@@ -88,6 +88,7 @@ struct Expr {
     std::vector<ExprPtr> keys;       // MapLit keys
     ExprPtr a, b, c;                 // operands / object / callee / index (b) / ternary branches (b, c)
     TypeRef typeRef;                 // Is / As: the type checked for
+    std::string opWord;              // Binary: the operator as written, when it was a word ("plus", "greater or equal")
 
     // Filled in by the checker.
     Type* type = nullptr;

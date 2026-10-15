@@ -1,0 +1,9 @@
+=== main.frg
+int main(){
+    string s = "a" plus 5;
+    bool b = "x" greater or equal 3;
+    return 0;
+}
+=== error
+can't add text and an int with plus
+can't compare a string with an int using 'greater or equal'

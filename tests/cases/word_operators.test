@@ -1,0 +1,99 @@
+=== main.frg
+#include <stdio>
+
+class Enemy {
+    int hp = 10;
+}
+
+int main(){
+    int a = 7;
+    int b = 3;
+    print(a plus b);
+    print(a minus b);
+    print(a times b);
+    print(a div b);
+    print(a mod b);
+    print(negative a);
+    print(7.0 div 2);
+
+    print(a equals 7);
+    print(a not equals 7);
+    print(a greater b);
+    print(a less b);
+    print(a greater or equal 7);
+    print(a less or equal 6);
+    print(a greater b and not (b greater a));
+    print(a greater b or a equals b);
+
+    print(a bitand b);
+    print(a bitor b);
+    print(a bitxor b);
+    print(bitnot 0);
+    print(1 shiftleft 4);
+    print(256 shiftright 2);
+
+    string label = "big" if a greater 5 else "small";
+    print(label);
+    int? maybe = null;
+    print(maybe otherwise 42);
+
+    set a to 10;
+    increase a by 5;
+    decrease a by 3;
+    multiply a by 2;
+    divide a by 4;
+    increase a;
+    increase a;
+    decrease a;
+    print(a);
+
+    Enemy e = Enemy();
+    decrease e.hp by 4;
+    set e.hp to e.hp times 2;
+    print(e.hp);
+
+    list<int> xs = [1, 2, 3];
+    increase xs[0] by 100;
+    print(xs);
+
+    int total = 0;
+    for (int i = 0; i less 5; increase i) {
+        increase total by i;
+    }
+    print(total);
+
+    // The words are only operators between two values, so they still work as names:
+    int times = 3;
+    int set = 2;
+    print(times times set);
+    return 0;
+}
+=== output
+10
+4
+21
+2
+1
+-7
+3.5
+true
+false
+true
+false
+true
+false
+true
+true
+3
+7
+4
+-1
+16
+64
+big
+42
+7
+12
+[101, 2, 3]
+10
+6

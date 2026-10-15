@@ -60,6 +60,13 @@
                 { "name": "keyword.control.forge", "match": "\\b(if|else|while|for|in|switch|case|default|return|break|continue|wait)\\b" },
                 { "name": "keyword.operator.logical.forge", "match": "\\b(and|or|not)\\b" },
                 { "name": "keyword.operator.type.forge", "match": "\\b(is|as)\\b" },
+                { "name": "keyword.operator.word.forge", "match": "(?<=[\\w\\)\\]\"]\\s{1,8})\\b(plus|minus|times|div|mod|equals|greater|less|otherwise|bitand|bitor|bitxor|shiftleft|shiftright)\\b(?!\\s*=(?!=))(?=\\s)" },
+                { "name": "keyword.operator.word.forge", "match": "\\b(negative|bitnot)\\b|(?<=\\bor\\s{1,8})\\bequal\\b" },
+                {
+                    "match": "^\\s*(set|increase|decrease|multiply|divide)\\s+(?=[A-Za-z_])",
+                    "captures": { "1": { "name": "keyword.operator.word.forge" } }
+                },
+                { "name": "keyword.operator.word.forge", "match": "(?<=[\\w\\)\\]]\\s{1,8})\\b(to|by)\\b(?=\\s)" },
                 { "name": "storage.type.forge", "match": "\\b(struct|class|enum)\\b" },
                 { "name": "storage.modifier.forge", "match": "\\b(const|static|private|public)\\b" },
                 { "name": "variable.language.forge", "match": "\\b(this|super)\\b" },

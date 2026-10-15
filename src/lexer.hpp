@@ -12,7 +12,7 @@ enum class Tok {
     EqEq, NotEq, Lt, Gt, LtEq, GtEq, AndAnd, OrOr, Bang, Amp, Pipe, Caret, Tilde, Shl, Shr, QuestionQuestion,
     KwIf, KwElse, KwWhile, KwFor, KwReturn, KwBreak, KwContinue, KwTrue, KwFalse, KwNull,
     KwAnd, KwOr, KwNot, KwConst, KwVoid,
-    KwStruct, KwClass, KwEnum, KwSwitch, KwCase, KwDefault, KwThis, KwSuper, KwIn, KwStatic, KwIs, KwAs, KwPrivate, KwPublic,
+    KwStruct, KwClass, KwEnum, KwSwitch, KwCase, KwDefault, KwThis, KwSuper, KwIn, KwStatic, KwIs, KwAs, KwPrivate, KwPublic, KwNegative, KwBitNot,
     KwReserved,  // words saved for future versions (new, delete)
     Eof,
 };

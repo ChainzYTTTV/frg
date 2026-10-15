@@ -99,6 +99,8 @@ private:
     ExprPtr parseCond();
 
     ExprPtr binary(ExprPtr l, const Token& op, ExprPtr r, const std::string& text);
+    bool atWord(const char* w) const;
+    StmtPtr tryWordStatement();
     ExprPtr parseTernary();
     ExprPtr parseCoalesce();
     ExprPtr parseOr();
@@ -461,7 +463,8 @@ StmtPtr Parser::parseStmt() {
             fail(l, cur().text + " types have to be made outside of functions", "move it to the top level of the file");
         default: break;
     }
-    StmtPtr s = (at(Tok::KwConst) || declAhead(false)) ? parseVarStmt() : parseSimple();
+    StmtPtr s = tryWordStatement();
+    if (!s) s = (at(Tok::KwConst) || declAhead(false)) ? parseVarStmt() : parseSimple();
     expect(Tok::Semi, "';'");
     return s;
 }
@@ -506,7 +509,10 @@ StmtPtr Parser::parseFor() {
     }
 
     auto s = std::make_unique<Stmt>(SK::For, l);
-    if (!at(Tok::Semi)) s->init = (at(Tok::KwConst) || declAhead(false)) ? parseVarStmt() : parseSimple();
+    if (!at(Tok::Semi)) {
+        s->init = tryWordStatement();
+        if (!s->init) s->init = (at(Tok::KwConst) || declAhead(false)) ? parseVarStmt() : parseSimple();
+    }
     expect(Tok::Semi, "';'");
     if (!at(Tok::Semi)) s->expr = parseCond();
     expect(Tok::Semi, "';'");
@@ -558,8 +564,64 @@ StmtPtr Parser::parseVarStmt() {
     return s;
 }
 
+// Word versions of assignments:
+//   set x to 5;          x = 5;          increase x by 2;   x += 2;      increase x;   x++;
+//   multiply x by 2;     x *= 2;         decrease x by 2;   x -= 2;      decrease x;   x--;
+//   divide x by 2;       x /= 2;
+// Only used when the `to` / `by` is really there, so `set(...)` or a variable named `increase` still work.
+StmtPtr Parser::tryWordStatement() {
+    if (!at(Tok::Ident)) return nullptr;
+    const std::string& w = cur().text;
+    bool canBeBare = w == "increase" || w == "decrease";
+    const char* joiner = w == "set" ? "to" : (canBeBare || w == "multiply" || w == "divide") ? "by" : nullptr;
+    if (!joiner) return nullptr;
+    if (peek().kind != Tok::Ident && peek().kind != Tok::KwThis) return nullptr;
+
+    // Look ahead (without reporting anything) for the `to` / `by`, or the end of the statement.
+    bool found = false, bare = false;
+    int depth = 0;
+    for (size_t k = p + 1; k < t.size(); k++) {
+        Tok kind = t[k].kind;
+        if (kind == Tok::LParen || kind == Tok::LBracket || kind == Tok::LBrace) {
+            depth++;
+        } else if (kind == Tok::RParen || kind == Tok::RBracket || kind == Tok::RBrace) {
+            if (depth == 0) {
+                bare = kind == Tok::RParen;  // the end of a for (...) header
+                break;
+            }
+            depth--;
+        } else if (depth == 0 && kind == Tok::Ident && t[k].text == joiner) {
+            found = true;
+            break;
+        } else if (depth == 0 && kind == Tok::Semi) {
+            bare = true;
+            break;
+        } else if (depth == 0 && (kind == Tok::Assign || kind == Tok::Eof)) {
+            break;
+        }
+    }
+    if (!found && !(bare && canBeBare)) return nullptr;
+
+    Loc l = cur().loc;
+    p++;
+    ExprPtr target = parsePostfix();
+    if (!found) {
+        auto s = std::make_unique<Stmt>(SK::IncDec, l);
+        s->op = w == "increase" ? "++" : "--";
+        s->expr = std::move(target);
+        return s;
+    }
+    p++;  // to / by
+    auto s = std::make_unique<Stmt>(SK::Assign, l);
+    s->op = w == "set" ? "=" : w == "increase" ? "+=" : w == "decrease" ? "-=" : w == "multiply" ? "*=" : "/=";
+    s->expr = std::move(target);
+    s->value = parseExpr();
+    return s;
+}
+
 // A statement that starts with an expression: a call, an assignment, or x++ / x--.
 StmtPtr Parser::parseSimple() {
+    if (StmtPtr w = tryWordStatement()) return w;
     Loc l = cur().loc;
     if (at(Tok::PlusPlus) || at(Tok::MinusMinus)) {
         auto s = std::make_unique<Stmt>(SK::IncDec, l);
@@ -602,17 +664,37 @@ StmtPtr Parser::parseSimple() {
 ExprPtr Parser::binary(ExprPtr l, const Token& op, ExprPtr r, const std::string& text) {
     auto e = std::make_unique<Expr>(EK::Binary, op.loc);
     e->text = text;
+    if (op.kind == Tok::Ident || op.kind == Tok::KwNot) {
+        // Remember how it was written, for error messages.
+        e->opWord = op.kind == Tok::KwNot ? "not equals" : op.text;
+        if ((op.text == "greater" || op.text == "less") && text.size() == 2) e->opWord += " or equal";
+    }
     e->a = std::move(l);
     e->b = std::move(r);
     return e;
 }
 
+// Word versions of operators (`a plus b`, `a greater or equal b`) are names right after a value - a place
+// where a plain name can never go - so they don't stop anyone from using those words as names elsewhere.
+bool Parser::atWord(const char* w) const { return at(Tok::Ident) && t[p].text == w; }
+
 ExprPtr Parser::parseTernary() {
-    ExprPtr cond = parseCoalesce();
-    if (!at(Tok::Question)) return cond;
+    ExprPtr first = parseCoalesce();
+    // Python-style: `a if condition else b`. The `if` has to be on the same line, so a missing ';' before
+    // an if statement on the next line is still reported as a missing ';'.
+    if (at(Tok::KwIf) && cur().loc.line == prev().loc.line) {
+        auto e = std::make_unique<Expr>(EK::Ternary, cur().loc);
+        p++;
+        e->b = std::move(first);
+        e->a = parseCoalesce();
+        expect(Tok::KwElse, "'else' (a if condition else b picks a when the condition is true, b when it's false)");
+        e->c = parseTernary();
+        return e;
+    }
+    if (!at(Tok::Question)) return first;
     auto e = std::make_unique<Expr>(EK::Ternary, cur().loc);
     p++;
-    e->a = std::move(cond);
+    e->a = std::move(first);
     e->b = parseExpr();
     expect(Tok::Colon, "':' (a ? b : c picks b when a is true, c when it's false)");
     e->c = parseTernary();
@@ -621,7 +703,7 @@ ExprPtr Parser::parseTernary() {
 
 ExprPtr Parser::parseCoalesce() {
     ExprPtr l = parseOr();
-    while (at(Tok::QuestionQuestion)) {
+    while (at(Tok::QuestionQuestion) || atWord("otherwise")) {
         const Token& op = t[p++];
         l = binary(std::move(l), op, parseOr(), "??");
     }
@@ -658,7 +740,7 @@ ExprPtr Parser::parseNot() {
 
 ExprPtr Parser::parseBitOr() {
     ExprPtr l = parseBitXor();
-    while (at(Tok::Pipe)) {
+    while (at(Tok::Pipe) || atWord("bitor")) {
         const Token& op = t[p++];
         l = binary(std::move(l), op, parseBitXor(), "|");
     }
@@ -667,7 +749,7 @@ ExprPtr Parser::parseBitOr() {
 
 ExprPtr Parser::parseBitXor() {
     ExprPtr l = parseBitAnd();
-    while (at(Tok::Caret)) {
+    while (at(Tok::Caret) || atWord("bitxor")) {
         const Token& op = t[p++];
         l = binary(std::move(l), op, parseBitAnd(), "^");
     }
@@ -676,7 +758,7 @@ ExprPtr Parser::parseBitXor() {
 
 ExprPtr Parser::parseBitAnd() {
     ExprPtr l = parseEquality();
-    while (at(Tok::Amp)) {
+    while (at(Tok::Amp) || atWord("bitand")) {
         const Token& op = t[p++];
         l = binary(std::move(l), op, parseEquality(), "&");
     }
@@ -685,16 +767,32 @@ ExprPtr Parser::parseBitAnd() {
 
 ExprPtr Parser::parseEquality() {
     ExprPtr l = parseCompare();
-    while (at(Tok::EqEq) || at(Tok::NotEq)) {
-        const Token& op = t[p++];
-        l = binary(std::move(l), op, parseCompare(), op.text);
+    while (true) {
+        if (at(Tok::EqEq) || at(Tok::NotEq) || atWord("equals")) {
+            const Token& op = t[p++];
+            l = binary(std::move(l), op, parseCompare(), op.kind == Tok::NotEq ? "!=" : "==");
+        } else if (at(Tok::KwNot) && peek().kind == Tok::Ident && peek().text == "equals") {  // a not equals b
+            const Token& op = t[p];
+            p += 2;
+            l = binary(std::move(l), op, parseCompare(), "!=");
+        } else {
+            return l;
+        }
     }
-    return l;
 }
 
 ExprPtr Parser::parseCompare() {
     ExprPtr l = parseShift();
-    while (at(Tok::Lt) || at(Tok::Gt) || at(Tok::LtEq) || at(Tok::GtEq) || at(Tok::KwIs) || at(Tok::KwAs)) {
+    while (at(Tok::Lt) || at(Tok::Gt) || at(Tok::LtEq) || at(Tok::GtEq) || at(Tok::KwIs) || at(Tok::KwAs) || atWord("greater") ||
+           atWord("less")) {
+        if (at(Tok::Ident)) {  // greater, less, greater or equal, less or equal
+            const Token& op = t[p++];
+            bool orEqual = at(Tok::KwOr) && peek().kind == Tok::Ident && peek().text == "equal";
+            if (orEqual) p += 2;
+            std::string sym = std::string(op.text == "greater" ? ">" : "<") + (orEqual ? "=" : "");
+            l = binary(std::move(l), op, parseShift(), sym);
+            continue;
+        }
         const Token& op = t[p++];
         if (op.kind == Tok::KwIs || op.kind == Tok::KwAs) {
             auto e = std::make_unique<Expr>(op.kind == Tok::KwIs ? EK::Is : EK::As, op.loc);
@@ -716,35 +814,38 @@ ExprPtr Parser::parseCompare() {
 
 ExprPtr Parser::parseShift() {
     ExprPtr l = parseAdd();
-    while (at(Tok::Shl) || at(Tok::Shr)) {
+    while (at(Tok::Shl) || at(Tok::Shr) || atWord("shiftleft") || atWord("shiftright")) {
         const Token& op = t[p++];
-        l = binary(std::move(l), op, parseAdd(), op.text);
+        std::string sym = op.text == "shiftleft" ? "<<" : op.text == "shiftright" ? ">>" : op.text;
+        l = binary(std::move(l), op, parseAdd(), sym);
     }
     return l;
 }
 
 ExprPtr Parser::parseAdd() {
     ExprPtr l = parseMul();
-    while (at(Tok::Plus) || at(Tok::Minus)) {
+    while (at(Tok::Plus) || at(Tok::Minus) || atWord("plus") || atWord("minus")) {
         const Token& op = t[p++];
-        l = binary(std::move(l), op, parseMul(), op.text);
+        std::string sym = op.text == "plus" ? "+" : op.text == "minus" ? "-" : op.text;
+        l = binary(std::move(l), op, parseMul(), sym);
     }
     return l;
 }
 
 ExprPtr Parser::parseMul() {
     ExprPtr l = parseUnary();
-    while (at(Tok::Star) || at(Tok::Slash) || at(Tok::Percent)) {
+    while (at(Tok::Star) || at(Tok::Slash) || at(Tok::Percent) || atWord("times") || atWord("div") || atWord("mod")) {
         const Token& op = t[p++];
-        l = binary(std::move(l), op, parseUnary(), op.text);
+        std::string sym = op.text == "times" ? "*" : op.text == "div" ? "/" : op.text == "mod" ? "%" : op.text;
+        l = binary(std::move(l), op, parseUnary(), sym);
     }
     return l;
 }
 
 ExprPtr Parser::parseUnary() {
-    if (at(Tok::Minus) || at(Tok::Bang) || at(Tok::Tilde) || at(Tok::KwNot)) {
+    if (at(Tok::Minus) || at(Tok::Bang) || at(Tok::Tilde) || at(Tok::KwNot) || at(Tok::KwNegative) || at(Tok::KwBitNot)) {
         auto e = std::make_unique<Expr>(EK::Unary, cur().loc);
-        e->text = at(Tok::KwNot) ? "!" : cur().text;
+        e->text = at(Tok::KwNot) ? "!" : at(Tok::KwNegative) ? "-" : at(Tok::KwBitNot) ? "~" : cur().text;
         p++;
         e->a = parseUnary();
         return e;

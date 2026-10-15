@@ -1619,6 +1619,7 @@ Type* Checker::equalityOp(Expr* e) {
 
 Type* Checker::binaryExpr(Expr* e, Type* expected) {
     const std::string& op = e->text;
+    std::string shown = e->opWord.empty() ? opName(op) : e->opWord;  // as the user wrote it
     Expr* a = e->a.get();
     Expr* b = e->b.get();
     auto fail = [&](const std::string& msg, const std::string& hint = "") {
@@ -1654,7 +1655,7 @@ Type* Checker::binaryExpr(Expr* e, Type* expected) {
             return e->type = tString();
         }
         if (op == "+" && (L->kind == TK::String || R->kind == TK::String))
-            return fail("can't add text and " + aType(L->kind == TK::String ? R : L) + " with +",
+            return fail("can't add text and " + aType(L->kind == TK::String ? R : L) + " with " + shown,
                         "put the value inside the text instead, like \"Score: {score}\"");
         if (isVec(L) || isVec(R)) {
             if ((op == "+" || op == "-") && L == R) {
@@ -1671,10 +1672,10 @@ Type* Checker::binaryExpr(Expr* e, Type* expected) {
                 e->opType = R;
                 return e->type = R;
             }
-            return fail("can't use '" + op + "' on " + aType(L) + " and " + aType(R),
+            return fail("can't use '" + shown + "' on " + aType(L) + " and " + aType(R),
                         "vectors can be added to and subtracted from vectors, and multiplied or divided by numbers");
         }
-        if (!isNumeric(L) || !isNumeric(R)) return fail("can't use '" + op + "' on " + aType(L) + " and " + aType(R));
+        if (!isNumeric(L) || !isNumeric(R)) return fail("can't use '" + shown + "' on " + aType(L) + " and " + aType(R));
         Type* T = commonOf({a, b});
         e->opType = T;
         e->litInt = a->litInt && b->litInt;
@@ -1688,18 +1689,18 @@ Type* Checker::binaryExpr(Expr* e, Type* expected) {
         else if (L->kind == TK::String && R->kind == TK::String)
             e->opType = tString();
         else
-            return fail("can't compare " + aType(L) + " with " + aType(R) + " using '" + op + "'");
+            return fail("can't compare " + aType(L) + " with " + aType(R) + " using '" + shown + "'");
         return e->type = tBool();
     }
     if (isLogic(op)) {
         if (L->kind != TK::Bool || R->kind != TK::Bool)
-            return fail("'" + opName(op) + "' needs true/false values on both sides, but got " + aType(L) + " and " + aType(R),
+            return fail("'" + shown + "' needs true/false values on both sides, but got " + aType(L) + " and " + aType(R),
                         "compare numbers first, like (x > 0 and y > 0)");
         return e->type = tBool();
     }
     if (isBitwise(op)) {
         if (L->kind != TK::Int || R->kind != TK::Int)
-            return fail("'" + op + "' works on the bits of whole numbers, but got " + aType(L) + " and " + aType(R),
+            return fail("'" + shown + "' works on the bits of whole numbers, but got " + aType(L) + " and " + aType(R),
                         L->kind == TK::Bool ? "did you mean '" + std::string(op == "&" ? "and" : "or") + "'?" : "");
         Type* T = commonOf({a, b});
         e->opType = T;
@@ -1707,7 +1708,7 @@ Type* Checker::binaryExpr(Expr* e, Type* expected) {
     }
     // << and >>
     if (L->kind != TK::Int || R->kind != TK::Int)
-        return fail("'" + op + "' shifts the bits of whole numbers, but got " + aType(L) + " and " + aType(R));
+        return fail("'" + shown + "' shifts the bits of whole numbers, but got " + aType(L) + " and " + aType(R));
     if (a->litInt) coerce(a, tInt(32, true));
     e->opType = a->type;
     return e->type = a->type;

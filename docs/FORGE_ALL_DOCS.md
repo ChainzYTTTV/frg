@@ -422,6 +422,8 @@ for (Entity e in all) {
 
 **`static`** fields and methods belong to the type, not to each object: `static int count = 0;` is one counter shared by every `Enemy`, and `static Enemy boss() { ... }` is called on the type. Outside the type write `Enemy.count` and `Enemy.boss()`; inside it, the plain name works. A static method has no object, so it can't use normal fields, normal methods or `this` (an error says so). Static fields aren't part of the constructor or of printing. Structs can have them too (`Point.origin`).
 
+**Generic types.** `class Box<T> { T item; Box(T item) { this.item = item; } }` and `struct Pair<A, B> { A first; B second; }`. Used with the types written out: `Box<int> coins = Box(5);` (Forge works out `T` from the type on the left; `print(Box(5))` alone is an error asking what `T` is). `T` can be any type. Inside, a `T` can only be stored, passed, returned, compared with `==`/`!=` and printed: no fields, methods or maths on it. `T?`, `list<T>` and `map<string, T>` work. A `T` field must be set at the top level of every constructor, or be `T?`; a `T` local needs a starting value. Generic types can't inherit, have interfaces or statics yet, nothing can inherit from them, and functions can't be generic. `Box<int>` and `Box<float>` are different types.
+
 **Interfaces and abstract classes.** `interface Attacker { int power(); void attack(string target); }` lists methods with no code (each ends in `;`, no fields/constructors/static/private, and an interface can't inherit). `abstract class Enemy { ... abstract int reward(); ... }` is a normal class that can also have `abstract` methods with no code; only abstract classes can have them. After the `:` comes at most one class, then any number of interfaces: `class Goblin : Enemy, Attacker, Flyer`. The class must write every method its interfaces and abstract parents list, with exactly the same types (the error names the missing one and what to add). `Attacker()` and `Enemy()` are errors: neither can be made directly. They work as types everywhere (`list<Attacker>`, `is`, `as`), and `super.reward()` is an error when `reward` is abstract. Structs can't have interfaces.
 
 **`private`** hides things. A private field or method can only be used inside its class (and classes that inherit from it). A private function, global variable or type at the top of a file can only be used inside that file. `public` is allowed too and means the same as writing nothing.
@@ -885,7 +887,6 @@ Runtime error in main.frg:10: position 5 is outside the list (it has 3 items, at
 **Things Forge does not have yet.** Don't teach or use these. Say "not in Forge yet" and work around them:
 
 - `char` (single letters are one-letter strings), fixed-size arrays (use `list`), tuples
-- Generics you write yourself (`class Box<T>`)
 - Two methods with the same name (only constructors and top-level functions can share a name), operator overloading for your own types
 - `protected` (`private` already includes classes that inherit)
 - Labeled breaks, exceptions (`try` / `catch`), `goto`
@@ -4106,7 +4107,44 @@ Things to know:
 - An interface or an abstract class can't be made directly: `Attacker()` and `Enemy()` are errors. Make one of the classes that have it.
 - `super.reward()` doesn't work when `reward` is abstract in the parent, because there's no code to call.
 - Structs can't have interfaces or be abstract, because they're copied rather than shared.
-- Printing something through an interface prints the real object, like `Goblin(name: "Grub", hp: 10)`.
+- Printing something through an interface prints the real object, like `Goblin(name: Grub, hp: 10)`.
+
+### Generic types: one type that holds any type
+
+`list<int>` and `list<string>` are the same kind of thing holding different types. Your own structs and classes can work like that too. Put a name for "some type" inside `< >` after the type's name, and use it like a type inside:
+
+```cpp
+class Box<T> {
+    T item;
+
+    Box(T item) {
+        this.item = item;
+    }
+
+    T open() {
+        return item;
+    }
+}
+
+Box<int> coins = Box(5);              // here T is int
+Box<string> note = Box("hello");      // here T is string
+Box<Player> hero = Box(Player());     // here T is Player
+print(coins.open() + 1);              // 6
+```
+
+A type can have several of them: `struct Pair<A, B> { A first; B second; }`, used as `Pair<string, int> score = Pair("Ana", 30);`.
+
+Things to know:
+
+- `T` can be any type at all: numbers, text, lists, your own structs and classes, even another `Box<int>`.
+- Forge works out what `T` is from where the value goes, so write the full type where you make one: `Box<int> coins = Box(5);`. On its own, like `print(Box(5))`, Forge asks you to say what `T` is.
+- Inside the type, Forge doesn't know what `T` will be, so a `T` can only be stored, passed on, given back, compared with `==` and `!=`, and printed. You can't use its fields or methods (`item.name`) or do maths with it.
+- `T?`, `list<T>` and `map<string, T>` all work inside.
+- Because `T` could be a class, which can't be empty, a field of type `T` needs a value from every constructor (`this.item = item;`, not inside an `if` or a loop), or has to be optional (`T? item;`). A `T` local variable needs a starting value.
+- Without a constructor, a generic type is made with all its fields: `Pair("Ana", 30)`.
+- `Box<int>` and `Box<float>` are different types: one can't be stored in the other.
+- For now, a generic type can't inherit, have interfaces, or have `static` fields and methods, and no class can inherit from one. Functions can't be generic (only structs and classes).
+- The name inside `< >` can't already be a type's name. `T` is the usual choice, or a short word like `Item`.
 
 ### Types from other files
 
@@ -4126,6 +4164,7 @@ class Boss : enemies.goblin.Goblin { ... }
 - Methods can call each other by name, and can use fields by name or through `this`.
 - Methods can't have the same name as each other. Only constructors can share a name.
 - A class inherits from at most one class, plus any number of interfaces.
+- A generic type (`class Box<T>`) is written with every type it holds: `Box<int>`.
 - Class objects are cleaned up automatically once nothing uses them anymore. There's no need (and no way) to delete them.
 
 ### What's next
@@ -4793,7 +4832,7 @@ If you already know C++, C#, Java, JavaScript or Python, Forge will feel familia
 | `base.method()` / `super.method()` | `super.method()` | |
 | `try` / `catch` | not available | runtime errors stop the game with a message |
 | lambdas, function pointers, callbacks | `(Enemy e) { return e.hp <= 0; }`, typed `Function<bool(Enemy)>` | a function value gets a copy of the local variables it uses. See Functions as values (see “6. Functions” › “Functions as values”) |
-| templates / generics you write yourself | not available | the built-in `list<T>`, `map<K, V>` and `Pointer<T>` are generic |
+| templates / generics you write yourself | `class Box<T> { T item; }`, used as `Box<int> b = Box(5);` | structs and classes only, not functions; inside, a `T` can only be stored, passed, compared and printed. See Generic types (see “9. Structs and Classes” › “Generic types: one type that holds any type”) |
 | threads | not available | use tasks (see “11. Tasks”) for things that happen over time |
 
 ### Things Forge adds
@@ -9278,6 +9317,22 @@ class Goblin : Enemy, Attacker {   // at most one class, then any number of inte
 
 list<Attacker> attackers = [Goblin()];
 ```
+
+#### Generic types
+
+```cpp
+class Box<T> {
+    T item;
+    Box(T item) {
+        this.item = item;
+    }
+}
+
+Box<int> coins = Box(5);           // T is worked out from the type written on the left
+struct Pair<A, B> { A first; B second; }
+```
+
+Inside, a `T` can be stored, passed, returned, compared with `==` and printed, but its fields and methods can't be used. A `T` field must be set by every constructor (or be `T?`). Generic types can't inherit, have interfaces or have statics yet.
 
 #### private
 

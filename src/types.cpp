@@ -62,7 +62,7 @@ static Type* intern(const std::string& key, Type proto) {
     return raw;
 }
 
-static std::string idOf(const Type* t) {
+static std::string idOf(const void* t) {
     return std::to_string(reinterpret_cast<uintptr_t>(t));
 }
 
@@ -91,7 +91,9 @@ Type* tOptional(Type* inner) {
     t.kind = TK::Optional;
     t.name = inner->name + "?";
     // Classes and pointers can already be empty, so they don't need a wrapper.
-    t.cpp = isNullableRef(inner) ? inner->cpp : "::std::optional<" + inner->cpp + ">";
+    t.cpp = isNullableRef(inner) ? inner->cpp
+            : inner->kind == TK::TypeParam ? "::frg::Opt<" + inner->cpp + ">"  // T could be a class, which is already nullable
+                                           : "::std::optional<" + inner->cpp + ">";
     t.elem = inner;
     return intern("opt:" + idOf(inner), t);
 }
@@ -123,6 +125,20 @@ Type* tFunction(Type* ret, const std::vector<Type*>& params) {
 
 Type* tNamed(TypeDecl* decl) {
     if (decl->type) return decl->type;
+    if (!decl->typeParams.empty()) {
+        // Inside class Box<T>, the type is Box<T>, with T standing for whatever type each Box is made with.
+        if (decl->paramTypes.empty())
+            for (size_t i = 0; i < decl->typeParams.size(); i++) {
+                Type t{};
+                t.kind = TK::TypeParam;
+                t.name = decl->typeParams[i];
+                t.cpp = decl->typeParams[i] + "_";
+                t.decl = decl;
+                decl->paramTypes.push_back(intern("tparam:" + idOf(decl) + ":" + std::to_string(i), t));
+            }
+        decl->type = tGeneric(decl, decl->paramTypes);
+        return decl->type;
+    }
     Type t{};
     // An interface is used like a class: it's shared, can be null as Name?, and holds objects of the classes that have it.
     bool shared = decl->kind == DK::Class || decl->kind == DK::Interface;
@@ -132,6 +148,56 @@ Type* tNamed(TypeDecl* decl) {
     t.decl = decl;
     decl->type = intern("decl:" + std::to_string(reinterpret_cast<uintptr_t>(decl)), t);
     return decl->type;
+}
+
+Type* tGeneric(TypeDecl* decl, const std::vector<Type*>& args) {
+    Type t{};
+    bool shared = decl->kind == DK::Class;
+    t.kind = shared ? TK::Class : TK::Struct;
+    std::string names, cpps, key = "gen:" + idOf(decl);
+    for (size_t i = 0; i < args.size(); i++) {
+        names += (i ? ", " : "") + args[i]->name;
+        cpps += (i ? ", " : "") + args[i]->cpp;
+        key += ":" + idOf(args[i]);
+    }
+    t.name = decl->name + "<" + names + ">";
+    std::string inner = decl->cpp + "<" + cpps + ">";
+    t.cpp = shared ? "::std::shared_ptr<" + inner + ">" : inner;
+    t.decl = decl;
+    t.params = args;
+    return intern(key, t);
+}
+
+bool isGeneric(const Type* t) {
+    return (t->kind == TK::Class || t->kind == TK::Struct) && t->decl && !t->decl->typeParams.empty();
+}
+
+Type* substType(Type* t, const std::vector<Type*>& from, const std::vector<Type*>& to) {
+    if (!t || from.empty()) return t;
+    switch (t->kind) {
+        case TK::TypeParam:
+            for (size_t i = 0; i < from.size() && i < to.size(); i++)
+                if (from[i] == t) return to[i];
+            return t;
+        case TK::List: return tList(substType(t->elem, from, to));
+        case TK::Map: return tMap(substType(t->key, from, to), substType(t->elem, from, to));
+        case TK::Optional: return tOptional(substType(t->elem, from, to));
+        case TK::Pointer: return tPointer(substType(t->elem, from, to));
+        case TK::Function: {
+            std::vector<Type*> ps;
+            for (Type* p : t->params) ps.push_back(substType(p, from, to));
+            return tFunction(substType(t->elem, from, to), ps);
+        }
+        case TK::Struct:
+        case TK::Class:
+            if (isGeneric(t)) {
+                std::vector<Type*> args;
+                for (Type* a : t->params) args.push_back(substType(a, from, to));
+                return tGeneric(t->decl, args);
+            }
+            return t;
+        default: return t;
+    }
 }
 
 static const std::map<std::string, Type*>& primitiveTable() {
@@ -206,7 +272,7 @@ bool implicitlyConverts(Type* from, Type* to) {
     }
     if (from->kind == TK::Int && to->kind == TK::Float) return true;
     if (from->kind == TK::Float && to->kind == TK::Float) return to->bits > from->bits;
-    if (from->kind == TK::Class && to->kind == TK::Class) return inheritsFrom(from->decl, to->decl);
+    if (from->kind == TK::Class && to->kind == TK::Class) return !isGeneric(from) && !isGeneric(to) && inheritsFrom(from->decl, to->decl);
     if (to->kind == TK::Optional) {
         if (from->kind == TK::Null) return true;
         if (from->kind == TK::Optional) return implicitlyConverts(from->elem, to->elem) && from->elem->kind == to->elem->kind;

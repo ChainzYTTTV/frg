@@ -104,6 +104,9 @@ private:
     void emitTypeDef(TypeDecl* d);
     void emitTypeFuncs(TypeDecl* d);
     std::string strFuncProto(TypeDecl* d);
+    std::string tmplHead(const TypeDecl* d);
+    std::string targs(const TypeDecl* d);
+    std::string classOf(const Type* t);
 
     // Expressions
     std::string ex(const Expr* e);
@@ -193,6 +196,7 @@ std::string Gen::strCode(const std::string& code, const Type* t, bool shallow) {
         case TK::Task:
         case TK::String: return "::frg::str(" + code + ")";
         case TK::Null: return "::std::string(\"null\")";
+        case TK::TypeParam: return "::frg::strAny(" + code + ")";  // T inside a generic type: decided per type it's made with
         case TK::Enum:
         case TK::Struct:
         case TK::Class: {
@@ -256,12 +260,13 @@ std::string Gen::args(const Expr* e, const std::vector<ExprPtr>& given, const Fu
     bool overloaded = !f->owner && f->module && !f->module->isPrelude && f->module->overloads.count(f->name) &&
                       f->module->overloads.at(f->name).size() > 1;
     for (size_t i = 0; i < given.size(); i++) {
-        std::string v = conv(given[i].get(), f->params[i]->type);
-        s += (i ? ", " : "") + (overloaded ? "static_cast<" + f->params[i]->type->cpp + ">(" + v + ")" : v);
+        const Type* pt = e->paramTypes.empty() ? f->params[i]->type : e->paramTypes[i];  // with a Box<int>'s T filled in
+        std::string v = conv(given[i].get(), pt);
+        s += (i ? ", " : "") + (overloaded ? "static_cast<" + pt->cpp + ">(" + v + ")" : v);
     }
     for (size_t i = 0; i < e->defaultArgs.size(); i++) {
         size_t pi = given.size() + i;
-        s += (pi ? ", " : "") + conv(e->defaultArgs[i], f->params[pi]->type);
+        s += (pi ? ", " : "") + conv(e->defaultArgs[i], e->paramTypes.empty() ? f->params[pi]->type : e->paramTypes[pi]);
     }
     return s;
 }
@@ -274,9 +279,9 @@ std::string Gen::construct(const Expr* e, const std::vector<ExprPtr>& given) {
         a = args(e, given, e->ctor);
     } else {
         std::vector<VarDecl*> fields = allFields(d);
-        for (size_t i = 0; i < given.size(); i++) a += (i ? ", " : "") + conv(given[i].get(), fields[i]->type);
+        for (size_t i = 0; i < given.size(); i++) a += (i ? ", " : "") + conv(given[i].get(), e->paramTypes.empty() ? fields[i]->type : e->paramTypes[i]);
     }
-    return d->cpp + (d->kind == DK::Class ? "::frg$new(" : "::frg$make(") + a + ")";
+    return classOf(e->type) + (d->kind == DK::Class ? "::frg$new(" : "::frg$make(") + a + ")";
 }
 
 std::string Gen::call(const Expr* e) {
@@ -448,13 +453,13 @@ std::string Gen::ex(const Expr* e) {
         case EK::Ternary: return "(" + ex(e->a.get()) + " ? " + conv(e->b.get(), e->type) + " : " + conv(e->c.get(), e->type) + ")";
         case EK::This:
             if (curType->kind == DK::Struct) return "(*this)";
-            return "::std::static_pointer_cast<" + curType->cpp + ">(this->shared_from_this())";
+            return "::std::static_pointer_cast<" + curType->cpp + targs(curType) + ">(this->shared_from_this())";
         case EK::Super: return "this";
         case EK::Is: {
-            std::string cast = "::std::dynamic_pointer_cast<" + e->opType->decl->cpp + ">(" + ex(e->a.get()) + ")";
+            std::string cast = "::std::dynamic_pointer_cast<" + classOf(e->opType) + ">(" + ex(e->a.get()) + ")";
             return "(" + cast + " != nullptr)";
         }
-        case EK::As: return "::std::dynamic_pointer_cast<" + e->opType->decl->cpp + ">(" + ex(e->a.get()) + ")";
+        case EK::As: return "::std::dynamic_pointer_cast<" + classOf(e->opType) + ">(" + ex(e->a.get()) + ")";
         case EK::Lambda: {
             // A C++ lambda that gets copies of the variables around it (and `this`, inside a method).
             FuncDecl* f = e->lambda.get();
@@ -662,7 +667,10 @@ std::vector<TypeDecl*> Gen::typeOrder() {
     std::function<void(const Type*)> visitType = [&](const Type* t) {
         if (!t) return;
         switch (t->kind) {
-            case TK::Struct: visit(t->decl); break;
+            case TK::Struct:
+                visit(t->decl);
+                for (const Type* a : t->params) visitType(a);  // a Box<Point> field needs Point first
+                break;
             case TK::Optional:
             case TK::List: visitType(t->elem); break;
             case TK::Map:
@@ -687,10 +695,33 @@ std::vector<TypeDecl*> Gen::typeOrder() {
     return order;
 }
 
+// class Box<T>: "template <typename T_> " before everything that belongs to it, and "<T_>" after its name.
+std::string Gen::tmplHead(const TypeDecl* d) {
+    if (d->typeParams.empty()) return "";
+    std::string s = "template <";
+    for (size_t i = 0; i < d->typeParams.size(); i++) s += (i ? ", typename " : "typename ") + d->typeParams[i] + "_";
+    return s + "> ";
+}
+
+std::string Gen::targs(const TypeDecl* d) {
+    if (d->typeParams.empty()) return "";
+    std::string s = "<";
+    for (size_t i = 0; i < d->typeParams.size(); i++) s += (i ? ", " : "") + d->typeParams[i] + "_";
+    return s + ">";
+}
+
+// The C++ struct behind a struct or class type: ::m_main::Player_, or ::m_main::Box_<int> for a Box<int>.
+std::string Gen::classOf(const Type* t) {
+    if (!isGeneric(t)) return t->decl->cpp;
+    if (t->kind == TK::Struct) return t->cpp;
+    const std::string pre = "::std::shared_ptr<";
+    return t->cpp.substr(pre.size(), t->cpp.size() - pre.size() - 1);
+}
+
 std::string Gen::strFuncProto(TypeDecl* d) {
     if (d->kind == DK::Enum) return "::std::string frg$str(" + d->cpp + " v)";
-    if (d->kind == DK::Struct) return "::std::string frg$str(const " + d->cpp + "& v)";
-    return "::std::string frg$str(const ::std::shared_ptr<" + d->cpp + ">& v)";
+    if (d->kind == DK::Struct) return tmplHead(d) + "::std::string frg$str(const " + d->cpp + targs(d) + "& v)";
+    return tmplHead(d) + "::std::string frg$str(const ::std::shared_ptr<" + d->cpp + targs(d) + ">& v)";
 }
 
 void Gen::emitTypeDef(TypeDecl* d) {
@@ -707,9 +738,9 @@ void Gen::emitTypeDef(TypeDecl* d) {
         line("}");
         return;
     }
-    std::string head = "struct " + name;
+    std::string head = tmplHead(d) + "struct " + name;
     if (d->kind == DK::Class) {
-        head += d->base ? " : public " + d->base->cpp : " : public ::std::enable_shared_from_this<" + name + ">";
+        head += d->base ? " : public " + d->base->cpp : " : public ::std::enable_shared_from_this<" + name + targs(d) + ">";
         for (TypeDecl* i : d->interfaces) head += ", public " + i->cpp;
     }
     line(head + " {");
@@ -760,7 +791,9 @@ void Gen::emitBody(const FuncDecl* f, TypeDecl* owner, const std::string& head) 
 
 void Gen::emitTypeFuncs(TypeDecl* d) {
     std::string name = id(d->name);
-    std::string full = d->cpp;
+    std::string full = d->cpp + targs(d);
+    std::string th = tmplHead(d);   // class Box<T>: its code is a C++ template
+    std::string q = name + targs(d);
     line("namespace " + d->module->cppNs + " {");
 
     if (d->kind == DK::Enum) {
@@ -800,7 +833,7 @@ void Gen::emitTypeFuncs(TypeDecl* d) {
     }
 
     // Default constructor: field starting values.
-    line(name + "::" + name + "() {");
+    line(th + q + "::" + name + "() {");
     ind++;
     curType = nullptr;
     for (auto& f : d->fields)
@@ -808,9 +841,9 @@ void Gen::emitTypeFuncs(TypeDecl* d) {
     ind--;
     line("}");
 
-    for (auto& c : d->ctors) emitBody(c.get(), d, "void " + name + "::frg$init(" + params(c.get()) + ")");
+    for (auto& c : d->ctors) emitBody(c.get(), d, th + "void " + q + "::frg$init(" + params(c.get()) + ")");
     if (hasAutoInit(d)) {
-        line("void " + name + "::frg$init(" + fieldParams(d) + ") {");
+        line(th + "void " + q + "::frg$init(" + fieldParams(d) + ") {");
         for (VarDecl* f : allFields(d)) line("    this->" + id(f->name) + " = " + id(f->name) + ";");
         line("}");
     }
@@ -828,26 +861,26 @@ void Gen::emitTypeFuncs(TypeDecl* d) {
         for (FuncDecl* c : ctors) {
             std::vector<std::string> names;
             for (auto& p : c->params) names.push_back(id(p->name));
-            line(self + " " + name + "::" + maker + "(" + params(c) + ") { " + make + " o" + dot + "frg$init(" + argNames(names) + "); return o; }");
+            line(th + self + " " + q + "::" + maker + "(" + params(c) + ") { " + make + " o" + dot + "frg$init(" + argNames(names) + "); return o; }");
         }
     } else {
-        line(self + " " + name + "::" + maker + "() { " + make + " return o; }");
+        line(th + self + " " + q + "::" + maker + "() { " + make + " return o; }");
         if (hasAutoInit(d)) {
             std::vector<std::string> names;
             for (VarDecl* f : allFields(d)) names.push_back(id(f->name));
-            line(self + " " + name + "::" + maker + "(" + fieldParams(d) + ") { " + make + " o" + dot + "frg$init(" + argNames(names) + "); return o; }");
+            line(th + self + " " + q + "::" + maker + "(" + fieldParams(d) + ") { " + make + " o" + dot + "frg$init(" + argNames(names) + "); return o; }");
         }
     }
 
     for (auto& m : d->methods)
-        if (!m->isAbstract) emitBody(m.get(), d, m->ret->cpp + " " + name + "::" + id(m->name) + "(" + params(m.get()) + ")");
+        if (!m->isAbstract) emitBody(m.get(), d, th + m->ret->cpp + " " + q + "::" + id(m->name) + "(" + params(m.get()) + ")");
 
     // Text form, used by print() and "{...}".
     line(strFuncProto(d) + " {");
     ind++;
     FuncDecl* toString = findMethod(d, "toString");
     if (toString && toString->params.empty() && toString->ret == tString()) {
-        line(isClass ? "return v->toString_();" : "return const_cast<" + name + "&>(v).toString_();");
+        line(isClass ? "return v->toString_();" : "return const_cast<" + q + "&>(v).toString_();");
     } else {
         std::string acc = isClass ? "v->" : "v.";
         std::string s = "::std::string(" + cppString(d->name + "(") + ")";
@@ -898,7 +931,7 @@ GeneratedCpp Gen::run() {
                 for (size_t i = 0; i < d->enumValues.size(); i++) vals += (i ? ", " : "") + id(d->enumValues[i]);
                 line("enum class " + id(d->name) + " : int32_t { " + vals + " };");
             } else {
-                line("struct " + id(d->name) + ";");
+                line(tmplHead(d.get()) + "struct " + id(d->name) + ";");
             }
         }
         ind--;

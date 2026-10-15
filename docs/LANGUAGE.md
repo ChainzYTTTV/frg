@@ -379,6 +379,22 @@ class Goblin : Enemy, Attacker {   // at most one class, then any number of inte
 list<Attacker> attackers = [Goblin()];
 ```
 
+### Generic types
+
+```cpp
+class Box<T> {
+    T item;
+    Box(T item) {
+        this.item = item;
+    }
+}
+
+Box<int> coins = Box(5);           // T is worked out from the type written on the left
+struct Pair<A, B> { A first; B second; }
+```
+
+Inside, a `T` can be stored, passed, returned, compared with `==` and printed, but its fields and methods can't be used. A `T` field must be set by every constructor (or be `T?`). Generic types can't inherit, have interfaces or have statics yet.
+
 ### private
 
 `private` hides something so only certain code can use it:

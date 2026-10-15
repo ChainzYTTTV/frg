@@ -108,6 +108,7 @@ struct Expr {
     FuncDecl* ctor = nullptr;            // Call/BraceLit that builds an object: the constructor used (or null = field-by-field)
     TypeDecl* builds = nullptr;          // Call/BraceLit that builds an object: the type built
     std::vector<Expr*> defaultArgs;      // Call: default values filled in for missing arguments
+    std::vector<Type*> paramTypes;       // Call on a generic type (Box<int>): each parameter's type with T filled in
     std::shared_ptr<FuncDecl> lambda;    // Lambda: its parameters and body (ret is filled in by the checker)
 
     Expr(EK k, Loc l) : kind(k), loc(l) {}
@@ -197,6 +198,9 @@ struct TypeDecl {
     TypeDecl* base = nullptr;               // the class it inherits from
     std::vector<TypeDecl*> interfaces;      // the interfaces it has
     bool isAbstract = false;                // abstract class: can't be made directly
+    std::vector<std::string> typeParams;    // class Box<T>: {"T"}
+    std::vector<Loc> typeParamLocs;
+    std::vector<Type*> paramTypes;          // the type each of typeParams stands for inside the type
     std::vector<VarPtr> fields;     // includes `static` built-in constants
     std::vector<FuncPtr> methods;
     std::vector<FuncPtr> ctors;

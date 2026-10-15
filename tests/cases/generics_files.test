@@ -1,0 +1,32 @@
+=== main.frg
+#include <stdio>
+
+int main(){
+    bag.Bag<string> loot = bag.Bag("sword");
+    loot.add("shield");
+    print(loot.count());
+    print(loot);
+    bag.Bag<int>? maybe = null;
+    print(maybe == null);
+    return 0;
+}
+=== bag.frg
+class Bag<T> {
+    list<T> items = [];
+
+    Bag(T first) {
+        items.add(first);
+    }
+
+    void add(T x) {
+        items.add(x);
+    }
+
+    int count() {
+        return items.length;
+    }
+}
+=== output
+2
+Bag(items: [sword, shield])
+true

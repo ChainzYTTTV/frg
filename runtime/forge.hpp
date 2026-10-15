@@ -372,9 +372,35 @@ bool isNull(T* p) { return p == nullptr; }
 // Using a T? as a T: stops the game with a clear message if it's null.
 template <class O>
 decltype(auto) unwrap(O&& o, const char* where, const char* what) {
-    if (!o.has_value()) panic(where, std::string(what) + " is null");
-    return *std::forward<O>(o);
+    if constexpr (requires { o.has_value(); }) {
+        if (!o.has_value()) panic(where, std::string(what) + " is null");
+        return *std::forward<O>(o);
+    } else {
+        // A T? inside a generic type, where T turned out to be a class: it's already a shared_ptr.
+        if (o == nullptr) panic(where, std::string(what) + " is null");
+        return std::forward<O>(o);
+    }
 }
+
+// T? inside a generic type (class Box<T>): an optional for values, the class's own shared_ptr for classes.
+template <class T>
+struct OptOf {
+    using type = std::optional<T>;
+};
+template <class T>
+struct OptOf<std::shared_ptr<T>> {
+    using type = std::shared_ptr<T>;
+};
+template <class T>
+struct OptOf<std::optional<T>> {
+    using type = std::optional<T>;
+};
+template <class T>
+struct OptOf<T*> {
+    using type = T*;
+};
+template <class T>
+using Opt = typename OptOf<T>::type;
 template <class P>
 P&& nn(P&& p, const char* where, const char* what) {
     if (p == nullptr) panic(where, std::string(what) + " is null");
@@ -404,6 +430,8 @@ template <class T, class B>
 T* orElse(T* o, B&& b) { return o ? o : static_cast<T*>(b); }
 template <class T>
 std::optional<T> orElseOpt(const std::optional<T>& o, const std::optional<T>& b) { return o ? o : b; }
+template <class T>
+std::shared_ptr<T> orElseOpt(const std::shared_ptr<T>& o, const std::shared_ptr<T>& b) { return o ? o : b; }
 
 template <class T, class F>
 std::string strOpt(const std::optional<T>& o, F f) { return o ? f(*o) : "null"; }
@@ -551,6 +579,58 @@ std::string strList(const L& l, F f) {
         s += f(l[i]);
     }
     return s + "]";
+}
+
+// The text form of a value whose type is a generic type's T: decided when the C++ code is made for each T.
+template <class T>
+struct IsVector : std::false_type {};
+template <class T, class A>
+struct IsVector<std::vector<T, A>> : std::true_type {};
+template <class T>
+struct IsStdMap : std::false_type {};
+template <class K, class V, class C, class A>
+struct IsStdMap<std::map<K, V, C, A>> : std::true_type {};
+template <class T>
+struct IsOptional : std::false_type {};
+template <class T>
+struct IsOptional<std::optional<T>> : std::true_type {};
+template <class T>
+struct IsSharedPtr : std::false_type {};
+template <class T>
+struct IsSharedPtr<std::shared_ptr<T>> : std::true_type {};
+template <class T>
+struct IsFunction : std::false_type {};
+template <class T>
+struct IsFunction<std::function<T>> : std::true_type {};
+
+template <class T>
+std::string strAny(const T& x) {
+    if constexpr (std::is_same_v<T, std::string> || std::is_arithmetic_v<T> || std::is_same_v<T, Task>) {
+        return str(x);
+    } else if constexpr (std::is_same_v<T, Bool>) {
+        return str(static_cast<bool>(x));
+    } else if constexpr (IsVector<T>::value) {
+        return strList(x, [](const auto& e) { return strAny(e); });
+    } else if constexpr (IsStdMap<T>::value) {
+        std::string s = "{";
+        bool first = true;
+        for (auto& [k, v] : x) {
+            if (!first) s += ", ";
+            first = false;
+            s += strAny(k) + ": " + strAny(v);
+        }
+        return s + "}";
+    } else if constexpr (IsOptional<T>::value) {
+        return x ? strAny(*x) : std::string("null");
+    } else if constexpr (IsSharedPtr<T>::value) {
+        return x ? frg$str(x) : std::string("null");
+    } else if constexpr (std::is_pointer_v<T>) {
+        return x ? strAny(*x) : std::string("removed pointer");
+    } else if constexpr (IsFunction<T>::value) {
+        return "function value";
+    } else {
+        return frg$str(x);
+    }
 }
 
 // ---------------------------------------------------------------- maps

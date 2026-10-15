@@ -253,6 +253,7 @@ private:
     Module* cur = nullptr;
     FuncDecl* fn = nullptr;
     TypeDecl* curType = nullptr;
+    TypeDecl* genericScope = nullptr;  // the generic type whose fields and methods are being read (its T is a type there)
     std::vector<std::map<std::string, VarDecl*>> scopes;
     std::vector<char> breakables;  // 'l' for a loop, 's' for a switch
     size_t callArgs = SIZE_MAX;    // while checking the callee of a call: how many values it's called with
@@ -292,6 +293,8 @@ private:
     void registerDecls(Module* m);
     void resolveSignatures(Module* m);
     void resolveTypeDecl(TypeDecl* d);
+    Type* namedType(TypeDecl* d, const TypeRef& r);
+    void resolveTypeDeclParts(TypeDecl* d);
     void resolveFunc(FuncDecl* f);
     void checkOverrides(TypeDecl* d);
     void checkAbstract(TypeDecl* d);
@@ -321,9 +324,10 @@ private:
     void valueMember(Expr* e, Expr* o);
     Type* finishRef(Expr* e, bool allowNonValue);
     Type* callExpr(Expr* e, Type* expected);
-    FuncDecl* resolveCall(Expr* e, const std::vector<FuncDecl*>& candidates, const std::string& name);
-    bool checkArgs(Expr* e, std::vector<ExprPtr>& args, FuncDecl* f, const std::string& name);
-    Type* construct(Expr* e, std::vector<ExprPtr>& args, TypeDecl* d);
+    FuncDecl* resolveCall(Expr* e, const std::vector<FuncDecl*>& candidates, const std::string& name, Type* inst = nullptr);
+    bool checkArgs(Expr* e, std::vector<ExprPtr>& args, FuncDecl* f, const std::string& name, Type* inst = nullptr);
+    Type* construct(Expr* e, std::vector<ExprPtr>& args, TypeDecl* d, Type* expected = nullptr);
+    Type* genericInstance(Expr* o);
     Type* builtinCall(Expr* e, const Builtin* b);
     Type* bmethodCall(Expr* e);
     Type* indexExpr(Expr* e);
@@ -465,6 +469,31 @@ std::string Checker::unknownTypeHint(const std::string& name) {
     return "";
 }
 
+// A struct, class or enum named in a type: Box<int> gives each of Box's type names a type.
+Type* Checker::namedType(TypeDecl* d, const TypeRef& r) {
+    if (d->typeParams.empty()) {
+        if (!r.args.empty()) reportError(r.loc, "'" + d->name + "' doesn't take types inside < >");
+        return tNamed(d);
+    }
+    std::string example = d->name + "<";
+    for (size_t i = 0; i < d->typeParams.size(); i++) example += i ? ", int" : "int";
+    example += ">";
+    if (r.args.size() != d->typeParams.size()) {
+        reportError(r.loc,
+                    "'" + d->name + "' needs " + std::to_string(d->typeParams.size()) + " type" + (d->typeParams.size() == 1 ? "" : "s") +
+                        " inside < >, for " + joinNames(d->typeParams),
+                    "for example: " + example);
+        return nullptr;
+    }
+    std::vector<Type*> args;
+    for (const TypeRef& a : r.args) {
+        Type* t = resolveType(a, false);
+        if (t == tError()) return nullptr;
+        args.push_back(t);
+    }
+    return tGeneric(d, args);
+}
+
 Type* Checker::resolveType(const TypeRef& r, bool allowVoid) {
     if (r.empty()) return tVoid();
     Type* base = nullptr;
@@ -515,9 +544,15 @@ Type* Checker::resolveType(const TypeRef& r, bool allowVoid) {
                 return tError();
             }
             base = tFunction(ret, params);
-        } else if (TypeDecl* d = findTypeDecl(name)) {
+        } else if (TypeDecl* scope = genericScope ? genericScope : curType;
+                   scope && std::find(scope->typeParams.begin(), scope->typeParams.end(), name) != scope->typeParams.end()) {
+            // T inside class Box<T>
             if (!r.args.empty()) reportError(r.loc, "'" + name + "' doesn't take types inside < >");
-            base = tNamed(d);
+            tNamed(scope);
+            base = scope->paramTypes[std::find(scope->typeParams.begin(), scope->typeParams.end(), name) - scope->typeParams.begin()];
+        } else if (TypeDecl* d = findTypeDecl(name)) {
+            base = namedType(d, r);
+            if (!base) return tError();
         } else {
             reportError(r.loc, "unknown type '" + name + "'", unknownTypeHint(name));
             return tError();
@@ -552,8 +587,8 @@ Type* Checker::resolveType(const TypeRef& r, bool allowVoid) {
             return tError();
         }
         if (privateBlocked(d->isPrivate, nullptr, m, r.loc, d->name)) return tError();
-        if (!r.args.empty()) reportError(r.loc, "'" + d->name + "' doesn't take types inside < >");
-        base = tNamed(d);
+        base = namedType(d, r);
+        if (!base) return tError();
     }
 
     if (base == tVoid() && (!allowVoid || r.optional)) {
@@ -580,14 +615,44 @@ void Checker::resolveFunc(FuncDecl* f) {
 
 void Checker::resolveTypeDecl(TypeDecl* d) {
     if (d->kind == DK::Enum) return;
+    genericScope = d;
+    resolveTypeDeclParts(d);
+    genericScope = nullptr;
+}
+
+void Checker::resolveTypeDeclParts(TypeDecl* d) {
+    for (size_t i = 0; i < d->typeParams.size(); i++) {
+        const std::string& n = d->typeParams[i];
+        if (std::find(d->typeParams.begin(), d->typeParams.begin() + i, n) != d->typeParams.begin() + i)
+            reportError(d->typeParamLocs[i], "'" + n + "' is inside the < > twice", "give each one its own name, like <K, V>");
+        else if (isBuiltinTypeName(n) || findTypeDecl(n))
+            reportError(d->typeParamLocs[i], "'" + n + "' is already a type, so it can't be the name inside < >",
+                        "use a short name that isn't a type yet, like T");
+    }
+    if (!d->typeParams.empty()) {
+        if (!d->baseRef.empty())
+            reportError(d->baseRef.loc, "a generic type can't inherit from another type or have interfaces yet",
+                        "remove the : part, or make " + d->name + " without < >");
+        for (auto& f : d->fields)
+            if (f->isStatic)
+                reportError(f->loc, "a generic type can't have static fields yet",
+                            "each " + d->name + "<...> would need its own, so put it in a global variable instead");
+        for (auto& m : d->methods)
+            if (m->isStatic)
+                reportError(m->loc, "a generic type can't have static methods yet", "make it a normal function outside " + d->name);
+    }
     // class Goblin : Enemy, Attacker - at most one class to inherit from, and any number of interfaces.
     std::vector<const TypeRef*> refs;
     if (!d->baseRef.empty()) refs.push_back(&d->baseRef);
     for (auto& r : d->moreBaseRefs) refs.push_back(&r);
+    if (!d->typeParams.empty()) refs.clear();  // already an error above
     for (const TypeRef* ref : refs) {
         Type* bt = resolveType(*ref, false);
         if (bt == tError()) continue;
-        if (bt->kind != TK::Class) {
+        if (isGeneric(bt)) {
+            reportError(ref->loc, "a class can't inherit from a generic type like " + bt->name + " yet",
+                        "give " + d->name + " a field of type " + bt->name + " instead");
+        } else if (bt->kind != TK::Class) {
             reportError(ref->loc, "a class can only inherit from another class or have an interface, but '" + bt->name + "' is " +
                                       (bt->decl ? "a " + kindWord(bt->decl) : aType(bt)));
         } else if (bt->decl == d || inheritsFrom(bt->decl, d)) {
@@ -1236,6 +1301,12 @@ void Checker::valueMember(Expr* e, Expr* o) {
     const std::string& n = e->text;
     Resolved& r = e->res;
     Type* t = o->type;
+    if ((t->kind == TK::Optional ? t->elem : t)->kind == TK::TypeParam) {
+        Type* tp = t->kind == TK::Optional ? t->elem : t;
+        reportError(e->loc, tp->name + " could be any type, so Forge can't know it has '" + n + "'",
+                    "inside " + tp->decl->name + ", a " + tp->name + " can only be stored, passed on, given back, compared with == and printed");
+        return;
+    }
     if (t->kind == TK::Pointer && n == "value") {
         r.kind = RK::PointerValue;
         e->type = t->elem;
@@ -1460,7 +1531,11 @@ Type* Checker::memberExpr(Expr* e, bool allowNonValue) {
             if (o->type && o->type != tError()) valueMember(e, o);
             break;
     }
-    return finishRef(e, allowNonValue);
+    Type* t = finishRef(e, allowNonValue);
+    // box.item on a Box<int>: the field is a T inside Box, and an int here.
+    if (t && (e->res.kind == RK::Field) && o->kind != EK::This && o->kind != EK::Super)
+        if (Type* inst = genericInstance(o)) e->type = t = substType(t, inst->decl->paramTypes, inst->params);
+    return t;
 }
 
 void Checker::checkRunCallbacks(const Loc& loc) {
@@ -1480,8 +1555,26 @@ void Checker::checkRunCallbacks(const Loc& loc) {
         reportError(d->loc, "for window.run(), draw has to be written as: void draw()");
 }
 
-bool Checker::checkArgs(Expr* e, std::vector<ExprPtr>& args, FuncDecl* f, const std::string& name) {
+// The Box<int> that `o` is (following ? and pointers), or nullptr if it isn't a generic type.
+Type* Checker::genericInstance(Expr* o) {
+    Type* t = o->type;
+    while (t && (t->kind == TK::Optional || t->kind == TK::Pointer)) t = t->elem;
+    if (o->kind == EK::This || o->kind == EK::Super) t = curType ? tNamed(curType) : nullptr;
+    return t && isGeneric(t) ? t : nullptr;
+}
+
+// A parameter's type, with T filled in when it's called on a Box<int>.
+static Type* paramType(FuncDecl* f, size_t i, Type* inst) {
+    Type* t = f->params[i]->type;
+    return inst ? substType(t, inst->decl->paramTypes, inst->params) : t;
+}
+
+bool Checker::checkArgs(Expr* e, std::vector<ExprPtr>& args, FuncDecl* f, const std::string& name, Type* inst) {
     size_t total = f->params.size(), required = f->requiredParams();
+    if (inst) {
+        e->paramTypes.clear();
+        for (size_t i = 0; i < total; i++) e->paramTypes.push_back(paramType(f, i, inst));
+    }
     if (args.size() < required || args.size() > total) {
         for (auto& a : args) value(a.get());
         std::string want = required == total ? std::to_string(total) : std::to_string(required) + " to " + std::to_string(total);
@@ -1490,14 +1583,14 @@ bool Checker::checkArgs(Expr* e, std::vector<ExprPtr>& args, FuncDecl* f, const 
                     "it's written as: " + signatureOf(f));
         return false;
     }
-    for (size_t i = 0; i < args.size(); i++) checkInto(args[i].get(), f->params[i]->type, "'" + f->params[i]->name + "' in " + name + "()");
+    for (size_t i = 0; i < args.size(); i++) checkInto(args[i].get(), paramType(f, i, inst), "'" + f->params[i]->name + "' in " + name + "()");
     for (size_t i = args.size(); i < total; i++) e->defaultArgs.push_back(f->params[i]->init.get());
     return true;
 }
 
-FuncDecl* Checker::resolveCall(Expr* e, const std::vector<FuncDecl*>& candidates, const std::string& name) {
+FuncDecl* Checker::resolveCall(Expr* e, const std::vector<FuncDecl*>& candidates, const std::string& name, Type* inst) {
     if (candidates.size() == 1) {
-        checkArgs(e, e->args, candidates[0], name);
+        checkArgs(e, e->args, candidates[0], name, inst);
         return candidates[0];
     }
     bool bad = false;
@@ -1513,7 +1606,7 @@ FuncDecl* Checker::resolveCall(Expr* e, const std::vector<FuncDecl*>& candidates
         int score = 0;
         for (size_t i = 0; fits && i < e->args.size(); i++) {
             Expr* a = e->args[i].get();
-            Type* T = f->params[i]->type;
+            Type* T = paramType(f, i, inst);
             fits = canAssignQuiet(a, T);
             if (a->type == T || (a->litInt && T == tInt(32, true)) || (a->litFloat && T == tFloat(32))) score += 2;
             else if ((a->litInt && T->kind == TK::Int) || (a->litFloat && T->kind == TK::Float)) score += 1;
@@ -1525,7 +1618,11 @@ FuncDecl* Checker::resolveCall(Expr* e, const std::vector<FuncDecl*>& candidates
     }
     for (FuncDecl* f : candidates) {
         if (f != best) continue;
-        for (size_t i = 0; i < e->args.size(); i++) assignable(e->args[i].get(), f->params[i]->type, "");
+        if (inst) {
+            e->paramTypes.clear();
+            for (size_t i = 0; i < f->params.size(); i++) e->paramTypes.push_back(paramType(f, i, inst));
+        }
+        for (size_t i = 0; i < e->args.size(); i++) assignable(e->args[i].get(), paramType(f, i, inst), "");
         for (size_t i = e->args.size(); i < f->params.size(); i++) e->defaultArgs.push_back(f->params[i]->init.get());
         return f;
     }
@@ -1535,8 +1632,24 @@ FuncDecl* Checker::resolveCall(Expr* e, const std::vector<FuncDecl*>& candidates
     return nullptr;
 }
 
-Type* Checker::construct(Expr* e, std::vector<ExprPtr>& args, TypeDecl* d) {
+Type* Checker::construct(Expr* e, std::vector<ExprPtr>& args, TypeDecl* d, Type* expected) {
     e->builds = d;
+    Type* inst = nullptr;
+    if (!d->typeParams.empty()) {
+        // Box(5) is a Box<int> when that's what's wanted: Box<int> b = Box(5);
+        Type* want = expected && expected->kind == TK::Optional ? expected->elem : expected;
+        if (want && want->decl == d) inst = want;
+        else if (curType == d) inst = tNamed(d);
+        else {
+            for (auto& a : args) value(a.get());
+            std::string example = d->name + "<";
+            for (size_t i = 0; i < d->typeParams.size(); i++) example += i ? ", int" : "int";
+            reportError(e->loc, "Forge needs to know what " + joinNames(d->typeParams) + " " + (d->typeParams.size() == 1 ? "is" : "are") +
+                                    " for this " + d->name,
+                        "make it where its type is written, like: " + example + "> b = " + d->name + "(...);");
+            return e->type = tError();
+        }
+    }
     if (d->kind == DK::Interface || d->isAbstract) {
         for (auto& a : args) value(a.get());
         reportError(e->loc, d->name + " is " + (d->kind == DK::Interface ? "an interface" : "an abstract class") + ", so it can't be made directly",
@@ -1557,7 +1670,7 @@ Type* Checker::construct(Expr* e, std::vector<ExprPtr>& args, TypeDecl* d) {
     }
     std::vector<FuncDecl*> ctors = findCtors(d);
     if (!ctors.empty()) {
-        FuncDecl* ctor = resolveCall(e, ctors, d->name);
+        FuncDecl* ctor = resolveCall(e, ctors, d->name, inst);
         if (!ctor) return e->type = tError();
         e->ctor = ctor;
         if (ctor->isPrivate && !(curType && inheritsFrom(curType, ctor->owner)))
@@ -1573,14 +1686,25 @@ Type* Checker::construct(Expr* e, std::vector<ExprPtr>& args, TypeDecl* d) {
                                     std::to_string(args.size()),
                         "its fields, in order, are: " + joinNames(names) + " - or give " + d->name + " a constructor");
         } else {
-            for (size_t i = 0; i < args.size(); i++) checkInto(args[i].get(), fields[i]->type, "'" + fields[i]->name + "' in " + d->name + "()");
+            if (inst) {
+                e->paramTypes.clear();
+                for (VarDecl* f : fields) e->paramTypes.push_back(substType(f->type, d->paramTypes, inst->params));
+            }
+            for (size_t i = 0; i < args.size(); i++)
+                checkInto(args[i].get(), inst ? e->paramTypes[i] : fields[i]->type, "'" + fields[i]->name + "' in " + d->name + "()");
+            if (inst && args.empty())
+                for (VarDecl* f : fields)
+                    if (f->type->kind == TK::TypeParam && !f->init) {
+                        reportError(e->loc, d->name + "() needs a value for '" + f->name + "', because " + f->type->name + " could be a class",
+                                    "give it all its fields: " + d->name + "(...), or give " + d->name + " a constructor");
+                        break;
+                    }
         }
     }
-    return e->type = tNamed(d);
+    return e->type = inst ? inst : tNamed(d);
 }
 
 Type* Checker::callExpr(Expr* e, Type* expected) {
-    (void)expected;
     Expr* callee = e->a.get();
     size_t outer = callArgs;
     callArgs = e->args.size();
@@ -1605,8 +1729,10 @@ Type* Checker::callExpr(Expr* e, Type* expected) {
         }
         case RK::Method: {
             FuncDecl* f = callee->res.func;
-            checkArgs(e, e->args, f, f->name);
-            return e->type = f->ret ? f->ret : tError();
+            Type* inst = callee->kind == EK::Member ? genericInstance(callee->a.get()) : curType && !curType->typeParams.empty() ? tNamed(curType) : nullptr;
+            checkArgs(e, e->args, f, f->name, inst);
+            Type* ret = f->ret ? f->ret : tError();
+            return e->type = inst ? substType(ret, inst->decl->paramTypes, inst->params) : ret;
         }
         case RK::Builtin: return builtinCall(e, callee->res.builtin);
         case RK::BuiltinMethod:
@@ -1615,7 +1741,7 @@ Type* Checker::callExpr(Expr* e, Type* expected) {
                 return e->type = tError();
             }
             return bmethodCall(e);
-        case RK::Type: return construct(e, e->args, callee->res.tdecl);
+        case RK::Type: return construct(e, e->args, callee->res.tdecl, expected);
         case RK::None:
             for (auto& a : e->args) value(a.get());
             if (callee->type && callee->type != tError()) reportError(e->loc, "this is " + aType(callee->type) + ", not a function");
@@ -1824,7 +1950,7 @@ Type* Checker::mapLit(Expr* e, Type* expected) {
 
 Type* Checker::braceLit(Expr* e, Type* expected) {
     Type* want = expected && expected->kind == TK::Optional ? expected->elem : expected;
-    if (want && (want->kind == TK::Struct || want->kind == TK::Class)) return construct(e, e->args, want->decl);
+    if (want && (want->kind == TK::Struct || want->kind == TK::Class)) return construct(e, e->args, want->decl, want);
     if (want && want->kind == TK::Map && e->args.empty()) return e->type = want;
     if (want && want->kind == TK::List) {
         reportError(e->loc, "lists use [ ] instead of { }", "for example: [1, 2, 3]");
@@ -1936,7 +2062,7 @@ Type* Checker::equalityOp(Expr* e) {
         }
     }
     if (L == R && L->kind != TK::Void) return ok(L);
-    if (L->kind == TK::Class && R->kind == TK::Class) {
+    if (L->kind == TK::Class && R->kind == TK::Class && !isGeneric(L) && !isGeneric(R)) {
         if (inheritsFrom(L->decl, R->decl)) return ok(R);
         if (inheritsFrom(R->decl, L->decl)) return ok(L);
     }
@@ -2102,6 +2228,9 @@ void Checker::varStmt(VarDecl* v) {
         reportError(v->loc, "'" + v->name + "' needs a starting value",
                     "give it a function, like: " + v->type->name + " " + v->name + " = (...) { ... };  - or make it optional: " +
                         v->type->name + "? " + v->name + " = null;");
+    } else if (v->type->kind == TK::TypeParam) {
+        reportError(v->loc, "'" + v->name + "' needs a starting value, because " + v->type->name + " could be a class",
+                    "give it one, or make it optional: " + v->type->name + "? " + v->name + " = null;");
     } else if (v->type->kind == TK::Class || v->type->kind == TK::Pointer) {
         reportError(v->loc, "'" + v->name + "' needs a starting value",
                     v->type->kind == TK::Class ? "make one, like: " + v->type->name + " " + v->name + " = " + v->type->name +
@@ -2433,6 +2562,20 @@ bool Checker::run() {
                 if (f->isStatic) continue;
                 if (f->init) {
                     checkInto(f->init.get(), f->type, "'" + f->name + "'");
+                } else if (f->type->kind == TK::TypeParam) {
+                    // T could be a class, which can't be empty: every constructor has to give it a value.
+                    for (auto& c : d->ctors) {
+                        bool set = false;
+                        for (auto& st : c->body->body)
+                            if (st->kind == SK::Assign && st->op == "=" &&
+                                ((st->expr->kind == EK::Name && st->expr->text == f->name) ||
+                                 (st->expr->kind == EK::Member && st->expr->a->kind == EK::This && st->expr->text == f->name)))
+                                set = true;
+                        if (!set)
+                            reportError(c->loc, "this constructor has to give '" + f->name + "' a value, because " + f->type->name + " could be a class",
+                                        "add this." + f->name + " = ...; to it (not inside an if or a loop), or make the field optional: " +
+                                            f->type->name + "? " + f->name + ";");
+                    }
                 } else if (!m->isPrelude && (f->type->kind == TK::Class || f->type->kind == TK::Pointer)) {
                     reportError(f->loc, "the field '" + f->name + "' needs a starting value",
                                 f->type->kind == TK::Class ? "give it one (" + f->typeRef.display() + " " + f->name + " = " + f->typeRef.display() +

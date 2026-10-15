@@ -396,6 +396,8 @@ for (Entity e in all) {
 
 **`static`** fields and methods belong to the type, not to each object: `static int count = 0;` is one counter shared by every `Enemy`, and `static Enemy boss() { ... }` is called on the type. Outside the type write `Enemy.count` and `Enemy.boss()`; inside it, the plain name works. A static method has no object, so it can't use normal fields, normal methods or `this` (an error says so). Static fields aren't part of the constructor or of printing. Structs can have them too (`Point.origin`).
 
+**Generic types.** `class Box<T> { T item; Box(T item) { this.item = item; } }` and `struct Pair<A, B> { A first; B second; }`. Used with the types written out: `Box<int> coins = Box(5);` (Forge works out `T` from the type on the left; `print(Box(5))` alone is an error asking what `T` is). `T` can be any type. Inside, a `T` can only be stored, passed, returned, compared with `==`/`!=` and printed: no fields, methods or maths on it. `T?`, `list<T>` and `map<string, T>` work. A `T` field must be set at the top level of every constructor, or be `T?`; a `T` local needs a starting value. Generic types can't inherit, have interfaces or statics yet, nothing can inherit from them, and functions can't be generic. `Box<int>` and `Box<float>` are different types.
+
 **Interfaces and abstract classes.** `interface Attacker { int power(); void attack(string target); }` lists methods with no code (each ends in `;`, no fields/constructors/static/private, and an interface can't inherit). `abstract class Enemy { ... abstract int reward(); ... }` is a normal class that can also have `abstract` methods with no code; only abstract classes can have them. After the `:` comes at most one class, then any number of interfaces: `class Goblin : Enemy, Attacker, Flyer`. The class must write every method its interfaces and abstract parents list, with exactly the same types (the error names the missing one and what to add). `Attacker()` and `Enemy()` are errors: neither can be made directly. They work as types everywhere (`list<Attacker>`, `is`, `as`), and `super.reward()` is an error when `reward` is abstract. Structs can't have interfaces.
 
 **`private`** hides things. A private field or method can only be used inside its class (and classes that inherit from it). A private function, global variable or type at the top of a file can only be used inside that file. `public` is allowed too and means the same as writing nothing.
@@ -859,7 +861,6 @@ Runtime error in main.frg:10: position 5 is outside the list (it has 3 items, at
 **Things Forge does not have yet.** Don't teach or use these. Say "not in Forge yet" and work around them:
 
 - `char` (single letters are one-letter strings), fixed-size arrays (use `list`), tuples
-- Generics you write yourself (`class Box<T>`)
 - Two methods with the same name (only constructors and top-level functions can share a name), operator overloading for your own types
 - `protected` (`private` already includes classes that inherit)
 - Labeled breaks, exceptions (`try` / `catch`), `goto`

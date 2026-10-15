@@ -1,0 +1,48 @@
+=== main.frg
+class Box<T> {
+    T item;
+
+    Box(T item) {
+        if (true) {
+            this.item = item;
+        }
+    }
+
+    void show() {
+        print(item.name);
+        T other;
+    }
+}
+
+class Pair<A, A> {
+}
+
+struct Bag<int> {
+}
+
+class Wide<T> : Box<T> {
+}
+
+class Small : Box<int> {
+}
+
+int main(){
+    Box<int, int> a = Box(1);
+    Box b = Box(1);
+    Box<int> c = Box("no");
+    print(Box(2));
+    Box<int> d = Box(1);
+    Box<float> e = d;
+    return 0;
+}
+=== error
+'A' is inside the < > twice
+'int' is already a type, so it can't be the name inside < >
+a generic type can't inherit from another type or have interfaces yet
+a class can't inherit from a generic type like Box<int> yet
+T could be any type, so Forge can't know it has 'name'
+'other' needs a starting value, because T could be a class
+this constructor has to give 'item' a value, because T could be a class
+'Box' needs 1 type inside < >, for T
+'Box' needs 1 type inside < >, for T
+Forge needs to know what T is for this Box

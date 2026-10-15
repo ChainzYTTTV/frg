@@ -367,6 +367,19 @@ TypeDeclPtr Parser::parseTypeDecl(bool isAbstract) {
     d->name = name.text;
     d->loc = name.loc;
 
+    if (at(Tok::Lt)) {
+        // class Box<T>, struct Pair<A, B>: a generic type, with a type name for each type it's made with.
+        if (d->kind == DK::Enum || d->kind == DK::Interface)
+            fail(cur().loc, "an " + kwName + " can't be generic", "only structs and classes can have types inside < >, like class Box<T>");
+        p++;
+        do {
+            const Token& tp = expect(Tok::Ident, "a name for the type inside < >, like T");
+            d->typeParams.push_back(tp.text);
+            d->typeParamLocs.push_back(tp.loc);
+        } while (accept(Tok::Comma));
+        expect(Tok::Gt, "'>'");
+    }
+
     if (d->kind == DK::Enum) {
         const Token& open = expect(Tok::LBrace, "'{'");
         while (!at(Tok::RBrace)) {

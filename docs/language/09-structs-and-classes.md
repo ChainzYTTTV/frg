@@ -476,7 +476,44 @@ Things to know:
 - An interface or an abstract class can't be made directly: `Attacker()` and `Enemy()` are errors. Make one of the classes that have it.
 - `super.reward()` doesn't work when `reward` is abstract in the parent, because there's no code to call.
 - Structs can't have interfaces or be abstract, because they're copied rather than shared.
-- Printing something through an interface prints the real object, like `Goblin(name: "Grub", hp: 10)`.
+- Printing something through an interface prints the real object, like `Goblin(name: Grub, hp: 10)`.
+
+## Generic types: one type that holds any type
+
+`list<int>` and `list<string>` are the same kind of thing holding different types. Your own structs and classes can work like that too. Put a name for "some type" inside `< >` after the type's name, and use it like a type inside:
+
+```cpp
+class Box<T> {
+    T item;
+
+    Box(T item) {
+        this.item = item;
+    }
+
+    T open() {
+        return item;
+    }
+}
+
+Box<int> coins = Box(5);              // here T is int
+Box<string> note = Box("hello");      // here T is string
+Box<Player> hero = Box(Player());     // here T is Player
+print(coins.open() + 1);              // 6
+```
+
+A type can have several of them: `struct Pair<A, B> { A first; B second; }`, used as `Pair<string, int> score = Pair("Ana", 30);`.
+
+Things to know:
+
+- `T` can be any type at all: numbers, text, lists, your own structs and classes, even another `Box<int>`.
+- Forge works out what `T` is from where the value goes, so write the full type where you make one: `Box<int> coins = Box(5);`. On its own, like `print(Box(5))`, Forge asks you to say what `T` is.
+- Inside the type, Forge doesn't know what `T` will be, so a `T` can only be stored, passed on, given back, compared with `==` and `!=`, and printed. You can't use its fields or methods (`item.name`) or do maths with it.
+- `T?`, `list<T>` and `map<string, T>` all work inside.
+- Because `T` could be a class, which can't be empty, a field of type `T` needs a value from every constructor (`this.item = item;`, not inside an `if` or a loop), or has to be optional (`T? item;`). A `T` local variable needs a starting value.
+- Without a constructor, a generic type is made with all its fields: `Pair("Ana", 30)`.
+- `Box<int>` and `Box<float>` are different types: one can't be stored in the other.
+- For now, a generic type can't inherit, have interfaces, or have `static` fields and methods, and no class can inherit from one. Functions can't be generic (only structs and classes).
+- The name inside `< >` can't already be a type's name. `T` is the usual choice, or a short word like `Item`.
 
 ## Types from other files
 
@@ -496,6 +533,7 @@ class Boss : enemies.goblin.Goblin { ... }
 - Methods can call each other by name, and can use fields by name or through `this`.
 - Methods can't have the same name as each other. Only constructors can share a name.
 - A class inherits from at most one class, plus any number of interfaces.
+- A generic type (`class Box<T>`) is written with every type it holds: `Box<int>`.
 - Class objects are cleaned up automatically once nothing uses them anymore. There's no need (and no way) to delete them.
 
 ## What's next

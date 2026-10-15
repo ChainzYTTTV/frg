@@ -420,6 +420,8 @@ for (Entity e in all) {
 }
 ```
 
+**`static`** fields and methods belong to the type, not to each object: `static int count = 0;` is one counter shared by every `Enemy`, and `static Enemy boss() { ... }` is called on the type. Outside the type write `Enemy.count` and `Enemy.boss()`; inside it, the plain name works. A static method has no object, so it can't use normal fields, normal methods or `this` (an error says so). Static fields aren't part of the constructor or of printing. Structs can have them too (`Point.origin`).
+
 **`private`** hides things. A private field or method can only be used inside its class (and classes that inherit from it). A private function, global variable or type at the top of a file can only be used inside that file. `public` is allowed too and means the same as writing nothing.
 
 ```cpp
@@ -883,7 +885,7 @@ Runtime error in main.frg:10: position 5 is outside the list (it has 3 items, at
 - `char` (single letters are one-letter strings), fixed-size arrays (use `list`), tuples
 - Generics you write yourself (`class Box<T>`)
 - Two methods with the same name (only constructors and top-level functions can share a name), operator overloading for your own types
-- Interfaces, abstract classes, `protected`, `static` fields or methods in your own types
+- Interfaces, abstract classes, `protected`
 - Labeled breaks, exceptions (`try` / `catch`), `goto`
 - Networking, shaders in the engine, 3D lighting
 - `<network>` is planned but **doesn't exist yet**.
@@ -3984,6 +3986,43 @@ class Enemy {
 }
 ```
 
+### static: shared by the whole type
+
+A normal field belongs to **each object**: every enemy has its own `hp`. A **`static`** field belongs to the **type itself**: there's only one, shared by all of them. A static method is a function that belongs to the type: it's called on the type's name, not on an object.
+
+```cpp
+class Enemy {
+    static int count = 0;        // one counter for all enemies
+    string name;
+
+    Enemy(string name) {
+        this.name = name;
+        count++;                 // inside the class, no "Enemy." is needed
+    }
+
+    static Enemy boss() {        // makes a special enemy
+        Enemy b = Enemy("Boss");
+        return b;
+    }
+}
+
+Enemy a = Enemy("Grub");
+Enemy b = Enemy.boss();         // a static method: called on the type
+print(Enemy.count);             // 2: a static field, reached through the type
+Enemy.count = 0;                // and changed the same way
+```
+
+Things to know:
+
+- Outside the type, write the type's name first: `Enemy.count`, `Enemy.boss()`. Inside it, the plain name works.
+- A static method has no object, so it can't use the normal fields, the normal methods or `this`. Forge says so, and suggests making it a normal method or giving it the object as a parameter.
+- A normal method can't be called on the type (`Enemy.attack()`); it needs an object.
+- Static fields can have a starting value. Like global variables, static fields of a class type (or a `Function<...>`) need one, or must be optional.
+- Static fields aren't part of an object: they're not in its constructor, and not shown when it's printed.
+- Structs can have static fields and methods too: `Point.origin`, `Point.distance(a, b)`.
+- `private static` works: only the type itself can use it.
+- A class that inherits gets its parent's static fields and methods (they're still the same, shared ones). Static methods can't be replaced.
+
 ### Types from other files
 
 Types follow the file-name prefix rule (see “7. Files and Folders”):
@@ -4565,7 +4604,7 @@ These words have special meanings, so they can't be used as names for variables,
 | Control flow | `if` `else` `while` `do` `for` `in` `switch` `case` `default` `return` `break` `continue` |
 | Values | `true` `false` `null` `this` `super` |
 | Declarations | `struct` `class` `enum` `const` `void` |
-| Modifiers | `private` `public` `static` (built-in libraries only) |
+| Modifiers | `private` `public` `static` |
 | Logic | `and` `or` `not` |
 | Classes | `is` `as` |
 | Word operators | `negative` `bitnot` |
@@ -4660,7 +4699,7 @@ If you already know C++, C#, Java, JavaScript or Python, Forge will feel familia
 | `x?.y` (C#/JS) | `if (x != null) { x.y }` | an optional is used directly; it stops the game if it's null |
 | `(Goblin)e` / `e as Goblin` (C#) | `e as Goblin` gives `Goblin?` | |
 | `protected` | `private` | `private` already includes classes that inherit |
-| `static` members | top-level functions and globals in a file | `static` isn't available for your own types |
+| `static` members | `static int count = 0;` and `static Enemy boss() { ... }` | reached as `Enemy.count`, `Enemy.boss()` |
 | overloading `void f(int)` / `void f(float)` | the same: `void f(int)` and `void f(float)` | top-level functions and constructors can share a name; methods can't |
 | `class B extends A` / `class B : public A` | `class B : A` | |
 | `@Override` / `override` | nothing | a method with the same name and types replaces the parent's |
@@ -9107,6 +9146,26 @@ for (Entity e in enemies) {
     }
 }
 ```
+
+#### static
+
+A `static` field or method belongs to the type, not to each object: there's one, shared by all.
+
+```cpp
+class Enemy {
+    static int count = 0;
+    Enemy() {
+        count++;
+    }
+    static Enemy boss() {
+        return Enemy();
+    }
+}
+print(Enemy.count);       // outside the type: TypeName.thing
+Enemy b = Enemy.boss();
+```
+
+A static method has no object, so it can't use normal fields, normal methods or `this`.
 
 #### private
 

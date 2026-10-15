@@ -387,12 +387,20 @@ TypeDeclPtr Parser::parseTypeDecl() {
             if (at(Tok::KwPrivate) || at(Tok::KwPublic)) fail(cur().loc, "only one of private or public can be used");
         }
         if (at(Tok::KwStatic)) {
-            if (!prelude) fail(cur().loc, "'static' isn't available yet");
+            // static: a field or method that belongs to the type itself (Enemy.count), not to each object.
             p++;
+            if (d->kind == DK::Enum) fail(cur().loc, "an enum can't have static fields or methods");
             TypeRef type = parseType();
             const Token& fname = expect(Tok::Ident, "a name");
+            if (at(Tok::LParen)) {
+                d->methods.push_back(parseFuncRest(type, fname, false));
+                d->methods.back()->isStatic = true;
+                d->methods.back()->isPrivate = isPrivate;
+                continue;
+            }
             auto v = finishVar(false, type, fname);
             v->isStatic = true;
+            v->isPrivate = isPrivate;
             expect(Tok::Semi, "';'");
             d->fields.push_back(std::move(v));
             continue;

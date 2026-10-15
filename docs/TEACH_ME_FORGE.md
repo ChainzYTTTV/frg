@@ -394,6 +394,8 @@ for (Entity e in all) {
 }
 ```
 
+**`static`** fields and methods belong to the type, not to each object: `static int count = 0;` is one counter shared by every `Enemy`, and `static Enemy boss() { ... }` is called on the type. Outside the type write `Enemy.count` and `Enemy.boss()`; inside it, the plain name works. A static method has no object, so it can't use normal fields, normal methods or `this` (an error says so). Static fields aren't part of the constructor or of printing. Structs can have them too (`Point.origin`).
+
 **`private`** hides things. A private field or method can only be used inside its class (and classes that inherit from it). A private function, global variable or type at the top of a file can only be used inside that file. `public` is allowed too and means the same as writing nothing.
 
 ```cpp
@@ -857,7 +859,7 @@ Runtime error in main.frg:10: position 5 is outside the list (it has 3 items, at
 - `char` (single letters are one-letter strings), fixed-size arrays (use `list`), tuples
 - Generics you write yourself (`class Box<T>`)
 - Two methods with the same name (only constructors and top-level functions can share a name), operator overloading for your own types
-- Interfaces, abstract classes, `protected`, `static` fields or methods in your own types
+- Interfaces, abstract classes, `protected`
 - Labeled breaks, exceptions (`try` / `catch`), `goto`
 - Networking, shaders in the engine, 3D lighting
 - `<network>` is planned but **doesn't exist yet**.

@@ -1,0 +1,29 @@
+=== main.frg
+class Enemy {
+    static int count = 0;
+    int hp = 10;
+
+    static void reset() {
+        hp = 0;
+        this.hp = 1;
+        heal();
+    }
+
+    void heal() {
+        hp = 10;
+    }
+}
+
+int main(){
+    Enemy.heal();
+    Enemy.cont = 3;
+    color.RED = color.BLUE;
+    return 0;
+}
+=== error
+a static method belongs to the type, not to one object, so it can't use the field 'hp'
+a static method belongs to the type, not to one object, so it can't use 'this'
+a static method belongs to the type, not to one object, so it can't use the method 'heal'
+'heal' is a normal method, so it needs an object
+did you mean 'count'?
+built-in constants like this can't be changed

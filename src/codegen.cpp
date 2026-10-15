@@ -222,7 +222,7 @@ std::string Gen::ref(const Expr* e) {
             return qual(e->res.var->module, e->res.var->name);
         case RK::Func: {
             const FuncDecl* f = e->res.func;
-            std::string q = qual(f->module, f->name);
+            std::string q = f->owner ? f->owner->cpp + "::" + id(f->name) : qual(f->module, f->name);  // static methods have an owner
             if (e->type && e->type->kind == TK::Function && f->module->overloads.count(f->name) && f->module->overloads.at(f->name).size() > 1) {
                 // A function value of one version of an overloaded function: say which one.
                 std::string ps;
@@ -700,7 +700,7 @@ void Gen::emitTypeDef(TypeDecl* d) {
         head += d->base ? " : public " + d->base->cpp : " : public ::std::enable_shared_from_this<" + name + ">";
     line(head + " {");
     ind++;
-    for (auto& f : d->fields) line(f->type->cpp + " " + id(f->name) + "{};");
+    for (auto& f : d->fields) line((f->isStatic ? "static " : "") + f->type->cpp + " " + id(f->name) + (f->isStatic ? ";" : "{};"));
     line(name + "();");
     if (d->kind == DK::Class && !d->base) line("virtual ~" + name + "() = default;");
     for (auto& c : d->ctors) line("void frg$init(" + params(c.get()) + ");");
@@ -716,7 +716,8 @@ void Gen::emitTypeDef(TypeDecl* d) {
         if (hasAutoInit(d)) line("static " + self + " " + maker + "(" + fieldParams(d) + ");");
     }
     for (auto& m : d->methods)
-        line(std::string(d->kind == DK::Class ? "virtual " : "") + m->ret->cpp + " " + id(m->name) + "(" + params(m.get()) + ");");
+        line(std::string(m->isStatic ? "static " : d->kind == DK::Class ? "virtual " : "") + m->ret->cpp + " " + id(m->name) + "(" +
+             params(m.get()) + ");");
     if (d->kind == DK::Struct) line("bool operator==(const " + name + "&) const = default;");
     if (d->kind == DK::Class) {
         // Lets the runtime ask an object "are you a <type name>?" (used by ECS's entity.get("Health")).
@@ -766,7 +767,7 @@ void Gen::emitTypeFuncs(TypeDecl* d) {
     ind++;
     curType = nullptr;
     for (auto& f : d->fields)
-        if (f->init) line("this->" + id(f->name) + " = " + conv(f->init.get(), f->type) + ";");
+        if (f->init && !f->isStatic) line("this->" + id(f->name) + " = " + conv(f->init.get(), f->type) + ";");
     ind--;
     line("}");
 
@@ -882,7 +883,14 @@ GeneratedCpp Gen::run() {
         out += "\n";
     }
 
-    // 4. Global variables.
+    // 4. Global variables, and the static fields of structs and classes.
+    for (TypeDecl* d : typeOrder())
+        for (auto& f : d->fields) {
+            if (!f->isStatic) continue;
+            // d->cpp starts with "::", which C++ would join to the type before it, so it's left off here.
+            std::string decl = "inline " + f->type->cpp + " " + d->cpp.substr(2) + "::" + id(f->name);
+            line(f->init ? decl + " = " + conv(f->init.get(), f->type) + ";" : decl + "{};");
+        }
     for (Module* m : P.allModules) {
         if (m->ast.globals.empty()) continue;
         line("namespace " + m->cppNs + " {");

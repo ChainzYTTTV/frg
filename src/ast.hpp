@@ -122,7 +122,7 @@ struct VarDecl {
     bool isGlobal = false;
     bool isParam = false;
     bool isField = false;
-    bool isStatic = false;   // built-in constants like color.RED
+    bool isStatic = false;   // static fields: one shared by the whole type (Enemy.count), and built-in constants like color.RED
     bool isPrivate = false;  // only usable inside its class (fields) or its file (globals)
     Type* type = nullptr;
     Module* module = nullptr;
@@ -170,6 +170,7 @@ struct FuncDecl {
     TypeDecl* owner = nullptr;  // methods and constructors
     bool isCtor = false;
     bool isPrivate = false;     // only usable inside its class (methods) or its file (functions)
+    bool isStatic = false;      // a static method: belongs to the type, not to one object
     FuncDecl* overrides = nullptr;
 
     size_t requiredParams() const {

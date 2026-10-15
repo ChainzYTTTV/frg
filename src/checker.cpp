@@ -257,6 +257,11 @@ private:
     std::vector<char> breakables;  // 'l' for a loop, 's' for a switch
     size_t callArgs = SIZE_MAX;    // while checking the callee of a call: how many values it's called with
     Type* wantFunction = nullptr;  // while checking a name where a Function<...> is expected
+    bool inStatic = false;         // checking a static method: there's no object, so no fields or `this`
+    void staticMisuse(Expr* e, const std::string& what) {
+        reportError(e->loc, "a static method belongs to the type, not to one object, so it can't use " + what,
+                    "make it a normal method (without static), or give it the object as a parameter");
+    }
     size_t lambdaScope = SIZE_MAX; // inside a function value: the first scope that belongs to it
 
     // For warnings
@@ -630,6 +635,11 @@ void Checker::checkOverrides(TypeDecl* d) {
         if (findField(d->base, m->name)) reportError(m->loc, "'" + m->name + "' is already a field of a base class");
         FuncDecl* bm = findMethod(d->base, m->name);
         if (!bm) continue;
+        if (m->isStatic || bm->isStatic) {
+            reportError(m->loc, "'" + m->name + "' is already a method of " + bm->owner->name + ", and static methods can't be replaced",
+                        "give it a different name");
+            continue;
+        }
         bool same = bm->ret == m->ret && bm->params.size() == m->params.size();
         for (size_t i = 0; same && i < m->params.size(); i++) same = bm->params[i]->type == m->params[i]->type;
         if (!same)
@@ -778,10 +788,10 @@ Type* Checker::checkInto(Expr* e, Type* T, const std::string& dest) {
 
 bool Checker::isLvalue(Expr* e) {
     switch (e->kind) {
-        case EK::Name: return e->res.kind == RK::Local || e->res.kind == RK::Global || e->res.kind == RK::Field;
+        case EK::Name: return e->res.kind == RK::Local || e->res.kind == RK::Global || e->res.kind == RK::Field || e->res.kind == RK::TypeStatic;
         case EK::Member:
             if (e->res.kind == RK::PointerValue) return true;
-            if (e->res.kind == RK::Global) return true;
+            if (e->res.kind == RK::Global || e->res.kind == RK::TypeStatic) return true;
             if (e->res.kind == RK::Field) {
                 Expr* o = e->a.get();
                 if (o->kind == EK::This || o->kind == EK::Super) return true;
@@ -809,7 +819,7 @@ bool Checker::checkAssignTarget(Expr* e) {
         reportError(e->loc, "'" + v->name + "' is const, so it can't be changed");
         return false;
     }
-    if (e->res.kind == RK::TypeStatic) {
+    if (e->res.kind == RK::TypeStatic && (!e->res.tdecl || e->res.tdecl->builtin)) {
         reportError(e->loc, "built-in constants like this can't be changed");
         return false;
     }
@@ -858,6 +868,10 @@ Type* Checker::expr(Expr* e, Type* expected, bool allowNonValue) {
         case EK::BraceLit: return braceLit(e, expected);
         case EK::Ternary: return ternaryExpr(e, expected);
         case EK::This:
+            if (inStatic) {
+                staticMisuse(e, "'this'");
+                return e->type = tError();
+            }
             if (!curType) {
                 reportError(e->loc, "'this' only works inside the methods of a struct or class");
                 return e->type = tError();
@@ -1112,9 +1126,21 @@ Type* Checker::nameExpr(Expr* e, bool allowNonValue) {
     } else if (VarDecl* f = curType ? findField(curType, n) : nullptr) {
         r.kind = RK::Field;
         r.var = f;
+        if (inStatic) staticMisuse(e, "the field '" + n + "'");
+    } else if (VarDecl* sf = curType ? findStaticField(curType, n) : nullptr) {
+        r.kind = RK::TypeStatic;  // a static field of this type, used inside it without the type's name
+        r.var = sf;
+        r.tdecl = sf->owner;
     } else if (FuncDecl* m = curType ? findMethod(curType, n) : nullptr) {
-        r.kind = RK::Method;
-        r.func = m;
+        if (m->isStatic) {
+            r.kind = RK::Func;  // a static method is called like a function (the code generator adds the type's name)
+            r.func = m;
+            r.module = m->module;
+        } else {
+            r.kind = RK::Method;
+            r.func = m;
+            if (inStatic) staticMisuse(e, "the method '" + n + "'");
+        }
     } else if (auto g = cur->globals.find(n); g != cur->globals.end()) {
         r.kind = RK::Global;
         r.var = g->second;
@@ -1347,14 +1373,26 @@ Type* Checker::memberExpr(Expr* e, bool allowNonValue) {
                     reportError(e->loc, "the enum " + d->name + " has no value called '" + n + "'",
                                 guess.empty() ? "its values are: " + joinNames(d->enumValues) : "did you mean '" + guess + "'?");
                 }
-            } else if (auto it = d->fieldMap.find(n); it != d->fieldMap.end() && it->second->isStatic) {
+            } else if (VarDecl* sf = findStaticField(d, n)) {
                 r.kind = RK::TypeStatic;
-                r.var = it->second;
-                r.tdecl = d;
+                r.var = sf;
+                r.tdecl = sf->owner ? sf->owner : d;
+                privateBlocked(sf->isPrivate, sf->owner, nullptr, e->loc, n);
+            } else if (FuncDecl* m = findMethod(d, n); m && m->isStatic) {
+                r.kind = RK::Func;
+                r.func = m;
+                r.module = m->module;
+                privateBlocked(m->isPrivate, m->owner, nullptr, e->loc, n);
+            } else if (FuncDecl* m2 = findMethod(d, n)) {
+                (void)m2;
+                reportError(e->loc, "'" + n + "' is a normal method, so it needs an object: make a " + d->name + " first and call it on that",
+                            "or make it a static method, if it doesn't use the object's fields");
             } else {
                 std::vector<std::string> statics;
                 for (auto& [k, v] : d->fieldMap)
                     if (v->isStatic) statics.push_back(k);
+                for (auto& [k, m] : d->methodMap)
+                    if (m->isStatic) statics.push_back(k);
                 std::string guess = suggestName(n, statics);
                 reportError(e->loc, "'" + n + "' isn't something " + d->name + " has by itself",
                             guess.empty() ? "to use a field or method, make a " + d->name + " first and use that"
@@ -1496,8 +1534,9 @@ Type* Checker::callExpr(Expr* e, Type* expected) {
     switch (callee->res.kind) {
         case RK::Func: {
             Module* m = callee->res.module ? callee->res.module : callee->res.func->module;
-            std::vector<FuncDecl*> candidates = m->overloads.count(callee->res.func->name) ? m->overloads[callee->res.func->name]
-                                                                                           : std::vector<FuncDecl*>{callee->res.func};
+            std::vector<FuncDecl*> candidates = !callee->res.func->owner && m->overloads.count(callee->res.func->name)
+                                                    ? m->overloads[callee->res.func->name]
+                                                    : std::vector<FuncDecl*>{callee->res.func};
             std::string name = m->isPrelude ? m->name + "." + callee->res.func->name : callee->res.func->name;
             FuncDecl* f = resolveCall(e, candidates, name);
             if (!f) return e->type = tError();
@@ -2247,6 +2286,7 @@ void Checker::checkBody(FuncDecl* f, TypeDecl* owner) {
     cur = f->module;
     fn = f;
     curType = owner;
+    inStatic = f->isStatic;
     breakables.clear();
     scopes.clear();
     scopes.emplace_back();
@@ -2273,6 +2313,7 @@ void Checker::checkBody(FuncDecl* f, TypeDecl* owner) {
         reportError(f->loc, "'" + f->name + "' doesn't always return a value", "add a return at the end, like 'return " + example + ";'");
     }
     curType = nullptr;
+    inStatic = false;
 }
 
 bool Checker::run() {
@@ -2325,6 +2366,15 @@ bool Checker::run() {
             for (auto& meth : d->methods) checkDefaults(meth.get());
             for (auto& c : d->ctors) checkDefaults(c.get());
             for (auto& f : d->fields) {
+                if (f->isStatic && !m->isPrelude && f->init) {  // a static field's starting value
+                    checkInto(f->init.get(), f->type, "'" + f->name + "'");
+                    continue;
+                }
+                if (f->isStatic && !m->isPrelude && (f->type->kind == TK::Class || f->type->kind == TK::Pointer || f->type->kind == TK::Function)) {
+                    reportError(f->loc, "the static field '" + f->name + "' needs a starting value",
+                                "give it one, or make it optional: static " + f->typeRef.display() + "? " + f->name + " = null;");
+                    continue;
+                }
                 if (f->isStatic) continue;
                 if (f->init) {
                     checkInto(f->init.get(), f->type, "'" + f->name + "'");

@@ -15,6 +15,15 @@ inline VarDecl* findField(TypeDecl* d, const std::string& n) {
     return nullptr;
 }
 
+// A static field of `d` or of a class it inherits from.
+inline VarDecl* findStaticField(TypeDecl* d, const std::string& n) {
+    for (; d; d = d->base) {
+        auto it = d->fieldMap.find(n);
+        if (it != d->fieldMap.end() && it->second->isStatic) return it->second;
+    }
+    return nullptr;
+}
+
 inline FuncDecl* findMethod(TypeDecl* d, const std::string& n) {
     for (; d; d = d->base) {
         auto it = d->methodMap.find(n);

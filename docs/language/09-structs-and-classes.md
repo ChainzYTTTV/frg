@@ -358,6 +358,43 @@ class Enemy {
 }
 ```
 
+## static: shared by the whole type
+
+A normal field belongs to **each object**: every enemy has its own `hp`. A **`static`** field belongs to the **type itself**: there's only one, shared by all of them. A static method is a function that belongs to the type: it's called on the type's name, not on an object.
+
+```cpp
+class Enemy {
+    static int count = 0;        // one counter for all enemies
+    string name;
+
+    Enemy(string name) {
+        this.name = name;
+        count++;                 // inside the class, no "Enemy." is needed
+    }
+
+    static Enemy boss() {        // makes a special enemy
+        Enemy b = Enemy("Boss");
+        return b;
+    }
+}
+
+Enemy a = Enemy("Grub");
+Enemy b = Enemy.boss();         // a static method: called on the type
+print(Enemy.count);             // 2: a static field, reached through the type
+Enemy.count = 0;                // and changed the same way
+```
+
+Things to know:
+
+- Outside the type, write the type's name first: `Enemy.count`, `Enemy.boss()`. Inside it, the plain name works.
+- A static method has no object, so it can't use the normal fields, the normal methods or `this`. Forge says so, and suggests making it a normal method or giving it the object as a parameter.
+- A normal method can't be called on the type (`Enemy.attack()`); it needs an object.
+- Static fields can have a starting value. Like global variables, static fields of a class type (or a `Function<...>`) need one, or must be optional.
+- Static fields aren't part of an object: they're not in its constructor, and not shown when it's printed.
+- Structs can have static fields and methods too: `Point.origin`, `Point.distance(a, b)`.
+- `private static` works: only the type itself can use it.
+- A class that inherits gets its parent's static fields and methods (they're still the same, shared ones). Static methods can't be replaced.
+
 ## Types from other files
 
 Types follow the [file-name prefix rule](07-files-and-folders.md):

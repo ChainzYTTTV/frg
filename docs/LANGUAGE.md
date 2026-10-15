@@ -334,6 +334,26 @@ for (Entity e in enemies) {
 }
 ```
 
+### static
+
+A `static` field or method belongs to the type, not to each object: there's one, shared by all.
+
+```cpp
+class Enemy {
+    static int count = 0;
+    Enemy() {
+        count++;
+    }
+    static Enemy boss() {
+        return Enemy();
+    }
+}
+print(Enemy.count);       // outside the type: TypeName.thing
+Enemy b = Enemy.boss();
+```
+
+A static method has no object, so it can't use normal fields, normal methods or `this`.
+
 ### private
 
 `private` hides something so only certain code can use it:

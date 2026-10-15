@@ -42,7 +42,7 @@ If you already know C++, C#, Java, JavaScript or Python, Forge will feel familia
 | `x?.y` (C#/JS) | `if (x != null) { x.y }` | an optional is used directly; it stops the game if it's null |
 | `(Goblin)e` / `e as Goblin` (C#) | `e as Goblin` gives `Goblin?` | |
 | `protected` | `private` | `private` already includes classes that inherit |
-| `static` members | top-level functions and globals in a file | `static` isn't available for your own types |
+| `static` members | `static int count = 0;` and `static Enemy boss() { ... }` | reached as `Enemy.count`, `Enemy.boss()` |
 | overloading `void f(int)` / `void f(float)` | the same: `void f(int)` and `void f(float)` | top-level functions and constructors can share a name; methods can't |
 | `class B extends A` / `class B : public A` | `class B : A` | |
 | `@Override` / `override` | nothing | a method with the same name and types replaces the parent's |

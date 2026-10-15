@@ -924,6 +924,12 @@ ExprPtr Parser::parsePrimary() {
             return e;
         }
         case Tok::StrLit: p++; return parseString(k);
+        case Tok::RawStrLit: {
+            p++;
+            auto e = std::make_unique<Expr>(EK::Str, k.loc);
+            e->parts.push_back(k.text);
+            return e;
+        }
         case Tok::KwTrue:
         case Tok::KwFalse: {
             p++;

@@ -1,0 +1,30 @@
+=== main.frg
+#include <OpenGL>
+#include <stdio>
+#include <physics>
+#include <tasks>
+
+string SHADER = """
+#version 330 core
+void main() { gl_Position = vec4(0.0); }
+""";
+
+task blink() {
+    wait(0.5);
+}
+
+int main(){
+    print(SHADER.contains("main() \{ gl_Position"));
+    print(OpenGL.COLOR_BUFFER_BIT bitor OpenGL.DEPTH_BUFFER_BIT);
+    print(OpenGL.multiply(OpenGL.identity(), OpenGL.translate(vec3(1, 2, 3))));
+    print(OpenGL.lookAt(vec3(0, 0, 5), vec3.ZERO, vec3.UP)[14]);
+    Key k = Key.SPACE;
+    print(k);
+    return 0;
+}
+=== output
+true
+16640
+[1.0, 0.0, 0.0, 0.0, 0.0, 1.0, 0.0, 0.0, 0.0, 0.0, 1.0, 0.0, 1.0, 2.0, 3.0, 1.0]
+-5.0
+SPACE

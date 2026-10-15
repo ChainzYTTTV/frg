@@ -55,6 +55,7 @@ private:
     }
     void lexNumber();
     void lexString();
+    void lexRawString();
     bool lexOperator();
 };
 
@@ -104,6 +105,10 @@ std::vector<Token> Lexer::run() {
         }
         if (std::isdigit((unsigned char)c)) {
             lexNumber();
+            continue;
+        }
+        if (c == '"' && at(1) == '"' && at(2) == '"') {
+            lexRawString();
             continue;
         }
         if (c == '"') {
@@ -156,6 +161,24 @@ void Lexer::lexNumber() {
     if ((text.size() == 2) && (text[1] == 'x' || text[1] == 'X' || text[1] == 'b' || text[1] == 'B'))
         fail(start, "this number has no digits after " + text);
     out.push_back({isFloat ? Tok::FloatLit : Tok::IntLit, text, start});
+}
+
+// """raw text""": can span many lines, and is taken exactly as written - no {values}, no \ escapes.
+// A line break right after the opening """ isn't part of the text. Handy for shader code.
+void Lexer::lexRawString() {
+    Loc start = here(3);
+    adv(3);
+    if (at() == '\r') adv();
+    if (at() == '\n') adv();
+    std::string text;
+    while (true) {
+        if (i >= s.size()) fail(start, "this \"\"\" text is never closed", "end it with another \"\"\"");
+        if (at() == '"' && at(1) == '"' && at(2) == '"') break;
+        if (at() != '\r') text += at();
+        adv();
+    }
+    adv(3);
+    out.push_back({Tok::RawStrLit, text, start});
 }
 
 void Lexer::lexString() {

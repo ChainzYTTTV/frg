@@ -144,6 +144,36 @@ static void loadPrelude(Project& proj) {
     }
 }
 
+// A game uses either Forge's built-in engine or one low-level toolkit (OpenGL, DirectX, Vulkan): each toolkit
+// opens its own window and does its own drawing, so they can't be mixed with the engine or with each other.
+static void checkEngineAndToolkits(Project& proj) {
+    const Include* engineUse = nullptr;
+    const Include* toolkitUse = nullptr;
+    for (Module* m : proj.allModules) {
+        for (const Include& inc : m->ast.includes) {
+            if (inc.isFolder) continue;
+            const PreludeLib* lib = findPreludeLib(inc.name);
+            if (!lib) continue;
+            if (lib->kind == LibKind::Engine && !engineUse) engineUse = &inc;
+            if (lib->kind == LibKind::Toolkit) {
+                if (toolkitUse && toolkitUse->name != inc.name) {
+                    reportError(inc.loc, "a game can only use one of <OpenGL>, <DirectX> and <Vulkan>",
+                                "this game already uses <" + toolkitUse->name + ">");
+                    return;
+                }
+                toolkitUse = &inc;
+            }
+        }
+    }
+    if (engineUse && toolkitUse)
+        reportError(toolkitUse->loc,
+                    "<" + toolkitUse->name + "> is a separate toolkit, so it can't be used together with Forge's engine (<" +
+                        engineUse->name + ">)",
+                    "a game either uses the engine (<window>, <input>, <graphics2d>, <graphics3d>, <assets>, <ui>) or one "
+                    "toolkit, which opens its own window and does its own drawing - " +
+                        toolkitUse->name + " has its own window, keyboard and mouse functions");
+}
+
 bool loadProject(Project& proj, const fs::path& root) {
     loadPrelude(proj);
     proj.root = fs::weakly_canonical(fs::absolute(root));
@@ -151,6 +181,7 @@ bool loadProject(Project& proj, const fs::path& root) {
     if (proj.name.empty()) proj.name = "game";
     proj.rootFolder.dir = proj.root;
     loadFolder(proj, proj.rootFolder);
+    checkEngineAndToolkits(proj);
 
     auto it = proj.rootFolder.modules.find("main");
     if (it != proj.rootFolder.modules.end()) proj.mainModule = it->second.get();

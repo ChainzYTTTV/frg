@@ -5,7 +5,7 @@
 #include <vector>
 
 enum class Tok {
-    Ident, IntLit, FloatLit, StrLit, Hash,
+    Ident, IntLit, FloatLit, StrLit, RawStrLit, Hash,
     LParen, RParen, LBrace, RBrace, LBracket, RBracket, Comma, Semi, Dot, Colon, Question,
     Plus, Minus, Star, Slash, Percent, PlusPlus, MinusMinus,
     Assign, PlusEq, MinusEq, StarEq, SlashEq, PercentEq,

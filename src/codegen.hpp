@@ -6,7 +6,9 @@
 
 struct GeneratedCpp {
     std::string code;
-    bool needsRaylib = false;  // the game uses a window, so it gets linked with raylib
+    bool needsRaylib = false;              // the game uses raylib (the engine, or images/sound), so it's linked with it
+    std::vector<std::string> sources;      // extra runtime .cpp files to compile with it (toolkits)
+    std::vector<std::string> linkFlags;    // extra libraries to link
 };
 
 // Turns a checked project into one C++ file. Every user name gets a trailing '_' so it can

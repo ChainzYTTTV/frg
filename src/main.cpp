@@ -93,13 +93,15 @@ static bool build(const fs::path& dir, fs::path& exeOut, bool release) {
         return false;
     }
 
-    std::wstring cmd = L"g++ -std=gnu++20 -O2 -fwrapv -w -static -I" + quote(runtime) + L" " + quote(cppPath) +
-                       L" -o " + quote(exe);
+    std::wstring cmd = L"g++ -std=gnu++20 -O2 -fwrapv -w -static -I" + quote(runtime) + L" " + quote(cppPath);
+    for (const std::string& src : gen.sources) cmd += L" " + quote(runtime / src);  // a toolkit's own runtime code
+    cmd += L" -o " + quote(exe);
     if (release) cmd += L" -mwindows -s";  // no console window, smaller .exe
     if (gen.needsRaylib) {
         fs::path raylib = runtime / "raylib";
         cmd += L" -I" + quote(raylib / "include") + L" -L" + quote(raylib / "lib") + L" -lraylib -lopengl32 -lgdi32 -lwinmm";
     }
+    for (const std::string& flag : gen.linkFlags) cmd += L" " + fs::path(flag).wstring();
     int code = runProcess(cmd);
     if (code == -1) {
         reportPlainError("couldn't find g++, which Forge uses to make .exe files",

@@ -119,7 +119,8 @@ void toggleFullscreen();
 void screenshot(string fileName);
 )FRG";
 
-static const char* kInput = R"FRG(
+// The same keys for <input> and the toolkits' own windows (runtime/forge_window.hpp, runtime/forge_native.hpp).
+#define FRG_KEY_ENUMS R"FRG(
 enum Key {
     A, B, C, D, E, F, G, H, I, J, K, L, M, N, O, P, Q, R, S, T, U, V, W, X, Y, Z,
     NUM0, NUM1, NUM2, NUM3, NUM4, NUM5, NUM6, NUM7, NUM8, NUM9,
@@ -129,7 +130,30 @@ enum Key {
 }
 
 enum MouseButton { LEFT, RIGHT, MIDDLE }
+)FRG"
 
+// The window, keyboard and mouse functions every low-level toolkit has.
+#define FRG_TOOLKIT_WINDOW R"FRG(
+void openWindow(int width, int height, string title);
+bool shouldClose();
+void closeWindow();
+int width();
+int height();
+float deltaTime();
+double time();
+void setTitle(string title);
+void setVSync(bool on);
+bool keyDown(Key key);
+bool keyPressed(Key key);
+bool keyReleased(Key key);
+bool mouseDown(MouseButton button);
+bool mousePressed(MouseButton button);
+bool mouseReleased(MouseButton button);
+vec2 mousePosition();
+float mouseWheel();
+)FRG"
+
+static const char* kInput = FRG_KEY_ENUMS R"FRG(
 bool keyDown(Key key);
 bool keyPressed(Key key);
 bool keyReleased(Key key);
@@ -362,23 +386,150 @@ float value();
 bool chance(float probability);
 )FRG";
 
+static const char* kOpenGL = FRG_KEY_ENUMS FRG_TOOLKIT_WINDOW R"FRG(
+string version();
+
+void clearColor(float r, float g, float b, float a);
+void clear(int mask);
+void viewport(int x, int y, int width, int height);
+void enable(int capability);
+void disable(int capability);
+void blendFunc(int source, int destination);
+void depthFunc(int function);
+void cullFace(int face);
+void lineWidth(float width);
+int getError();
+
+int createShader(int type);
+void shaderSource(int shader, string source);
+void compileShader(int shader);
+bool shaderCompiled(int shader);
+string shaderLog(int shader);
+void deleteShader(int shader);
+int createProgram();
+void attachShader(int program, int shader);
+void linkProgram(int program);
+bool programLinked(int program);
+string programLog(int program);
+void useProgram(int program);
+void deleteProgram(int program);
+int buildProgram(string vertexSource, string fragmentSource);
+int getUniformLocation(int program, string name);
+int getAttribLocation(int program, string name);
+void uniform1f(int location, float x);
+void uniform2f(int location, float x, float y);
+void uniform3f(int location, float x, float y, float z);
+void uniform4f(int location, float x, float y, float z, float w);
+void uniform1i(int location, int x);
+void uniformMatrix4(int location, list<float> matrix);
+
+int genVertexArray();
+void bindVertexArray(int vertexArray);
+void deleteVertexArray(int vertexArray);
+int genBuffer();
+void bindBuffer(int target, int buffer);
+void deleteBuffer(int buffer);
+void bufferData(int target, list<float> data, int usage);
+void bufferDataInts(int target, list<int> data, int usage);
+void vertexAttribPointer(int index, int size, int strideFloats, int offsetFloats);
+void enableVertexAttribArray(int index);
+void drawArrays(int mode, int first, int count);
+void drawElements(int mode, int count);
+
+int genTexture();
+void bindTexture(int target, int texture);
+void deleteTexture(int texture);
+void activeTexture(int unit);
+void texParameteri(int target, int name, int value);
+void generateMipmap(int target);
+int loadTexture(string path);
+
+list<float> identity();
+list<float> multiply(list<float> a, list<float> b);
+list<float> perspective(float fovDegrees, float aspect, float near, float far);
+list<float> orthographic(float left, float right, float bottom, float top, float near, float far);
+list<float> lookAt(vec3 eye, vec3 target, vec3 up);
+list<float> translate(vec3 offset);
+list<float> rotate(float degrees, vec3 axis);
+list<float> scale(vec3 amount);
+
+const int COLOR_BUFFER_BIT = 16384;
+const int DEPTH_BUFFER_BIT = 256;
+const int STENCIL_BUFFER_BIT = 1024;
+const int POINTS = 0;
+const int LINES = 1;
+const int LINE_LOOP = 2;
+const int LINE_STRIP = 3;
+const int TRIANGLES = 4;
+const int TRIANGLE_STRIP = 5;
+const int TRIANGLE_FAN = 6;
+const int ARRAY_BUFFER = 34962;
+const int ELEMENT_ARRAY_BUFFER = 34963;
+const int STATIC_DRAW = 35044;
+const int DYNAMIC_DRAW = 35048;
+const int STREAM_DRAW = 35040;
+const int VERTEX_SHADER = 35633;
+const int FRAGMENT_SHADER = 35632;
+const int DEPTH_TEST = 2929;
+const int BLEND = 3042;
+const int CULL_FACE = 2884;
+const int ZERO = 0;
+const int ONE = 1;
+const int SRC_ALPHA = 770;
+const int ONE_MINUS_SRC_ALPHA = 771;
+const int LESS = 513;
+const int LEQUAL = 515;
+const int ALWAYS = 519;
+const int FRONT = 1028;
+const int BACK = 1029;
+const int FRONT_AND_BACK = 1032;
+const int TEXTURE_2D = 3553;
+const int TEXTURE0 = 33984;
+const int TEXTURE1 = 33985;
+const int TEXTURE2 = 33986;
+const int TEXTURE3 = 33987;
+const int TEXTURE_MIN_FILTER = 10241;
+const int TEXTURE_MAG_FILTER = 10240;
+const int TEXTURE_WRAP_S = 10242;
+const int TEXTURE_WRAP_T = 10243;
+const int NEAREST = 9728;
+const int LINEAR = 9729;
+const int NEAREST_MIPMAP_NEAREST = 9984;
+const int LINEAR_MIPMAP_LINEAR = 9987;
+const int REPEAT = 10497;
+const int CLAMP_TO_EDGE = 33071;
+const int NO_ERROR = 0;
+const int INVALID_ENUM = 1280;
+const int INVALID_VALUE = 1281;
+const int INVALID_OPERATION = 1282;
+const int OUT_OF_MEMORY = 1285;
+)FRG";
+
 const std::vector<PreludeLib>& preludeLibs() {
+    using K = LibKind;
     static const std::vector<PreludeLib> libs = {
         {"core", kCore, false, ""},
-        {"window", kWindow, true, "forge_window.hpp"},
-        {"input", kInput, true, "forge_window.hpp"},
-        {"graphics2d", kGraphics2d, true, "forge_window.hpp"},
+        {"window", kWindow, true, "forge_window.hpp", K::Engine},
+        {"input", kInput, true, "forge_window.hpp", K::Engine},
+        {"graphics2d", kGraphics2d, true, "forge_window.hpp", K::Engine},
         {"physics", kPhysics, false, "forge_physics.hpp"},
-        {"assets", kAssets, true, "forge_assets.hpp"},
+        {"assets", kAssets, true, "forge_assets.hpp", K::Engine},
         {"audio", kAudio, true, "forge_audio.hpp"},
         {"random", kRandom, false, ""},
         {"tasks", kTasks, false, ""},
         {"time", kTime, false, "forge_time.hpp"},
         {"file", kFile, false, "forge_file.hpp"},
         {"scenes", kScenes, false, "forge_scenes.hpp"},
-        {"ui", kUi, true, "forge_ui.hpp"},
-        {"graphics3d", kGraphics3d, true, "forge_graphics3d.hpp"},
+        {"ui", kUi, true, "forge_ui.hpp", K::Engine},
+        {"graphics3d", kGraphics3d, true, "forge_graphics3d.hpp", K::Engine},
         {"ECS", kEcs, false, "forge_ecs.hpp"},
+        {"OpenGL", kOpenGL, true, "forge_opengl.hpp", K::Toolkit, {"forge_opengl_impl.cpp"}, {"-lopengl32", "-lgdi32"}},
     };
     return libs;
+}
+
+const PreludeLib* findPreludeLib(const std::string& name) {
+    for (const PreludeLib& lib : preludeLibs())
+        if (lib.name == name) return &lib;
+    return nullptr;
 }

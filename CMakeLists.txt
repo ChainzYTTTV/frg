@@ -23,7 +23,7 @@ add_executable(frg
     src/checker.cpp
     src/codegen.cpp
 )
-target_compile_options(frg PRIVATE -Wall -Wextra)
+target_compile_options(frg PRIVATE -Wall -Wextra -Wno-missing-field-initializers)
 target_link_options(frg PRIVATE -static)
 
 add_custom_command(TARGET frg POST_BUILD

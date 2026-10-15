@@ -394,9 +394,9 @@ std::string Checker::unknownTypeHint(const std::string& name) {
     for (Module* m : P.allModules)
         if (m != cur && m->types.count(name))
             return "'" + name + "' is in " + m->src->displayPath + " - use " + m->qualName + "." + name;
-    for (auto& [lib, lm] : P.libModules)
-        if (lm->types.count(name) && !cur->libs.count(lib))
-            return "'" + name + "' is part of the " + lib + " library - add #include <" + lib + "> at the top of " +
+    for (auto& lm : P.preludeStore)  // in library order, so the engine's libraries are suggested before the toolkits
+        if (lm->types.count(name) && !cur->libs.count(lm->name))
+            return "'" + name + "' is part of the " + lm->name + " library - add #include <" + lm->name + "> at the top of " +
                    cur->src->displayPath;
     std::vector<std::string> names = builtinTypeNames();
     for (auto& [n, _] : cur->types) names.push_back(n);
@@ -927,9 +927,9 @@ std::string Checker::unknownHint(const std::string& n) {
                    (P.libModules.count(lib) && P.libModules[lib]->funcs.count(n));
         if (has) return "there's a '" + n + "' in the " + lib + " library: #include <" + lib + "> and use " + lib + "." + n;
     }
-    for (auto& [lib, lm] : P.libModules)
-        if (lm->types.count(n) && !cur->libs.count(lib))
-            return "'" + n + "' is part of the " + lib + " library - add #include <" + lib + ">";
+    for (auto& lm : P.preludeStore)
+        if (lm->types.count(n) && !cur->libs.count(lm->name))
+            return "'" + n + "' is part of the " + lm->name + " library - add #include <" + lm->name + ">";
     return "";
 }
 
@@ -1135,12 +1135,16 @@ Type* Checker::memberExpr(Expr* e, bool allowNonValue) {
                 r.kind = RK::Func;
                 r.func = lm->funcs[n];
                 r.module = lm;
+            } else if (lm && lm->globals.count(n)) {  // library constants, like OpenGL.TRIANGLES
+                r.kind = RK::Global;
+                r.var = lm->globals[n];
             } else if (lm && lm->types.count(n)) {
                 r.kind = RK::Type;
                 r.tdecl = lm->types[n];
             } else {
                 std::vector<std::string> names = builtinMemberNames(lib);
                 if (lm) {
+                    for (auto& [k, _] : lm->globals) names.push_back(k);
                     for (auto& [k, _] : lm->funcs) names.push_back(k);
                     for (auto& [k, _] : lm->types) names.push_back(k);
                 }

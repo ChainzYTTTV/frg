@@ -1,0 +1,10 @@
+=== main.frg
+#include <window>
+
+int main(){
+    return 0;
+}
+=== render.frg
+#include <OpenGL>
+=== error
+<OpenGL> is a separate toolkit, so it can't be used together with Forge's engine (<window>)

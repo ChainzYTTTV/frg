@@ -1,0 +1,5 @@
+=== main.frg
+void main(){
+}
+=== error
+main has to return an int

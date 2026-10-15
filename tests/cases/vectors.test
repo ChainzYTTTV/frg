@@ -1,0 +1,41 @@
+=== main.frg
+#include <stdio>
+
+int main(){
+    vec2 pos = vec2(10, 20);
+    vec2 vel = vec2(3, -4);
+    pos += vel * 2;
+    print(pos);
+    print(vel.length());
+    print(vel.normalized());
+    print(pos - vec2.ONE);
+    print(-vel);
+    print(2 * vel == vel * 2);
+    vec3 up = vec3.UP;
+    print(up.cross(vec3(1, 0, 0)));
+    color c = color(255, 128, 0);
+    print(c);
+    print(color.RED);
+    print(c.fade(0.5).a);
+    rect r = rect(0, 0, 10, 10);
+    print(r.overlaps(rect(5, 5, 10, 10)));
+    print(r.overlaps(rect(10, 0, 5, 5)));
+    print(r.contains(vec2(3, 3)));
+    print(r.center());
+    return 0;
+}
+=== output
+vec2(16.0, 12.0)
+5.0
+vec2(0.6, -0.8)
+vec2(15.0, 11.0)
+vec2(-3.0, 4.0)
+true
+vec3(0.0, 0.0, -1.0)
+color(255, 128, 0, 255)
+color(230, 41, 55, 255)
+127
+true
+false
+true
+vec2(5.0, 5.0)

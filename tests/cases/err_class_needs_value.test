@@ -1,0 +1,12 @@
+=== main.frg
+class Enemy {
+    int hp;
+}
+
+int main(){
+    Enemy e;
+    return 0;
+}
+=== error
+'e' needs a starting value
+Enemy? e = null;

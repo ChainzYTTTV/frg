@@ -1,0 +1,7 @@
+=== main.frg
+int main(){
+    print("hi");
+    return 0;
+}
+=== error
+add #include <stdio> at the top of main.frg

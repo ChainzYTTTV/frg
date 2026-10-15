@@ -1,0 +1,65 @@
+=== main.frg
+#include <stdio>
+
+int main(){
+    for (int i = 0; i < 10; i++) {
+        if (i == 2) {
+            continue;
+        }
+        if (i == 5) {
+            break;
+        }
+        write("[{i}]");
+    }
+    print();
+    int n = 0;
+    while (true) {
+        n += 1;
+        if (n >= 3) {
+            break;
+        }
+    }
+    print("n = {n}");
+    print(fib(20));
+    print(grade(95) + grade(85) + grade(10));
+    bool a = true;
+    bool b = false;
+    print(a and not b);
+    print(not a == b);
+    print(!a == b);
+    print(a || b && false);
+    return 0;
+}
+
+int fib(int n){
+    if (n < 2) {
+        return n;
+    }
+    return fib(n - 1) + fib(n - 2);
+}
+
+string grade(int score){
+    if (score >= 90) {
+        return "A";
+    } else if (score >= 80) {
+        return "B";
+    } else {
+        return "F";
+    }
+}
+
+int forever(){
+    while (true) {
+        return 1;
+    }
+}
+
+=== output
+[0][1][3][4]
+n = 3
+6765
+ABF
+true
+true
+true
+true

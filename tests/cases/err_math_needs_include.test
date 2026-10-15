@@ -1,0 +1,7 @@
+=== main.frg
+int main(){
+    float x = sqrt(2.0);
+    return 0;
+}
+=== error
+#include <math> and use math.sqrt

@@ -1,0 +1,29 @@
+=== main.frg
+#include <stdio>
+#include <math>
+
+int main(){
+    string s = "a";
+    s += "b";
+    s = s + "c";
+    print(s);
+    print(s == "abc");
+    print("tab\there, quote \" and backslash \\");
+    print("{{literal}} and \{also\}");
+    float hp = 7.5;
+    print("HP: {hp}/{10} ({hp / 10 * 100}%)");
+    print("{math.abs(-3)} {math.min(2.5, 1)} {math.floor(2.7)} {math.pow(2, 10)}");
+    print("parsed {int(\"42\") + 1}");
+    print("héllo ünïcode ✓");
+    return 0;
+}
+
+=== output
+abc
+true
+tab	here, quote " and backslash \
+{literal} and {also}
+HP: 7.5/10 (75.0%)
+3 1.0 2.0 1024.0
+parsed 43
+héllo ünïcode ✓

@@ -1,0 +1,9 @@
+=== main.frg
+int main(){
+    uint x = -1;
+    uint8 y = 300;
+    return 0;
+}
+=== error
+this number doesn't fit in a uint
+this number doesn't fit in a uint8

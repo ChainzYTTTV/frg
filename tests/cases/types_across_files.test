@@ -1,0 +1,38 @@
+=== main.frg
+#include <stdio>
+#include <"world">
+
+int main(){
+    entities.Player p = entities.Player("Ana");
+    entities.Kind k = entities.Kind.Wizard;
+    print("{p.name} the {k}");
+    list<entities.Player> party = [p, entities.Player("Bo")];
+    print(party.length);
+    world.tiles.Tile t = world.tiles.Tile(3, true);
+    print(t);
+    print(entities.makeDefault().name);
+    return 0;
+}
+=== entities.frg
+enum Kind { Knight, Wizard }
+
+class Player {
+    string name;
+    Player(string name) {
+        this.name = name;
+    }
+}
+
+Player makeDefault() {
+    return Player("Nobody");
+}
+=== world/tiles.frg
+struct Tile {
+    int id;
+    bool solid;
+}
+=== output
+Ana the Wizard
+2
+Tile(id: 3, solid: true)
+Nobody

@@ -1,0 +1,10 @@
+=== main.frg
+#include <stdio>
+
+int main(){
+    prnt("hi");
+    return 0;
+}
+=== error
+unknown name 'prnt'
+did you mean 'print'?

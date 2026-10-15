@@ -1,0 +1,117 @@
+{
+    "main function": {
+        "prefix": "main",
+        "body": ["#include <stdio>", "", "int main(){", "\t$0", "\treturn 0;", "}"],
+        "description": "The main function every game starts in"
+    },
+    "game (engine loop)": {
+        "prefix": "game",
+        "body": [
+            "#include <window>",
+            "#include <graphics2d>",
+            "#include <input>",
+            "",
+            "int main(){",
+            "\twindow.open(${1:960}, ${2:540}, \"${3:My Game}\");",
+            "\twindow.run();",
+            "\treturn 0;",
+            "}",
+            "",
+            "void update(float dt){",
+            "\t$0",
+            "}",
+            "",
+            "void draw(){",
+            "\tgraphics2d.drawText(\"Hello!\", 20, 20, 32, color.WHITE);",
+            "}"
+        ],
+        "description": "A game where window.run() calls update(dt) and draw() every frame"
+    },
+    "game (own loop)": {
+        "prefix": "gameloop",
+        "body": [
+            "#include <window>",
+            "#include <graphics2d>",
+            "#include <input>",
+            "",
+            "int main(){",
+            "\twindow.open(${1:960}, ${2:540}, \"${3:My Game}\");",
+            "\twhile (!window.shouldClose()) {",
+            "\t\tmainLoop();",
+            "\t}",
+            "\twindow.close();",
+            "\treturn 0;",
+            "}",
+            "",
+            "void mainLoop(){",
+            "\tfloat dt = window.deltaTime();",
+            "\t$0",
+            "}"
+        ],
+        "description": "A game that runs its own loop and calls mainLoop() every frame"
+    },
+    "function": {
+        "prefix": "func",
+        "body": ["${1:void} ${2:name}(${3}){", "\t$0", "}"],
+        "description": "A function"
+    },
+    "struct": {
+        "prefix": "struct",
+        "body": ["struct ${1:Name} {", "\t${2:float} ${3:x};", "\t$0", "}"],
+        "description": "A struct: a value that's copied when assigned"
+    },
+    "class": {
+        "prefix": "class",
+        "body": [
+            "class ${1:Name} {",
+            "\t${2:int} ${3:hp} = ${4:100};",
+            "",
+            "\t${1:Name}(${5}) {",
+            "\t\t$0",
+            "\t}",
+            "}"
+        ],
+        "description": "A class with a constructor"
+    },
+    "class that inherits": {
+        "prefix": "subclass",
+        "body": ["class ${1:Name} : ${2:Base} {", "\t$0", "}"],
+        "description": "A class that inherits from another class"
+    },
+    "enum": {
+        "prefix": "enum",
+        "body": ["enum ${1:State} { ${2:Idle}, ${3:Running} }"],
+        "description": "An enum"
+    },
+    "if": {
+        "prefix": "if",
+        "body": ["if (${1:condition}) {", "\t$0", "}"]
+    },
+    "if / else": {
+        "prefix": "ifelse",
+        "body": ["if (${1:condition}) {", "\t$2", "} else {", "\t$0", "}"]
+    },
+    "for": {
+        "prefix": "for",
+        "body": ["for (int ${1:i} = 0; ${1:i} < ${2:count}; ${1:i}++) {", "\t$0", "}"]
+    },
+    "for each": {
+        "prefix": "foreach",
+        "body": ["for (${1:int} ${2:item} in ${3:list}) {", "\t$0", "}"],
+        "description": "Go through every item in a list"
+    },
+    "while": {
+        "prefix": "while",
+        "body": ["while (${1:condition}) {", "\t$0", "}"]
+    },
+    "switch": {
+        "prefix": "switch",
+        "body": ["switch (${1:value}) {", "\tcase ${2:1}:", "\t\t$0", "\tdefault:", "\t\t", "}"],
+        "description": "Pick a case by value (cases never need break)"
+    },
+    "physics body": {
+        "prefix": "body",
+        "body": ["Body ${1:box} = Body(${2:x}, ${3:y}, ${4:32}, ${5:32});", "physics.add(${1:box});"],
+        "description": "A physics box (needs #include <physics>)"
+    }
+}

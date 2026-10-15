@@ -1,0 +1,8 @@
+=== main.frg
+int main(){
+    int x = 5
+    return 0;
+}
+=== error
+missing ';' at the end of this line
+main.frg:2:14

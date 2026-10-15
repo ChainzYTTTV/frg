@@ -1,0 +1,9 @@
+=== main.frg
+int main(){
+    int x = 1;
+    if (x = 5) {
+    }
+    return 0;
+}
+=== error
+to compare two values, use '=='

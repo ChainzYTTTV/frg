@@ -1,0 +1,13 @@
+=== main.frg
+#include <window>
+
+int main(){
+    window.open(100, 100, "x");
+    window.run();
+    return 0;
+}
+
+void update(){
+}
+=== error
+window.run() calls update(float dt) and draw() every frame, so main.frg needs both

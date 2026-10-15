@@ -1,0 +1,10 @@
+=== main.frg
+int main(){
+    jump();
+    return 0;
+}
+=== player.frg
+void jump(){
+}
+=== error
+use player.jump

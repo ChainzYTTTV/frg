@@ -1,0 +1,86 @@
+=== main.frg
+#include <stdio>
+
+int main(){
+    list<int> nums = [5, 3, 8];
+    nums.add(1);
+    nums.insert(0, 9);
+    print(nums);
+    print("length {nums.length}, first {nums.first()}, last {nums.last()}");
+    nums.sort();
+    print(nums);
+    print(nums.contains(8));
+    print(nums.indexOf(8));
+    print(nums.removeAt(0));
+    nums.remove(8);
+    print(nums);
+    nums[0] = 42;
+    nums[1] += 10;
+    print(nums);
+
+    int total = 0;
+    for (int n in nums) {
+        total += n;
+    }
+    print("total {total}");
+
+    list<string> words = "red,green,blue".split(",");
+    for (string w in words) {
+        write(w.upper() + " ");
+    }
+    print();
+
+    list<bool> flags = [true, false];
+    flags[1] = true;
+    print(flags);
+
+    list<list<int>> grid = [[1, 2], [3, 4]];
+    grid[1][0] = 30;
+    print(grid);
+
+    map<string, int> ages = {"Ana": 12, "Ben": 14};
+    ages["Cy"] = 9;
+    ages["Ana"] += 1;
+    print(ages);
+    print(ages["Ben"]);
+    print(ages.has("Zed"));
+    print(ages.get("Zed", -1));
+    for (string name in ages.keys()) {
+        write("{name}={ages[name]} ");
+    }
+    print();
+    ages.remove("Ben");
+    print("{ages.length} left");
+
+    map<int, list<string>> teams = {};
+    teams[1] = ["a", "b"];
+    print(teams);
+
+    string text = "  Hello Forge  ";
+    print("[{text.trim()}] {text.length} {text.contains("Forge")} {text.trim().lower()} {text.replace("l", "L")}");
+    print("abcdef".substring(1, 3) + "abc".charAt(2) + "ab".repeat(3));
+    return 0;
+}
+
+=== output
+[9, 5, 3, 8, 1]
+length 5, first 9, last 1
+[1, 3, 5, 8, 9]
+true
+3
+1
+[3, 5, 9]
+[42, 15, 9]
+total 66
+RED GREEN BLUE
+[true, true]
+[[1, 2], [30, 4]]
+{Ana: 13, Ben: 14, Cy: 9}
+14
+false
+-1
+Ana=13 Ben=14 Cy=9
+2 left
+{1: [a, b]}
+[Hello Forge] 15 true hello forge   HeLLo Forge
+bcdcababab

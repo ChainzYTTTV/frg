@@ -1,0 +1,17 @@
+=== main.frg
+#include <stdio>
+
+class Enemy {
+    int hp = 3;
+}
+
+int main(){
+    list<int> xs = [1, 2, 3];
+    print(xs[2]);
+    Enemy? e = null;
+    print(e == null);
+    return 0;
+}
+=== output
+3
+true

@@ -1,0 +1,95 @@
+=== main.frg
+#include <stdio>
+
+class Entity {
+    string name;
+    int hp = 100;
+
+    Entity(string name) {
+        this.name = name;
+    }
+
+    void takeHit(int amount) {
+        hp -= amount;
+        print("{name} takes {amount} damage, {hp} HP left");
+    }
+
+    string describe() {
+        return "an entity";
+    }
+
+    bool alive() {
+        return hp > 0;
+    }
+}
+
+class Player : Entity {
+    int score = 0;
+
+    Player(string name) {
+        super(name);
+        hp = 150;
+    }
+
+    string describe() {
+        return "the player (was " + super.describe() + ")";
+    }
+}
+
+class Goblin : Entity {
+    string describe() {
+        return "a goblin";
+    }
+}
+
+class Counter {
+    int count;
+}
+
+void hurtTwice(Entity e) {
+    e.takeHit(10);
+    e.takeHit(10);
+}
+
+int main(){
+    Player hero = Player("Hero");
+    Goblin grok = Goblin("Grok");
+    print(hero.describe());
+    print(grok.describe());
+
+    hurtTwice(hero);          // classes are shared, not copied
+    print(hero.hp);
+
+    Entity e = grok;          // a Goblin is a kind of Entity
+    print(e.describe());      // ...and it still acts like a Goblin
+
+    Player alias = hero;
+    alias.score += 5;
+    print(hero.score);
+    print(alias == hero);
+
+    list<Entity> everyone = [hero, grok];
+    for (Entity x in everyone) {
+        print("{x.name}: {x.describe()}, alive: {x.alive()}");
+    }
+
+    Counter c = Counter(41);
+    c.count++;
+    print(c);
+    print(Counter());
+    return 0;
+}
+
+=== output
+the player (was an entity)
+a goblin
+Hero takes 10 damage, 140 HP left
+Hero takes 10 damage, 130 HP left
+130
+a goblin
+5
+true
+Hero: the player (was an entity), alive: true
+Grok: a goblin, alive: true
+Counter(count: 42)
+Counter(count: 0)

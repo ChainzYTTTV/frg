@@ -1,0 +1,10 @@
+=== main.frg
+int main(){
+    int player = 3;
+    return 0;
+}
+=== player.frg
+void jump(){
+}
+=== error
+'player' is already the name of the file player.frg

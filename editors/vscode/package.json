@@ -1,0 +1,103 @@
+{
+    "name": "forge",
+    "displayName": "Forge",
+    "description": "Forge (.frg) game language: syntax colors, errors as you save, autocomplete for the built-in libraries, and a Run button.",
+    "version": "0.1.0",
+    "publisher": "forge-lang",
+    "license": "MIT",
+    "engines": {
+        "vscode": "^1.75.0"
+    },
+    "categories": [
+        "Programming Languages",
+        "Snippets"
+    ],
+    "main": "./extension.js",
+    "activationEvents": [
+        "onLanguage:forge"
+    ],
+    "contributes": {
+        "languages": [
+            {
+                "id": "forge",
+                "aliases": [
+                    "Forge",
+                    "forge"
+                ],
+                "extensions": [
+                    ".frg"
+                ],
+                "configuration": "./language-configuration.json",
+                "icon": {
+                    "light": "./icons/frg.svg",
+                    "dark": "./icons/frg.svg"
+                }
+            }
+        ],
+        "grammars": [
+            {
+                "language": "forge",
+                "scopeName": "source.forge",
+                "path": "./syntaxes/forge.tmLanguage.json"
+            }
+        ],
+        "snippets": [
+            {
+                "language": "forge",
+                "path": "./snippets/forge.json"
+            }
+        ],
+        "commands": [
+            {
+                "command": "forge.run",
+                "title": "Forge: Run Game",
+                "icon": "$(play)"
+            },
+            {
+                "command": "forge.build",
+                "title": "Forge: Build Game",
+                "icon": "$(tools)"
+            },
+            {
+                "command": "forge.check",
+                "title": "Forge: Check for Errors"
+            }
+        ],
+        "menus": {
+            "editor/title": [
+                {
+                    "command": "forge.run",
+                    "when": "resourceLangId == forge",
+                    "group": "navigation"
+                }
+            ]
+        },
+        "keybindings": [
+            {
+                "command": "forge.run",
+                "key": "f5",
+                "when": "editorLangId == forge"
+            },
+            {
+                "command": "forge.build",
+                "key": "ctrl+shift+b",
+                "when": "editorLangId == forge"
+            }
+        ],
+        "configuration": {
+            "title": "Forge",
+            "properties": {
+                "forge.path": {
+                    "type": "string",
+                    "default": "",
+                    "description": "Full path to frg.exe. Leave empty to use the one Forge was installed with, or the one on your PATH."
+                },
+                "forge.checkOnSave": {
+                    "type": "boolean",
+                    "default": true,
+                    "description": "Look for errors every time a .frg file is saved."
+                }
+            }
+        }
+    }
+}

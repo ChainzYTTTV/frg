@@ -1,0 +1,62 @@
+=== main.frg
+#include <stdio>
+
+int main(){
+    int8 a = 127;
+    a++;
+    print(a);
+    uint8 b = 0;
+    b--;
+    print(b);
+    int128 huge = 170141183460469231731687303715884105727;
+    print(huge);
+    print(10 / 3);
+    print(-7 / 2);
+    print(-7 % 3);
+    print(10.0 / 4);
+    print(0.1 + 0.2);
+    double d = 0.1 + 0.2;
+    print(d);
+    float f = 5;
+    print(f);
+    print(1 << 4);
+    print(0xFF + 0b101);
+    print(1_000_000);
+    int x = 7;
+    x *= 3;
+    x -= 1;
+    x /= 4;
+    x %= 3;
+    print(x);
+    print(int(-2.7));
+    print(float(3) / 2);
+    print(int("  -12 ") * 2);
+    print(string(42) + "!");
+    print(uint(4000000000) + 1);
+    int8 small = 100;
+    int big = small * 1000;
+    print(big);
+    return 0;
+}
+
+=== output
+-128
+255
+170141183460469231731687303715884105727
+3
+-3
+-1
+2.5
+0.3
+0.30000000000000004
+5.0
+16
+260
+1000000
+2
+-2
+1.5
+-24
+42!
+4000000001
+-96

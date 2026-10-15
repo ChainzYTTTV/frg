@@ -1,0 +1,8 @@
+=== main.frg
+int main(){
+    int x = 1.5;
+    return 0;
+}
+=== error
+'x' needs an int, but this is a float
+use int(...)

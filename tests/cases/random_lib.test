@@ -1,0 +1,24 @@
+=== main.frg
+#include <stdio>
+#include <random>
+
+int main(){
+    random.seed(42);
+    bool ok = true;
+    for (int i = 0; i < 1000; i++) {
+        int roll = random.range(1, 6);
+        float f = random.range(0.5, 2.5);
+        float v = random.value();
+        if (roll < 1 or roll > 6 or f < 0.5 or f > 2.5 or v < 0 or v > 1) {
+            ok = false;
+        }
+    }
+    print(ok);
+    print(random.chance(0) or false);
+    print(random.chance(1.5));
+    return 0;
+}
+=== output
+true
+false
+true

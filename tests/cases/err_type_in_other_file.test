@@ -1,0 +1,11 @@
+=== main.frg
+int main(){
+    Player p = Player();
+    return 0;
+}
+=== player.frg
+class Player {
+    int hp;
+}
+=== error
+use player.Player

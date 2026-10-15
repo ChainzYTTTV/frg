@@ -1,0 +1,6 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 32 32">
+  <!-- An anvil, for Forge -->
+  <path fill="#F28C28" d="M4 9h17c0 3 3 5 7 5v2c-3 0-5 1-6 3l-2 3h-8l-2-3c-1-2-3-3-6-3z"/>
+  <rect fill="#F28C28" x="11" y="22" width="10" height="3"/>
+  <rect fill="#F28C28" x="8" y="25" width="16" height="3" rx="1"/>
+</svg>

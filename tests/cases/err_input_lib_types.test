@@ -1,0 +1,7 @@
+=== main.frg
+int main(){
+    Key k = Key.SPACE;
+    return 0;
+}
+=== error
+'Key' is part of the input library - add #include <input>

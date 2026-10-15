@@ -1,0 +1,24 @@
+# Forge for VS Code
+
+Support for the Forge (`.frg`) game language.
+
+- **Syntax colors**, including `{values}` inside text and ` ``` ` comments
+- **Errors when you save**: problems are underlined in red, with Forge's hint attached
+- **Run button** (▶ in the editor's title bar, or **F5**) builds and runs the game. **Ctrl+Shift+B** only builds it.
+- **Autocomplete and hover help** for the libraries: type `window.`, `graphics2d.`, `color.` or `Key.`
+- **Snippets**: `main`, `game`, `gameloop`, `class`, `struct`, `enum`, `foreach`, `switch`, `body`, and more
+
+## Settings
+
+| Setting | |
+|---|---|
+| `forge.path` | Full path to `frg.exe`. Leave it empty to use the one the extension was built with, or the one on your PATH. |
+| `forge.checkOnSave` | Look for errors whenever a `.frg` file is saved (on by default). |
+
+## Building it
+
+```
+.\editors\vscode\package.ps1 -Install
+```
+
+Then reload VS Code.

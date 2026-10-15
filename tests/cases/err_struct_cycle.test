@@ -1,0 +1,12 @@
+=== main.frg
+struct Node {
+    int value;
+    Node? next;
+}
+
+int main(){
+    return 0;
+}
+=== error
+struct 'Node' ends up containing itself
+use a class instead

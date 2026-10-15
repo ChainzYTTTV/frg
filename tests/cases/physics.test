@@ -1,0 +1,57 @@
+=== main.frg
+#include <stdio>
+#include <physics>
+
+class Crate : Body {
+    string label = "crate";
+}
+
+int main(){
+    Body ground = Body(0, 100, 500, 20);
+    ground.isStatic = true;
+    Body wall = Body(200, 0, 20, 100);
+    wall.isStatic = true;
+    physics.add(ground);
+    physics.add(wall);
+
+    Crate box = Crate(50, 0, 10, 10);
+    physics.add(box);
+    print(physics.count());
+
+    // Let it fall for 2 seconds: it should land on the ground (top at y = 100).
+    for (int i = 0; i < 120; i++) {
+        physics.step(1.0 / 60);
+    }
+    print("landed: {box.onGround}, y = {box.position.y}");
+
+    // Slide right into the wall (left side at x = 200).
+    for (int i = 0; i < 120; i++) {
+        box.velocity.x = 200;
+        physics.step(1.0 / 60);
+    }
+    print("hit wall: {box.onWall}, x = {box.position.x}");
+
+    // Jump.
+    box.velocity.y = -300;
+    physics.step(1.0 / 60);
+    print("in the air: {not box.onGround}, going up: {box.velocity.y < 0}");
+
+    physics.setGravity(vec2(0, 0));
+    box.velocity = vec2(0, 0);
+    physics.step(1.0 / 60);
+    print(physics.gravity());
+    print(box.label);
+    print(box.overlaps(ground));
+    physics.remove(box);
+    print(physics.count());
+    return 0;
+}
+=== output
+3
+landed: true, y = 90.0
+hit wall: true, x = 190.0
+in the air: true, going up: true
+vec2(0.0, 0.0)
+crate
+false
+2

@@ -1,0 +1,43 @@
+=== main.frg
+#include <stdio>
+#include <"world">
+
+int main(){
+    print(helper.greet("Forge"));
+    helper.counter += 5;
+    helper.bump();
+    print(helper.counter);
+    print(world.level.SIZE * 2);
+    world.level.describe();
+    return 0;
+}
+
+=== helper.frg
+int counter = 1;
+
+string greet(string who){
+    return "Hello, {who}!";
+}
+
+void bump(){
+    counter++;
+}
+
+=== world/level.frg
+#include <stdio>
+#include <"tiles">
+
+const int SIZE = 16;
+
+void describe(){
+    print("map {SIZE}x{SIZE} with {world.tiles.grass.COUNT} grass tiles");
+}
+
+=== world/tiles/grass.frg
+int COUNT = 42;
+
+=== output
+Hello, Forge!
+7
+32
+map 16x16 with 42 grass tiles

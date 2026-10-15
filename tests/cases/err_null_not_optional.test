@@ -1,0 +1,7 @@
+=== main.frg
+int main(){
+    int x = null;
+    return 0;
+}
+=== error
+null can only go in an optional type

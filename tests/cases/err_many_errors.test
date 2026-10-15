@@ -1,0 +1,17 @@
+=== main.frg
+#include <stdio>
+
+int main(){
+    string name = 5;
+    bool ok = "yes";
+    float speed = "fast";
+    print(undefinedThing);
+    return "done";
+}
+=== error
+'name' needs a string, but this is an int
+'ok' needs a bool, but this is a string
+'speed' needs a float, but this is a string
+unknown name 'undefinedThing'
+the return value of main() needs an int, but this is a string
+Build failed: 5 errors.

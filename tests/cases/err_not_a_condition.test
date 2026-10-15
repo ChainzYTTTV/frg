@@ -1,0 +1,9 @@
+=== main.frg
+int main(){
+    int x = 1;
+    if (x) {
+    }
+    return 0;
+}
+=== error
+the condition of 'if' must be true or false, but this is an int

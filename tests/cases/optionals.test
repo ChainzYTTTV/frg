@@ -1,0 +1,108 @@
+=== main.frg
+#include <stdio>
+
+enum State { Idle, Running, Jumping }
+
+class Enemy {
+    string name;
+    Enemy? target;
+}
+
+int? findIndex(list<string> items, string wanted) {
+    for (int i = 0; i < items.length; i++) {
+        if (items[i] == wanted) {
+            return i;
+        }
+    }
+    return null;
+}
+
+void addOne(Pointer<int> counter) {
+    counter.value += 1;
+}
+
+string label(State s) {
+    switch (s) {
+        case State.Idle:
+            return "standing still";
+        case State.Running, State.Jumping:
+            return "moving";
+    }
+    return "?";
+}
+
+float scale(float value, float by = 2) {
+    return value * by;
+}
+
+int main(){
+    int? maybe = null;
+    print(maybe);
+    print(maybe == null);
+    maybe = 5;
+    int sure = maybe;
+    print(sure + 1);
+    print(maybe ?? 0);
+
+    int? missing = findIndex(["a", "b", "c"], "z");
+    print(missing ?? -1);
+    print(findIndex(["a", "b", "c"], "c"));
+
+    Enemy a = Enemy("A", null);
+    Enemy b = Enemy("B", a);
+    print(b.target != null);
+    print(b.target.name);
+    print(a.target == null ? "A has no target" : "A has a target");
+
+    State s = State.Running;
+    print(s);
+    print(label(s));
+    print(label(State.Idle));
+    print(int(State.Jumping));
+    print(State(0));
+
+    int score = 10;
+    Pointer<int> p = score;
+    p.value = 20;
+    addOne(score);
+    addOne(p);
+    print(score);
+
+    print(scale(3));
+    print(scale(3, 10));
+
+    int x = 7;
+    string parity = x % 2 == 0 ? "even" : "odd";
+    print(parity);
+
+    switch ("b") {
+        case "a":
+            print("got a");
+        case "b":
+            print("got b");
+        default:
+            print("got something else");
+    }
+    return 0;
+}
+
+=== output
+null
+true
+6
+5
+-1
+2
+true
+A
+A has no target
+Running
+moving
+standing still
+2
+Idle
+22
+6.0
+30.0
+odd
+got b

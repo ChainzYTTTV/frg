@@ -1,0 +1,13 @@
+=== main.frg
+struct Point {
+    float x;
+    float y;
+}
+
+int main(){
+    Point p = Point(1, 2);
+    p.z = 5;
+    return 0;
+}
+=== error
+Point has no field or method called 'z'

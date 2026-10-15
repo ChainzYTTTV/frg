@@ -1,0 +1,19 @@
+=== main.frg
+class Animal {
+    string sound() {
+        return "...";
+    }
+}
+
+class Dog : Animal {
+    int sound() {
+        return 1;
+    }
+}
+
+int main(){
+    return 0;
+}
+=== error
+'sound' replaces the method in Animal, so it has to match it
+string sound()

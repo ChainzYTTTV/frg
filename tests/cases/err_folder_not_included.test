@@ -1,0 +1,10 @@
+=== main.frg
+int main(){
+    enemies.goblin.spawn();
+    return 0;
+}
+=== enemies/goblin.frg
+void spawn(){
+}
+=== error
+add #include <"enemies">

@@ -1,0 +1,64 @@
+# Forge
+
+Forge (`.frg`) is a compiled language for making 2D and 3D games. It looks like C++ and aims to read like plain English.
+
+```cpp
+#include <stdio>
+
+int main(){
+    print("Hello, World!");
+    return 0;
+}
+```
+
+The language guide is [docs/LANGUAGE.md](docs/LANGUAGE.md). For VS Code support (colors, errors as you save, a Run button), see [editors/vscode](editors/vscode/README.md).
+
+## How it works
+
+`frg build` checks your `.frg` files and translates them to C++. It then uses g++ to turn that C++ into a standalone `.exe`. The C++ is an internal step: it's saved as `build/forge_generated.cpp`, but you never need to read it.
+
+```
+src/
+  main.cpp         the frg command: build / run / new
+  lexer.cpp        source text  -> tokens
+  parser.cpp       tokens       -> syntax tree
+  project.cpp      finds main.frg, the other files and #included folders
+  prelude.cpp      built-in types and libraries (vec2, color, window, physics...), written in Forge syntax
+  checker.cpp      types, names and the friendly error messages
+  codegen.cpp      syntax tree  -> C++
+  diagnostics.cpp  error printing
+runtime/
+  forge.hpp          core runtime: text, lists, maps, optionals, vec2/color/rect, random
+  forge_window.hpp   <window>, <input>, <graphics2d> on top of raylib
+  forge_physics.hpp  <physics>
+  raylib/            raylib 5.5 (zlib license)
+tests/             .\tests\run_tests.ps1
+examples/          hello, tour, shapes, platformer
+```
+
+Games that include `<window>`, `<input>` or `<graphics2d>` are linked with raylib. Everything is linked statically, so the `.exe` runs on any Windows PC.
+
+### Testing games automatically
+
+Graphical games read three environment variables, so they can be tested without a person at the keyboard:
+
+```
+FRG_AUTOTEST_FRAMES=90               quit after 90 frames
+FRG_AUTOTEST_SHOT=shot.png           ...taking this screenshot first
+FRG_AUTOTEST_INPUT=RIGHT:10-60,SPACE:30-31   hold keys during those frames
+```
+
+## Building Forge
+
+You need [w64devkit](https://github.com/skeeto/w64devkit) (g++, CMake, Ninja) on your PATH.
+
+```
+cmake -S . -B build -G Ninja
+cmake --build build
+```
+
+This produces `bin/frg.exe`, with `bin/runtime/` next to it. Add `bin` to your PATH to use `frg` from anywhere. Run the tests with:
+
+```
+.\tests\run_tests.ps1
+```

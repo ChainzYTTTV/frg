@@ -1,0 +1,9 @@
+=== main.frg
+const int MAX = 3;
+
+int main(){
+    MAX = 4;
+    return 0;
+}
+=== error
+'MAX' is const, so it can't be changed

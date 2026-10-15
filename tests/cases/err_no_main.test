@@ -1,0 +1,5 @@
+=== main.frg
+void start(){
+}
+=== error
+main.frg needs a main function

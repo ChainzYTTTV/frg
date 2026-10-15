@@ -1,0 +1,38 @@
+#pragma once
+#include <string>
+#include <vector>
+
+// One .frg file loaded into memory.
+struct SourceFile {
+    std::string displayPath;  // path shown in errors, relative to the project root ("enemies/goblin.frg")
+    std::string fullPath;     // absolute path on disk ("" for built-in code)
+    std::string text;
+    std::vector<size_t> lineStarts;
+
+    void computeLines();
+    std::string getLine(int line) const;
+};
+
+// A position in a source file. Lines and columns start at 1.
+struct Loc {
+    const SourceFile* file = nullptr;
+    int line = 0;
+    int col = 0;
+    int len = 1;
+};
+
+// Thrown after an error that stops the current file from being parsed any further.
+struct CompileAbort {};
+
+void initConsole();
+// Machine mode (for editors): each error is one tab-separated line on stdout:
+//   E <tab> full path <tab> line <tab> column <tab> length <tab> message <tab> hint
+// with \, tabs and newlines inside fields escaped as \\, \t and \n. Columns count bytes.
+void setMachineOutput(bool on);
+void reportError(const Loc& loc, const std::string& msg, const std::string& hint = "");
+void reportPlainError(const std::string& msg, const std::string& hint = "");
+void printStatus(const std::string& label, const std::string& msg);
+int errorCount();
+
+// Returns the candidate closest to `wrong` (for "did you mean" hints), or "" if none is close.
+std::string suggestName(const std::string& wrong, const std::vector<std::string>& candidates);

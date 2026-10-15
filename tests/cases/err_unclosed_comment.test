@@ -1,0 +1,7 @@
+=== main.frg
+``` oops
+int main(){
+    return 0;
+}
+=== error
+this ``` comment is never closed

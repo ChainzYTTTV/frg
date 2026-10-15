@@ -1,0 +1,7 @@
+=== main.frg
+int main(){
+    list<int> xs = [1, 2, "three"];
+    return 0;
+}
+=== error
+this list needs an int, but this is a string

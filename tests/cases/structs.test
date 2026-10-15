@@ -1,0 +1,78 @@
+=== main.frg
+#include <stdio>
+#include <math>
+
+struct Point {
+    float x;
+    float y;
+
+    float length() {
+        return math.sqrt(x * x + y * y);
+    }
+
+    void moveBy(float dx, float dy) {
+        x += dx;
+        this.y += dy;
+    }
+}
+
+struct Size {
+    int width = 10;
+    int height = 20;
+}
+
+struct Box {
+    Point corner;
+    Size size;
+    string label = "box";
+
+    Box(string name) {
+        label = name;
+        corner = Point(1, 2);
+    }
+
+    int area() {
+        return size.width * size.height;
+    }
+}
+
+int main(){
+    Point p = Point(3, 4);
+    print(p.length());
+    p.moveBy(1, 1);
+    print(p);
+
+    Point q = p;          // structs are copied
+    q.x = 100;
+    print("p.x = {p.x}, q.x = {q.x}");
+
+    Point origin = Point();
+    print(origin);
+
+    Point braces = {7, 8};
+    print(braces);
+
+    Size s = Size();
+    print("{s.width}x{s.height}");
+
+    Box b = Box("crate");
+    b.size.width = 3;
+    print("{b.label} at {b.corner} has area {b.area()}");
+    print(b);
+
+    print(Point(1, 2) == Point(1, 2));
+    print(Point(1, 2) != Point(2, 1));
+    return 0;
+}
+
+=== output
+5.0
+Point(x: 4.0, y: 5.0)
+p.x = 4.0, q.x = 100.0
+Point(x: 0.0, y: 0.0)
+Point(x: 7.0, y: 8.0)
+10x20
+crate at Point(x: 1.0, y: 2.0) has area 60
+Box(corner: Point(x: 1.0, y: 2.0), size: Size(width: 3, height: 20), label: crate)
+true
+true

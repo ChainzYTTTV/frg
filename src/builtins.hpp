@@ -13,6 +13,7 @@ enum class BSig {
     Generic1,  // one number -> same type
     Generic2,  // two numbers -> their common type
     Generic3,  // three numbers -> their common type
+    Wait,      // wait() / wait(seconds) / wait(otherTask), only inside a task function
 };
 
 struct Builtin {

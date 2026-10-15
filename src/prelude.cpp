@@ -231,6 +231,13 @@ void setVolume(float volume);
 void update();
 )FRG";
 
+static const char* kTasks = R"FRG(
+void update(float dt);
+void runAll();
+int count();
+void stopAll();
+)FRG";
+
 static const char* kRandom = R"FRG(
 void seed(int value);
 int range(int min, int max);
@@ -249,6 +256,7 @@ const std::vector<PreludeLib>& preludeLibs() {
         {"assets", kAssets, true, "forge_assets.hpp"},
         {"audio", kAudio, true, "forge_audio.hpp"},
         {"random", kRandom, false, ""},
+        {"tasks", kTasks, false, ""},
     };
     return libs;
 }

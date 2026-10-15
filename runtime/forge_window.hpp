@@ -101,6 +101,7 @@ inline void beginFrame() {
     BeginDrawing();
     ClearBackground(rl(st().background));
     st().inFrame = true;
+    tasks::update_(GetFrameTime());  // wake up any task whose wait() is over
 }
 
 inline void endFrame() {

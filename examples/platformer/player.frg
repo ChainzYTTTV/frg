@@ -17,6 +17,17 @@ class Player : Body {
         position = START;
         velocity = vec2.ZERO;
         deaths++;
+        flash();
+    }
+
+    // A task: it runs alongside the game, and wait() pauses just this task, not the game.
+    task flash() {
+        for (int i = 0; i < 5; i++) {
+            tint = color.WHITE;
+            wait(0.08);
+            tint = color.ORANGE;
+            wait(0.08);
+        }
     }
 }
 

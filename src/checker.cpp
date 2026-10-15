@@ -192,6 +192,8 @@ const std::vector<BMethod>& bmethods() {
         {TK::String, "charAt", {"int"}, "string"},
         {TK::String, "repeat", {"int"}, "string"},
         {TK::String, "isEmpty", {}, "bool"},
+        {TK::Task, "isDone", {}, "bool"},
+        {TK::Task, "stop", {}, "void"},
     };
     return t;
 }
@@ -302,7 +304,7 @@ bool Checker::checkNewName(const std::string& n, const Loc& loc) {
         reportError(loc, "'" + n + "' is a built-in type name, so it can't be used as a name");
         return false;
     }
-    if (findBuiltin("stdio", n)) {
+    if (findBuiltin("stdio", n) || findBuiltin("core", n)) {
         reportError(loc, "'" + n + "' is the name of a built-in function", "pick a different name");
         return false;
     }
@@ -905,6 +907,9 @@ Type* Checker::nameExpr(Expr* e, bool allowNonValue) {
     } else if (TypeDecl* d = findTypeDecl(n)) {
         r.kind = RK::Type;
         r.tdecl = d;
+    } else if (const Builtin* cb = findBuiltin("core", n)) {
+        r.kind = RK::Builtin;
+        r.builtin = cb;
     } else if (const Builtin* b = findBuiltin("stdio", n)) {
         if (!cur->libs.count("stdio")) {
             reportError(e->loc, "'" + n + "' is part of the stdio library, which this file doesn't include",
@@ -967,8 +972,8 @@ void Checker::valueMember(Expr* e, Expr* o) {
         }
         return;
     }
-    if (d->kind == TK::List || d->kind == TK::Map || d->kind == TK::String) {
-        if (n == "length") {
+    if (d->kind == TK::List || d->kind == TK::Map || d->kind == TK::String || d->kind == TK::Task) {
+        if (n == "length" && d->kind != TK::Task) {
             r.kind = RK::BuiltinMethod;
             r.index = -1;
             return;
@@ -981,7 +986,7 @@ void Checker::valueMember(Expr* e, Expr* o) {
                 return;
             }
         }
-        std::string what = d->kind == TK::List ? "lists" : d->kind == TK::Map ? "maps" : "text";
+        std::string what = d->kind == TK::List ? "lists" : d->kind == TK::Map ? "maps" : d->kind == TK::Task ? "tasks" : "text";
         std::string guess = suggestName(n, memberNamesOf(d->kind));
         reportError(e->loc, what + " don't have anything called '" + n + "'", guess.empty() ? "" : "did you mean '" + guess + "'?");
         return;
@@ -1288,7 +1293,8 @@ Type* Checker::bmethodCall(Expr* e) {
 }
 
 Type* Checker::builtinCall(Expr* e, const Builtin* b) {
-    std::string name = std::string(b->lib) == "stdio" ? b->name : std::string(b->lib) + "." + b->name;
+    std::string lib = b->lib;
+    std::string name = lib == "stdio" || lib == "core" ? b->name : lib + "." + b->name;
     std::vector<Expr*> args;
     bool bad = false;
     for (auto& a : e->args) {
@@ -1325,6 +1331,22 @@ Type* Checker::builtinCall(Expr* e, const Builtin* b) {
         case BSig::Input:
             if (needCount(0, 1) && args.size() == 1 && !bad) assignable(args[0], tString(), "the prompt of input()");
             return e->type = tString();
+        case BSig::Wait:
+            if (!fn || fn->ret != tTask()) {
+                reportError(e->loc, "wait() only works inside a task function",
+                            fn && !fn->isCtor ? "change '" + fn->retRef.display() + " " + fn->name + "()' to 'task " + fn->name +
+                                                    "()' - then calling it starts it, and it keeps going on its own"
+                                              : "make a function like: task blink() { ... wait(0.5); ... }");
+                return e->type = tVoid();
+            }
+            if (!needCount(0, 1) || bad || args.empty()) return e->type = tVoid();
+            if (args[0]->type == tTask()) return e->type = tVoid();
+            if (!isNumeric(args[0]->type)) {
+                reportError(args[0]->loc, "wait() needs a number of seconds (or a task to wait for), but this is " + aType(args[0]->type));
+                return e->type = tVoid();
+            }
+            coerce(args[0], tFloat(64));
+            return e->type = tVoid();
         default: break;
     }
 
@@ -1639,8 +1661,8 @@ Type* Checker::castExpr(Expr* e) {
     Type* S = value(e->a.get());
     e->type = T;
     if (S == tError()) return T;
-    if (T == tVoid()) {
-        reportError(e->loc, "can't convert to void");
+    if (T == tVoid() || T == tTask()) {
+        reportError(e->loc, "can't convert to " + T->name);
         return e->type = tError();
     }
     if (S->kind == TK::Void) {
@@ -1846,13 +1868,16 @@ void Checker::stmt(Stmt* s) {
         }
         case SK::Return: {
             Type* ret = fn->ret ? fn->ret : tError();
+            if (ret == tTask()) ret = tVoid();  // a task just stops when it returns
             if (s->expr) {
                 if (ret == tVoid()) {
                     value(s->expr.get());
                     reportError(s->expr->loc,
                                 fn->isCtor ? "a constructor can't return a value"
-                                           : "'" + fn->name + "' is a void function, so it can't return a value",
-                                fn->isCtor ? "use 'return;' to leave early" : "remove the value, or change 'void' to the type it should return");
+                                : fn->ret == tTask() ? "a task can't return a value"
+                                                     : "'" + fn->name + "' is a void function, so it can't return a value",
+                                fn->isCtor || fn->ret == tTask() ? "use 'return;' to stop early"
+                                                                 : "remove the value, or change 'void' to the type it should return");
                 } else {
                     checkInto(s->expr.get(), ret, "the return value of " + fn->name + "()");
                 }
@@ -1893,8 +1918,10 @@ void Checker::checkBody(FuncDecl* f, TypeDecl* owner) {
             declareLocal(p.get());
         }
     }
+    if (owner && owner->kind == DK::Struct && f->ret == tTask())
+        reportError(f->loc, "a struct's methods can't be tasks", "make " + owner->name + " a class, or move the task to a normal function");
     for (auto& s : f->body->body) stmt(s.get());
-    if (f->ret && f->ret != tVoid() && f->ret != tError() && !alwaysReturns(f->body.get())) {
+    if (f->ret && f->ret != tVoid() && f->ret != tTask() && f->ret != tError() && !alwaysReturns(f->body.get())) {
         std::string example = f->ret->kind == TK::String ? "\"\"" : f->ret->kind == TK::Bool ? "false" : isNumeric(f->ret) ? "0" : "...";
         reportError(f->loc, "'" + f->name + "' doesn't always return a value", "add a return at the end, like 'return " + example + ";'");
     }

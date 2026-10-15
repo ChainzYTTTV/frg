@@ -1,0 +1,11 @@
+=== main.frg
+void blink() {
+    wait(0.5);
+}
+
+int main(){
+    return 0;
+}
+=== error
+wait() only works inside a task function
+change 'void blink()' to 'task blink()'

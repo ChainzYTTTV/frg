@@ -7,6 +7,7 @@
 // stdio and math functions that need special type rules (print takes anything, math.min works on any number).
 // Everything else built in is declared in Forge syntax in prelude.cpp.
 static const Builtin kBuiltins[] = {
+    {"core", "wait", BSig::Wait, "::frg::tasks::Wait"},
     {"stdio", "print", BSig::Print, "::frg::print"},
     {"stdio", "write", BSig::Write, "::frg::write"},
     {"stdio", "input", BSig::Input, "::frg::readInput"},

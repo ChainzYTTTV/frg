@@ -4,7 +4,7 @@
 
 struct TypeDecl;
 
-enum class TK { Error, Void, Null, Bool, Int, Float, String, Struct, Class, Enum, List, Map, Optional, Pointer };
+enum class TK { Error, Void, Null, Bool, Int, Float, String, Task, Struct, Class, Enum, List, Map, Optional, Pointer };
 
 struct Type {
     TK kind;
@@ -22,6 +22,7 @@ Type* tVoid();
 Type* tNull();
 Type* tBool();
 Type* tString();
+Type* tTask();  // a running coroutine: functions that return 'task' can wait()
 Type* tInt(int bits, bool isSigned);
 Type* tFloat(int bits);
 Type* tList(Type* elem);

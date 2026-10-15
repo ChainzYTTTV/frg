@@ -11,6 +11,7 @@ static Type T_void{TK::Void, 0, true, "void", "void"};
 static Type T_null{TK::Null, 0, true, "null", "::std::nullptr_t"};
 static Type T_bool{TK::Bool, 0, true, "bool", "bool"};
 static Type T_string{TK::String, 0, true, "string", "::std::string"};
+static Type T_task{TK::Task, 0, true, "task", "::frg::Task"};
 
 static Type T_i8{TK::Int, 8, true, "int8", "int8_t"};
 static Type T_i16{TK::Int, 16, true, "int16", "int16_t"};
@@ -31,6 +32,7 @@ Type* tVoid() { return &T_void; }
 Type* tNull() { return &T_null; }
 Type* tBool() { return &T_bool; }
 Type* tString() { return &T_string; }
+Type* tTask() { return &T_task; }
 
 Type* tInt(int bits, bool isSigned) {
     switch (bits) {
@@ -120,7 +122,7 @@ static const std::map<std::string, Type*>& primitiveTable() {
         {"int64", &T_i64},   {"int128", &T_i128}, {"uint8", &T_u8},    {"uint16", &T_u16},
         {"uint", &T_u32},    {"uint32", &T_u32},  {"uint64", &T_u64},  {"uint128", &T_u128},
         {"float", &T_f32},   {"double", &T_f64},  {"bool", &T_bool},   {"string", &T_string},
-        {"void", &T_void},
+        {"void", &T_void},    {"task", &T_task},
     };
     return table;
 }

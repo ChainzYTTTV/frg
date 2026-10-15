@@ -1,0 +1,81 @@
+=== main.frg
+#include <stdio>
+#include <tasks>
+
+class Door {
+    string name;
+    bool open = false;
+
+    task openSlowly() {
+        print("{name}: creak...");
+        wait(1.0);
+        open = true;
+        print("{name}: open!");
+    }
+}
+
+task countdown(string label, int from) {
+    for (int i = from; i > 0; i--) {
+        print("{label} {i}");
+        wait(0.5);
+    }
+    print("{label} go!");
+}
+
+task boss() {
+    task intro = countdown("boss", 2);
+    wait(intro);            // wait for another task to finish
+    print("boss fight starts");
+    wait();                 // just the next update
+    print("boss done");
+}
+
+task forever() {
+    while (true) {
+        wait(0.25);
+    }
+}
+
+task quick() {
+    print("quick task never waits");
+}
+
+int main(){
+    Door d = Door("front", false);
+    task t = d.openSlowly();     // runs right away, until its first wait
+    task b = boss();
+    task f = forever();
+    quick();
+    print("tasks running: {tasks.count()}, door done? {t.isDone()}");
+
+    for (int frame = 1; frame <= 6; frame++) {
+        print("-- {frame * 0.25} s");
+        tasks.update(0.25);
+    }
+    print("door open: {d.open}, door task: {t}");
+
+    f.stop();
+    print(f.isDone());
+    tasks.runAll();          // nothing left to wait for, so this returns at once
+    print("left: {tasks.count()}");
+    return 0;
+}
+=== output
+front: creak...
+boss 2
+quick task never waits
+tasks running: 4, door done? false
+-- 0.25 s
+-- 0.5 s
+boss 1
+-- 0.75 s
+-- 1.0 s
+front: open!
+boss go!
+-- 1.25 s
+boss fight starts
+-- 1.5 s
+boss done
+door open: true, door task: task (done)
+true
+left: 0

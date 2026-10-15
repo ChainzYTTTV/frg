@@ -63,7 +63,9 @@ std::string where(const Loc& l) {
     return cppString((l.file ? l.file->displayPath : std::string("?")) + ":" + std::to_string(l.line));
 }
 
-const char* bmethodPrefix(TK kind) { return kind == TK::List ? "::frg::list_" : kind == TK::Map ? "::frg::map_" : "::frg::str_"; }
+const char* bmethodPrefix(TK kind) {
+    return kind == TK::List ? "::frg::list_" : kind == TK::Map ? "::frg::map_" : kind == TK::Task ? "::frg::task_" : "::frg::str_";
+}
 
 Type* derefType(Type* t) {
     if (t->kind == TK::Pointer) t = t->elem;
@@ -187,6 +189,7 @@ std::string Gen::strCode(const std::string& code, const Type* t, bool shallow) {
         case TK::Int:
         case TK::Float:
         case TK::Bool:
+        case TK::Task:
         case TK::String: return "::frg::str(" + code + ")";
         case TK::Null: return "::std::string(\"null\")";
         case TK::Enum:
@@ -294,6 +297,11 @@ std::string Gen::call(const Expr* e) {
                 return std::string(b->cpp) + "(" + strCode(ex(e->args[0].get()), e->args[0]->type) + ")";
             }
             if (b->sig == BSig::Input) return std::string(b->cpp) + "(" + (e->args.empty() ? "" : ex(e->args[0].get())) + ")";
+            if (b->sig == BSig::Wait) {
+                if (e->args.empty()) return "co_await ::frg::tasks::Wait{0.0}";
+                if (e->args[0]->type == tTask()) return "co_await ::frg::tasks::WaitFor{" + ex(e->args[0].get()) + "}";
+                return "co_await ::frg::tasks::Wait{" + conv(e->args[0].get(), tFloat(64)) + "}";
+            }
             std::string a;
             for (size_t i = 0; i < e->args.size(); i++) a += (i ? ", " : "") + conv(e->args[i].get(), e->type);
             std::string name = b->cpp;
@@ -538,7 +546,10 @@ void Gen::stmt(const Stmt* s) {
             break;
         }
         case SK::Return:
-            line(s->expr ? "return " + conv(s->expr.get(), fn->ret) + ";" : "return;");
+            if (fn->ret == tTask())
+                line("co_return;");
+            else
+                line(s->expr ? "return " + conv(s->expr.get(), fn->ret) + ";" : "return;");
             break;
         case SK::Break: line("break;"); break;
         case SK::Continue: line("continue;"); break;
@@ -655,7 +666,12 @@ void Gen::emitBody(const FuncDecl* f, TypeDecl* owner, const std::string& head) 
     fn = const_cast<FuncDecl*>(f);
     curType = owner;
     line(head + " {");
+    if (f->ret == tTask() && owner && owner->kind == DK::Class) {
+        // A task can outlive the line that started it, so it keeps its object alive while it runs.
+        line("    auto frg$self = this->shared_from_this();");
+    }
     children(f->body.get());
+    if (f->ret == tTask()) line("    co_return;");  // makes it a coroutine even if it never waits
     line("}");
     curType = nullptr;
 }

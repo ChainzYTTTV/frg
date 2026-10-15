@@ -4,7 +4,9 @@
 
 #include <algorithm>
 #include <charconv>
+#include <chrono>
 #include <cmath>
+#include <coroutine>
 #include <cstdint>
 #include <cstdio>
 #include <cstdlib>
@@ -15,6 +17,7 @@
 #include <optional>
 #include <random>
 #include <string>
+#include <thread>
 #include <type_traits>
 #include <vector>
 
@@ -186,6 +189,150 @@ constexpr double PI_ = 3.14159265358979323846;
 constexpr double TAU_ = 6.28318530717958647692;
 constexpr double E_ = 2.71828182845904523536;
 }  // namespace math
+
+// ---------------------------------------------------------------- tasks: functions that can wait()
+//
+// A Forge function that returns `task` becomes a C++ coroutine. Calling it runs it right away, up to its
+// first wait(); after that the scheduler resumes it once enough game time has passed. With a window, the
+// scheduler moves forward by itself every frame; without one, call tasks.update(dt) or tasks.runAll().
+
+namespace tasks {
+struct State {
+    std::coroutine_handle<> handle;
+    double wakeAt = 0;
+    std::shared_ptr<State> waitingOn;  // wait(otherTask)
+    bool done = false;
+    bool running = false;
+    bool stopRequested = false;
+};
+struct Scheduler {
+    double now = 0;
+    std::vector<std::shared_ptr<State>> waiting;
+};
+inline Scheduler& sched() {
+    static Scheduler s;
+    return s;
+}
+}  // namespace tasks
+
+struct Task {
+    std::shared_ptr<tasks::State> st;
+
+    struct promise_type {
+        std::shared_ptr<tasks::State> state = std::make_shared<tasks::State>();
+        Task get_return_object() {
+            state->handle = std::coroutine_handle<promise_type>::from_promise(*this);
+            state->running = true;
+            return Task{state};
+        }
+        std::suspend_never initial_suspend() noexcept { return {}; }
+        std::suspend_never final_suspend() noexcept { return {}; }
+        void return_void() {
+            state->done = true;
+            state->running = false;
+        }
+        void unhandled_exception() { std::terminate(); }
+    };
+};
+
+namespace tasks {
+// Shared by wait(seconds) and wait(otherTask): parks the task in the scheduler.
+inline void park(std::coroutine_handle<Task::promise_type> h, double seconds, std::shared_ptr<State> on) {
+    auto st = h.promise().state;
+    st->running = false;
+    if (st->stopRequested) {  // it called stop() on itself
+        st->done = true;
+        h.destroy();
+        return;
+    }
+    st->wakeAt = sched().now + (seconds > 0 ? seconds : 0);
+    st->waitingOn = std::move(on);
+    sched().waiting.push_back(st);
+}
+
+struct Wait {
+    double seconds;
+    bool await_ready() const noexcept { return false; }
+    void await_suspend(std::coroutine_handle<Task::promise_type> h) { park(h, seconds, nullptr); }
+    void await_resume() const noexcept {}
+};
+
+struct WaitFor {
+    Task other;
+    bool await_ready() const noexcept { return !other.st || other.st->done; }
+    void await_suspend(std::coroutine_handle<Task::promise_type> h) { park(h, 0, other.st); }
+    void await_resume() const noexcept {}
+};
+
+inline void update_(float dt) {
+    Scheduler& s = sched();
+    s.now += dt > 0 ? dt : 0;
+    std::vector<std::shared_ptr<State>> ready, still;
+    for (auto& t : s.waiting) {
+        if (t->done) continue;
+        bool wake = t->waitingOn ? t->waitingOn->done : t->wakeAt <= s.now + 1e-9;
+        (wake ? ready : still).push_back(t);
+    }
+    s.waiting = std::move(still);
+    for (auto& t : ready) {
+        if (t->done) continue;
+        t->running = true;
+        t->handle.resume();
+    }
+}
+
+inline int32_t count_() {
+    int32_t n = 0;
+    for (auto& t : sched().waiting)
+        if (!t->done) n++;
+    return n;
+}
+
+inline void stop(const std::shared_ptr<State>& st) {
+    if (!st || st->done) return;
+    if (st->running) {  // stopping itself: it stops at its next wait()
+        st->stopRequested = true;
+        return;
+    }
+    auto& w = sched().waiting;
+    w.erase(std::remove(w.begin(), w.end(), st), w.end());
+    st->done = true;
+    st->handle.destroy();
+}
+
+inline void stopAll_() {
+    auto waiting = sched().waiting;
+    for (auto& t : waiting) stop(t);
+}
+
+// For programs without a window: keeps going (really waiting) until every task has finished.
+inline void runAll_() {
+    while (true) {
+        Scheduler& s = sched();
+        double next = -1;
+        bool any = false;
+        for (auto& t : s.waiting) {
+            if (t->done) continue;
+            any = true;
+            if (!t->waitingOn && (next < 0 || t->wakeAt < next)) next = t->wakeAt;
+        }
+        if (!any) return;
+        if (next < 0) {  // only tasks waiting for other tasks are left
+            size_t before = s.waiting.size();
+            update_(0);
+            if (sched().waiting.size() >= before) return;  // nothing can move any more
+            continue;
+        }
+        double dt = next - s.now;
+        if (dt > 0) std::this_thread::sleep_for(std::chrono::duration<double>(dt));
+        update_((float)(dt > 0 ? dt : 0));
+    }
+}
+}  // namespace tasks
+
+inline bool task_isDone(const Task& t, const char*) { return !t.st || t.st->done; }
+inline void task_stop(Task& t, const char*) { tasks::stop(t.st); }
+inline std::string str(const Task& t) { return task_isDone(t, "") ? "task (done)" : "task (running)"; }
 
 // ---------------------------------------------------------------- optionals and null
 

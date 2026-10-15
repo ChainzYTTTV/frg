@@ -107,6 +107,17 @@ Type* tPointer(Type* target) {
     return intern("ptr:" + idOf(target), t);
 }
 
+Type* tWeak(Type* target) {
+    Type t{};
+    t.kind = TK::Weak;
+    t.name = "Weak<" + target->name + ">";
+    // target is a class: its C++ type is ::std::shared_ptr<X>, and this is ::std::weak_ptr<X>.
+    const std::string pre = "::std::shared_ptr<";
+    t.cpp = "::std::weak_ptr<" + target->cpp.substr(pre.size());
+    t.elem = target;
+    return intern("weak:" + idOf(target), t);
+}
+
 Type* tFunction(Type* ret, const std::vector<Type*>& params) {
     Type t{};
     t.kind = TK::Function;
@@ -183,6 +194,7 @@ Type* substType(Type* t, const std::vector<Type*>& from, const std::vector<Type*
         case TK::Map: return tMap(substType(t->key, from, to), substType(t->elem, from, to));
         case TK::Optional: return tOptional(substType(t->elem, from, to));
         case TK::Pointer: return tPointer(substType(t->elem, from, to));
+        case TK::Weak: return tWeak(substType(t->elem, from, to));
         case TK::Function: {
             std::vector<Type*> ps;
             for (Type* p : t->params) ps.push_back(substType(p, from, to));
@@ -216,7 +228,7 @@ Type* primitiveTypeByName(const std::string& name) {
     return it == primitiveTable().end() ? nullptr : it->second;
 }
 
-static const char* kOtherBuiltinTypes[] = {"list", "map", "Pointer", "Function", "vec2", "vec3", "vec4", "color", "rect"};
+static const char* kOtherBuiltinTypes[] = {"list", "map", "Pointer", "Function", "Weak", "vec2", "vec3", "vec4", "color", "rect"};
 
 bool isBuiltinTypeName(const std::string& name) {
     if (primitiveTypeByName(name)) return true;
@@ -272,6 +284,7 @@ bool implicitlyConverts(Type* from, Type* to) {
     }
     if (from->kind == TK::Int && to->kind == TK::Float) return true;
     if (from->kind == TK::Float && to->kind == TK::Float) return to->bits > from->bits;
+    if (from->kind == TK::Weak && to->kind == TK::Weak) return implicitlyConverts(from->elem, to->elem);
     if (from->kind == TK::Class && to->kind == TK::Class) return !isGeneric(from) && !isGeneric(to) && inheritsFrom(from->decl, to->decl);
     if (to->kind == TK::Optional) {
         if (from->kind == TK::Null) return true;

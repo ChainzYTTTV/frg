@@ -419,6 +419,14 @@ template <class T>
 void ptr_remove(T*& p, const char*) { p = nullptr; }
 template <class T>
 bool ptr_isRemoved(T* p, const char*) { return p == nullptr; }
+// Weak<T>: get() gives the object, or null once nothing else keeps it alive.
+template <class T>
+std::shared_ptr<T> weak_get(const std::weak_ptr<T>& w, const char*) { return w.lock(); }
+template <class T, class F>
+std::string strWeak(const std::weak_ptr<T>& w, F&& show) {
+    auto p = w.lock();
+    return p ? show(p) : std::string("null");
+}
 template <class T, class F>
 std::string strPtr(T* p, F&& show) { return p ? show(*p) : std::string("removed pointer"); }
 
@@ -599,6 +607,10 @@ struct IsSharedPtr : std::false_type {};
 template <class T>
 struct IsSharedPtr<std::shared_ptr<T>> : std::true_type {};
 template <class T>
+struct IsWeak : std::false_type {};
+template <class T>
+struct IsWeak<std::weak_ptr<T>> : std::true_type {};
+template <class T>
 struct IsFunction : std::false_type {};
 template <class T>
 struct IsFunction<std::function<T>> : std::true_type {};
@@ -624,6 +636,9 @@ std::string strAny(const T& x) {
         return x ? strAny(*x) : std::string("null");
     } else if constexpr (IsSharedPtr<T>::value) {
         return x ? frg$str(x) : std::string("null");
+    } else if constexpr (IsWeak<T>::value) {
+        auto p = x.lock();
+        return p ? strAny(p) : std::string("null");
     } else if constexpr (std::is_pointer_v<T>) {
         return x ? strAny(*x) : std::string("removed pointer");
     } else if constexpr (IsFunction<T>::value) {

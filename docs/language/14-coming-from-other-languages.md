@@ -51,6 +51,7 @@ If you already know C++, C#, Java, JavaScript or Python, Forge will feel familia
 | `try` / `catch` | not available | runtime errors stop the game with a message |
 | lambdas, function pointers, callbacks | `(Enemy e) { return e.hp <= 0; }`, typed `Function<bool(Enemy)>` | a function value gets a copy of the local variables it uses. See [Functions as values](06-functions.md#functions-as-values) |
 | templates / generics you write yourself | `class Box<T> { T item; }`, used as `Box<int> b = Box(5);` | structs and classes only, not functions; inside, a `T` can only be stored, passed, compared and printed. See [Generic types](09-structs-and-classes.md#generic-types-one-type-that-holds-any-type) |
+| `weak_ptr`, `WeakReference`, `weakref` | `Weak<Player> w = Weak(p);` and `Player? x = w.get();` | only for class types. See [Weak](09-structs-and-classes.md#weak-pointing-at-an-object-without-keeping-it-alive) |
 | threads | not available | use [tasks](11-tasks.md) for things that happen over time |
 
 ## Things Forge adds

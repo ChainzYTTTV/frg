@@ -8,6 +8,7 @@
 // Everything else built in is declared in Forge syntax in prelude.cpp.
 static const Builtin kBuiltins[] = {
     {"core", "wait", BSig::Wait, "::frg::tasks::Wait"},
+    {"core", "Weak", BSig::Weak, "::frg::weakOf"},
     {"stdio", "print", BSig::Print, "::frg::print"},
     {"stdio", "write", BSig::Write, "::frg::write"},
     {"stdio", "input", BSig::Input, "::frg::readInput"},

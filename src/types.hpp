@@ -4,7 +4,7 @@
 
 struct TypeDecl;
 
-enum class TK { Error, Void, Null, Bool, Int, Float, String, Task, Struct, Class, Enum, List, Map, Optional, Pointer, Function, TypeParam };
+enum class TK { Error, Void, Null, Bool, Int, Float, String, Task, Struct, Class, Enum, List, Map, Optional, Pointer, Function, TypeParam, Weak };
 
 struct Type {
     TK kind;
@@ -12,7 +12,7 @@ struct Type {
     bool isSigned = true;      // Int only
     std::string name;          // name shown to the user ("int", "list<Enemy>", "Player?")
     std::string cpp;           // C++ spelling used by the code generator
-    Type* elem = nullptr;      // List element, Map value, Optional inner type, Pointer target
+    Type* elem = nullptr;      // List element, Map value, Optional inner type, Pointer / Weak target
     Type* key = nullptr;       // Map key
     std::vector<Type*> params; // Function: the parameter types (elem is the return type). Generic struct/class: the types it's made with
     TypeDecl* decl = nullptr;  // Struct / Class / Enum, or the generic type a TypeParam belongs to
@@ -30,6 +30,7 @@ Type* tList(Type* elem);
 Type* tMap(Type* key, Type* value);
 Type* tOptional(Type* inner);
 Type* tPointer(Type* target);
+Type* tWeak(Type* target);  // Weak<Player>: points at a class object without keeping it alive
 Type* tFunction(Type* ret, const std::vector<Type*>& params);  // Function<ret(params)>
 Type* tNamed(TypeDecl* decl);  // the type of a struct, class or enum (a generic one with its own type names: Box<T>)
 Type* tGeneric(TypeDecl* decl, const std::vector<Type*>& args);  // Box<int>

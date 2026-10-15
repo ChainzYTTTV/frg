@@ -1,0 +1,29 @@
+=== main.frg
+#include <stdio>
+
+struct Point {
+    int x;
+}
+
+class Player {
+}
+
+int main(){
+    Weak<int> a;
+    Weak<Point> b;
+    Weak<Player, Player> c;
+    int n = 3;
+    Weak<Player> d = Weak(n);
+    Player p = Player();
+    Weak<Player> e = Weak(p);
+    Weak<Player> f = Weak(p);
+    print(e == f);
+    Player q = e.get();
+    return 0;
+}
+=== error
+Weak only works with classes, but int isn't one
+Weak only works with classes, but Point isn't one
+'Weak' needs 1 type inside < >
+Weak(...) needs a class object, but this is an int
+Weak values can't be compared directly

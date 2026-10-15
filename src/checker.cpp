@@ -217,6 +217,7 @@ const std::vector<BMethod>& bmethods() {
         {TK::Task, "isDone", {}, "bool"},
         {TK::Pointer, "remove", {}, "void"},
         {TK::Pointer, "isRemoved", {}, "bool"},
+        {TK::Weak, "get", {}, "E?"},
         {TK::Task, "stop", {}, "void"},
     };
     return t;
@@ -231,6 +232,7 @@ Type* bmType(const std::string& pat, Type* obj) {
     if (pat == "list<E>" || pat == "list<V>") return tList(obj->elem);
     if (pat == "list<K>") return tList(obj->key);
     if (pat == "list<string>") return tList(tString());
+    if (pat == "E?") return tOptional(obj->elem);
     if (pat == "Function<bool(E)>") return tFunction(tBool(), {obj->elem});
     if (pat == "Function<float(E)>") return tFunction(tFloat(32), {obj->elem});
     return tVoid();
@@ -529,6 +531,17 @@ Type* Checker::resolveType(const TypeRef& r, bool allowVoid) {
             Type* target = resolveType(r.args[0], false);
             if (target == tError()) return tError();
             base = tPointer(target);
+        } else if (name == "Weak") {
+            if (!argCount(1, "Weak<Player>")) return tError();
+            Type* target = resolveType(r.args[0], false);
+            if (target == tError()) return tError();
+            if (target->kind != TK::Class) {
+                reportError(r.args[0].loc, "Weak only works with classes, but " + target->name + " isn't one",
+                            target->kind == TK::TypeParam ? "T could be any type here, so use T? instead"
+                                                          : "structs, numbers and text are copied, so there's nothing to point at");
+                return tError();
+            }
+            base = tWeak(target);
         } else if (name == "Function") {
             if (!r.isFunction) {
                 reportError(r.loc, "Function needs the kind of function inside < >",
@@ -1345,8 +1358,8 @@ void Checker::valueMember(Expr* e, Expr* o) {
         }
         return;
     }
-    if (d->kind == TK::List || d->kind == TK::Map || d->kind == TK::String || d->kind == TK::Task) {
-        if (n == "length" && d->kind != TK::Task) {
+    if (d->kind == TK::List || d->kind == TK::Map || d->kind == TK::String || d->kind == TK::Task || d->kind == TK::Weak) {
+        if (n == "length" && d->kind != TK::Task && d->kind != TK::Weak) {
             r.kind = RK::BuiltinMethod;
             r.index = -1;
             return;
@@ -1359,7 +1372,7 @@ void Checker::valueMember(Expr* e, Expr* o) {
                 return;
             }
         }
-        std::string what = d->kind == TK::List ? "lists" : d->kind == TK::Map ? "maps" : d->kind == TK::Task ? "tasks" : "text";
+        std::string what = d->kind == TK::List ? "lists" : d->kind == TK::Map ? "maps" : d->kind == TK::Task ? "tasks" : d->kind == TK::Weak ? "Weak values" : "text";
         std::string guess = suggestName(n, memberNamesOf(d->kind));
         reportError(e->loc, what + " don't have anything called '" + n + "'", guess.empty() ? "" : "did you mean '" + guess + "'?");
         return;
@@ -1827,6 +1840,17 @@ Type* Checker::builtinCall(Expr* e, const Builtin* b) {
                 reportError(args[0]->loc, "this doesn't give back a value to show");
             }
             return e->type = tVoid();
+        case BSig::Weak: {
+            if (!needCount(1, 1) || bad) return e->type = tError();
+            Type* t = args[0]->type;
+            if (t->kind == TK::Optional) t = t->elem;
+            if (t->kind != TK::Class) {
+                reportError(args[0]->loc, "Weak(...) needs a class object, but this is " + aType(args[0]->type),
+                            "structs, numbers and text are copied, so there's nothing to point at");
+                return e->type = tError();
+            }
+            return e->type = tWeak(t);
+        }
         case BSig::Input:
             if (needCount(0, 1) && args.size() == 1 && !bad) assignable(args[0], tString(), "the prompt of input()");
             return e->type = tString();
@@ -2060,6 +2084,10 @@ Type* Checker::equalityOp(Expr* e) {
             assignable(other, opt, "");
             return ok(opt);
         }
+    }
+    if (L->kind == TK::Weak || R->kind == TK::Weak) {
+        reportError(e->loc, "Weak values can't be compared directly", "compare what they point at: a.get() == b.get()");
+        return e->type = tError();
     }
     if (L == R && L->kind != TK::Void) return ok(L);
     if (L->kind == TK::Class && R->kind == TK::Class && !isGeneric(L) && !isGeneric(R)) {

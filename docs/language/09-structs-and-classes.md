@@ -199,6 +199,37 @@ void removeEnemy(Enemy e){
 
 A common example is a parent and its children, like a team and its players. Let the team hold a `list<Player>`, and give each `Player` a `Team? team` field. When a player leaves the team, set its `team = null` as well as removing it from the list.
 
+### Weak: pointing at an object without keeping it alive
+
+The other way to avoid the loop is a **weak** link. A `Weak<Player>` points at a player, but doesn't count as "something still refers to it". When nothing else keeps the player alive, it's freed, and the weak link simply becomes empty:
+
+```cpp
+class Enemy {
+    Weak<Player> target;              // starts empty
+
+    void chase() {
+        Player? p = target.get();     // the player, or null if it's gone
+        if (p != null) {
+            print("chasing {p.name}");
+        }
+    }
+}
+
+Enemy e = Enemy();
+e.target = Weak(hero);                // point at hero, without keeping it alive
+```
+
+So for a team and its players, the team holds `list<Player> players` (strong: the team keeps them), and each player holds `Weak<Team> team` (weak: no loop). Nothing needs to be set to `null` by hand.
+
+Things to know:
+
+- `Weak(object)` makes one. `Weak<Player>` only works with class types (structs, numbers and text are copied, so there's nothing to point at).
+- `get()` gives a `Player?`: the object if it's still alive, or `null`. Always check it before using it.
+- A `Weak<...>` variable or field without a starting value is empty, and `get()` gives `null`.
+- A `Weak<Goblin>` can be stored in a `Weak<Enemy>` when `Goblin` inherits from `Enemy`.
+- Two `Weak` values can't be compared with `==`: compare what they point at, `a.get() == b.get()`.
+- `print` shows the object it points at, or `null`.
+
 ## Inheritance
 
 A class can **inherit** from another class with `:`. It gets all the parent's fields and methods, and can add its own:

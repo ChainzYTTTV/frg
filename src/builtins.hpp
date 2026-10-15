@@ -14,6 +14,7 @@ enum class BSig {
     Generic2,  // two numbers -> their common type
     Generic3,  // three numbers -> their common type
     Wait,      // wait() / wait(seconds) / wait(otherTask), only inside a task function
+    Weak,      // Weak(object): a Weak<Type> pointing at a class object
 };
 
 struct Builtin {

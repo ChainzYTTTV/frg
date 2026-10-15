@@ -65,7 +65,7 @@ std::string where(const Loc& l) {
 }
 
 const char* bmethodPrefix(TK kind) {
-    return kind == TK::List ? "::frg::list_" : kind == TK::Map ? "::frg::map_" : kind == TK::Task ? "::frg::task_" : "::frg::str_";
+    return kind == TK::List ? "::frg::list_" : kind == TK::Map ? "::frg::map_" : kind == TK::Task ? "::frg::task_" : kind == TK::Weak ? "::frg::weak_" : "::frg::str_";
 }
 
 Type* derefType(Type* t) {
@@ -212,6 +212,7 @@ std::string Gen::strCode(const std::string& code, const Type* t, bool shallow) {
                    "; }, [](const auto& v) { return " + strCode("v", t->elem, shallow) + "; })";
         case TK::Optional:
             return "::frg::strOpt(" + code + ", [](const auto& x) { return " + strCode("x", t->elem, shallow) + "; })";
+        case TK::Weak: return "::frg::strWeak(" + code + ", [](const auto& x) { return " + strCode("x", t->elem, shallow) + "; })";
         case TK::Pointer: return "::frg::strPtr(" + code + ", [](const auto& x) { return " + strCode("x", t->elem, shallow) + "; })";
         default: return "::std::string(\"?\")";
     }
@@ -333,6 +334,7 @@ std::string Gen::call(const Expr* e) {
                 if (e->args.empty()) return std::string(b->cpp) + "()";
                 return std::string(b->cpp) + "(" + strCode(ex(e->args[0].get()), e->args[0]->type) + ")";
             }
+            if (b->sig == BSig::Weak) return e->type->cpp + "(" + ex(e->args[0].get()) + ")";
             if (b->sig == BSig::Input) return std::string(b->cpp) + "(" + (e->args.empty() ? "" : ex(e->args[0].get())) + ")";
             if (b->sig == BSig::Wait) {
                 if (e->args.empty()) return "co_await ::frg::tasks::Wait{0.0}";

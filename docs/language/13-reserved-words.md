@@ -17,7 +17,7 @@ These words have special meanings, so they can't be used as names for variables,
 
 ## Built-in type names
 
-`void` `bool` `string` `task` `int` `int8` `int16` `int32` `int64` `int128` `uint` `uint8` `uint16` `uint32` `uint64` `uint128` `float` `double` `list` `map` `Pointer` `Function` `vec2` `vec3` `vec4` `color` `rect`
+`void` `bool` `string` `task` `int` `int8` `int16` `int32` `int64` `int128` `uint` `uint8` `uint16` `uint32` `uint64` `uint128` `float` `double` `list` `map` `Pointer` `Function` `Weak` `vec2` `vec3` `vec4` `color` `rect`
 
 ## Built-in functions
 

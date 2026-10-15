@@ -290,7 +290,7 @@ The difference between them is what happens when you copy one:
 
 - A **struct** is a value. `Point b = a;` makes a separate copy, so changing `b` doesn't change `a`. Use structs for small bits of data like positions and colors.
 - A **class** is shared. `Player b = a;` makes `b` another name for the *same* player. Use classes for game objects: players, enemies, items.
-- A class object is freed as soon as nothing refers to it any more. Two objects that refer to **each other** (`a.partner = b; b.partner = a;`) are never freed while the game runs. That rarely matters in small games, but if you make such pairs over and over, set one side to `null` when you're done with them (`a.partner = null;`). See [When class objects go away](language/09-structs-and-classes.md#when-class-objects-go-away).
+- A class object is freed as soon as nothing refers to it any more. Two objects that refer to **each other** (`a.partner = b; b.partner = a;`) are never freed while the game runs. That rarely matters in small games, but if you make such pairs over and over, set one side to `null` when you're done with them (`a.partner = null;`), or make one side weak: `Weak<Enemy> partner = Weak(b);` doesn't keep `b` alive, and `partner.get()` gives an `Enemy?` that is `null` once `b` is gone. See [When class objects go away](language/09-structs-and-classes.md#when-class-objects-go-away).
 
 Classes can **inherit** from another class. They get all its fields and methods, and can replace methods with their own version:
 

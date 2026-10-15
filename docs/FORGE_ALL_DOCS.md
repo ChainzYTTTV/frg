@@ -357,7 +357,7 @@ Point c = Point();        // every field at its starting value
 **The key difference:**
 - A **struct** is a *value*. `Point b = a;` makes a separate **copy**. Use structs for small data like positions.
 - A **class** is *shared*. `Player b = a;` makes `b` another name for the **same** player, and passing a class to a function lets the function change it. Use classes for game objects.
-- **When class objects are freed:** automatically, as soon as nothing (no variable, field or list) refers to them any more. There's no `delete`. The one exception: two objects that refer to **each other** (`a.partner = b; b.partner = a;`, or a team with a list of players where each player has a `Team? team` field) keep each other alive, so they're never freed while the game runs, even after the rest of the game has forgotten them. Memory comes back when the game closes. It rarely matters in small games (leftover objects aren't drawn or updated unless they're still in a list); it only adds up if such pairs are made over and over, like for every bullet. To avoid it, set one side to `null` when done: `e.partner = null;` before removing `e`. Explain it only if the learner builds objects that point at each other.
+- **When class objects are freed:** automatically, as soon as nothing (no variable, field or list) refers to them any more. There's no `delete`. The one exception: two objects that refer to **each other** (`a.partner = b; b.partner = a;`, or a team with a list of players where each player has a `Team? team` field) keep each other alive, so they're never freed while the game runs, even after the rest of the game has forgotten them. Memory comes back when the game closes. It rarely matters in small games (leftover objects aren't drawn or updated unless they're still in a list); it only adds up if such pairs are made over and over, like for every bullet. To avoid it, set one side to `null` when done: `e.partner = null;` before removing `e`, or make one side a **weak** link: `Weak<Team> team = Weak(t);` points at an object without keeping it alive; `team.get()` gives a `Team?` that is `null` once nothing else holds the team. `Weak<T>` only works with class types; an unset `Weak` field is empty; Weak values can't be compared with `==` (compare `a.get() == b.get()`). Explain it only if the learner builds objects that point at each other.
 
 ```cpp
 class Entity {
@@ -3830,6 +3830,37 @@ void removeEnemy(Enemy e){
 
 A common example is a parent and its children, like a team and its players. Let the team hold a `list<Player>`, and give each `Player` a `Team? team` field. When a player leaves the team, set its `team = null` as well as removing it from the list.
 
+#### Weak: pointing at an object without keeping it alive
+
+The other way to avoid the loop is a **weak** link. A `Weak<Player>` points at a player, but doesn't count as "something still refers to it". When nothing else keeps the player alive, it's freed, and the weak link simply becomes empty:
+
+```cpp
+class Enemy {
+    Weak<Player> target;              // starts empty
+
+    void chase() {
+        Player? p = target.get();     // the player, or null if it's gone
+        if (p != null) {
+            print("chasing {p.name}");
+        }
+    }
+}
+
+Enemy e = Enemy();
+e.target = Weak(hero);                // point at hero, without keeping it alive
+```
+
+So for a team and its players, the team holds `list<Player> players` (strong: the team keeps them), and each player holds `Weak<Team> team` (weak: no loop). Nothing needs to be set to `null` by hand.
+
+Things to know:
+
+- `Weak(object)` makes one. `Weak<Player>` only works with class types (structs, numbers and text are copied, so there's nothing to point at).
+- `get()` gives a `Player?`: the object if it's still alive, or `null`. Always check it before using it.
+- A `Weak<...>` variable or field without a starting value is empty, and `get()` gives `null`.
+- A `Weak<Goblin>` can be stored in a `Weak<Enemy>` when `Goblin` inherits from `Enemy`.
+- Two `Weak` values can't be compared with `==`: compare what they point at, `a.get() == b.get()`.
+- `print` shows the object it points at, or `null`.
+
 ### Inheritance
 
 A class can **inherit** from another class with `:`. It gets all the parent's fields and methods, and can add its own:
@@ -4737,7 +4768,7 @@ These words have special meanings, so they can't be used as names for variables,
 
 ### Built-in type names
 
-`void` `bool` `string` `task` `int` `int8` `int16` `int32` `int64` `int128` `uint` `uint8` `uint16` `uint32` `uint64` `uint128` `float` `double` `list` `map` `Pointer` `Function` `vec2` `vec3` `vec4` `color` `rect`
+`void` `bool` `string` `task` `int` `int8` `int16` `int32` `int64` `int128` `uint` `uint8` `uint16` `uint32` `uint64` `uint128` `float` `double` `list` `map` `Pointer` `Function` `Weak` `vec2` `vec3` `vec4` `color` `rect`
 
 ### Built-in functions
 
@@ -4833,6 +4864,7 @@ If you already know C++, C#, Java, JavaScript or Python, Forge will feel familia
 | `try` / `catch` | not available | runtime errors stop the game with a message |
 | lambdas, function pointers, callbacks | `(Enemy e) { return e.hp <= 0; }`, typed `Function<bool(Enemy)>` | a function value gets a copy of the local variables it uses. See Functions as values (see “6. Functions” › “Functions as values”) |
 | templates / generics you write yourself | `class Box<T> { T item; }`, used as `Box<int> b = Box(5);` | structs and classes only, not functions; inside, a `T` can only be stored, passed, compared and printed. See Generic types (see “9. Structs and Classes” › “Generic types: one type that holds any type”) |
+| `weak_ptr`, `WeakReference`, `weakref` | `Weak<Player> w = Weak(p);` and `Player? x = w.get();` | only for class types. See Weak (see “9. Structs and Classes” › “Weak: pointing at an object without keeping it alive”) |
 | threads | not available | use tasks (see “11. Tasks”) for things that happen over time |
 
 ### Things Forge adds
@@ -9229,7 +9261,7 @@ The difference between them is what happens when you copy one:
 
 - A **struct** is a value. `Point b = a;` makes a separate copy, so changing `b` doesn't change `a`. Use structs for small bits of data like positions and colors.
 - A **class** is shared. `Player b = a;` makes `b` another name for the *same* player. Use classes for game objects: players, enemies, items.
-- A class object is freed as soon as nothing refers to it any more. Two objects that refer to **each other** (`a.partner = b; b.partner = a;`) are never freed while the game runs. That rarely matters in small games, but if you make such pairs over and over, set one side to `null` when you're done with them (`a.partner = null;`). See When class objects go away (see “9. Structs and Classes” › “When class objects go away”).
+- A class object is freed as soon as nothing refers to it any more. Two objects that refer to **each other** (`a.partner = b; b.partner = a;`) are never freed while the game runs. That rarely matters in small games, but if you make such pairs over and over, set one side to `null` when you're done with them (`a.partner = null;`), or make one side weak: `Weak<Enemy> partner = Weak(b);` doesn't keep `b` alive, and `partner.get()` gives an `Enemy?` that is `null` once `b` is gone. See When class objects go away (see “9. Structs and Classes” › “When class objects go away”).
 
 Classes can **inherit** from another class. They get all its fields and methods, and can replace methods with their own version:
 

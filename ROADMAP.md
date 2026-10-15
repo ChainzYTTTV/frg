@@ -30,11 +30,66 @@ These belong before 1.0, because they're harder to add once people rely on how F
 | Your own generic types (`class Box<T>`) | reusable containers | L |
 | Weak references | objects that point at each other get freed | M |
 | `try` / `catch` | handling errors like a missing file without the game stopping | M |
-| Maybe a short counting loop like `for (i in 0..10)`, alongside the C-style one | still to be decided | S |
+| A short counting loop, `for (int i in 0..10)`, alongside the C-style one | easier for beginners to read | S |
 | Built-in info on every struct and class, with nothing to write (like Python's `__name__`, `__class__` and `vars()`): the type's name, its field names, each field's value as text, and the type it inherits from | look inside any object while debugging or printing, for free | M |
 | Operators for your own types, using Forge's operator words as method names (Forge's version of Python's dunder methods): a method `plus(Money other)` makes both `a + b` and `a plus b` work; `less(...)` makes `<` work and lets `list.sort()` sort your own structs; `equals(...)` replaces the automatic `==`; `toText()` chooses what `print` and `"{x}"` show | your types work with the same symbols and words as numbers | M |
 
-The exact names for the built-in info (for example `x.typeName()` and `x.fields()`) are still to be decided, so that they can't clash with names people already use in their own classes.
+### Decided for 0.8.0
+
+These were decided by Forge's designer (2026-10-16). Build them this way.
+
+1. **Counting loop.** `for (int i in 0..10)` counts 0, 1, 2 ... 10. **Both ends are included**, because that's what a beginner expects "0 to 10" to mean. It works with variables too (`0..n`).
+   - Because lists start at 0, `0..list.length` would go one past the end. When the end of a range is a `.length`, Forge gives a **warning** with the fix: `0..list.length - 1`.
+   - The C-style loop stays as it is.
+
+2. **Functions as values** are written like a function without a name:
+
+   ```cpp
+   list.removeWhere((Enemy e) { return e.hp <= 0; });
+   ```
+
+   How to write the *type* of a function value (for storing one in a variable or parameter) is up to the builder. Keep it close to Forge's existing look, and document it.
+
+3. **Built-in info: `describe`.** Every struct and class gets it, with nothing to write.
+
+   ```cpp
+   Goblin g = Goblin();
+   print(g.describe);            // Goblin (an Enemy): hp = 30, name = "Grub"
+   print(g.describe.name);       // Goblin
+   print(g.describe.parent);     // Enemy ("" if it doesn't inherit)
+   print(g.describe.fields);     // ["hp", "name"]
+   print(g.describe.values);     // {"hp": "30", "name": "Grub"}
+   ```
+
+   - On its own, `describe` gives everything as text. A part after it gives only that part.
+   - `private` fields are left out.
+   - `describe` becomes a reserved member name, so your own field or method can't be called `describe`.
+
+4. **Operators for your own types.** Methods named after Forge's operator words: `plus`, `minus`, `times`, `div`, `mod`, `less`, `equals` and `toText`.
+   - `less(T other)` gives all four comparisons: `<` (less), `>` (greater), `<=` (less or equal) and `>=` (greater or equal). It also lets `list.sort()` sort lists of that type.
+   - `equals(T other)` gives `==` and `!=` (equals / not equals).
+   - `toText()` decides what `print(x)` and `"{x}"` show.
+   - The symbol and the word form both work: `a + b` and `a plus b`.
+
+5. **`try` / `catch`.**
+   - Every runtime error can be caught: list positions, null, missing files, `int("abc")`, and so on.
+   - `try { ... } catch (Error e) { print(e.message); }`
+   - Your own code can raise an error with `throw "message";`.
+
+6. **Interfaces and abstract classes** use the keywords `interface` and `abstract`. A class lists them with the same `:` as inheritance: `class Goblin : Enemy, Attacker`.
+
+7. **Weak references** are a type you choose to use. They point at an object without keeping it alive, and `get()` gives `null` once it's gone:
+
+   ```cpp
+   Weak<Player> target = Weak(player);
+   Player? p = target.get();
+   ```
+
+8. **Generics:** `class Box<T>`, with no limits on what `T` can be.
+
+9. **`static`** is the keyword for shared fields and methods.
+
+10. **Brace style** (for `frg fmt` in 0.9.0): the designer's style, `int main(){`, with no space before the brace. Use it everywhere in the docs and examples too.
 
 ## 0.9.0: Better tools
 

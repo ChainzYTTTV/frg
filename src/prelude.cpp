@@ -219,6 +219,7 @@ class Body {
     vec2 velocity;
     bool isStatic;
     bool solid;
+    bool oneWay;
     float gravityScale;
     bool onGround;
     bool onCeiling;

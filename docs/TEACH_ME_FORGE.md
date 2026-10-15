@@ -515,7 +515,7 @@ void draw(){
 ### Physics
 
 A `Body` is a box: `Body(x, y, width, height)`.
-- Fields you set: `position`, `size`, `velocity` (all vec2), `isStatic` (true for floors, walls and platforms that never move), and `gravityScale` (1 by default).
+- Fields you set: `position`, `size`, `velocity` (all vec2), `isStatic` (true for floors, walls and platforms that never move), `oneWay` (with `isStatic`: a one-way platform, which you can jump up through from below and walk through sideways, but land on from above), and `gravityScale` (1 by default).
 - Fields Forge sets during each `physics.step(dt)`: `onGround`, `onCeiling` and `onWall`.
 - Methods: `bounds()` (a rect), `center()`, `overlaps(otherBody)`.
 - Gravity starts at `vec2(0, 980)`, in pixels per second per second, pointing down.

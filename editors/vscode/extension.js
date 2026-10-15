@@ -191,7 +191,7 @@ const LIBRARIES = {
         ['stopAll', 'void stopAll()', 'Stops every task.'],
     ],
     physics: [
-        ['add', 'void add(Body body)', 'Adds a body to the world so step() moves it.'],
+        ['add', 'void add(Body body)', 'Adds a body to the world so step() moves it. A Body has position, size, velocity, isStatic, solid, oneWay (a platform you can jump up through), gravityScale, and onGround / onCeiling / onWall.'],
         ['remove', 'void remove(Body body)', 'Takes a body out of the world.'],
         ['step', 'void step(float dt)', 'Moves every body: gravity, velocity, and stopping at static bodies. Call it once per frame.'],
         ['setGravity', 'void setGravity(vec2 gravity)', 'Gravity, in pixels per second per second. Starts at vec2(0, 980).'],

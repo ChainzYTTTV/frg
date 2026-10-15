@@ -1,0 +1,64 @@
+=== main.frg
+#include <stdio>
+#include <physics>
+
+int main(){
+    Body floor = Body(0, 400, 1000, 20);
+    floor.isStatic = true;
+    Body ledge = Body(0, 200, 300, 10);
+    ledge.isStatic = true;
+    ledge.oneWay = true;
+    physics.add(floor);
+    physics.add(ledge);
+
+    // Jump up from the floor, through the one-way ledge, and land on top of it.
+    Body hero = Body(100, 368, 32, 32);
+    physics.add(hero);
+    physics.step(1.0 / 60);
+    print("on the floor: {hero.onGround}");
+    hero.velocity.y = -800;
+    bool wentThrough = false;
+    for (int i = 0; i < 120; i++) {
+        physics.step(1.0 / 60);
+        if (hero.position.y + hero.size.y < 200) {
+            wentThrough = true;
+        }
+    }
+    print("went up through it: {wentThrough}");
+    print("standing on it: {hero.onGround}, y = {hero.position.y}");
+
+    // Walking sideways through a one-way platform isn't blocked.
+    Body wall = Body(500, 300, 20, 100);
+    wall.isStatic = true;
+    wall.oneWay = true;
+    physics.add(wall);
+    Body walker = Body(440, 368, 32, 32);
+    physics.add(walker);
+    for (int i = 0; i < 60; i++) {
+        walker.velocity.x = 200;
+        physics.step(1.0 / 60);
+    }
+    print("walked through: {walker.position.x > 520}, onWall = {walker.onWall}");
+
+    // A normal platform still stops a jump from below.
+    Body roof = Body(700, 250, 200, 10);
+    roof.isStatic = true;
+    physics.add(roof);
+    Body jumper = Body(750, 368, 32, 32);
+    physics.add(jumper);
+    physics.step(1.0 / 60);
+    jumper.velocity.y = -800;
+    bool bumped = false;
+    for (int i = 0; i < 30; i++) {
+        physics.step(1.0 / 60);
+        bumped = bumped or jumper.onCeiling;
+    }
+    print("bumped its head: {bumped}");
+    return 0;
+}
+=== output
+on the floor: true
+went up through it: true
+standing on it: true, y = 168.0
+walked through: true, onWall = false
+bumped its head: true

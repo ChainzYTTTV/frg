@@ -579,7 +579,7 @@ graphics2d.resetCamera();                                     // ...then the sco
 
 ### Physics
 
-A `Body` is a box: `Body(x, y, width, height)`. It has `position`, `size`, `velocity`, `isStatic`, `gravityScale`, plus `onGround`, `onCeiling` and `onWall`, which say what it touched during the last step. It also has `bounds()`, `center()` and `overlaps(other)`.
+A `Body` is a box: `Body(x, y, width, height)`. It has `position`, `size`, `velocity`, `isStatic`, `solid`, `oneWay`, `gravityScale`, plus `onGround`, `onCeiling` and `onWall`, which say what it touched during the last step. It also has `bounds()`, `center()` and `overlaps(other)`.
 
 ```cpp
 Body ground = Body(0, 500, 960, 40);
@@ -594,7 +594,7 @@ physics.step(dt);                // falls with gravity, stops on static bodies
 if (box.onGround) { ... }
 ```
 
-Your own classes can inherit from `Body`: `class Player : Body { ... }`. Moving bodies push each other apart, so crates stack. Set `solid = false` on things that should pass through everything, like coins and trigger zones, and check those with `a.overlaps(b)`.
+Your own classes can inherit from `Body`: `class Player : Body { ... }`. Moving bodies push each other apart, so crates stack. Set `solid = false` on things that should pass through everything, like coins and trigger zones, and check those with `a.overlaps(b)`. Set `oneWay = true` on a static platform to make it one-way: you can jump up through it and land on top.
 
 `physics.drawDebug()` draws every body's outline (static blue, moving green, not solid purple, and a yellow bar under a body that's `onGround`), to see what physics sees. It draws with `<graphics2d>`, so that file needs `#include <graphics2d>` too.
 

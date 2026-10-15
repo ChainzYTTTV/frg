@@ -1,5 +1,9 @@
 # Forge
 
+> **This project was made with AI.** I designed the language: what it looks like, how files and folders work, and which features it has. The compiler, runtime, tools and docs were written by an AI (Claude), not by me.
+>
+> I'm not trying to get anyone to use it. I thought a game language built around my own ideas would be cool to see as something real, and I'm using it to learn how programming languages, and programming in general, actually work. If AI-made projects aren't your thing, that's completely fair.
+
 Forge (`.frg`) is a compiled language for making 2D and 3D games. It looks like C++ and aims to read like plain English.
 
 ```cpp

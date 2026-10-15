@@ -694,6 +694,7 @@ StmtPtr Parser::parseFor() {
             s->var->loc = name.loc;
             s->var->typeRef = type;
             s->expr = parseExpr();
+            if (accept(Tok::DotDot)) s->value = parseExpr();  // for (int i in 0..10): counts 0 to 10, both included
             expect(Tok::RParen, "')'");
             s->then = parseBody("for");
             return s;

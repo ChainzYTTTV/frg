@@ -2449,6 +2449,34 @@ void Checker::stmt(Stmt* s) {
             scopes.pop_back();
             break;
         case SK::ForEach: {
+            if (s->value) {
+                // for (int i in 0..10): counts from the start to the end, both included.
+                VarDecl* v = s->var.get();
+                v->type = resolveType(v->typeRef, false);
+                if (v->type != tError() && v->type->kind != TK::Int) {
+                    reportError(v->typeRef.loc, "a counting loop counts whole numbers, so '" + v->name + "' has to be an int",
+                                "write it as: for (int " + v->name + " in ...)");
+                    v->type = tError();
+                }
+                Type* T = v->type == tError() ? tInt(32, true) : v->type;
+                checkInto(s->expr.get(), T, "the start of the range");
+                checkInto(s->value.get(), T, "the end of the range");
+                Expr* end = s->value.get();
+                if (end->kind == EK::Member && end->text == "length" && end->res.kind == RK::BuiltinMethod) {
+                    std::string obj = end->a->kind == EK::Name ? end->a->text : "list";
+                    bool text = end->a->type && end->a->type->kind == TK::String;
+                    warn(end->loc, "this counts one past the last position, because both ends of a range are included",
+                         std::string(text ? "letters" : "lists") + " start at 0, so write: " +
+                             (s->expr->kind == EK::Int ? std::to_string((long long)s->expr->ival) : "...") + ".." + obj + ".length - 1");
+                }
+                scopes.emplace_back();
+                declareLocal(v);
+                breakables.push_back('l');
+                stmt(s->then.get());
+                breakables.pop_back();
+                scopes.pop_back();
+                break;
+            }
             Type* lt = value(s->expr.get());
             VarDecl* v = s->var.get();
             v->type = resolveType(v->typeRef, false);

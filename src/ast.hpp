@@ -149,7 +149,7 @@ struct Stmt {
     std::vector<StmtPtr> body;  // Block
     VarPtr var;                 // Var, ForEach loop variable, Try: the Error in catch (Error e)
     ExprPtr expr;               // ExprStmt, Return value, If/While/For condition, Assign/IncDec target, ForEach list, Switch subject
-    ExprPtr value;              // Assign right-hand side
+    ExprPtr value;              // Assign right-hand side; ForEach over a range (0..10): the end, with expr the start
     std::string op;             // Assign ("=", "+=", ...), IncDec ("++", "--")
     StmtPtr then, els;          // If branches; While/DoWhile/For/ForEach body is `then`; Try: then = try { }, els = catch { }
     StmtPtr init, step;         // For

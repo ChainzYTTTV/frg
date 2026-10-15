@@ -226,7 +226,11 @@ if (hp <= 0) {
     print("OK");
 }
 
-for (int i = 0; i < 10; i++) {   // C-style loop
+for (int i in 0..10) {           // counting loop: 0, 1, ... 10 (both ends included)
+    print(i);
+}
+
+for (int i = 0; i < 10; i++) {   // C-style loop: 0 ... 9
     print(i);
 }
 
@@ -881,7 +885,7 @@ Runtime error in main.frg:10: position 5 is outside the list (it has 3 items, at
 | `Player p;` for a class | Needs a value, or make it optional: `Player? p = null;` |
 | `str[0]` | `str.charAt(0)` |
 | `len(list)` / `list.size()` / `list.count` | `list.length` |
-| `for i in range(10)` | `for (int i = 0; i < 10; i++)` |
+| `for i in range(10)` (0 to 9) | `for (int i in 0..9)`: a Forge range includes **both** ends. `0..list.length` warns; write `0..list.length - 1` |
 | `var x = 5;` / `auto x = 5;` | Every variable states its type: `int x = 5;` |
 | `x = 5` (without `;`) | Every statement ends with `;` |
 | `float` holding `0.1 + 0.2` | It's a decimal number, so tiny rounding is normal, as in every language |
@@ -2905,6 +2909,22 @@ That's handy when you need to do something before you can check it, like asking 
 
 `break` and `continue` work the same as in `while` (`continue` jumps to the check). Variables made inside the `{ }` are gone by the time the condition is checked, so make them before the `do` if the condition needs them, like `answer` above.
 
+### Counting: for (int i in 0..10)
+
+The easiest way to count is a **range**: a start, two dots, and an end.
+
+```cpp
+for (int i in 1..5) {
+    print(i);          // 1, 2, 3, 4, 5
+}
+```
+
+**Both ends are included**: `0..10` counts 0, 1, 2 ... 10, which is eleven numbers. The start and end can be any whole numbers, including variables and sums: `for (int i in 1..level * 2)`.
+
+- It always counts **up**, one at a time. If the start is bigger than the end (`5..4`), the loop doesn't run at all. To count down or in steps, use the `for` loop below.
+- Lists start at position 0, so the last position is `length - 1`. To go through every position: `for (int i in 0..names.length - 1)`. If you write `0..names.length`, Forge warns you, because that goes one past the end.
+- `break` and `continue` work as usual. Changing `i` inside the loop doesn't change how it counts.
+
 ### for
 
 `for` packs a counter into one line:
@@ -4883,7 +4903,7 @@ If you already know C++, C#, Java, JavaScript or Python, Forge will feel familia
 | `arr.size()`, `len(arr)`, `arr.Count` | `arr.length` (no parentheses) | |
 | `str[0]` | `str.charAt(0)` | text can't be indexed |
 | `'c'` (a char) | `"c"` | there's no `char` type; single quotes are an error |
-| `for i in range(10)` (Python) | `for (int i = 0; i < 10; i++)` | |
+| `for i in range(10)` (Python) | `for (int i in 0..9)` or `for (int i = 0; i < 10; i++)` | a range includes **both** ends: `0..9` is ten numbers |
 | `for (auto& x : list)` (C++) | `for (int x in list)` | the item type is written out |
 | `x ** 2`, `x ^ 2`, `pow(x, 2)` | `x * x` or `math.pow(x, 2)` | no power operator; `^` is bitwise xor |
 | `7 / 2 == 3.5` (Python 3) | `7 / 2` is `3` | whole-number division, like C, C++, Java and C# |
@@ -9161,14 +9181,22 @@ if (hp <= 0) {
     print("OK");
 }
 
-for (int i = 0; i < 10; i++) {
+for (int i in 0..10) {          // counts 0, 1, ... 10: both ends included
+    print(i);
+}
+
+for (int i = 0; i < 10; i++) {  // C-style: 0 ... 9
     print(i);
 }
 
 for (Enemy e in enemies) {      // goes through every item in a list
     e.update();
 }
+```
 
+A range (`0..10`, `1..n`) counts up one at a time and includes **both** ends, so going through every position of a list is `0..list.length - 1` (Forge warns about `0..list.length`). If the start is bigger than the end, it doesn't run.
+
+```cpp
 while (lives > 0) {
     lives--;
 }

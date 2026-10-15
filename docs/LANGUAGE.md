@@ -154,14 +154,22 @@ if (hp <= 0) {
     print("OK");
 }
 
-for (int i = 0; i < 10; i++) {
+for (int i in 0..10) {          // counts 0, 1, ... 10: both ends included
+    print(i);
+}
+
+for (int i = 0; i < 10; i++) {  // C-style: 0 ... 9
     print(i);
 }
 
 for (Enemy e in enemies) {      // goes through every item in a list
     e.update();
 }
+```
 
+A range (`0..10`, `1..n`) counts up one at a time and includes **both** ends, so going through every position of a list is `0..list.length - 1` (Forge warns about `0..list.length`). If the start is bigger than the end, it doesn't run.
+
+```cpp
 while (lives > 0) {
     lives--;
 }

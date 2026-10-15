@@ -200,7 +200,11 @@ if (hp <= 0) {
     print("OK");
 }
 
-for (int i = 0; i < 10; i++) {   // C-style loop
+for (int i in 0..10) {           // counting loop: 0, 1, ... 10 (both ends included)
+    print(i);
+}
+
+for (int i = 0; i < 10; i++) {   // C-style loop: 0 ... 9
     print(i);
 }
 
@@ -855,7 +859,7 @@ Runtime error in main.frg:10: position 5 is outside the list (it has 3 items, at
 | `Player p;` for a class | Needs a value, or make it optional: `Player? p = null;` |
 | `str[0]` | `str.charAt(0)` |
 | `len(list)` / `list.size()` / `list.count` | `list.length` |
-| `for i in range(10)` | `for (int i = 0; i < 10; i++)` |
+| `for i in range(10)` (0 to 9) | `for (int i in 0..9)`: a Forge range includes **both** ends. `0..list.length` warns; write `0..list.length - 1` |
 | `var x = 5;` / `auto x = 5;` | Every variable states its type: `int x = 5;` |
 | `x = 5` (without `;`) | Every statement ends with `;` |
 | `float` holding `0.1 + 0.2` | It's a decimal number, so tiny rounding is normal, as in every language |

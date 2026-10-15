@@ -575,6 +575,27 @@ void Gen::stmt(const Stmt* s) {
             line("}");
             break;
         case SK::ForEach: {
+            if (s->value) {
+                // for (int i in 0..10): both ends included. `done` is worked out before ++, so the end can be the type's biggest value.
+                int n = ++tmp;
+                std::string k = "frg$k" + std::to_string(n), to = "frg$to" + std::to_string(n), done = "frg$done" + std::to_string(n);
+                const VarDecl* v = s->var.get();
+                const std::string& T = v->type->cpp;
+                line("{");
+                ind++;
+                line(T + " " + k + " = " + conv(s->expr.get(), v->type) + ";");
+                line(T + " " + to + " = " + conv(s->value.get(), v->type) + ";");
+                line("bool " + done + " = " + k + " > " + to + ";");
+                line("for (; !" + done + "; " + done + " = " + k + " == " + to + ", ++" + k + ") {");
+                ind++;
+                line(T + " " + id(v->name) + " = " + k + ";");
+                for (auto& c : s->then->body) stmt(c.get());
+                ind--;
+                line("}");
+                ind--;
+                line("}");
+                break;
+            }
             int n = ++tmp;
             std::string list = "frg$list" + std::to_string(n), i = "frg$i" + std::to_string(n);
             const Type* lt = s->expr->type;

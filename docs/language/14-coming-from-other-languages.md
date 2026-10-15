@@ -34,7 +34,7 @@ If you already know C++, C#, Java, JavaScript or Python, Forge will feel familia
 | `arr.size()`, `len(arr)`, `arr.Count` | `arr.length` (no parentheses) | |
 | `str[0]` | `str.charAt(0)` | text can't be indexed |
 | `'c'` (a char) | `"c"` | there's no `char` type; single quotes are an error |
-| `for i in range(10)` (Python) | `for (int i = 0; i < 10; i++)` | |
+| `for i in range(10)` (Python) | `for (int i in 0..9)` or `for (int i = 0; i < 10; i++)` | a range includes **both** ends: `0..9` is ten numbers |
 | `for (auto& x : list)` (C++) | `for (int x in list)` | the item type is written out |
 | `x ** 2`, `x ^ 2`, `pow(x, 2)` | `x * x` or `math.pow(x, 2)` | no power operator; `^` is bitwise xor |
 | `7 / 2 == 3.5` (Python 3) | `7 / 2` is `3` | whole-number division, like C, C++, Java and C# |

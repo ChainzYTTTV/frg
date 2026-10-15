@@ -1,0 +1,11 @@
+=== main.frg
+int main(){
+    int x = 0;
+    do {
+        x++;
+    }
+    return 0;
+}
+=== error
+a 'do { ... }' needs 'while (...)' after its closing }
+hint: for example: do { ... } while (lives > 0);

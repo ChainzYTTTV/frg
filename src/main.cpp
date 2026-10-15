@@ -21,7 +21,7 @@
 
 namespace fs = std::filesystem;
 
-static const char* kVersion = "0.6.0";
+static const char* kVersion = "0.7.0";
 
 static fs::path exeDir() {
     std::wstring buf(32768, L'\0');
@@ -181,22 +181,109 @@ static void removeOldCache(const fs::path& cacheRoot, const std::string& tools) 
     }
 }
 
+// The cache folders this build uses. They're never deleted by limitCache, even if they're the oldest.
+static std::vector<fs::path> g_cacheInUse;
+
 // The folder for one cached thing: <frg.exe's folder>/cache/<hash>, or the game's build folder if that can't be written.
-// `tools` is toolStamp(): what made it.
+// `tools` is toolStamp(): what made it. Using a folder touches its stamp.txt, which is how limitCache knows which
+// folders were used least recently.
 static fs::path cacheFolder(const std::string& key, const std::string& tools, const fs::path& buildDir) {
     std::error_code ec;
     for (fs::path root : {exeDir() / "cache", buildDir / "cache"}) {
         fs::path dir = root / hashName(tools + "|" + key);
-        if (fs::exists(dir / "stamp.txt", ec)) return dir;
+        if (fs::exists(dir / "stamp.txt", ec)) {
+            fs::last_write_time(dir / "stamp.txt", fs::file_time_type::clock::now(), ec);
+            g_cacheInUse.push_back(dir);
+            return dir;
+        }
         fs::create_directories(dir, ec);
         if (ec) continue;
         std::ofstream f(dir / "stamp.txt", std::ios::binary);
         if (!(f << hashName(tools) << "\n")) continue;
         f.close();
         removeOldCache(root, tools);
+        g_cacheInUse.push_back(dir);
         return dir;
     }
     return buildDir;
+}
+
+static uintmax_t folderSize(const fs::path& dir) {
+    std::error_code ec;
+    uintmax_t total = 0;
+    for (auto it = fs::recursive_directory_iterator(dir, ec); it != fs::recursive_directory_iterator(); it.increment(ec)) {
+        if (ec) break;
+        if (it->is_regular_file(ec)) total += it->file_size(ec);
+    }
+    return total;
+}
+
+static std::string sizeText(uintmax_t bytes) {
+    char buf[32];
+    if (bytes < 1024 * 1024)
+        std::snprintf(buf, sizeof buf, "%.0f KB", bytes / 1024.0);
+    else
+        std::snprintf(buf, sizeof buf, "%.0f MB", bytes / (1024.0 * 1024.0));
+    return buf;
+}
+
+// The cache next to frg.exe is kept under about 400 MB: after a build, the sets used least recently are deleted
+// until it fits. (Each set of prepared headers is about 100 MB.) The ones this build used always stay.
+static const uintmax_t kCacheLimit = 400ull * 1024 * 1024;
+
+static void limitCache() {
+    fs::path root = exeDir() / "cache";
+    std::error_code ec;
+    struct Set {
+        fs::path dir;
+        fs::file_time_type used;
+        uintmax_t size;
+    };
+    std::vector<Set> sets;
+    uintmax_t total = 0;
+    for (const auto& entry : fs::directory_iterator(root, ec)) {
+        if (!entry.is_directory()) continue;
+        Set s{entry.path(), fs::last_write_time(entry.path() / "stamp.txt", ec), folderSize(entry.path())};
+        if (ec) s.used = fs::file_time_type::min();
+        total += s.size;
+        sets.push_back(s);
+    }
+    std::sort(sets.begin(), sets.end(), [](const Set& a, const Set& b) { return a.used < b.used; });
+    for (const Set& s : sets) {
+        if (total <= kCacheLimit) break;
+        if (std::find(g_cacheInUse.begin(), g_cacheInUse.end(), s.dir) != g_cacheInUse.end()) continue;
+        fs::remove_all(s.dir, ec);
+        if (!ec) total -= s.size;
+    }
+}
+
+// frg cache: shows where the cache is and how big. frg cache clear: deletes it.
+static int cmdCache(bool clear) {
+    fs::path root = exeDir() / "cache";
+    std::error_code ec;
+    if (clear && !fs::exists(root, ec)) {
+        printStatus("Cleared", "nothing: the build cache is already empty");
+        return 0;
+    }
+    int sets = 0;
+    for (const auto& entry : fs::directory_iterator(root, ec))
+        if (entry.is_directory()) sets++;
+    uintmax_t size = folderSize(root);
+    if (!clear) {
+        printStatus("Cache", root.string());
+        std::fprintf(stderr, "    %s in %d set%s (Forge keeps it under about %s)\n", sizeText(size).c_str(), sets, sets == 1 ? "" : "s",
+                     sizeText(kCacheLimit).c_str());
+        std::fprintf(stderr, "    It makes builds faster. To delete it: frg cache clear\n");
+        return 0;
+    }
+    fs::remove_all(root, ec);
+    if (ec) {
+        reportPlainError("couldn't delete all of " + root.string() + " (" + ec.message() + ")",
+                         "is a game being built right now? Wait for it to finish, then try again");
+        return 1;
+    }
+    printStatus("Cleared", "the build cache (" + sizeText(size) + "). The next build prepares it again.");
+    return 0;
 }
 
 // Runs one g++ command that makes `output`, writing to a temporary name first so a half-written file is never used.
@@ -386,6 +473,7 @@ static bool build(const fs::path& dir, fs::path& exeOut, const BuildOptions& opt
     if (gen.needsRaylib) cmd += L" -L" + quote(raylib / "lib") + L" -lraylib -lopengl32 -lgdi32 -lwinmm";
     for (const std::string& flag : gen.linkFlags) cmd += L" " + fs::path(flag).wstring();
     int code = runProcess(cmd);
+    limitCache();
     if (code == -1) {
         reportPlainError("couldn't find g++, which Forge uses to make .exe files",
                          "install w64devkit and make sure its bin folder is on your PATH");
@@ -547,6 +635,7 @@ static void printHelp() {
         "  frg run [folder]    compile the game, then run it\n"
         "  frg check [folder]  look for errors without building\n"
         "  frg package [folder]  make a finished build and zip it, ready to share: dist/<name>.zip\n"
+        "  frg cache           show how big the build cache is (frg cache clear deletes it)\n"
         "  frg version         show the Forge version\n\n"
         "[folder] is the game's top folder (the one with main.frg). It defaults to the current folder.\n"
         "Options for build and run:\n"
@@ -632,6 +721,13 @@ int main(int argc, char** argv) {
         printStatus("Checked", proj.name + ": no errors" +
                                    (warnings ? ", " + std::to_string(warnings) + " warning" + (warnings == 1 ? "" : "s") : ""));
         return 0;
+    }
+    if (cmd == "cache") {
+        if (args.size() == 1) return cmdCache(false);
+        if (args.size() == 2 && args[1] == "clear") return cmdCache(true);
+        reportPlainError("frg cache doesn't know '" + (args.size() > 1 ? args[1] : "") + "'",
+                         "use frg cache to see how big the build cache is, or frg cache clear to delete it");
+        return 1;
     }
     if (cmd == "new") {
         // frg new <name> [--template console|window|platformer|3d]

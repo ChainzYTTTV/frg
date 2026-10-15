@@ -2,6 +2,26 @@
 
 What changed in each version of Forge. Plans for later versions are in the [roadmap](ROADMAP.md).
 
+## 0.7.0 (2026-10-16)
+
+**Language and compiler**
+- `do { ... } while (condition);` loops, which always run at least once. `do` is now a keyword.
+- `Pointer.remove()` and `isRemoved()`: using a removed pointer stops the game with a clear message instead of crashing.
+- Using a reserved word as a variable name (`int do = 5;`) now says so clearly.
+
+**Libraries**
+- `<tilemap>`: levels drawn as text, one character per tile. Walls become physics bodies (merged into big boxes), and tiles can be drawn as colors or from a tileset image.
+- `<particles>`: an `Emitter` for dust, sparks, smoke and explosions.
+- `<tween>`: smooth changes over time, with easing (`LINEAR`, `IN`, `OUT`, `IN_OUT`, `BOUNCE`).
+- `ui.textBox` for typing text (like a player's name), and `ui.isTyping()`.
+
+**Tools**
+- The build cache is kept under about 400 MB. `frg cache` shows its size, and `frg cache clear` deletes it.
+
+**Examples**
+- The platformer's level is now drawn as text, with one-way planks, dust when landing and sparkles when collecting a coin.
+- The menu has a name box, and its title drops in with a bounce.
+
 ## 0.6.0 (2026-10-15)
 
 **Language and compiler**

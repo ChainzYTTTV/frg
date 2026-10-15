@@ -357,6 +357,8 @@ bool button(rect area, string label);
 void label(string text, float x, float y, int size = 20, color c = color.WHITE);
 bool checkbox(rect area, string label, bool checked);
 float slider(rect area, float value, float min, float max);
+string textBox(rect area, string text, int maxLength = 0);
+bool isTyping();
 void panel(rect area);
 void setTheme(color background, color accent, color text);
 )FRG";
@@ -660,6 +662,69 @@ void remove(string key);
 void clear();
 )FRG";
 
+static const char* kTween = R"FRG(
+enum Ease { LINEAR, IN, OUT, IN_OUT, BOUNCE }
+
+class Tween {
+    bool looping;
+    bool pingPong;
+    Tween(float from, float to, float seconds, Ease ease = Ease.OUT);
+    void update(float dt);
+    float value();
+    float progress();
+    bool isDone();
+    void restart();
+    void reverse();
+}
+
+float ease(Ease ease, float t);
+)FRG";
+
+static const char* kParticles = R"FRG(
+class Emitter {
+    vec2 position;
+    float rate;
+    float lifetime;
+    float speed;
+    float direction;
+    float spread;
+    color startColor;
+    color endColor;
+    float startSize;
+    float endSize;
+    vec2 gravity;
+    Emitter(vec2 position);
+    void update(float dt);
+    void draw();
+    void burst(int count);
+    int count();
+    void clear();
+}
+)FRG";
+
+static const char* kTilemap = R"FRG(
+class TileMap {
+    float tileSize;
+    TileMap(string text, float tileSize);
+    int columns();
+    int rows();
+    float width();
+    float height();
+    string get(int column, int row);
+    void set(int column, int row, string tile);
+    int columnAt(float x);
+    int rowAt(float y);
+    rect tileRect(int column, int row);
+    list<vec2> find(string tiles);
+    list<rect> solidAreas(string tiles);
+    list<Body> addBodies(string tiles, bool oneWay = false);
+    void draw(string tiles, color c);
+    void drawTiles(Texture tileset, int sourceSize, string tiles);
+}
+
+TileMap load(string path, float tileSize);
+)FRG";
+
 const std::vector<PreludeLib>& preludeLibs() {
     using K = LibKind;
     static const std::vector<PreludeLib> libs = {
@@ -675,6 +740,9 @@ const std::vector<PreludeLib>& preludeLibs() {
         {"time", kTime, false, "forge_time.hpp"},
         {"file", kFile, false, "forge_file.hpp"},
         {"save", kSave, false, "forge_save.hpp"},
+        {"tween", kTween, false, "forge_tween.hpp"},
+        {"particles", kParticles, true, "forge_particles.hpp", K::Engine},
+        {"tilemap", kTilemap, true, "forge_tilemap.hpp", K::Engine, {}, {}, {"physics", "assets"}},
         {"scenes", kScenes, false, "forge_scenes.hpp"},
         {"ui", kUi, true, "forge_ui.hpp", K::Engine},
         {"graphics3d", kGraphics3d, true, "forge_graphics3d.hpp", K::Engine},

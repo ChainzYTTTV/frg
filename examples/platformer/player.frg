@@ -2,10 +2,11 @@
 #include <graphics2d>
 #include <input>
 #include <physics>
+#include <particles>
 
 const float MOVE_SPEED = 320;
 const float JUMP_SPEED = 620;
-const vec2 START = vec2(80, 380);
+vec2 start = vec2(80, 380);    // main.frg moves it to the P in the level
 
 // A Player is a physics Body (it inherits position, size, velocity, onGround...)
 // with a few extra things of its own.
@@ -14,7 +15,7 @@ class Player : Body {
     int deaths = 0;
 
     void respawn() {
-        position = START;
+        position = start;
         velocity = vec2.ZERO;
         deaths++;
         flash();
@@ -33,13 +34,33 @@ class Player : Body {
 
 Player hero = makeHero();
 
+// A puff of dust when the player lands.
+Emitter dust = makeDust();
+bool wasOnGround = false;
+float fallSpeed = 0;
+
+Emitter makeDust(){
+    Emitter e = Emitter(vec2(0, 0));
+    e.lifetime = 0.4;
+    e.speed = 90;
+    e.direction = -90;          // up...
+    e.spread = 160;             // ...and out to both sides
+    e.gravity = vec2(0, 300);
+    e.startColor = color(200, 200, 210);
+    e.endColor = color(200, 200, 210, 0);   // fades out
+    e.startSize = 9;
+    e.endSize = 3;
+    return e;
+}
+
 Player makeHero(){
-    Player p = Player(START.x, START.y, 36, 36);
+    Player p = Player(start.x, start.y, 36, 36);
     physics.add(p);
     return p;
 }
 
 void handleInput(){
+    fallSpeed = hero.velocity.y;    // remembered before physics.step stops the fall
     float direction = 0;
     if (input.keyDown(Key.LEFT) or input.keyDown(Key.A)) {
         direction -= 1;
@@ -61,6 +82,16 @@ void handleInput(){
     }
 }
 
+// Called after physics.step: a hard landing makes a puff of dust at the player's feet.
+void checkLanding(float dt){
+    if (hero.onGround and !wasOnGround and fallSpeed > 250) {
+        dust.position = vec2(hero.center().x, hero.position.y + hero.size.y);
+        dust.burst(14);
+    }
+    wasOnGround = hero.onGround;
+    dust.update(dt);
+}
+
 void checkFall(){
     if (hero.position.y > window.height() + 100) {
         hero.respawn();
@@ -68,6 +99,7 @@ void checkFall(){
 }
 
 void draw(){
+    dust.draw();
     graphics2d.drawRect(hero.bounds(), hero.tint);
     // Two eyes that look the way the player is moving.
     float look = hero.velocity.x > 0 ? 4 : hero.velocity.x < 0 ? -4 : 0;

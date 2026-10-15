@@ -84,6 +84,98 @@ inline float slider_(core::rect_ area, float value, float lo, float hi) {
     return value;
 }
 
+// ---- text boxes. Only one box is being typed into at a time; it's known by its rectangle.
+struct TextFocus {
+    bool active = false;
+    core::rect_ area{};
+    long frame = -1;  // the frame it was last drawn in, so a box that stops being drawn loses the focus
+};
+inline TextFocus& textFocus() {
+    static TextFocus f;
+    return f;
+}
+inline bool sameArea(core::rect_ a, core::rect_ b) {
+    return a.x_ == b.x_ && a.y_ == b.y_ && a.width_ == b.width_ && a.height_ == b.height_;
+}
+inline size_t charCount(const std::string& s) {
+    size_t n = 0;
+    for (unsigned char c : s) n += (c & 0xC0) != 0x80;
+    return n;
+}
+inline void appendUtf8(std::string& s, int cp) {
+    if (cp < 0x80) {
+        s += (char)cp;
+    } else if (cp < 0x800) {
+        s += (char)(0xC0 | (cp >> 6)), s += (char)(0x80 | (cp & 0x3F));
+    } else if (cp < 0x10000) {
+        s += (char)(0xE0 | (cp >> 12)), s += (char)(0x80 | ((cp >> 6) & 0x3F)), s += (char)(0x80 | (cp & 0x3F));
+    } else {
+        s += (char)(0xF0 | (cp >> 18)), s += (char)(0x80 | ((cp >> 12) & 0x3F)), s += (char)(0x80 | ((cp >> 6) & 0x3F)),
+            s += (char)(0x80 | (cp & 0x3F));
+    }
+}
+
+// True while the player is typing in a text box, so the game can ignore its own key shortcuts meanwhile.
+inline bool isTyping_() {
+    TextFocus& f = textFocus();
+    return f.active && f.frame >= window::st().frame - 1;
+}
+
+inline std::string textBox_(core::rect_ area, std::string text, int32_t maxLength) {
+    window::ensureFrame("ui.textBox()");
+    TextFocus& f = textFocus();
+    long frame = window::st().frame;
+    if (f.active && f.frame < frame - 1) f.active = false;  // the focused box wasn't drawn last frame
+    bool mine = f.active && sameArea(f.area, area);
+    bool over = hovering(area);
+    if (IsMouseButtonPressed(MOUSE_BUTTON_LEFT)) {
+        if (over) {
+            f.active = true;
+            f.area = area;
+            mine = true;
+        } else if (mine) {
+            f.active = mine = false;  // a click somewhere else
+        }
+    }
+    if (mine) {
+        f.frame = frame;
+        for (int cp = GetCharPressed(); cp > 0; cp = GetCharPressed())
+            if (cp >= 32 && (maxLength <= 0 || charCount(text) < (size_t)maxLength)) appendUtf8(text, cp);
+        // Keys come from raylib's queue, so even a very quick tap (pressed and let go within one frame) counts.
+        int backspaces = IsKeyPressedRepeat(KEY_BACKSPACE) ? 1 : 0;
+        bool enter = false;
+        for (int k = GetKeyPressed(); k != 0; k = GetKeyPressed()) {
+            if (k == KEY_BACKSPACE) backspaces++;
+            if (k == KEY_ENTER || k == KEY_KP_ENTER) enter = true;
+        }
+        for (; backspaces > 0 && !text.empty(); backspaces--) {
+            size_t end = text.size() - 1;
+            while (end > 0 && ((unsigned char)text[end] & 0xC0) == 0x80) end--;  // a whole letter, even é
+            text.erase(end);
+        }
+        if (enter) f.active = mine = false;
+    }
+
+    DrawRectangleRounded(rl(area), 0.2f, 6, rl(mine ? shade(theme().background, 0.08f) : theme().background));
+    DrawRectangleRoundedLinesEx(rl(area), 0.2f, 6, 2, rl(mine ? theme().accent : shade(theme().background, over ? 0.25f : 0.15f)));
+    int size = fontSizeFor(area);
+    float pad = std::max(6.0f, area.height_ * 0.2f);
+    std::string shown = text;
+    // Too long to fit: show the end, which is where the typing happens.
+    while (!shown.empty() && MeasureText(shown.c_str(), size) > area.width_ - pad * 2 - 4) {
+        size_t cut = 1;
+        while (cut < shown.size() && ((unsigned char)shown[cut] & 0xC0) == 0x80) cut++;
+        shown.erase(0, cut);
+    }
+    int y = (int)(area.y_ + (area.height_ - size) / 2);
+    DrawText(shown.c_str(), (int)(area.x_ + pad), y, size, rl(theme().text));
+    if (mine && std::fmod(GetTime(), 1.0) < 0.6) {
+        int x = (int)(area.x_ + pad) + MeasureText(shown.c_str(), size) + 2;
+        DrawRectangle(x, y, 2, size, rl(theme().accent));
+    }
+    return text;
+}
+
 inline void panel_(core::rect_ area) {
     window::ensureFrame("ui.panel()");
     DrawRectangleRounded(rl(area), 0.06f, 8, rl(core::color_{theme().background.r_, theme().background.g_, theme().background.b_, 230}));

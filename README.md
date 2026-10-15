@@ -1,6 +1,6 @@
 # Forge
 
-[![tests](https://github.com/ChainzYTTTV/frg/actions/workflows/tests.yml/badge.svg)](https://github.com/ChainzYTTTV/frg/actions/workflows/tests.yml) · Version 0.6.0 · [Changelog](CHANGELOG.md) · [Roadmap](ROADMAP.md) · [License: MIT](LICENSE)
+[![tests](https://github.com/ChainzYTTTV/frg/actions/workflows/tests.yml/badge.svg)](https://github.com/ChainzYTTTV/frg/actions/workflows/tests.yml) · Version 0.7.0 · [Changelog](CHANGELOG.md) · [Roadmap](ROADMAP.md) · [License: MIT](LICENSE)
 
 > **This project was made with AI.** I designed the language: what it looks like, how files and folders work, and which features it has. The compiler, runtime, tools and docs were written by an AI (Claude), not by me.
 >
@@ -56,6 +56,8 @@ runtime/
   forge_time.hpp        <time>
   forge_file.hpp        <file>
   forge_save.hpp        <save>
+  forge_tween.hpp       <tween>
+  forge_particles.hpp   <particles>
   forge_native.hpp      the plain Windows window shared by the low-level toolkits (code in native_window.inl)
   forge_opengl.hpp      <OpenGL> toolkit (code in forge_opengl_impl.cpp)
   forge_directx.hpp     <DirectX> toolkit (code in forge_directx_impl.cpp)

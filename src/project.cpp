@@ -133,6 +133,7 @@ static void loadPrelude(Project& proj) {
         m->qualName = lib.name;
         m->cppNs = "frg::" + lib.name;
         m->isPrelude = true;
+        for (const std::string& used : lib.uses) m->libs.insert(used);
         m->src = std::make_unique<SourceFile>();
         m->src->displayPath = "<" + lib.name + ">";
         m->src->text = lib.source;

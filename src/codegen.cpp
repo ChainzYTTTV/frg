@@ -163,7 +163,7 @@ std::string Gen::objRef(const Expr* o, std::string& sep) {
     std::string code = ex(o);
     const Type* t = o->type;
     if (t->kind == TK::Pointer) {
-        code = "(*" + code + ")";
+        code = "(*::frg::live(" + code + ", " + where(o->loc) + "))";
         t = t->elem;
     }
     if (t->kind == TK::Optional) {
@@ -171,7 +171,7 @@ std::string Gen::objRef(const Expr* o, std::string& sep) {
         t = t->elem;
     }
     if (t->kind == TK::Pointer) {
-        code = "(*" + code + ")";
+        code = "(*::frg::live(" + code + ", " + where(o->loc) + "))";
         t = t->elem;
     }
     sep = t->kind == TK::Class ? "->" : ".";
@@ -208,7 +208,7 @@ std::string Gen::strCode(const std::string& code, const Type* t, bool shallow) {
                    "; }, [](const auto& v) { return " + strCode("v", t->elem, shallow) + "; })";
         case TK::Optional:
             return "::frg::strOpt(" + code + ", [](const auto& x) { return " + strCode("x", t->elem, shallow) + "; })";
-        case TK::Pointer: return strCode("(*" + code + ")", t->elem, shallow);
+        case TK::Pointer: return "::frg::strPtr(" + code + ", [](const auto& x) { return " + strCode("x", t->elem, shallow) + "; })";
         default: return "::std::string(\"?\")";
     }
 }
@@ -233,7 +233,7 @@ std::string Gen::ref(const Expr* e) {
                 std::string obj = objRef(e->a.get(), sep);
                 return obj + sep + id(e->text);
             }
-        case RK::PointerValue: return "(*" + ex(e->a.get()) + ")";
+        case RK::PointerValue: return "(*::frg::live(" + ex(e->a.get()) + ", " + where(e->loc) + "))";
         case RK::BuiltinMethod:  // only `length` is used as a value
             return "static_cast<int32_t>(" + objValue(e->a.get()) + ".size())";
         default: return "/*?*/";
@@ -282,6 +282,8 @@ std::string Gen::call(const Expr* e) {
         }
         case RK::Type: return construct(e, e->args);
         case RK::BuiltinMethod: {
+            if (callee->a->type->kind == TK::Pointer && (callee->text == "remove" || callee->text == "isRemoved") && e->args.empty())
+                return "::frg::ptr_" + callee->text + "(" + ex(callee->a.get()) + ", " + where(e->loc) + ")";
             Type* obj = derefType(callee->a->type);
             std::string s = bmethodPrefix(obj->kind) + callee->text + "(" + objValue(callee->a.get());
             for (auto& a : e->args) {
@@ -499,6 +501,11 @@ void Gen::stmt(const Stmt* s) {
             line("while (" + ex(s->expr.get()) + ") {");
             children(s->then.get());
             line("}");
+            break;
+        case SK::DoWhile:
+            line("do {");
+            children(s->then.get());
+            line("} while (" + ex(s->expr.get()) + ");");
             break;
         case SK::For:
             line("for (" + (s->init ? simple(s->init.get()) : "") + "; " + (s->expr ? ex(s->expr.get()) : "") + "; " +

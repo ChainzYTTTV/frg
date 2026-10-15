@@ -1,0 +1,27 @@
+=== main.frg
+#include <window>
+#include <input>
+#include <ui>
+
+string name = "";
+string code = "AB";
+
+void update(float dt) {
+    // Shortcuts are ignored while typing, so typing an R doesn't restart.
+    if (input.keyPressed(Key.R) and !ui.isTyping()) {
+        name = "";
+    }
+}
+
+void draw() {
+    name = ui.textBox(rect(20, 20, 300, 40), name);
+    code = ui.textBox(rect(20, 80, 120, 40), code, 4);
+}
+
+int main(){
+    window.open(400, 200, "Text box");
+    window.run();
+    return 0;
+}
+=== build
+=== no warnings

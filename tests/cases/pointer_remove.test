@@ -1,0 +1,52 @@
+=== main.frg
+#include <stdio>
+
+struct Point {
+    float x;
+    float y;
+}
+
+int main(){
+    int score = 10;
+    Pointer<int> p = score;
+    print(p.isRemoved());
+    p.value = 20;
+    print(score);
+    p.remove();
+    print(p.isRemoved());
+    print(p);
+    print(score);
+
+    // Pointing it at something again makes it usable again.
+    int other = 5;
+    p = other;
+    print(p.value);
+    print(p.isRemoved());
+
+    // remove() with a value still goes to the list the pointer points at.
+    list<int> xs = [1, 2, 3];
+    Pointer<list<int>> lp = xs;
+    lp.remove(2);
+    print(xs);
+    lp.remove();
+    print(lp.isRemoved());
+    print(xs);
+
+    Point pt = Point(1, 2);
+    Pointer<Point> pp = pt;
+    pp.x = 9;
+    print(pt.x);
+    return 0;
+}
+=== output
+false
+20
+true
+removed pointer
+20
+5
+false
+[1, 3]
+true
+[1, 3]
+9.0

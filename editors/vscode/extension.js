@@ -136,6 +136,12 @@ const LIBRARIES = {
         ['minute', 'int minute()', 'The minute.'],
         ['second', 'int second()', 'The second.'],
     ],
+    tilemap: [
+        ['load', 'TileMap load(string path, float tileSize)', 'A level from a text file, one character per tile. Or TileMap("""...""", 32). Then: level.addBodies("#"), level.find("C"), level.get(col, row), level.draw("#", color), level.drawTiles(tileset, 16, "#=").'],
+    ],
+    tween: [
+        ['ease', 'float ease(Ease ease, float t)', 'The eased amount for t from 0 to 1: tween.ease(Ease.OUT, 0.5) is 0.875. For a smooth change over time, use a Tween: Tween t = Tween(from, to, seconds, Ease.OUT); then t.update(dt) and t.value().'],
+    ],
     save: [
         ['setInt', 'void setInt(string key, int value)', 'Saves a whole number under a name. The save file is written straight away.'],
         ['getInt', 'int getInt(string key, int backup = 0)', 'A saved whole number, or backup if it isn\'t saved.'],
@@ -169,6 +175,8 @@ const LIBRARIES = {
         ['button', 'bool button(rect area, string label)', 'Draws a button. True on the frame it gets clicked.'],
         ['checkbox', 'bool checkbox(rect area, string label, bool checked)', 'Draws a checkbox and gives back its new value: on = ui.checkbox(..., on);'],
         ['slider', 'float slider(rect area, float value, float min, float max)', 'Draws a slider and gives back its new value: v = ui.slider(..., v, 0, 1);'],
+        ['textBox', 'string textBox(rect area, string text, int maxLength = 0)', 'A box to type in. Gives back the new text: name = ui.textBox(..., name, 12); Click it to type; Enter or a click elsewhere finishes. maxLength 0 means no limit.'],
+        ['isTyping', 'bool isTyping()', 'True while the player is typing in a text box, so the game can ignore its own key shortcuts.'],
         ['label', 'void label(string text, float x, float y, int size = 20, color c = color.WHITE)', 'Text.'],
         ['panel', 'void panel(rect area)', 'A rounded box to put other UI on.'],
         ['setTheme', 'void setTheme(color background, color accent, color text)', 'The colors of all UI.'],
@@ -360,6 +368,7 @@ const TYPE_STATICS = {
     vec4: ['ZERO', 'ONE'],
     Key: KEYS,
     MouseButton: ['LEFT', 'RIGHT', 'MIDDLE'],
+    Ease: ['LINEAR', 'IN', 'OUT', 'IN_OUT', 'BOUNCE'],
     GamepadButton: ['A', 'B', 'X', 'Y', 'LEFT_BUMPER', 'RIGHT_BUMPER', 'LEFT_TRIGGER', 'RIGHT_TRIGGER', 'BACK', 'START', 'LEFT_STICK', 'RIGHT_STICK', 'UP', 'DOWN', 'LEFT', 'RIGHT'],
 };
 

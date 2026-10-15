@@ -1,0 +1,14 @@
+=== main.frg
+#include <particles>
+
+int main(){
+    Emitter a = Emitter(10, 20);
+    Emitter b = Emitter(vec2(0, 0));
+    b.burst(2.5);
+    b.colour = color.RED;
+    return 0;
+}
+=== error
+Emitter() needs 1 value, but got 2
+'count' in burst() needs an int, but this is a float
+Emitter has no field or method called 'colour'

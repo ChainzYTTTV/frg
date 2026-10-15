@@ -1,0 +1,5 @@
+=== command
+cache emtpy
+=== error
+frg cache doesn't know 'emtpy'
+hint: use frg cache to see how big the build cache is, or frg cache clear to delete it

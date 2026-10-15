@@ -1,4 +1,4 @@
-# Forge Cheat Sheet (v0.6)
+# Forge Cheat Sheet (v0.7)
 
 The whole language on one page, for looking things up quickly. For full explanations, examples and every detail, see the [complete documentation](README.md). Planned features are listed at the end.
 
@@ -24,6 +24,7 @@ int main(){
 | `frg build` | compiles the game into `build/<folder name>.exe` |
 | `frg run` | builds, then runs the game |
 | `frg check` | only looks for errors |
+| `frg cache` / `frg cache clear` | show how big the build cache is (kept under about 400 MB) / delete it |
 | `frg package` | makes the finished game and zips it into `dist/<name>.zip`, ready to share |
 | `--release` (after build or run) | the finished game: no console window, smaller `.exe` |
 | `--no-console` / `--console` | turn the console window off or on, whatever else is chosen |
@@ -164,6 +165,10 @@ for (Enemy e in enemies) {      // goes through every item in a list
 while (lives > 0) {
     lives--;
 }
+
+do {                             // like while, but runs at least once: the check comes after
+    guess = int(input("Guess: "));
+} while (guess != secret);       // note the ; at the end
 ```
 
 `break` leaves a loop early. `continue` skips to the next time around.
@@ -375,7 +380,7 @@ int score = 10;
 addOne(score);        // score is now 11
 ```
 
-Don't keep a pointer to a function's local variable after that function ends.
+Don't keep a pointer to a function's local variable after that function ends. `p.remove()` makes a pointer point at nothing: `p.isRemoved()` is then true, and using `p` stops the game with a clear message ("this pointer was removed ...") until it's pointed at something again (`p = score;`).
 
 ## Tasks: waiting without freezing the game
 
@@ -431,10 +436,13 @@ Each file includes the libraries it uses. Functions are reached through the libr
 | `<audio>` | `audio.loadSound("jump.wav")`, `audio.loadMusic("song.ogg")`, `audio.setVolume(0.5)` (see below) |
 | `<graphics3d>` | 3D drawing (see below) |
 | `<time>` | `time.now()` (seconds since the game started), `time.sleep(seconds)`, `time.clock()` ("14:05:09"), `time.date()` ("2026-10-14"), `time.year()` `month()` `day()` `hour()` `minute()` `second()`, and the `Timer` class |
+| `<tilemap>` | `TileMap level = TileMap("""...""", 32);` (text, tile size) or `tilemap.load("level1.txt", 32)`: one character per tile. `level.addBodies("#")` (merged static bodies; `addBodies("=", true)` for one-way), `level.find("C")` (top-left corners), `get(col, row)` `set(col, row, "#")` `columns()` `rows()` `width()` `height()` `tileRect(col, row)` `columnAt(x)` `rowAt(y)` `solidAreas(tiles)`, `draw("#", color)`, `drawTiles(tileset, 16, "#=")` |
+| `<particles>` | `Emitter e = Emitter(vec2(x, y));`, then `e.burst(30)` (all at once) or `e.rate = 50` (per second); `e.update(dt)` and `e.draw()` each frame. Fields: `position` `rate` `lifetime` `speed` `direction` (degrees, -90 is up) `spread` (degrees, 360 is every way) `startColor` `endColor` `startSize` `endSize` `gravity`; `count()` `clear()` |
+| `<tween>` | `Tween t = Tween(from, to, seconds, Ease.OUT);` then `t.update(dt)` and `t.value()` each frame; `progress()` (0 to 1, for `lerp`), `isDone()`, `restart()`, `reverse()`, fields `looping` `pingPong`. Easing: `Ease.LINEAR` `IN` `OUT` `IN_OUT` `BOUNCE`; `tween.ease(Ease.OUT, t)` |
 | `<save>` | `save.setInt(key, n)` and `save.getInt(key, backup)`, also `setFloat`/`getFloat`, `setString`/`getString`, `setBool`/`getBool`, and `has(key)` `remove(key)` `clear()`. Kept in `save.txt` in the game's folder, written straight away. |
 | `<file>` | `file.read(path)` `write(path, text)` `append(path, text)` `exists(path)` `remove(path)` `readLines(path)` `writeLines(path, lines)` `files(folder)`. Paths are relative to the game's folder. |
 | `<scenes>` | the `Scene` class and `scenes.change(scene)` `update(dt)` `draw()` `current()` (see below) |
-| `<ui>` | `ui.button(rect, "text")` (true when clicked), `ui.checkbox(rect, "text", checked)` (gives the new value), `ui.slider(rect, value, min, max)` (gives the new value), `ui.label(text, x, y, size, color)`, `ui.panel(rect)`, `ui.setTheme(background, accent, text)` |
+| `<ui>` | `ui.button(rect, "text")` (true when clicked), `ui.checkbox(rect, "text", checked)` (gives the new value), `ui.slider(rect, value, min, max)` (gives the new value), `ui.textBox(rect, text, maxLength = 0)` (a box to type in; gives the new text), `ui.isTyping()`, `ui.label(text, x, y, size, color)`, `ui.panel(rect)`, `ui.setTheme(background, accent, text)` |
 | `<ECS>` | the `Entity` and `Component` classes (see below) |
 | `<tasks>` | `tasks.update(dt)` `runAll()` `count()` `stopAll()` (see [Tasks](#tasks-waiting-without-freezing-the-game)) |
 

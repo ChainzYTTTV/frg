@@ -1,0 +1,11 @@
+=== main.frg
+#include <tilemap>
+
+int main(){
+    TileMap map = TileMap("##", "big");
+    TileMap other = TileMap("##");
+    return 0;
+}
+=== error
+'tileSize' in TileMap() needs a float, but this is a string
+TileMap() needs 2 values, but got 1

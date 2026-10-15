@@ -123,7 +123,7 @@ struct VarDecl {
 };
 using VarPtr = std::unique_ptr<VarDecl>;
 
-enum class SK { Block, Var, ExprStmt, Assign, IncDec, If, While, For, ForEach, Switch, Return, Break, Continue, SuperCall };
+enum class SK { Block, Var, ExprStmt, Assign, IncDec, If, While, DoWhile, For, ForEach, Switch, Return, Break, Continue, SuperCall };
 
 struct Stmt;
 using StmtPtr = std::unique_ptr<Stmt>;
@@ -143,7 +143,7 @@ struct Stmt {
     ExprPtr expr;               // ExprStmt, Return value, If/While/For condition, Assign/IncDec target, ForEach list, Switch subject
     ExprPtr value;              // Assign right-hand side
     std::string op;             // Assign ("=", "+=", ...), IncDec ("++", "--")
-    StmtPtr then, els;          // If branches; While/For/ForEach body is `then`
+    StmtPtr then, els;          // If branches; While/DoWhile/For/ForEach body is `then`
     StmtPtr init, step;         // For
     std::vector<SwitchCase> cases;
     std::vector<ExprPtr> args;  // SuperCall arguments

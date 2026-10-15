@@ -4,7 +4,7 @@ Forge (`.frg`) is a compiled programming language for making 2D and 3D games. It
 
 These docs are for **anyone using or learning Forge**, including people who have never programmed before. If you're new, read them in order. If you already know another language, skim [Getting Started](getting-started.md), then read [Things that surprise people from other languages](language/14-coming-from-other-languages.md).
 
-> Forge was designed by a person and written by an AI (see the main [README](../README.md)). These docs describe **Forge 0.6**. If something here disagrees with what the compiler does, the compiler is right; please report the mismatch.
+> Forge was designed by a person and written by an AI (see the main [README](../README.md)). These docs describe **Forge 0.7**. If something here disagrees with what the compiler does, the compiler is right; please report the mismatch.
 
 ## Start here
 
@@ -54,9 +54,12 @@ Everything that isn't the core language lives in a library you `#include`. See t
 | [`<physics>`](libraries/physics.md) | Gravity and collisions for boxes |
 | [`<time>`](libraries/time.md) | The clock, the date, and timers |
 | [`<save>`](libraries/save.md) | Remembering values between runs: high scores, settings, progress |
+| [`<tilemap>`](libraries/tilemap.md) | Levels drawn as text: walls, coins and the start from characters |
+| [`<particles>`](libraries/particles.md) | Dust, sparks, smoke and explosions |
+| [`<tween>`](libraries/tween.md) | Smooth changes over time: sliding, bouncing, fading |
 | [`<file>`](libraries/file.md) | Reading and writing text files |
 | [`<scenes>`](libraries/scenes.md) | Switching between menu, levels and game over |
-| [`<ui>`](libraries/ui.md) | Buttons, checkboxes, sliders |
+| [`<ui>`](libraries/ui.md) | Buttons, checkboxes, sliders, text boxes |
 | [`<ECS>`](libraries/ecs.md) | Building game objects out of components |
 | [`<tasks>`](libraries/tasks.md) | Running tasks in programs without a window |
 

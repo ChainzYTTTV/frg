@@ -6,7 +6,7 @@ These words have special meanings, so they can't be used as names for variables,
 
 | Group | Words |
 |---|---|
-| Control flow | `if` `else` `while` `for` `in` `switch` `case` `default` `return` `break` `continue` |
+| Control flow | `if` `else` `while` `do` `for` `in` `switch` `case` `default` `return` `break` `continue` |
 | Values | `true` `false` `null` `this` `super` |
 | Declarations | `struct` `class` `enum` `const` `void` |
 | Modifiers | `private` `public` `static` (built-in libraries only) |
@@ -25,9 +25,9 @@ These words have special meanings, so they can't be used as names for variables,
 
 ## Library names
 
-`stdio` `math` `random` `window` `input` `graphics2d` `graphics3d` `assets` `audio` `physics` `time` `file` `save` `scenes` `ui` `ECS` `tasks` `OpenGL` `DirectX` `Vulkan`, plus `network`, which is planned.
+`stdio` `math` `random` `window` `input` `graphics2d` `graphics3d` `assets` `audio` `physics` `time` `file` `save` `tween` `particles` `tilemap` `scenes` `ui` `ECS` `tasks` `OpenGL` `DirectX` `Vulkan`, plus `network`, which is planned.
 
-Types that come from a library (`Key`, `MouseButton`, `GamepadButton`, `Body`, `Texture`, `Animation`, `Font`, `Sound`, `Music`, `Camera`, `Camera2D`, `Model`, `Timer`, `Scene`, `Entity`, `Component`) can't be reused as names of your own types **in a file that includes that library**.
+Types that come from a library (`Key`, `MouseButton`, `GamepadButton`, `Body`, `Texture`, `Animation`, `Font`, `Sound`, `Music`, `Camera`, `Camera2D`, `Model`, `Timer`, `Tween`, `Ease`, `Emitter`, `TileMap`, `Scene`, `Entity`, `Component`) can't be reused as names of your own types **in a file that includes that library**.
 
 ## Your own top-level files and folders
 

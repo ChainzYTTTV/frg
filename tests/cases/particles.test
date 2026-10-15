@@ -1,0 +1,44 @@
+=== main.frg
+#include <stdio>
+#include <particles>
+
+int main(){
+    Emitter sparks = Emitter(vec2(100, 100));
+    print(sparks.count());
+    sparks.burst(10);
+    print(sparks);
+    sparks.update(0.5);
+    print(sparks.count());
+    sparks.update(1.0);
+    print(sparks.count());
+
+    // A steady stream: 10 a second, so 2.5 in a quarter second (the half carries over).
+    Emitter smoke = Emitter(vec2(0, 0));
+    smoke.rate = 10;
+    smoke.lifetime = 100;
+    smoke.update(0.25);
+    print(smoke.count());
+    smoke.update(0.25);
+    print(smoke.count());
+    smoke.clear();
+    print(smoke.count());
+
+    // The settings can be read and changed.
+    sparks.startColor = color.YELLOW;
+    sparks.endColor = color.RED.fade(0);
+    sparks.gravity = vec2(0, 500);
+    sparks.direction = -90;
+    sparks.spread = 45;
+    print("{sparks.speed} {sparks.lifetime} {sparks.startSize} {sparks.endSize} {sparks.rate}");
+    return 0;
+}
+=== output
+0
+Emitter(10 particles)
+10
+0
+2
+5
+0
+100.0 1.0 8.0 2.0 0.0
+=== no warnings

@@ -1,0 +1,47 @@
+=== main.frg
+#include <window>
+#include <graphics2d>
+#include <ui>
+#include <tween>
+
+// The examples from docs/libraries/tween.md.
+Tween slideIn = Tween(-300, 40, 0.5, Ease.OUT);
+Tween fade = Tween(0, 1, 2, Ease.LINEAR);
+Tween pulse = Tween(1, 1.3, 0.4, Ease.IN_OUT);
+vec2 start = vec2(100, 100);
+vec2 end = vec2(500, 300);
+float menuX = -300;
+
+task showMenu() {
+    Tween t = Tween(-300, 40, 0.5);
+    while (!t.isDone()) {
+        t.update(window.deltaTime());
+        menuX = t.value();
+        wait();
+    }
+}
+
+void update(float dt){
+    slideIn.update(dt);
+    fade.update(dt);
+    pulse.update(dt);
+}
+
+void draw(){
+    ui.panel(rect(slideIn.value(), 100, 280, 300));
+    vec2 p = start.lerp(end, fade.progress());
+    color c = color.WHITE.lerp(color.BLANK, fade.progress());
+    graphics2d.drawCircle(p, 20 * pulse.value(), c);
+    graphics2d.drawRect(menuX, 10, 100, 20, color.RED);
+}
+
+int main(){
+    pulse.looping = true;
+    pulse.pingPong = true;
+    window.open(600, 400, "Tweens");
+    showMenu();
+    window.run();
+    return 0;
+}
+=== build
+=== no warnings

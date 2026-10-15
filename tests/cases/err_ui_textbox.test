@@ -1,0 +1,13 @@
+=== main.frg
+#include <ui>
+
+int main(){
+    string name = "";
+    ui.textBox(rect(0, 0, 100, 30), name);
+    int n = ui.textBox(rect(0, 0, 100, 30), name);
+    name = ui.textBox(rect(0, 0, 100, 30), 5);
+    return 0;
+}
+=== error
+'n' needs an int, but this is a string
+'text' in ui.textBox() needs a string, but this is an int

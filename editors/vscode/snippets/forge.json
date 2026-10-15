@@ -104,6 +104,11 @@
         "prefix": "while",
         "body": ["while (${1:condition}) {", "\t$0", "}"]
     },
+    "do while": {
+        "prefix": "do",
+        "body": ["do {", "\t$0", "} while (${1:condition});"],
+        "description": "A loop that runs at least once: the condition is checked after each round"
+    },
     "switch": {
         "prefix": "switch",
         "body": ["switch (${1:value}) {", "\tcase ${2:1}:", "\t\t$0", "\tdefault:", "\t\t", "}"],

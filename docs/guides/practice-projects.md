@@ -45,7 +45,7 @@ Hints:
 
 - `#include <random>`, then `int secret = random.range(1, 100);`. Both 1 and 100 can come up.
 - `input` gives back text. Turn it into a number with `int(...)`: `int guess = int(input("Your guess: "));`. Typing something that isn't a number stops the program with an error. To ask again instead, check the text first with `isInt()`: `string typed = input("Your guess: ");`, then `if (typed.isInt()) { int guess = int(typed); ... } else { print("Please type a number"); }`.
-- A `bool found = false;` and `while (!found) { ... }` is one way to loop until the guess is right.
+- A `bool found = false;` and `while (!found) { ... }` is one way to loop until the guess is right. Another is `do { ... } while (guess != secret);`, which always asks at least once (make `int guess = 0;` before the `do`, so the condition can see it).
 
 Make it yours: allow only 7 guesses. Ask "Play again? (y/n)" at the end. Let the player choose easy (1-50) or hard (1-500).
 
@@ -349,7 +349,7 @@ Hints:
 
 - Only break **one** brick per frame (`break` out of the loop after a hit), or the ball can flip twice and carry on through.
 
-Make it yours: a different color and score for each row. Where the ball hits the paddle changes its angle. Power-ups that fall from broken bricks.
+Make it yours: a different color and score for each row. Where the ball hits the paddle changes its angle. Bricks that burst into particles (`<particles>`) when broken. Power-ups that fall from broken bricks.
 
 ### 13. Clicker game
 
@@ -372,7 +372,7 @@ Hints:
 - `<save>` writes the file straight away, so saving after every purchase (and every few seconds for the helpers) is fine. Load with a backup value for the very first run: `save.getInt("helpers", 0)`.
 - "Reset save" is `save.clear()`, then set the variables back to their starting values.
 
-Make it yours: the cookie shrinks a little when clicked, then grows back. Achievements at 100, 1,000 and 10,000 cookies.
+Make it yours: the cookie shrinks a little when clicked, then grows back. Let the player name their bakery on the title screen with `ui.textBox`, and save the name with `save.setString`. Achievements at 100, 1,000 and 10,000 cookies.
 
 ### 14. Dodge
 
@@ -405,7 +405,7 @@ Hints:
 
   Start it with `flash();`. The game keeps running while it waits.
 
-Make it yours: "Wave 3!" text that appears for 2 seconds (another task). A shield pickup.
+Make it yours: "Wave 3!" text that appears for 2 seconds (another task), sliding in with a `Tween` from `<tween>`. A shield pickup.
 
 ### 15. Platformer remix
 
@@ -416,7 +416,7 @@ Make it yours: "Wave 3!" text that appears for 2 seconds (another task). A shiel
 Ideas, roughly from easiest to hardest:
 
 1. Change the colors, the jump height and the speed until it feels right to you.
-2. Add more platforms and coins, and a door that only opens when all coins are collected.
+2. Add more platforms and coins (type them into the level text in `level.frg`), and a door that only opens when all coins are collected (a `D` tile that `set` turns into `" "`).
 3. Give the player a sprite and a jump sound.
 4. A moving platform: a static `Body` whose position you change every frame, going back and forth.
 5. An enemy that walks left and right on a platform. Touching it sends you back to the start.

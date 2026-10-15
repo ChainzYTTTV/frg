@@ -183,6 +183,10 @@ bool Parser::declAhead(bool allowParen) {
         // `x ? y : z` looks like the start of `x? y` - a ':' after the name means it's an expression.
         result = !(tmp.optional && next == Tok::Colon) && (next != Tok::LParen || allowParen);
         if (!allowParen && next == Tok::LParen) result = false;
+    } else if (!tmp.empty() && p < t.size() && isKeyword(cur().text) && (peek().kind == Tok::Assign || peek().kind == Tok::Semi)) {
+        // `int do = 5;` - a reserved word used as a name.
+        fail(cur().loc, "'" + cur().text + "' is a reserved word in Forge, so it can't be the name of a variable",
+             "pick a different name - the reserved words are listed in the docs (Reserved words)");
     }
     while (splitLog.size() > splits) {
         t[splitLog.back().first] = splitLog.back().second;
@@ -424,6 +428,21 @@ StmtPtr Parser::parseStmt() {
             s->expr = parseCond();
             expect(Tok::RParen, "')'");
             s->then = parseBody("while");
+            return s;
+        }
+        case Tok::KwDo: {
+            // do { ... } while (condition);  runs the code once, then again for as long as the condition is true.
+            p++;
+            auto s = std::make_unique<Stmt>(SK::DoWhile, l);
+            if (!at(Tok::LBrace)) fail(cur().loc, "'do' needs { } around its code", "for example: do { ... } while (x > 0);");
+            s->then = parseBlock();
+            if (!at(Tok::KwWhile))
+                fail(cur().loc, "a 'do { ... }' needs 'while (...)' after its closing }", "for example: do { ... } while (lives > 0);");
+            p++;
+            expect(Tok::LParen, "'(' after while");
+            s->expr = parseCond();
+            expect(Tok::RParen, "')'");
+            expect(Tok::Semi, "';'");
             return s;
         }
         case Tok::KwReturn: {

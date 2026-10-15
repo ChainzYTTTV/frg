@@ -47,6 +47,21 @@ print("Go!");
 
 If the condition never becomes false, the loop runs forever. That's sometimes on purpose: `while (true) { ... }` with a `break` or `return` inside.
 
+## do ... while
+
+Like `while`, but the condition is checked **after** each round, so the code always runs at least once:
+
+```cpp
+string answer = "";
+do {
+    answer = input("Type yes or no: ");
+} while (answer != "yes" and answer != "no");
+```
+
+That's handy when you need to do something before you can check it, like asking a question and then checking the answer. Notice the `;` after the `)`: a `do ... while` ends with one.
+
+`break` and `continue` work the same as in `while` (`continue` jumps to the check). Variables made inside the `{ }` are gone by the time the condition is checked, so make them before the `do` if the condition needs them, like `answer` above.
+
 ## for
 
 `for` packs a counter into one line:

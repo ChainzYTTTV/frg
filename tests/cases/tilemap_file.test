@@ -1,0 +1,19 @@
+=== main.frg
+#include <stdio>
+#include <tilemap>
+
+// A level in its own file. Ragged lines are filled with spaces.
+int main(){
+    TileMap level = tilemap.load("level1.txt", 32);
+    print("{level.columns()} {level.rows()}");
+    print(level.solidAreas("#").length);
+    return 0;
+}
+=== level1.txt
+####
+#  #
+#
+######
+=== output
+6 4
+4

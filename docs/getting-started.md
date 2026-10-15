@@ -18,7 +18,7 @@ frg version
 g++ --version
 ```
 
-The first should print `Forge 0.6.0` and the second should print a GCC version. If `frg` isn't found, add Forge's `bin` folder to your PATH and restart the terminal.
+The first should print `Forge 0.7.0` and the second should print a GCC version. If `frg` isn't found, add Forge's `bin` folder to your PATH and restart the terminal.
 
 ### Building Forge from source
 
@@ -93,6 +93,7 @@ Run these in a terminal. `[folder]` is the game's top folder (the one with `main
 | `frg build [folder]` | Checks and compiles into `build/<folder name>.exe`, without running it |
 | `frg check [folder]` | Only looks for errors (fast, makes no `.exe`) |
 | `frg package [folder]` | Makes the finished game and zips it, ready to share: `dist/<name>.zip` (see [Sharing your game](#sharing-your-game)) |
+| `frg cache` | Shows how big the build cache is ([why there is one](#why-the-first-build-is-slower)). `frg cache clear` deletes it |
 | `frg version` | Shows the Forge version |
 | `frg help` | Shows this list |
 
@@ -125,7 +126,12 @@ The very first time you build a game (and the first time with `--release` or wit
    Preparing Forge's runtime for these libraries (only the first time, to make later builds faster)
 ```
 
-It's getting Forge's own code ready once, so every build after that is quicker, for all your games. It's kept in a `cache` folder next to `frg.exe` (a few hundred MB at most). When Forge (or w64devkit) is updated, the old files are deleted by themselves. You can also delete that folder whenever you like; Forge just makes it again.
+It's getting Forge's own code ready once, so every build after that is quicker, for all your games. It's kept in a `cache` folder next to `frg.exe`. Each kind of game (console, window, release...) gets its own prepared set of about 100 MB, and Forge keeps the whole folder under about **400 MB** by deleting the sets that haven't been used for the longest time. When Forge (or w64devkit) is updated, the old sets are deleted by themselves too.
+
+```
+frg cache          // shows where the cache is and how big it is
+frg cache clear    // deletes it; the next build prepares it again
+```
 
 `--release` builds take a little longer, because they make the game run as fast as possible. Normal builds skip some of that work: they're quicker to make, and the game behaves exactly the same.
 

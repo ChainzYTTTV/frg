@@ -1,4 +1,4 @@
-# Forge 0.6.0: the complete documentation
+# Forge 0.7.0: the complete documentation
 
 This one file holds everything written about the Forge programming language, so it can be uploaded in one go:
 
@@ -13,10 +13,10 @@ Where the parts disagree, the detailed pages (B to F) are more precise, and the 
 - **Part A: The teaching brief (for an AI tutor)**: Teaching Brief: the Forge Programming Language
 - **Part B: Start here**: Forge Documentation - Getting Started
 - **Part C: The language**: 1. The Basics - 2. Variables and Types - 3. Text - 4. Operators - 5. Making Decisions and Repeating - 6. Functions - 7. Files and Folders - 8. Lists and Maps - 9. Structs and Classes - 10. Enums, Optionals and Pointers - 11. Tasks - 12. Errors - 13. Reserved Words - 14. Coming From Other Languages
-- **Part D: The libraries**: Library Overview - Built-in Types: vec2, vec3, vec4, color, rect - <stdio>: Console Input and Output - <math>: Math Functions - <random>: Random Numbers - <window>: The Game Window - <input>: Keyboard, Mouse and Controllers - <graphics2d>: 2D Drawing - <graphics3d>: 3D Drawing - <assets>: Images, Animations and Fonts - <audio>: Sounds and Music - <physics>: Boxes, Gravity and Collisions - <time>: Clock, Date and Timers - <file>: Reading and Writing Text Files - <save>: Remembering Things Between Runs - <scenes>: Menus, Levels and Game Over - <ui>: Buttons, Checkboxes and Sliders - <ECS>: Entities and Components - <tasks>: Tasks Without a Window - Low-Level Toolkits: OpenGL, DirectX and Vulkan - <OpenGL>: Drawing with OpenGL Yourself - <DirectX>: Drawing with Direct3D 11 Yourself - <Vulkan>: Drawing with Vulkan Yourself
+- **Part D: The libraries**: Library Overview - Built-in Types: vec2, vec3, vec4, color, rect - <stdio>: Console Input and Output - <math>: Math Functions - <random>: Random Numbers - <window>: The Game Window - <input>: Keyboard, Mouse and Controllers - <graphics2d>: 2D Drawing - <graphics3d>: 3D Drawing - <assets>: Images, Animations and Fonts - <audio>: Sounds and Music - <physics>: Boxes, Gravity and Collisions - <time>: Clock, Date and Timers - <file>: Reading and Writing Text Files - <save>: Remembering Things Between Runs - <tween>: Smooth Changes Over Time - <particles>: Dust, Sparks and Explosions - <tilemap>: Levels Drawn as Text - <scenes>: Menus, Levels and Game Over - <ui>: Buttons, Checkboxes, Sliders and Text Boxes - <ECS>: Entities and Components - <tasks>: Tasks Without a Window - Low-Level Toolkits: OpenGL, DirectX and Vulkan - <OpenGL>: Drawing with OpenGL Yourself - <DirectX>: Drawing with Direct3D 11 Yourself - <Vulkan>: Drawing with Vulkan Yourself
 - **Part E: Guides**: The Game Loop - Sprites and Animation - Platformer Walkthrough
 - **Part F: Under the hood**: How Forge Works
-- **Part G: The cheat sheet (everything on one page)**: Forge Cheat Sheet (v0.6)
+- **Part G: The cheat sheet (everything on one page)**: Forge Cheat Sheet (v0.7)
 
 ---
 
@@ -114,7 +114,7 @@ In **VS Code** (with the Forge extension): errors are underlined when you save, 
 
 Forge is **compiled**. The whole program is checked before it runs, so most mistakes are caught before the game starts.
 
-The first build (and the first `--release` build) shows "Preparing Forge's runtime ... (only the first time)" and takes longer: Forge is getting its own code ready once, so later builds of every game are faster. It's stored in a `cache` folder next to `frg.exe` that can be deleted at any time.
+The first build (and the first `--release` build) shows "Preparing Forge's runtime ... (only the first time)" and takes longer: Forge is getting its own code ready once, so later builds of every game are faster. It's stored in a `cache` folder next to `frg.exe`, which Forge keeps under about 400 MB by itself. `frg cache` shows its size and `frg cache clear` deletes it (the next build just prepares it again).
 
 ---
 
@@ -237,6 +237,10 @@ for (string name in names) {     // goes through each item of a list
 while (lives > 0) {
     lives--;
 }
+
+do {                             // like while, but runs at least once: the check comes after
+    guess = int(input("Guess: "));
+} while (guess != secret);       // note the ; at the end
 ```
 
 `break` leaves a loop and `continue` skips to the next time around.
@@ -474,7 +478,7 @@ Pointer<int> p = score;       // points at score
 p.value = 50;                 // score is now 50
 ```
 
-A pointer must point at a variable, field or list item. Don't keep one pointing at a function's local variable after that function ends. Pointers are rarely needed, since classes are already shared, so teach them late.
+A pointer must point at a variable, field or list item. Don't keep one pointing at a function's local variable after that function ends. `p.remove()` throws a pointer away (the variable it pointed at is untouched): afterwards `p.isRemoved()` is true, and using `p` stops the game with "this pointer was removed (with remove()) ..." until it's pointed at something again with `p = someVariable;`. With a pointer to a list or map, `p.remove(x)` (with a value) is still the list's own remove. Pointers are rarely needed, since classes are already shared, so teach them late.
 
 #### Built-in types (always available, no include)
 
@@ -505,10 +509,13 @@ Library functions are reached through the library name (`window.open(...)`). Lib
 | `<audio>` | `audio.loadSound("x.wav")` gives a `Sound`, `audio.loadMusic("x.ogg")` gives a `Music`, `audio.setVolume(v)` |
 | `<graphics3d>` | the `Camera` struct and `Model` class, `graphics3d.setCamera(cam)`, `drawCube(pos, size, color)`, `drawCubeOutline`, `drawSphere(center, radius, color)`, `drawSphereOutline`, `drawCylinder(pos, radius, height, color)`, `drawPlane(center, vec2 size, color)`, `drawGrid(slices, spacing)`, `drawLine(from, to, color)`, `toScreen(vec3)`, `loadModel("x.glb")` |
 | `<time>` | `time.now()`, `time.sleep(s)`, `time.clock()`, `time.date()`, `year() month() day() hour() minute() second()`, the `Timer` class |
+| `<tilemap>` | levels drawn as text, one character per tile: `TileMap level = TileMap("""` ... `""", 32);` (or `tilemap.load("level1.txt", 32)`). The game decides what characters mean. `level.addBodies("#")` makes static physics bodies, merging neighbouring tiles into big boxes (`addBodies("=", true)` makes one-way platforms); `level.find("C")` gives the top-left corner (pixels) of every `C` tile; `get(column, row)` (`" "` outside the map), `set(column, row, "#")`, `columns()`, `rows()`, `width()`, `height()` (pixels), `tileRect(column, row)`, `columnAt(x)`, `rowAt(y)`; `draw("#", color)` fills tiles with a color, `drawTiles(tileset, 16, "#=")` draws them from a tileset image (each character is the next 16x16 picture). Don't name the variable `map` (a type name) |
+| `<particles>` | dust, sparks, smoke, explosions: `Emitter sparks = Emitter(vec2(x, y));`, then `sparks.burst(30);` (all at once) or `sparks.rate = 50;` (a steady stream per second), and each frame `sparks.update(dt);` and `sparks.draw();`. Fields to set: `position`, `lifetime` (seconds), `speed`, `direction` (degrees: 0 right, -90 up), `spread` (degrees around it: 360 every way), `startColor`/`endColor` (an end color with alpha 0 fades them out), `startSize`/`endSize`, `gravity` (a vec2). Also `count()` and `clear()`. It draws in 2D, through the 2D camera |
+| `<tween>` | smooth changes over time: `Tween slide = Tween(-300, 40, 0.5, Ease.OUT);` (from, to, seconds, easing), then `slide.update(dt);` and use `slide.value()`. Also `progress()` (0 to 1, with `lerp` for positions and colors: `a.lerp(b, t.progress())`), `isDone()`, `restart()`, `reverse()` (go back from where it is), fields `looping` and `pingPong`. `Ease.LINEAR` (steady), `IN` (slow start), `OUT` (slow end, the default), `IN_OUT`, `BOUNCE`. There are no callbacks: check `isDone()` |
 | `<save>` | `save.setInt(key, n)` / `getInt(key, backup)`, the same for `Float`, `String` and `Bool`, `has(key)`, `remove(key)`, `clear()`. Kept in `save.txt` in the game's folder |
 | `<file>` | `file.read(path)`, `write(path, text)`, `append(path, text)`, `exists(path)`, `remove(path)`, `readLines(path)`, `writeLines(path, list)`, `files(folder)` |
 | `<scenes>` | the `Scene` class, `scenes.change(scene)`, `update(dt)`, `draw()`, `current()` |
-| `<ui>` | `ui.button(rect, "text")` (true when clicked), `ui.checkbox(rect, "text", checked)` (new value), `ui.slider(rect, value, min, max)` (new value), `ui.label(text, x, y, size, color)`, `ui.panel(rect)`, `ui.setTheme(bg, accent, text)` |
+| `<ui>` | `ui.button(rect, "text")` (true when clicked), `ui.checkbox(rect, "text", checked)` (new value), `ui.slider(rect, value, min, max)` (new value), `ui.textBox(rect, text, maxLength = 0)` (a box to type in: `name = ui.textBox(rect(20, 20, 240, 40), name, 12);` gives the new text; click to type, Backspace deletes, Enter or a click elsewhere finishes), `ui.isTyping()` (true while typing, so the game can skip its key shortcuts), `ui.label(text, x, y, size, color)`, `ui.panel(rect)`, `ui.setTheme(bg, accent, text)` |
 | `<ECS>` | the `Entity` and `Component` classes, `ECS.create(name)`, `add(entity)`, `update(dt)`, `draw()`, `find(name)`, `all()`, `withComponent("Type")`, `clear()`, `count()` |
 | `<tasks>` | `tasks.update(dt)`, `runAll()`, `count()`, `stopAll()` (only needed without a window) |
 | `<OpenGL>` `<DirectX>` `<Vulkan>` | low-level toolkits for writing your own rendering, **instead of** the engine (see "Low-level toolkits" below) |
@@ -862,15 +869,15 @@ Runtime error in main.frg:10: position 5 is outside the list (it has 3 items, at
 - Generics you write yourself (`class Box<T>`), function values, lambdas, callbacks
 - Two functions or methods with the same name (only constructors can share a name), operator overloading for your own types
 - Interfaces, abstract classes, `protected`, `static` fields or methods in your own types
-- `do ... while`, labeled breaks, exceptions (`try` / `catch`), `goto`
-- Networking, shaders in the engine, 3D lighting, text input boxes in `<ui>`
+- Labeled breaks, exceptions (`try` / `catch`), `goto`
+- Networking, shaders in the engine, 3D lighting
 - `<network>` is planned but **doesn't exist yet**.
 
 ---
 
 ### Part 5: The example platformer
 
-This game is in `examples/platformer/`. It's the learner's first goal: they should eventually understand every line. Arrows or A/D move, Space/W/Up jumps, you collect 12 coins, and falling into a pit sends you back to the start. The level is 2400 pixels wide, so a `Camera2D` follows the player smoothly (`followPlayer` in main.frg), and the text is drawn after `resetCamera()` so it stays on the screen.
+This game is in `examples/platformer/`. It's the learner's first goal: they should eventually understand every line. Arrows or A/D move, Space/W/Up jumps, you collect 12 coins, and falling into a pit sends you back to the start. The level is 2400 pixels wide, so a `Camera2D` follows the player smoothly (`followPlayer` in main.frg). The level itself is drawn as text in level.frg with a `<tilemap>` (`#` ground, `=` one-way planks, `C` coins, `P` the start), and the text is drawn after `resetCamera()` so it stays on the screen.
 
 #### main.frg
 
@@ -883,6 +890,7 @@ This game is in `examples/platformer/`. It's the learner's first goal: they shou
 ```
   A tiny platformer: move with the arrow keys (or A / D), jump with Space (or W / Up).
   Collect all the coins. Don't fall in the pits!
+  The level is drawn as text in level.frg (a <tilemap>).
 
   This game uses the engine loop: window.run() calls update(dt) and draw() every frame.
   The level is wider than the window, so a camera follows the player.
@@ -895,6 +903,8 @@ int main(){
     window.open(960, 540, "Forge Platformer");
     window.setBackground(color(24, 26, 40));
     level.build();
+    player.start = level.start;     // the P in the level
+    player.hero.position = level.start;
     window.run();
     return 0;
 }
@@ -902,15 +912,17 @@ int main(){
 void update(float dt){
     player.handleInput();
     physics.step(dt);
+    player.checkLanding(dt);
     player.checkFall();
     level.collectCoins(player.hero.bounds());
+    level.updateEffects(dt);
     followPlayer(dt);
 }
 
 // The camera glides toward the player, but stops at the ends of the level so it never shows past them.
 void followPlayer(float dt){
     float half = window.width() / 2.0;
-    float x = math.clamp(player.hero.center().x, half, level.WIDTH - half);
+    float x = math.clamp(player.hero.center().x, half, level.tiles.width() - half);
     camera.target = camera.target.lerp(vec2(x, window.height() / 2.0), 5 * dt);
 }
 
@@ -938,10 +950,11 @@ void draw(){
 #include <graphics2d>
 #include <input>
 #include <physics>
+#include <particles>
 
 const float MOVE_SPEED = 320;
 const float JUMP_SPEED = 620;
-const vec2 START = vec2(80, 380);
+vec2 start = vec2(80, 380);    // main.frg moves it to the P in the level
 
 // A Player is a physics Body (it inherits position, size, velocity, onGround...)
 // with a few extra things of its own.
@@ -950,7 +963,7 @@ class Player : Body {
     int deaths = 0;
 
     void respawn() {
-        position = START;
+        position = start;
         velocity = vec2.ZERO;
         deaths++;
         flash();
@@ -969,13 +982,33 @@ class Player : Body {
 
 Player hero = makeHero();
 
+// A puff of dust when the player lands.
+Emitter dust = makeDust();
+bool wasOnGround = false;
+float fallSpeed = 0;
+
+Emitter makeDust(){
+    Emitter e = Emitter(vec2(0, 0));
+    e.lifetime = 0.4;
+    e.speed = 90;
+    e.direction = -90;          // up...
+    e.spread = 160;             // ...and out to both sides
+    e.gravity = vec2(0, 300);
+    e.startColor = color(200, 200, 210);
+    e.endColor = color(200, 200, 210, 0);   // fades out
+    e.startSize = 9;
+    e.endSize = 3;
+    return e;
+}
+
 Player makeHero(){
-    Player p = Player(START.x, START.y, 36, 36);
+    Player p = Player(start.x, start.y, 36, 36);
     physics.add(p);
     return p;
 }
 
 void handleInput(){
+    fallSpeed = hero.velocity.y;    // remembered before physics.step stops the fall
     float direction = 0;
     if (input.keyDown(Key.LEFT) or input.keyDown(Key.A)) {
         direction -= 1;
@@ -997,6 +1030,16 @@ void handleInput(){
     }
 }
 
+// Called after physics.step: a hard landing makes a puff of dust at the player's feet.
+void checkLanding(float dt){
+    if (hero.onGround and !wasOnGround and fallSpeed > 250) {
+        dust.position = vec2(hero.center().x, hero.position.y + hero.size.y);
+        dust.burst(14);
+    }
+    wasOnGround = hero.onGround;
+    dust.update(dt);
+}
+
 void checkFall(){
     if (hero.position.y > window.height() + 100) {
         hero.respawn();
@@ -1004,6 +1047,7 @@ void checkFall(){
 }
 
 void draw(){
+    dust.draw();
     graphics2d.drawRect(hero.bounds(), hero.tint);
     // Two eyes that look the way the player is moving.
     float look = hero.velocity.x > 0 ? 4 : hero.velocity.x < 0 ? -4 : 0;
@@ -1018,48 +1062,61 @@ void draw(){
 ```cpp
 #include <graphics2d>
 #include <physics>
+#include <particles>
+#include <tilemap>
 
-const float WIDTH = 2400;    // the level is wider than the 960-pixel window
+// The level, drawn with characters. Each character is one 36 x 36 tile:
+//   #  ground and walls          =  a platform you can jump up through
+//   C  a coin                    P  where the player starts
+TileMap tiles = TileMap("""
+#                                                          #
+#                                                          #
+#                                                          #
+#                                                          #
+#                                             C            #
+#                            C               ====          #
+#                      C    ####                           #
+#         C           ====                C                #
+#        ====                            ====              #
+#    C              C                  C             C     #
+#   ====          =====         C    =====          ====   #
+#                                                          #
+# P     C                                               C  #
+############    ##############     ###########    ##########
+############    ##############     ###########    ##########
+""", 36);
 
-list<Body> platforms = [];
 list<vec2> coins = [];
 int totalCoins = 0;
 int collected = 0;
+vec2 start = vec2(0, 0);
 
-void build(){
-    // The ground, with three pits.
-    addPlatform(0, 500, 400, 40);
-    addPlatform(540, 500, 560, 40);
-    addPlatform(1250, 500, 500, 40);
-    addPlatform(1880, 500, 520, 40);
+// Golden sparkles where a coin was picked up.
+Emitter sparkles = makeSparkles();
 
-    // Platforms to jump between.
-    addPlatform(140, 400, 160, 20);
-    addPlatform(380, 320, 160, 20);
-    addPlatform(620, 240, 160, 20);
-    addPlatform(410, 150, 100, 20);
-    addPlatform(900, 380, 140, 20);
-    addPlatform(1120, 330, 120, 20);
-    addPlatform(1400, 380, 160, 20);
-    addPlatform(1600, 280, 140, 20);
-    addPlatform(1780, 200, 120, 20);
-    addPlatform(2050, 380, 160, 20);
-    addPlatform(2250, 280, 120, 20);
-
-    // Walls at the two ends of the level.
-    addPlatform(-20, 0, 20, 540);
-    addPlatform(WIDTH, 0, 20, 540);
-
-    coins = [vec2(220, 370), vec2(460, 290), vec2(700, 210), vec2(460, 120), vec2(970, 350), vec2(1180, 300),
-             vec2(1480, 350), vec2(1670, 250), vec2(1840, 170), vec2(2130, 350), vec2(2310, 250), vec2(2350, 470)];
-    totalCoins = coins.length;
+Emitter makeSparkles(){
+    Emitter e = Emitter(vec2(0, 0));
+    e.lifetime = 0.6;
+    e.speed = 140;
+    e.gravity = vec2(0, 250);
+    e.startColor = color.GOLD;
+    e.endColor = color(255, 255, 160, 0);
+    e.startSize = 7;
+    e.endSize = 1;
+    return e;
 }
 
-void addPlatform(float x, float y, float width, float height){
-    Body b = Body(x, y, width, height);
-    b.isStatic = true;
-    physics.add(b);
-    platforms.add(b);
+void build(){
+    // Neighbouring # tiles become a few big static bodies, not hundreds of small ones.
+    tiles.addBodies("#");
+    tiles.addBodies("=", true);     // true: one-way platforms
+
+    // find gives the top-left corner of each tile; coins are kept as the middle of their tile.
+    for (vec2 corner in tiles.find("C")) {
+        coins.add(corner + vec2(tiles.tileSize / 2, tiles.tileSize / 2));
+    }
+    totalCoins = coins.length;
+    start = tiles.find("P")[0];
 }
 
 void collectCoins(rect playerBox){
@@ -1069,23 +1126,40 @@ void collectCoins(rect playerBox){
         if (playerBox.overlaps(rect(c.x - 10, c.y - 10, 20, 20))) {
             coins.removeAt(i);
             collected++;
+            sparkles.position = c;
+            sparkles.burst(24);
         }
     }
 }
 
+void updateEffects(float dt){
+    sparkles.update(dt);
+}
+
 void draw(){
-    for (Body p in platforms) {
-        graphics2d.drawRect(p.bounds(), color(70, 86, 120));
-        graphics2d.drawRect(p.position.x, p.position.y, p.size.x, 5, color(110, 200, 130));
+    tiles.draw("#", color(70, 86, 120));
+    // Grass on every # tile that has nothing above it.
+    for (int row = 0; row < tiles.rows(); row++) {
+        for (int column = 0; column < tiles.columns(); column++) {
+            if (tiles.get(column, row) == "#" and tiles.get(column, row - 1) != "#") {
+                rect r = tiles.tileRect(column, row);
+                graphics2d.drawRect(r.x, r.y, r.width, 5, color(110, 200, 130));
+            }
+        }
+    }
+    // One-way platforms are drawn as thin planks.
+    for (vec2 p in tiles.find("=")) {
+        graphics2d.drawRect(p.x, p.y, tiles.tileSize, 10, color(170, 130, 90));
     }
     for (vec2 c in coins) {
         graphics2d.drawCircle(c, 10, color.GOLD);
         graphics2d.drawCircleOutline(c.x, c.y, 10, color.ORANGE);
     }
+    sparkles.draw();
 }
 ```
 
-**Good exercises once the learner understands it:** show the death count on screen, add a sixth coin, make a moving platform (change a static body's `position` in `update`), add a timer with `window.time()`, add a second level, or add enemies that send you back to the start when `hero.overlaps(enemy)`.
+**Good exercises once the learner understands it:** show the death count on screen, add a coin (type a `C` into the level text in level.frg), make a moving platform (change a static body's `position` in `update`), add a timer with `window.time()`, add a second level, or add enemies that send you back to the start when `hero.overlaps(enemy)`.
 
 
 ---
@@ -1136,7 +1210,7 @@ Hints:
 
 - `#include <random>`, then `int secret = random.range(1, 100);`. Both 1 and 100 can come up.
 - `input` gives back text. Turn it into a number with `int(...)`: `int guess = int(input("Your guess: "));`. Typing something that isn't a number stops the program with an error. To ask again instead, check the text first with `isInt()`: `string typed = input("Your guess: ");`, then `if (typed.isInt()) { int guess = int(typed); ... } else { print("Please type a number"); }`.
-- A `bool found = false;` and `while (!found) { ... }` is one way to loop until the guess is right.
+- A `bool found = false;` and `while (!found) { ... }` is one way to loop until the guess is right. Another is `do { ... } while (guess != secret);`, which always asks at least once (make `int guess = 0;` before the `do`, so the condition can see it).
 
 Make it yours: allow only 7 guesses. Ask "Play again? (y/n)" at the end. Let the player choose easy (1-50) or hard (1-500).
 
@@ -1440,7 +1514,7 @@ Hints:
 
 - Only break **one** brick per frame (`break` out of the loop after a hit), or the ball can flip twice and carry on through.
 
-Make it yours: a different color and score for each row. Where the ball hits the paddle changes its angle. Power-ups that fall from broken bricks.
+Make it yours: a different color and score for each row. Where the ball hits the paddle changes its angle. Bricks that burst into particles (`<particles>`) when broken. Power-ups that fall from broken bricks.
 
 ##### 13. Clicker game
 
@@ -1463,7 +1537,7 @@ Hints:
 - `<save>` writes the file straight away, so saving after every purchase (and every few seconds for the helpers) is fine. Load with a backup value for the very first run: `save.getInt("helpers", 0)`.
 - "Reset save" is `save.clear()`, then set the variables back to their starting values.
 
-Make it yours: the cookie shrinks a little when clicked, then grows back. Achievements at 100, 1,000 and 10,000 cookies.
+Make it yours: the cookie shrinks a little when clicked, then grows back. Let the player name their bakery on the title screen with `ui.textBox`, and save the name with `save.setString`. Achievements at 100, 1,000 and 10,000 cookies.
 
 ##### 14. Dodge
 
@@ -1496,7 +1570,7 @@ Hints:
 
   Start it with `flash();`. The game keeps running while it waits.
 
-Make it yours: "Wave 3!" text that appears for 2 seconds (another task). A shield pickup.
+Make it yours: "Wave 3!" text that appears for 2 seconds (another task), sliding in with a `Tween` from `<tween>`. A shield pickup.
 
 ##### 15. Platformer remix
 
@@ -1507,7 +1581,7 @@ Make it yours: "Wave 3!" text that appears for 2 seconds (another task). A shiel
 Ideas, roughly from easiest to hardest:
 
 1. Change the colors, the jump height and the speed until it feels right to you.
-2. Add more platforms and coins, and a door that only opens when all coins are collected.
+2. Add more platforms and coins (type them into the level text in `level.frg`), and a door that only opens when all coins are collected (a `D` tile that `set` turns into `" "`).
 3. Give the player a sprite and a jump sound.
 4. A moving platform: a static `Body` whose position you change every frame, going back and forth.
 5. An enemy that walks left and right on a platform. Touching it sends you back to the start.
@@ -1563,7 +1637,7 @@ Then build version 1, play it, and only then add more.
 
 ---
 
-*Forge v0.6. If the learner reports that something in this file doesn't work, believe the compiler over this file and tell them to report it to whoever maintains Forge.*
+*Forge v0.7. If the learner reports that something in this file doesn't work, believe the compiler over this file and tell them to report it to whoever maintains Forge.*
 
 ---
 
@@ -1577,14 +1651,14 @@ Forge (`.frg`) is a compiled programming language for making 2D and 3D games. It
 
 These docs are for **anyone using or learning Forge**, including people who have never programmed before. If you're new, read them in order. If you already know another language, skim Getting Started (see “Getting Started”), then read Things that surprise people from other languages (see “14. Coming From Other Languages”).
 
-> Forge was designed by a person and written by an AI (see the main README (the file `README.md` in the Forge folder)). These docs describe **Forge 0.6**. If something here disagrees with what the compiler does, the compiler is right; please report the mismatch.
+> Forge was designed by a person and written by an AI (see the main README (the file `README.md` in the Forge folder)). These docs describe **Forge 0.7**. If something here disagrees with what the compiler does, the compiler is right; please report the mismatch.
 
 ### Start here
 
 | | |
 |---|---|
 | Getting Started (see “Getting Started”) | Setup, the `frg` command, VS Code, your first program, and building a finished game |
-| Cheat sheet (see “Forge Cheat Sheet (v0.6)”) | The whole language on one page, for looking things up quickly |
+| Cheat sheet (see “Forge Cheat Sheet (v0.7)”) | The whole language on one page, for looking things up quickly |
 | Everything in one file (the file `FORGE_ALL_DOCS.md` in the Forge folder) | The teaching brief and every page below, combined into one file to upload to an AI chat. Rebuild it with `.\docs\make-all-docs.ps1` after changing the docs. |
 
 ### The language
@@ -1627,9 +1701,12 @@ Everything that isn't the core language lives in a library you `#include`. See t
 | `<physics>` (see “`<physics>`: Boxes, Gravity and Collisions”) | Gravity and collisions for boxes |
 | `<time>` (see “`<time>`: Clock, Date and Timers”) | The clock, the date, and timers |
 | `<save>` (see “`<save>`: Remembering Things Between Runs”) | Remembering values between runs: high scores, settings, progress |
+| `<tilemap>` (see “`<tilemap>`: Levels Drawn as Text”) | Levels drawn as text: walls, coins and the start from characters |
+| `<particles>` (see “`<particles>`: Dust, Sparks and Explosions”) | Dust, sparks, smoke and explosions |
+| `<tween>` (see “`<tween>`: Smooth Changes Over Time”) | Smooth changes over time: sliding, bouncing, fading |
 | `<file>` (see “`<file>`: Reading and Writing Text Files”) | Reading and writing text files |
 | `<scenes>` (see “`<scenes>`: Menus, Levels and Game Over”) | Switching between menu, levels and game over |
-| `<ui>` (see “`<ui>`: Buttons, Checkboxes and Sliders”) | Buttons, checkboxes, sliders |
+| `<ui>` (see “`<ui>`: Buttons, Checkboxes, Sliders and Text Boxes”) | Buttons, checkboxes, sliders, text boxes |
 | `<ECS>` (see “`<ECS>`: Entities and Components”) | Building game objects out of components |
 | `<tasks>` (see “`<tasks>`: Tasks Without a Window”) | Running tasks in programs without a window |
 
@@ -1680,7 +1757,7 @@ frg version
 g++ --version
 ```
 
-The first should print `Forge 0.6.0` and the second should print a GCC version. If `frg` isn't found, add Forge's `bin` folder to your PATH and restart the terminal.
+The first should print `Forge 0.7.0` and the second should print a GCC version. If `frg` isn't found, add Forge's `bin` folder to your PATH and restart the terminal.
 
 #### Building Forge from source
 
@@ -1755,6 +1832,7 @@ Run these in a terminal. `[folder]` is the game's top folder (the one with `main
 | `frg build [folder]` | Checks and compiles into `build/<folder name>.exe`, without running it |
 | `frg check [folder]` | Only looks for errors (fast, makes no `.exe`) |
 | `frg package [folder]` | Makes the finished game and zips it, ready to share: `dist/<name>.zip` (see Sharing your game (see “Sharing your game”)) |
+| `frg cache` | Shows how big the build cache is (why there is one (see “Why the first build is slower”)). `frg cache clear` deletes it |
 | `frg version` | Shows the Forge version |
 | `frg help` | Shows this list |
 
@@ -1787,7 +1865,12 @@ The very first time you build a game (and the first time with `--release` or wit
    Preparing Forge's runtime for these libraries (only the first time, to make later builds faster)
 ```
 
-It's getting Forge's own code ready once, so every build after that is quicker, for all your games. It's kept in a `cache` folder next to `frg.exe` (a few hundred MB at most). When Forge (or w64devkit) is updated, the old files are deleted by themselves. You can also delete that folder whenever you like; Forge just makes it again.
+It's getting Forge's own code ready once, so every build after that is quicker, for all your games. It's kept in a `cache` folder next to `frg.exe`. Each kind of game (console, window, release...) gets its own prepared set of about 100 MB, and Forge keeps the whole folder under about **400 MB** by deleting the sets that haven't been used for the longest time. When Forge (or w64devkit) is updated, the old sets are deleted by themselves too.
+
+```
+frg cache          // shows where the cache is and how big it is
+frg cache clear    // deletes it; the next build prepares it again
+```
 
 `--release` builds take a little longer, because they make the game run as fast as possible. Normal builds skip some of that work: they're quicker to make, and the game behaves exactly the same.
 
@@ -2782,6 +2865,21 @@ print("Go!");
 ```
 
 If the condition never becomes false, the loop runs forever. That's sometimes on purpose: `while (true) { ... }` with a `break` or `return` inside.
+
+### do ... while
+
+Like `while`, but the condition is checked **after** each round, so the code always runs at least once:
+
+```cpp
+string answer = "";
+do {
+    answer = input("Type yes or no: ");
+} while (answer != "yes" and answer != "no");
+```
+
+That's handy when you need to do something before you can check it, like asking a question and then checking the answer. Notice the `;` after the `)`: a `do ... while` ends with one.
+
+`break` and `continue` work the same as in `while` (`continue` jumps to the check). Variables made inside the `{ }` are gone by the time the condition is checked, so make them before the `do` if the condition needs them, like `answer` above.
 
 ### for
 
@@ -3915,6 +4013,27 @@ print(score);               // 50
 - For a pointer to a struct, fields can be used directly: `Pointer<Point> pp = p; pp.x = 5;`.
 - A `Pointer<T>` must start pointing at something. `Pointer<T>?` can be `null`.
 
+#### Throwing a pointer away: remove()
+
+`p.remove()` makes the pointer point at nothing. The thing it pointed at isn't changed; only the pointer lets go of it. After that, `p.isRemoved()` is `true`, and using `p` stops the game with a clear message instead of doing something strange:
+
+```cpp
+int score = 10;
+Pointer<int> p = score;
+p.remove();
+print(p.isRemoved());    // true
+print(score);            // 10 - score itself is fine
+p.value = 5;             // stops the game: "this pointer was removed (with remove()), so it doesn't point at anything any more"
+p = score;               // pointing it at something again makes it usable again
+```
+
+| | What it does |
+|---|---|
+| `p.remove()` | makes `p` point at nothing |
+| `p.isRemoved()` | `true` after `remove()`, until `p` is pointed at something again |
+
+If a pointer points at a list or a map, `p.remove(x)` **with** a value is still the list's (or map's) own `remove`. Only `p.remove()` with nothing in the brackets is the pointer's.
+
 #### When to use pointers
 
 Rarely. Class objects are already shared (a function that gets a `Player` can change it), so pointers are only needed to let a function change a caller's **number, bool, string, struct or list** variable. Often it's clearer to return the new value instead:
@@ -3928,7 +4047,7 @@ score = addOne(score);
 
 #### Danger: don't keep pointers to things that go away
 
-A pointer to a function's local variable stops being valid when that function ends, and the same goes for a pointer to a list item once the list grows or shrinks. Forge can't always catch this. Using such a pointer gives garbage values or a crash. Keep pointers short-lived: pass them into a function, and don't store them.
+A pointer to a function's local variable stops being valid when that function ends, and the same goes for a pointer to a list item once the list grows or shrinks. Forge can't always catch this. Using such a pointer gives garbage values or a crash. Keep pointers short-lived: pass them into a function, and don't store them. When you do keep one and you're done with it, `p.remove()` it, so using it by mistake gives a clear error.
 
 ### What's next
 
@@ -4302,7 +4421,7 @@ These words have special meanings, so they can't be used as names for variables,
 
 | Group | Words |
 |---|---|
-| Control flow | `if` `else` `while` `for` `in` `switch` `case` `default` `return` `break` `continue` |
+| Control flow | `if` `else` `while` `do` `for` `in` `switch` `case` `default` `return` `break` `continue` |
 | Values | `true` `false` `null` `this` `super` |
 | Declarations | `struct` `class` `enum` `const` `void` |
 | Modifiers | `private` `public` `static` (built-in libraries only) |
@@ -4321,9 +4440,9 @@ These words have special meanings, so they can't be used as names for variables,
 
 ### Library names
 
-`stdio` `math` `random` `window` `input` `graphics2d` `graphics3d` `assets` `audio` `physics` `time` `file` `save` `scenes` `ui` `ECS` `tasks` `OpenGL` `DirectX` `Vulkan`, plus `network`, which is planned.
+`stdio` `math` `random` `window` `input` `graphics2d` `graphics3d` `assets` `audio` `physics` `time` `file` `save` `tween` `particles` `tilemap` `scenes` `ui` `ECS` `tasks` `OpenGL` `DirectX` `Vulkan`, plus `network`, which is planned.
 
-Types that come from a library (`Key`, `MouseButton`, `GamepadButton`, `Body`, `Texture`, `Animation`, `Font`, `Sound`, `Music`, `Camera`, `Camera2D`, `Model`, `Timer`, `Scene`, `Entity`, `Component`) can't be reused as names of your own types **in a file that includes that library**.
+Types that come from a library (`Key`, `MouseButton`, `GamepadButton`, `Body`, `Texture`, `Animation`, `Font`, `Sound`, `Music`, `Camera`, `Camera2D`, `Model`, `Timer`, `Tween`, `Ease`, `Emitter`, `TileMap`, `Scene`, `Entity`, `Component`) can't be reused as names of your own types **in a file that includes that library**.
 
 ### Your own top-level files and folders
 
@@ -4466,9 +4585,12 @@ How libraries work:
 | `<physics>` (see “`<physics>`: Boxes, Gravity and Collisions”) | Box bodies with gravity and collisions | no |
 | `<time>` (see “`<time>`: Clock, Date and Timers”) | The clock and date, `sleep`, and the `Timer` class | no |
 | `<save>` (see “`<save>`: Remembering Things Between Runs”) | Remembering values (high scores, settings) between runs | no |
+| `<tilemap>` (see “`<tilemap>`: Levels Drawn as Text”) | Levels drawn as text, turned into physics bodies and drawn as tiles (`TileMap`) | to draw them |
+| `<particles>` (see “`<particles>`: Dust, Sparks and Explosions”) | Dust, sparks, smoke and explosions (`Emitter`) | yes |
+| `<tween>` (see “`<tween>`: Smooth Changes Over Time”) | Smooth changes over time: sliding, bouncing, fading, with easing | no |
 | `<file>` (see “`<file>`: Reading and Writing Text Files”) | Reading and writing text files | no |
 | `<scenes>` (see “`<scenes>`: Menus, Levels and Game Over”) | Splitting a game into scenes (menu, level...) | no |
-| `<ui>` (see “`<ui>`: Buttons, Checkboxes and Sliders”) | Buttons, checkboxes, sliders, labels, panels | yes |
+| `<ui>` (see “`<ui>`: Buttons, Checkboxes, Sliders and Text Boxes”) | Buttons, checkboxes, sliders, text boxes, labels, panels | yes |
 | `<ECS>` (see “`<ECS>`: Entities and Components”) | Entities built from components | no |
 | `<tasks>` (see “`<tasks>`: Tasks Without a Window”) | Running tasks (see “11. Tasks”) in programs without a window | no |
 
@@ -4945,7 +5067,7 @@ Both loops do the same things each frame:
 - Calling drawing functions before `window.open(...)` stops the game with "the window isn't open yet".
 - Escape closes the window by default.
 - If the game's folder has an `icon.png`, it becomes the window's icon (and the `.exe`'s icon). See The game's icon (see “Getting Started” › “The game's icon”).
-- `<input>` (see “`<input>`: Keyboard, Mouse and Controllers”), `<graphics2d>` (see “`<graphics2d>`: 2D Drawing”), `<graphics3d>` (see “`<graphics3d>`: 3D Drawing”) and `<ui>` (see “`<ui>`: Buttons, Checkboxes and Sliders”) all work with this window.
+- `<input>` (see “`<input>`: Keyboard, Mouse and Controllers”), `<graphics2d>` (see “`<graphics2d>`: 2D Drawing”), `<graphics3d>` (see “`<graphics3d>`: 3D Drawing”) and `<ui>` (see “`<ui>`: Buttons, Checkboxes, Sliders and Text Boxes”) all work with this window.
 
 ### Testing games automatically
 
@@ -5747,6 +5869,8 @@ A body only lands on it when it's **falling** and was **above** the platform's t
 
 #### Platforms and walls
 
+To build a whole level of walls and platforms, drawing it as text with `<tilemap>` (see “`<tilemap>`: Levels Drawn as Text”) is usually easier: `level.addBodies("#")` makes the static bodies for you.
+
 ```cpp
 void addPlatform(float x, float y, float w, float h){
     Body b = Body(x, y, w, h);
@@ -6042,6 +6166,356 @@ void setVolume(float v){
 - `save` is a library name, so your own functions and variables can't be called `save`. Use something like `saveGame`.
 - For your own file formats (a level made of characters, a list of lines), use `<file>` (see “`<file>`: Reading and Writing Text Files”) instead.
 
+<!-- docs/libraries/tween.md -->
+
+## `<tween>`: Smooth Changes Over Time
+
+```cpp
+#include <tween>
+```
+
+A **tween** changes a number smoothly from one value to another over some time: a menu sliding in, a title dropping and bouncing, a coin fading out. ("Tween" comes from "in-between": it works out every value between the start and the end.)
+
+```cpp
+Tween slideIn = Tween(-300, 40, 0.5, Ease.OUT);   // from -300 to 40, in half a second
+
+void update(float dt){
+    slideIn.update(dt);
+}
+
+void draw(){
+    ui.panel(rect(slideIn.value(), 100, 280, 300));  // the panel slides in from the left
+}
+```
+
+Every frame: `update(dt)` moves it on, then `value()` is where it is now.
+
+### Tween
+
+| Making one | |
+|---|---|
+| `Tween(float from, float to, float seconds, Ease ease = Ease.OUT)` | goes from `from` to `to` in `seconds` |
+
+| Method or field | What it does |
+|---|---|
+| `update(float dt)` | moves it on by `dt` seconds. Call it once per frame |
+| `value()` | the number now: `from` at the start, `to` at the end |
+| `progress()` | how far along it is, from 0 to 1 (with the easing). Use it with `lerp`, below |
+| `isDone()` | `true` once it has reached the end |
+| `restart()` | back to the start |
+| `reverse()` | goes back from where it is now to where it started, like a menu sliding back out |
+| `bool looping` | `true`: when it reaches the end, it starts again (forever) |
+| `bool pingPong` | `true`: when it reaches the end, it goes back again. With `looping` too, it goes back and forth forever |
+
+A time of `0` jumps straight to the end. A negative time stops the game with an error.
+
+### Easing: the shape of the change
+
+`Ease` decides how the value moves between the start and the end:
+
+| `Ease.` | Movement | Good for |
+|---|---|---|
+| `LINEAR` | the same speed all the way | progress bars, steady movement |
+| `IN` | starts slowly, ends fast | things falling, leaving the screen |
+| `OUT` (the default) | starts fast, ends slowly | things arriving: menus, pop-ups |
+| `IN_OUT` | slow, fast, slow | moving something from one place to another |
+| `BOUNCE` | falls in and bounces at the end, like a dropped ball | titles, pickups landing |
+
+`tween.ease(Ease ease, float t)` gives the eased amount for `t` from 0 to 1, if you want the shape without a `Tween`: `tween.ease(Ease.OUT, 0.5)` is `0.875`.
+
+### Positions and colors
+
+A tween gives one number. To move a `vec2` or change a `color`, tween from 0 to 1 and use `progress()` with `lerp`:
+
+```cpp
+Tween fade = Tween(0, 1, 2, Ease.LINEAR);
+vec2 start = vec2(100, 100);
+vec2 end = vec2(500, 300);
+
+void update(float dt){
+    fade.update(dt);
+}
+
+void draw(){
+    vec2 p = start.lerp(end, fade.progress());
+    color c = color.WHITE.lerp(color.BLANK, fade.progress());    // fades out
+    graphics2d.drawCircle(p, 20, c);
+}
+```
+
+### Examples
+
+#### A title that drops in and bounces
+
+```cpp
+Tween titleDrop = Tween(-80, 70, 0.9, Ease.BOUNCE);
+
+void update(float dt){
+    titleDrop.update(dt);
+}
+
+void draw(){
+    graphics2d.drawText("FORGE", 380, titleDrop.value(), 64, color.ORANGE);
+}
+```
+
+examples/menu (the file `examples/menu/main.frg` in the Forge folder) does this.
+
+#### Something pulsing forever
+
+```cpp
+Tween pulse = Tween(1, 1.3, 0.4, Ease.IN_OUT);
+
+int main(){
+    pulse.looping = true;
+    pulse.pingPong = true;
+    ...
+}
+
+void draw(){
+    coin.drawScaled(x, y, 2 * pulse.value());
+}
+```
+
+#### In a task
+
+A task (see “11. Tasks”) can play a tween from start to end on its own:
+
+```cpp
+float menuX = -300;
+
+task showMenu() {
+    Tween t = Tween(-300, 40, 0.5);
+    while (!t.isDone()) {
+        t.update(window.deltaTime());
+        menuX = t.value();
+        wait();                      // the next frame
+    }
+}
+```
+
+### Why it works like this
+
+A tween is a value you update and read, like a `Timer` (see “`<time>`: Clock, Date and Timers”). Forge doesn't have functions as values yet, so a tween can't run code by itself when it ends: check `isDone()` instead. That also means it works the same way in every kind of game loop, and in tasks.
+
+<!-- docs/libraries/particles.md -->
+
+## `<particles>`: Dust, Sparks and Explosions
+
+```cpp
+#include <particles>
+```
+
+**Particles** are lots of tiny dots that fly out, fade and disappear: dust when a player lands, sparks when something is hit, smoke, fire, explosions. A few lines make a game feel much more alive.
+
+An `Emitter` makes them. Give it a position, then each frame `update(dt)` it and `draw()` it:
+
+```cpp
+Emitter sparks = Emitter(vec2(400, 300));
+
+void update(float dt){
+    if (input.mousePressed(MouseButton.LEFT)) {
+        sparks.position = input.mousePosition();
+        sparks.burst(30);              // 30 particles at once
+    }
+    sparks.update(dt);
+}
+
+void draw(){
+    sparks.draw();
+}
+```
+
+### Emitter
+
+| Making one | |
+|---|---|
+| `Emitter(vec2 position)` | an emitter at that point. It makes nothing until you `burst` or give it a `rate` |
+
+| Method | What it does |
+|---|---|
+| `burst(int count)` | makes `count` particles right now (an explosion, a puff of dust) |
+| `update(float dt)` | moves every particle, makes new ones if `rate` is more than 0, and removes the ones that are too old. Call it once per frame |
+| `draw()` | draws every particle. It's 2D drawing, so it goes through the 2D camera (see “`<graphics2d>`: 2D Drawing” › “Camera: scrolling and zooming”) like everything else |
+| `count()` | how many particles are alive now |
+| `clear()` | removes every particle |
+
+These fields can be changed at any time; the new values are used for the particles made after that:
+
+| Field | Type | Start value | Meaning |
+|---|---|---|---|
+| `position` | `vec2` | (given) | where new particles start |
+| `rate` | `float` | `0` | particles per second, for a steady stream (smoke, fire). `0`: only `burst` makes them |
+| `lifetime` | `float` | `1` | how many seconds each particle lives |
+| `speed` | `float` | `100` | how fast they fly out, in pixels per second |
+| `direction` | `float` | `-90` | which way they fly, in degrees: `0` is right, `-90` up, `90` down, `180` left |
+| `spread` | `float` | `360` | how wide the spray is, in degrees around `direction`: `360` is every way, `30` a narrow jet |
+| `startColor` | `color` | white | the color when a particle is new... |
+| `endColor` | `color` | see-through white | ...and when it disappears. Particles blend between the two, so an `endColor` with alpha 0 fades them out |
+| `startSize` | `float` | `8` | the size (across, in pixels) when new... |
+| `endSize` | `float` | `2` | ...and at the end |
+| `gravity` | `vec2` | `vec2(0, 0)` | pulls the particles, in pixels per second per second: `vec2(0, 400)` makes them fall |
+
+To look natural, each particle's speed and lifetime are a little different (speed from 70% to 130%, lifetime from 80% to 120%).
+
+An emitter keeps at most 5000 particles alive; past that, new ones are skipped.
+
+### Recipes
+
+```cpp
+// Dust when landing: a small puff that goes up and out, then settles.
+dust.lifetime = 0.4;
+dust.speed = 90;
+dust.direction = -90;
+dust.spread = 160;
+dust.gravity = vec2(0, 300);
+dust.startColor = color(200, 200, 210);
+dust.endColor = color(200, 200, 210, 0);
+dust.burst(14);
+
+// Fire: a steady stream going up, from yellow to see-through red.
+fire.rate = 80;
+fire.direction = -90;
+fire.spread = 25;
+fire.speed = 60;
+fire.startColor = color.YELLOW;
+fire.endColor = color.RED.fade(0);
+fire.startSize = 14;
+fire.endSize = 4;
+
+// An explosion: everything at once, in every direction.
+boom.speed = 300;
+boom.lifetime = 0.7;
+boom.startColor = color.ORANGE;
+boom.endColor = color.DARKGRAY.fade(0);
+boom.startSize = 12;
+boom.burst(80);
+```
+
+One emitter can be moved around and reused: set its `position`, then `burst`. Particles already flying stay where they are.
+
+examples/platformer (the file `examples/platformer/` in the Forge folder) uses an emitter for dust when the player lands (in `player.frg`) and one for sparkles when a coin is collected (in `level.frg`).
+
+<!-- docs/libraries/tilemap.md -->
+
+## `<tilemap>`: Levels Drawn as Text
+
+```cpp
+#include <tilemap>
+```
+
+Instead of placing every platform with numbers, **draw the level with characters**. Each character is one square **tile** of the level:
+
+```cpp
+TileMap level = TileMap("""
+##################
+#                #
+#   C      ===   #
+#  ===           #
+# P       C      #
+##################
+""", 32);
+```
+
+What each character means is up to your game. Here `#` is a wall, `=` a platform, `C` a coin and `P` where the player starts, and a space is nothing. The `32` is the size of a tile in pixels, so this level is 18 × 32 = 576 pixels wide.
+
+Then use the map to make the level:
+
+```cpp
+void build(){
+    level.addBodies("#");                    // walls become static physics bodies
+    level.addBodies("=", true);              // one-way platforms
+    for (vec2 corner in level.find("C")) {   // coins
+        coins.add(corner + vec2(16, 16));    // the middle of the tile
+    }
+    hero.position = level.find("P")[0];      // the player's start
+}
+
+void draw(){
+    level.draw("#", color.DARKGRAY);         // walls as gray squares
+    level.draw("=", color.BROWN);
+}
+```
+
+### Making one
+
+| | |
+|---|---|
+| `TileMap(string text, float tileSize)` | a map from text: one line per row of tiles. `"""raw text"""` is the easiest way to write it in your code |
+| `tilemap.load(string path, float tileSize)` | a map from a text file in the game's folder, like `tilemap.load("level1.txt", 32)` |
+
+The top-left character is column 0, row 0. Lines can have different lengths: short lines are filled with spaces. Blank lines at the end are left out. Characters are single letters and symbols (not `é` or emoji).
+
+Keeping each level in its own file makes it easy to have many levels: `level1.txt`, `level2.txt`...
+
+### Reading and changing tiles
+
+| Method | Gives back | What it does |
+|---|---|---|
+| `columns()`, `rows()` | `int` | the size of the map in tiles |
+| `width()`, `height()` | `float` | the size of the map in pixels |
+| `float tileSize` | | the size of one tile, in pixels (a field) |
+| `get(int column, int row)` | `string` | the tile there, like `"#"`. Outside the map it's `" "`, so checking neighbours at the edges is safe |
+| `set(int column, int row, string tile)` | — | changes a tile, like `level.set(5, 2, " ")` to remove it. Outside the map, the game stops with an error |
+| `find(string tiles)` | `list<vec2>` | the **top-left corner**, in pixels, of every tile that's one of these characters, row by row. `find("C")` finds the coins; `find("CD")` finds both `C` and `D` |
+| `tileRect(int column, int row)` | `rect` | the rectangle of a tile, in pixels |
+| `columnAt(float x)`, `rowAt(float y)` | `int` | which column and row a point in the level is in: `level.get(level.columnAt(p.x), level.rowAt(p.y))` is the tile under `p` |
+
+### Walls and physics
+
+| Method | Gives back | What it does |
+|---|---|---|
+| `addBodies(string tiles, bool oneWay = false)` | `list<Body>` | makes static physics (see “`<physics>`: Boxes, Gravity and Collisions”) bodies for those tiles, adds them to the physics world, and gives them back. With `true`, they're one-way platforms |
+| `solidAreas(string tiles)` | `list<rect>` | the rectangles `addBodies` would use, if you want to do something else with them |
+
+Neighbouring tiles are **merged** into bigger rectangles: a row of 30 wall tiles becomes one body, and a solid block becomes one box. That keeps the number of bodies small, which keeps physics fast, and stops players from catching on the seams between tiles.
+
+Because `addBodies` uses `Body`, a file that includes `<tilemap>` can use the bodies it gives back without including `<physics>` itself, but needs `#include <physics>` to call `physics.step` and to write the type `Body`.
+
+### Drawing
+
+| Method | What it does |
+|---|---|
+| `draw(string tiles, color c)` | fills every tile that's one of these characters with a color |
+| `drawTiles(Texture tileset, int sourceSize, string tiles)` | draws those tiles with pictures from a **tileset** image |
+
+A tileset is one image with many tile pictures side by side, each `sourceSize` pixels square. The first character in `tiles` uses the first picture (top-left), the second character the next picture to its right, and so on (then the next row):
+
+```cpp
+Texture tileset = assets.loadTexture("tiles.png");    // 16 x 16 pictures: grass, dirt, plank
+
+void draw(){
+    level.drawTiles(tileset, 16, "#.=");     // # is picture 0, . is picture 1, = is picture 2
+}
+```
+
+Pictures are stretched to the map's `tileSize`, and stay sharp (good for pixel art).
+
+Drawing goes through the 2D camera (see “`<graphics2d>`: 2D Drawing” › “Camera: scrolling and zooming”), so a level wider than the window scrolls like everything else. To stop the camera at the level's edges, use `level.width()`:
+
+```cpp
+float half = window.width() / 2.0;
+camera.target.x = math.clamp(hero.center().x, half, level.width() - half);
+```
+
+For your own extra drawing, go through the tiles with two loops:
+
+```cpp
+for (int row = 0; row < level.rows(); row++) {
+    for (int column = 0; column < level.columns(); column++) {
+        if (level.get(column, row) == "#" and level.get(column, row - 1) != "#") {
+            rect r = level.tileRect(column, row);
+            graphics2d.drawRect(r.x, r.y, r.width, 5, color.GREEN);    // grass on top
+        }
+    }
+}
+```
+
+### Things to know
+
+- A variable can't be called `map` (that's the type `map<K, V>`), so call yours `level`, `tiles` or `world`.
+- examples/platformer (the file `examples/platformer/level.frg` in the Forge folder) builds its whole level from a tile map. The walkthrough (see “Platformer Walkthrough” › “level.frg”) explains it.
+
 <!-- docs/libraries/scenes.md -->
 
 ## `<scenes>`: Menus, Levels and Game Over
@@ -6138,11 +6612,11 @@ if (scenes.current() is Level) {
 }
 ```
 
-See examples/menu (the file `examples/menu/main.frg` in the Forge folder) for a menu with buttons, using `<ui>` (see “`<ui>`: Buttons, Checkboxes and Sliders”).
+See examples/menu (the file `examples/menu/main.frg` in the Forge folder) for a menu with buttons, using `<ui>` (see “`<ui>`: Buttons, Checkboxes, Sliders and Text Boxes”).
 
 <!-- docs/libraries/ui.md -->
 
-## `<ui>`: Buttons, Checkboxes and Sliders
+## `<ui>`: Buttons, Checkboxes, Sliders and Text Boxes
 
 ```cpp
 #include <ui>
@@ -6165,6 +6639,8 @@ There are no objects to create or remember. Whatever the control controls lives 
 | `ui.button(rect area, string label)` | `bool` | draws a button; **true on the frame it's clicked** (the mouse button released over it) |
 | `ui.checkbox(rect area, string label, bool checked)` | `bool` | draws a box with a label to its right; gives back the **new** checked value |
 | `ui.slider(rect area, float value, float min, float max)` | `float` | draws a slider; gives back the **new** value (drag it with the mouse) |
+| `ui.textBox(rect area, string text, int maxLength = 0)` | `string` | draws a box to type in; gives back the **new** text. `maxLength` is the most letters it takes (0 means no limit) |
+| `ui.isTyping()` | `bool` | true while the player is typing in a text box |
 | `ui.label(string text, float x, float y, int size = 20, color c = color.WHITE)` | — | draws text |
 | `ui.panel(rect area)` | — | draws a rounded box to put other controls on |
 | `ui.setTheme(color background, color accent, color text)` | — | the colors of every control |
@@ -6186,6 +6662,34 @@ void draw(){
 
 For a checkbox, the `rect` is the clickable area; the box is a square as tall as the rect, with the label to its right.
 
+#### Typing text: textBox
+
+A text box works the same way: give it the text, and store what it gives back.
+
+```cpp
+string playerName = "Player";
+
+void draw(){
+    ui.label("Your name:", 360, 170);
+    playerName = ui.textBox(rect(360, 195, 240, 40), playerName, 12);    // at most 12 letters
+}
+```
+
+- **Click** the box to start typing in it. Its border lights up and a cursor blinks at the end.
+- Type to add letters. **Backspace** deletes the last one (hold it to keep deleting).
+- **Enter**, or a click anywhere else, finishes typing.
+- With a `maxLength`, extra letters are simply ignored.
+- Only one box takes the typing at a time. Each box is known by its `rect`, so two boxes need different rectangles.
+- Text that's too long for the box shows its end, where the typing happens.
+
+While the player types, the keys still reach the rest of the game. If the game uses keys for other things (like R to restart), check `ui.isTyping()` first:
+
+```cpp
+if (input.keyPressed(Key.R) and !ui.isTyping()) {
+    restart();
+}
+```
+
 ### Look
 
 - Buttons light up when the mouse is over them, and get darker while pressed.
@@ -6196,7 +6700,6 @@ For a checkbox, the `rect` is the clickable area; the box is a square as tall as
 
 - Controls need the window to be open, and must be drawn every frame to stay visible and clickable.
 - Draw controls after the game world, so they appear on top.
-- There's no text input box yet.
 
 See examples/menu (the file `examples/menu/main.frg` in the Forge folder) for a full menu screen.
 
@@ -7634,7 +8137,7 @@ The game is split into three files:
 |---|---|
 | `main.frg` | opens the window and runs the loop, calling the other two files |
 | `player.frg` | the player: input, jumping, falling into a pit, drawing |
-| `level.frg` | the platforms and the coins |
+| `level.frg` | the level, drawn as text, and the coins |
 
 ### main.frg
 
@@ -7658,13 +8161,15 @@ int main(){
     window.open(960, 540, "Forge Platformer");
     window.setBackground(color(24, 26, 40));
     level.build();
+    player.start = level.start;     // the P in the level
+    player.hero.position = level.start;
     window.run();
     return 0;
 }
 ```
 
 - `window.open` makes a 960×540 window.
-- `level.build()` calls `build` in `level.frg`. The file-name prefix is required, because it's in another file.
+- `level.build()` calls `build` in `level.frg`, which turns the level's text into physics bodies and coins. The file-name prefix is required, because it's in another file. Then the player is moved to the `P` in the level.
 - `window.run()` starts the engine loop (see “The Game Loop”): from now on Forge calls `update(dt)` and `draw()` every frame, until the window closes.
 
 ```cpp
@@ -7689,7 +8194,7 @@ This order matters:
 ```cpp
 void followPlayer(float dt){
     float half = window.width() / 2.0;
-    float x = math.clamp(player.hero.center().x, half, level.WIDTH - half);
+    float x = math.clamp(player.hero.center().x, half, level.tiles.width() - half);
     camera.target = camera.target.lerp(vec2(x, window.height() / 2.0), 5 * dt);
 }
 ```
@@ -7735,10 +8240,10 @@ When the list of coins is empty, a centered win message is drawn: start half its
 ```cpp
 const float MOVE_SPEED = 320;
 const float JUMP_SPEED = 620;
-const vec2 START = vec2(80, 380);
+vec2 start = vec2(80, 380);
 ```
 
-Constants keep the "tuning numbers" in one place. Try changing them: a higher `JUMP_SPEED` means higher jumps.
+`start` is where the player starts, and where it goes back to after falling. It's a variable, not a constant, because `main.frg` moves it to the `P` in the level. Constants keep the "tuning numbers" in one place. Try changing them: a higher `JUMP_SPEED` means higher jumps.
 
 ```cpp
 class Player : Body {
@@ -7752,7 +8257,7 @@ class Player : Body {
 
 ```cpp
     void respawn() {
-        position = START;
+        position = start;
         velocity = vec2.ZERO;
         deaths++;
         flash();
@@ -7778,7 +8283,7 @@ A task (see “11. Tasks”): it switches the color, waits 0.08 seconds, switche
 Player hero = makeHero();
 
 Player makeHero(){
-    Player p = Player(START.x, START.y, 36, 36);
+    Player p = Player(start.x, start.y, 36, 36);
     physics.add(p);
     return p;
 }
@@ -7843,43 +8348,53 @@ The body is a colored rectangle. The eyes are two small black rectangles, shifte
 
 ### level.frg
 
-```cpp
-const float WIDTH = 2400;
+The level is **drawn as text**, with a tile map (see “`<tilemap>`: Levels Drawn as Text”): each character is one 36 × 36 square of the level.
 
-list<Body> platforms = [];
-list<vec2> coins = [];
-int totalCoins = 0;
-int collected = 0;
+```cpp
+TileMap tiles = TileMap("""
+#                                                          #
+#                                                          #
+#                                                          #
+#                                                          #
+#                                             C            #
+#                            C               ====          #
+#                      C    ####                           #
+#         C           ====                C                #
+#        ====                            ====              #
+#    C              C                  C             C     #
+#   ====          =====         C    =====          ====   #
+#                                                          #
+# P     C                                               C  #
+############    ##############     ###########    ##########
+############    ##############     ###########    ##########
+""", 36);
 ```
 
-The level is 2400 pixels wide (two and a half windows); `main.frg` uses `level.WIDTH` to stop the camera at the ends. Then the level's state: the platform bodies (kept for drawing), the coin positions still left, and the counts.
+| Character | Means |
+|---|---|
+| `#` | ground and walls |
+| `=` | a one-way platform: you can jump up through it and land on top |
+| `C` | a coin |
+| `P` | where the player starts |
+| (a space) | nothing |
+
+The meaning isn't built into Forge: it's what `build` and `draw` below do with each character. To change the level, change the text. The 60 columns × 36 pixels make it 2160 pixels wide, and the 15 rows make it exactly one window (540 pixels) tall.
 
 ```cpp
 void build(){
-    addPlatform(0, 500, 400, 40);
-    addPlatform(540, 500, 560, 40);
-    addPlatform(1250, 500, 500, 40);
-    addPlatform(1880, 500, 520, 40);
-    ...
-    addPlatform(-20, 0, 20, 540);
-    addPlatform(WIDTH, 0, 20, 540);
-    coins = [vec2(220, 370), vec2(460, 290), ...];
+    tiles.addBodies("#");
+    tiles.addBodies("=", true);
+    for (vec2 corner in tiles.find("C")) {
+        coins.add(corner + vec2(tiles.tileSize / 2, tiles.tileSize / 2));
+    }
     totalCoins = coins.length;
+    start = tiles.find("P")[0];
 }
 ```
 
-The ground is four pieces with gaps (the pits) between them. The two walls sit just outside the two ends of the level, so the player can't walk off the sides.
-
-```cpp
-void addPlatform(float x, float y, float width, float height){
-    Body b = Body(x, y, width, height);
-    b.isStatic = true;
-    physics.add(b);
-    platforms.add(b);
-}
-```
-
-`isStatic = true` means the platform never moves, but moving bodies collide with it. The same body is put in the physics world *and* in our list. Because `Body` is a class, both hold the very same object.
+- `addBodies("#")` makes static physics bodies for the `#` tiles. Neighbouring tiles are **merged**: a row of 12 ground tiles becomes one long body, not 12 small ones. `addBodies("=", true)` does the same for the planks, and `true` makes them one-way (see “`<physics>`: Boxes, Gravity and Collisions” › “One-way platforms”).
+- `find("C")` gives the top-left corner of every `C` tile. Each coin is kept as the middle of its tile, half a tile further right and down.
+- `find("P")[0]` is the first (and only) `P`: the player's start.
 
 ```cpp
 void collectCoins(rect playerBox){
@@ -7888,6 +8403,7 @@ void collectCoins(rect playerBox){
         if (playerBox.overlaps(rect(c.x - 10, c.y - 10, 20, 20))) {
             coins.removeAt(i);
             collected++;
+            ...
         }
     }
 }
@@ -7897,23 +8413,54 @@ Each coin is checked as a 20×20 box around its center. The loop goes **backward
 
 ```cpp
 void draw(){
-    for (Body p in platforms) {
-        graphics2d.drawRect(p.bounds(), color(70, 86, 120));
-        graphics2d.drawRect(p.position.x, p.position.y, p.size.x, 5, color(110, 200, 130));
+    tiles.draw("#", color(70, 86, 120));
+    for (int row = 0; row < tiles.rows(); row++) {
+        for (int column = 0; column < tiles.columns(); column++) {
+            if (tiles.get(column, row) == "#" and tiles.get(column, row - 1) != "#") {
+                rect r = tiles.tileRect(column, row);
+                graphics2d.drawRect(r.x, r.y, r.width, 5, color(110, 200, 130));
+            }
+        }
     }
-    for (vec2 c in coins) {
-        graphics2d.drawCircle(c, 10, color.GOLD);
-        graphics2d.drawCircleOutline(c.x, c.y, 10, color.ORANGE);
+    for (vec2 p in tiles.find("=")) {
+        graphics2d.drawRect(p.x, p.y, tiles.tileSize, 10, color(170, 130, 90));
     }
+    ...
 }
 ```
 
-Each platform is a blue-gray rectangle with a thin green strip on top (grass). Each coin is a gold circle with an orange outline.
+- `tiles.draw("#", color)` fills every `#` tile with one color.
+- The two loops go through every tile and add a strip of green **grass** on top of each `#` that has nothing above it. `get(column, row - 1)` is the tile above; outside the map, `get` gives `" "`, so the top row works too.
+- The one-way platforms are drawn as thin wooden planks.
+- Then the coins: a gold circle with an orange outline each.
+
+With an image of tiles instead of colors, `tiles.drawTiles(tileset, 16, "#=")` draws each `#` as the tileset's first 16 × 16 picture and each `=` as the second.
+
+### Particles: dust and sparkles
+
+Two particle emitters (see “`<particles>`: Dust, Sparks and Explosions”) make the game feel more alive:
+
+- **Dust when landing** (`player.frg`). `handleInput` remembers `fallSpeed = hero.velocity.y` *before* `physics.step`, because landing sets the velocity to 0. After the step, `checkLanding(dt)` sees that the player is on the ground now but wasn't last frame, and if it was falling fast enough, puts the `dust` emitter at the player's feet and calls `dust.burst(14)`.
+
+```cpp
+void checkLanding(float dt){
+    if (hero.onGround and !wasOnGround and fallSpeed > 250) {
+        dust.position = vec2(hero.center().x, hero.position.y + hero.size.y);
+        dust.burst(14);
+    }
+    wasOnGround = hero.onGround;
+    dust.update(dt);
+}
+```
+
+- **Sparkles when collecting a coin** (`level.frg`). `collectCoins` moves the `sparkles` emitter to the coin and bursts 24 golden particles that fall and fade. `updateEffects(dt)` updates them, and `draw` draws them.
+
+Both emitters are made by small functions (`makeDust`, `makeSparkles`) that set their colors, sizes, speed and gravity. They're drawn between `setCamera` and `resetCamera`, so they stay in the right place in the level.
 
 ### Things to try
 
 1. Show the death count on screen (`player.hero.deaths`).
-2. Add another coin, and a platform to reach it. Then make the level longer: raise `WIDTH` and add more ground.
+2. Add another coin and a platform to reach it, by typing a `C` and some `=` into the level text. Then make the level longer: add more columns to every row.
 3. Make the jump higher, or gravity weaker (`physics.setGravity(vec2(0, 700))` in `main`).
 4. Add a timer: `window.time()` at the start, and show how long the run took when all coins are collected.
 5. A moving platform: keep a `Body` in a variable and change its `position.x` in `update` using `math.sin(window.time())`.
@@ -8010,7 +8557,7 @@ g++ -std=gnu++20 -O1 -fwrapv -w -I<runtime> -I<cache> forge_generated.cpp -o gam
 
 - If the game's folder has `icon.png`, Forge wraps the PNG in an `.ico` file (an `.ico` can simply hold a PNG), writes a one-line resource script `GLFW_ICON ICON "icon.ico"`, and runs **windres** (from w64devkit) to turn it into `build/icon_res.o`, which is linked in. That gives the `.exe` its icon; the name `GLFW_ICON` is the one raylib's window library looks for, and the window also loads `icon.png` with raylib's `SetWindowIcon`.
 - `-O1` optimizes a little, and compiles fast. `--release` builds use `-O2`, which optimizes more but takes longer.
-- **Precompiled headers.** Most of a build's time goes into reading Forge's runtime headers (and raylib's). So the generated file starts with `#include "forge_pch.hpp"`, and Forge compiles that header once into `forge_pch.hpp.gch` in a `cache` folder next to `frg.exe` (or in the game's `build/` folder if that one can't be written). There are two versions: one with the core and the libraries that don't use raylib, and one that adds every raylib library, so all games share them. The toolkits' own `.cpp` files are cached as `.o` files the same way. The cache folder's name comes from everything that affects the result (Forge's version, the runtime files' dates, which g++ is used, and the flags), so it's never stale. Each cache folder also has a `stamp.txt` naming the Forge and g++ that made it; when a new folder is made, folders from an older Forge or g++ are deleted, so the cache doesn't grow after updates. If a cached file is unusable anyway, g++ just reads the real headers, so the cache only changes speed, never behavior.
+- **Precompiled headers.** Most of a build's time goes into reading Forge's runtime headers (and raylib's). So the generated file starts with `#include "forge_pch.hpp"`, and Forge compiles that header once into `forge_pch.hpp.gch` in a `cache` folder next to `frg.exe` (or in the game's `build/` folder if that one can't be written). There are two versions: one with the core and the libraries that don't use raylib, and one that adds every raylib library, so all games share them. The toolkits' own `.cpp` files are cached as `.o` files the same way. The cache folder's name comes from everything that affects the result (Forge's version, the runtime files' dates, which g++ is used, and the flags), so it's never stale. Each cache folder also has a `stamp.txt` naming the Forge and g++ that made it; when a new folder is made, folders from an older Forge or g++ are deleted, so the cache doesn't grow after updates. Using a folder touches its `stamp.txt`, and after each build the folders used least recently are deleted until the cache is under about 400 MB (the ones that build used always stay). `frg cache` shows the size, and `frg cache clear` deletes it all. If a cached file is unusable anyway, g++ just reads the real headers, so the cache only changes speed, never behavior.
 - `-fwrapv` makes whole numbers wrap around predictably when they overflow.
 - `-static` puts everything into the `.exe`, so it runs anywhere without extra files.
 - Games that use the engine libraries also link **raylib** (`-lraylib -lopengl32 -lgdi32 -lwinmm`).
@@ -8024,8 +8571,8 @@ The **runtime** (`runtime/*.hpp`) is the C++ code every game is built with:
 |---|---|
 | `forge.hpp` | printing, text conversion, lists and maps, optionals, tasks, the core types (`vec2`, `color`...), random |
 | `forge_window.hpp` | `<window>`, `<input>`, `<graphics2d>` on top of raylib |
-| `forge_graphics3d.hpp`, `forge_assets.hpp`, `forge_audio.hpp`, `forge_ui.hpp` | the other engine libraries |
-| `forge_physics.hpp`, `forge_scenes.hpp`, `forge_ecs.hpp`, `forge_time.hpp`, `forge_file.hpp`, `forge_save.hpp` | libraries that don't need raylib |
+| `forge_graphics3d.hpp`, `forge_assets.hpp`, `forge_audio.hpp`, `forge_ui.hpp`, `forge_particles.hpp` | the other engine libraries |
+| `forge_physics.hpp`, `forge_scenes.hpp`, `forge_ecs.hpp`, `forge_time.hpp`, `forge_file.hpp`, `forge_save.hpp`, `forge_tween.hpp` | libraries that don't need raylib |
 | `forge_physics_draw.hpp` | `physics.drawDebug()`, which draws with raylib. Forge adds it only to games that use both `<physics>` and `<graphics2d>`, so `<physics>` itself never needs raylib |
 | `raylib/` | raylib 5.5 (by Ramon Santamaria and contributors, zlib license) |
 
@@ -8083,7 +8630,7 @@ When you save, the extension runs `frg check <game folder> --machine`. In machin
 
 <!-- docs/LANGUAGE.md -->
 
-## Forge Cheat Sheet (v0.6)
+## Forge Cheat Sheet (v0.7)
 
 The whole language on one page, for looking things up quickly. For full explanations, examples and every detail, see the complete documentation (see “Forge Documentation”). Planned features are listed at the end.
 
@@ -8109,6 +8656,7 @@ int main(){
 | `frg build` | compiles the game into `build/<folder name>.exe` |
 | `frg run` | builds, then runs the game |
 | `frg check` | only looks for errors |
+| `frg cache` / `frg cache clear` | show how big the build cache is (kept under about 400 MB) / delete it |
 | `frg package` | makes the finished game and zips it into `dist/<name>.zip`, ready to share |
 | `--release` (after build or run) | the finished game: no console window, smaller `.exe` |
 | `--no-console` / `--console` | turn the console window off or on, whatever else is chosen |
@@ -8249,6 +8797,10 @@ for (Enemy e in enemies) {      // goes through every item in a list
 while (lives > 0) {
     lives--;
 }
+
+do {                             // like while, but runs at least once: the check comes after
+    guess = int(input("Guess: "));
+} while (guess != secret);       // note the ; at the end
 ```
 
 `break` leaves a loop early. `continue` skips to the next time around.
@@ -8460,7 +9012,7 @@ int score = 10;
 addOne(score);        // score is now 11
 ```
 
-Don't keep a pointer to a function's local variable after that function ends.
+Don't keep a pointer to a function's local variable after that function ends. `p.remove()` makes a pointer point at nothing: `p.isRemoved()` is then true, and using `p` stops the game with a clear message ("this pointer was removed ...") until it's pointed at something again (`p = score;`).
 
 ### Tasks: waiting without freezing the game
 
@@ -8516,10 +9068,13 @@ Each file includes the libraries it uses. Functions are reached through the libr
 | `<audio>` | `audio.loadSound("jump.wav")`, `audio.loadMusic("song.ogg")`, `audio.setVolume(0.5)` (see below) |
 | `<graphics3d>` | 3D drawing (see below) |
 | `<time>` | `time.now()` (seconds since the game started), `time.sleep(seconds)`, `time.clock()` ("14:05:09"), `time.date()` ("2026-10-14"), `time.year()` `month()` `day()` `hour()` `minute()` `second()`, and the `Timer` class |
+| `<tilemap>` | `TileMap level = TileMap("""...""", 32);` (text, tile size) or `tilemap.load("level1.txt", 32)`: one character per tile. `level.addBodies("#")` (merged static bodies; `addBodies("=", true)` for one-way), `level.find("C")` (top-left corners), `get(col, row)` `set(col, row, "#")` `columns()` `rows()` `width()` `height()` `tileRect(col, row)` `columnAt(x)` `rowAt(y)` `solidAreas(tiles)`, `draw("#", color)`, `drawTiles(tileset, 16, "#=")` |
+| `<particles>` | `Emitter e = Emitter(vec2(x, y));`, then `e.burst(30)` (all at once) or `e.rate = 50` (per second); `e.update(dt)` and `e.draw()` each frame. Fields: `position` `rate` `lifetime` `speed` `direction` (degrees, -90 is up) `spread` (degrees, 360 is every way) `startColor` `endColor` `startSize` `endSize` `gravity`; `count()` `clear()` |
+| `<tween>` | `Tween t = Tween(from, to, seconds, Ease.OUT);` then `t.update(dt)` and `t.value()` each frame; `progress()` (0 to 1, for `lerp`), `isDone()`, `restart()`, `reverse()`, fields `looping` `pingPong`. Easing: `Ease.LINEAR` `IN` `OUT` `IN_OUT` `BOUNCE`; `tween.ease(Ease.OUT, t)` |
 | `<save>` | `save.setInt(key, n)` and `save.getInt(key, backup)`, also `setFloat`/`getFloat`, `setString`/`getString`, `setBool`/`getBool`, and `has(key)` `remove(key)` `clear()`. Kept in `save.txt` in the game's folder, written straight away. |
 | `<file>` | `file.read(path)` `write(path, text)` `append(path, text)` `exists(path)` `remove(path)` `readLines(path)` `writeLines(path, lines)` `files(folder)`. Paths are relative to the game's folder. |
 | `<scenes>` | the `Scene` class and `scenes.change(scene)` `update(dt)` `draw()` `current()` (see below) |
-| `<ui>` | `ui.button(rect, "text")` (true when clicked), `ui.checkbox(rect, "text", checked)` (gives the new value), `ui.slider(rect, value, min, max)` (gives the new value), `ui.label(text, x, y, size, color)`, `ui.panel(rect)`, `ui.setTheme(background, accent, text)` |
+| `<ui>` | `ui.button(rect, "text")` (true when clicked), `ui.checkbox(rect, "text", checked)` (gives the new value), `ui.slider(rect, value, min, max)` (gives the new value), `ui.textBox(rect, text, maxLength = 0)` (a box to type in; gives the new text), `ui.isTyping()`, `ui.label(text, x, y, size, color)`, `ui.panel(rect)`, `ui.setTheme(background, accent, text)` |
 | `<ECS>` | the `Entity` and `Component` classes (see below) |
 | `<tasks>` | `tasks.update(dt)` `runAll()` `count()` `stopAll()` (see Tasks (see “Tasks: waiting without freezing the game”)) |
 

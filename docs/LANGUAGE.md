@@ -200,6 +200,8 @@ void greet(string who, string greeting = "Hi"){   // greeting has a default valu
 
 **Order doesn't matter.** A function can be used above or below the place it's written. Forge reads every file before it runs anything.
 
+Functions can share a name if their parameters differ: `void drawHealth(int hp)` and `void drawHealth(float fraction)`. Forge uses the version whose parameter types match the values best.
+
 ### Functions as values
 
 ```cpp

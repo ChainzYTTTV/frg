@@ -1,0 +1,10 @@
+=== main.frg
+int main(){
+    return 0;
+}
+
+int main(int x){
+    return 0;
+}
+=== error
+there can only be one main function

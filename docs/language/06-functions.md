@@ -115,6 +115,36 @@ shout("hey", 1);      // hey
 
 Once a parameter has a default, every parameter after it needs one too.
 
+## Several functions with the same name
+
+Functions can share a name when their **parameters are different**: a different number of them, or different types. Forge picks the right one from the values you call it with:
+
+```cpp
+void drawHealth(int hp) {
+    graphics2d.drawText("HP: {hp}", 10, 10, 20, color.WHITE);
+}
+
+void drawHealth(float fraction) {
+    graphics2d.drawRect(10, 10, 200 * fraction, 20, color.GREEN);
+}
+
+drawHealth(75);      // the int version
+drawHealth(0.75);    // the float version
+```
+
+How Forge chooses:
+
+- Only the versions the values fit are considered.
+- Of those, the one whose parameter types match the values most exactly wins: `drawHealth(75)` uses the `int` version even though `75` would also fit a `float`.
+- If none fits, the error lists every version, so you can see what's possible.
+
+Rules:
+
+- Two versions with exactly the same parameter types are an error, even if they give back different types: a call couldn't tell them apart.
+- There's only one `main`.
+- Methods in a struct or class can't share a name (only constructors can).
+- When a function with several versions is used as a [function value](#functions-as-values), the version whose parameters match the `Function<...>` type is used.
+
 ## Order doesn't matter
 
 A function can be called from anywhere in the game, above or below where it's written, and from other files (with the file's name in front; see [Files and folders](07-files-and-folders.md)). Forge reads all the code before checking any of it.
@@ -136,7 +166,7 @@ Make sure there's always a way out (here, `n < 2`); otherwise it calls itself fo
 
 ## Rules
 
-- Each function name can be used only once per file. Two functions with the same name in one file is an error, even with different parameters.
+- Two functions in one file can only share a name if their parameters are different (see [Several functions with the same name](#several-functions-with-the-same-name)).
 - A function's name can't be a [reserved word](13-reserved-words.md), a built-in function name (`print`, `wait`), or the name of one of your top-level files.
 - Functions are always written at the top level of a file (or inside a struct or class, where they're called methods). You can't write a function inside another function.
 - To store a function in a variable or pass it to another function, use a [function value](#functions-as-values).

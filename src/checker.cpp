@@ -423,7 +423,13 @@ void Checker::registerDecls(Module* m) {
             continue;
         }
         if (f->name != "main") checkNewName(f->name, f->loc);
-        if (!duplicate(f->name, f->loc)) m->funcs[f->name] = f.get();
+        // Several functions can share a name if their parameters differ (checked once the types are known).
+        if (m->funcs.count(f->name)) {
+            m->overloads[f->name].push_back(f.get());
+        } else if (!duplicate(f->name, f->loc)) {
+            m->funcs[f->name] = f.get();
+            m->overloads[f->name].push_back(f.get());
+        }
     }
 }
 
@@ -1018,6 +1024,12 @@ Type* Checker::finishRef(Expr* e, bool allowNonValue) {
     }
     if (wantFunction && e->res.kind == RK::Func && !e->res.func->module->isPrelude && !e->res.func->owner) {
         FuncDecl* f = e->res.func;
+        // With several versions, the one whose parameters match the Function<...> is used.
+        for (FuncDecl* o : f->module->overloads[f->name]) {
+            bool same = o->params.size() == wantFunction->params.size();
+            for (size_t i = 0; same && i < o->params.size(); i++) same = o->params[i]->type == wantFunction->params[i];
+            if (same) f = e->res.func = o;
+        }
         if (f->ret == tTask()) {
             reportError(e->loc, "'" + n + "' is a task, so it can't be used as a function value",
                         "use a function value that starts it: () { " + n + "(); }");
@@ -1404,11 +1416,28 @@ FuncDecl* Checker::resolveCall(Expr* e, const std::vector<FuncDecl*>& candidates
     bool bad = false;
     for (auto& a : e->args) bad |= value(a.get()) == tError();
     if (bad) return candidates[0];
+    // Of the versions the values fit, the one whose parameter types match them most exactly wins:
+    // f(5) picks f(int) over f(float), and f(2.5) picks f(float).
+    FuncDecl* best = nullptr;
+    int bestScore = -1;
     for (FuncDecl* f : candidates) {
         if (e->args.size() < f->requiredParams() || e->args.size() > f->params.size()) continue;
         bool fits = true;
-        for (size_t i = 0; fits && i < e->args.size(); i++) fits = canAssignQuiet(e->args[i].get(), f->params[i]->type);
-        if (!fits) continue;
+        int score = 0;
+        for (size_t i = 0; fits && i < e->args.size(); i++) {
+            Expr* a = e->args[i].get();
+            Type* T = f->params[i]->type;
+            fits = canAssignQuiet(a, T);
+            if (a->type == T || (a->litInt && T == tInt(32, true)) || (a->litFloat && T == tFloat(32))) score += 2;
+            else if ((a->litInt && T->kind == TK::Int) || (a->litFloat && T->kind == TK::Float)) score += 1;
+        }
+        if (fits && score > bestScore) {
+            best = f;
+            bestScore = score;
+        }
+    }
+    for (FuncDecl* f : candidates) {
+        if (f != best) continue;
         for (size_t i = 0; i < e->args.size(); i++) assignable(e->args[i].get(), f->params[i]->type, "");
         for (size_t i = e->args.size(); i < f->params.size(); i++) e->defaultArgs.push_back(f->params[i]->init.get());
         return f;
@@ -1467,7 +1496,8 @@ Type* Checker::callExpr(Expr* e, Type* expected) {
     switch (callee->res.kind) {
         case RK::Func: {
             Module* m = callee->res.module ? callee->res.module : callee->res.func->module;
-            std::vector<FuncDecl*> candidates = m->isPrelude ? m->overloads[callee->res.func->name] : std::vector<FuncDecl*>{callee->res.func};
+            std::vector<FuncDecl*> candidates = m->overloads.count(callee->res.func->name) ? m->overloads[callee->res.func->name]
+                                                                                           : std::vector<FuncDecl*>{callee->res.func};
             std::string name = m->isPrelude ? m->name + "." + callee->res.func->name : callee->res.func->name;
             FuncDecl* f = resolveCall(e, candidates, name);
             if (!f) return e->type = tError();
@@ -2259,6 +2289,26 @@ bool Checker::run() {
     for (Module* m : modules)
         for (auto& d : m->ast.types) checkOverrides(d.get());
     checkStructCycles();
+    // Functions sharing a name need different parameter types, so every call can tell which one it means.
+    for (Module* m : P.allModules)
+        for (auto& [name, fs] : m->overloads) {
+            if (name == "main" && fs.size() > 1) {
+                reportError(fs[1]->loc, "there can only be one main function", "rename the other one");
+                continue;
+            }
+            for (size_t i = 1; i < fs.size(); i++)
+                for (size_t j = 0; j < i; j++) {
+                    bool same = fs[i]->params.size() == fs[j]->params.size();
+                    for (size_t k = 0; same && k < fs[i]->params.size(); k++) same = fs[i]->params[k]->type == fs[j]->params[k]->type;
+                    if (same) {
+                        reportError(fs[i]->loc, "'" + name + "' is written twice with the same parameter types (the first is on line " +
+                                                    std::to_string(fs[j]->loc.line) + ")",
+                                    "functions can share a name only if their parameters are different, like " + name + "(int) and " +
+                                        name + "(float) - change the parameters or the name");
+                        break;
+                    }
+                }
+        }
 
     // Pass 2: check values and bodies.
     for (Module* m : modules) {

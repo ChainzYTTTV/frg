@@ -43,7 +43,7 @@ If you already know C++, C#, Java, JavaScript or Python, Forge will feel familia
 | `(Goblin)e` / `e as Goblin` (C#) | `e as Goblin` gives `Goblin?` | |
 | `protected` | `private` | `private` already includes classes that inherit |
 | `static` members | top-level functions and globals in a file | `static` isn't available for your own types |
-| overloading `void f(int)` / `void f(float)` | different names | only constructors can share a name |
+| overloading `void f(int)` / `void f(float)` | the same: `void f(int)` and `void f(float)` | top-level functions and constructors can share a name; methods can't |
 | `class B extends A` / `class B : public A` | `class B : A` | |
 | `@Override` / `override` | nothing | a method with the same name and types replaces the parent's |
 | `base.method()` / `super.method()` | `super.method()` | |

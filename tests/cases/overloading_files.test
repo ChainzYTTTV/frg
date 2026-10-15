@@ -1,0 +1,19 @@
+=== main.frg
+#include <stdio>
+
+int main(){
+    print(shapes.size(3));
+    print(shapes.size(2, 5));
+    return 0;
+}
+=== shapes.frg
+int size(int side) {
+    return side * side;
+}
+
+int size(int width, int height) {
+    return width * height;
+}
+=== output
+9
+10

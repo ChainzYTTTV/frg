@@ -273,7 +273,7 @@ void greet(string who, string greeting = "Hi"){   // a default value
 - A function can be used **before or after** the place it's written, and in any file.
 - A function that returns a value must return on every path, or Forge reports an error.
 - `void` means it gives nothing back.
-- Each function name can be used only once per file: no two functions with the same name.
+- Functions can share a name if their parameters differ (`void drawHealth(int hp)` and `void drawHealth(float fraction)`): Forge picks the version whose parameter types match the values best (`drawHealth(75)` is the int one). Two versions with exactly the same parameter types are an error. Methods can't share names (only constructors can).
 
 **Functions as values.** A function value is written like a function without a return type or name: `(Enemy e) { return e.hp <= 0; }`. Its type is `Function<` return type `(` parameter types `)>`, like `Function<bool(Enemy)>`, `Function<void()>` or `Function<int(int, int)>` (it reads like the function's first line without names). Call one like a function: `isEven(4)`. A named function can be used as a value by writing its name without `()`: `Function<int(int)> f = twice;`. A function value goes where a `Function<...>` is expected (variable, parameter, field, list method), never on its own. It gets a **copy** of the local variables around it, so it can't change them (an error says so); it can change globals, fields and class objects. A `Function<...>` field can be empty until set (calling an empty one is a runtime error); a variable needs a starting value or `?`. Tasks can't be function values: wrap them, `() { blink(); }`.
 
@@ -882,7 +882,7 @@ Runtime error in main.frg:10: position 5 is outside the list (it has 3 items, at
 
 - `char` (single letters are one-letter strings), fixed-size arrays (use `list`), tuples
 - Generics you write yourself (`class Box<T>`)
-- Two functions or methods with the same name (only constructors can share a name), operator overloading for your own types
+- Two methods with the same name (only constructors and top-level functions can share a name), operator overloading for your own types
 - Interfaces, abstract classes, `protected`, `static` fields or methods in your own types
 - Labeled breaks, exceptions (`try` / `catch`), `goto`
 - Networking, shaders in the engine, 3D lighting
@@ -3145,6 +3145,36 @@ shout("hey", 1);      // hey
 
 Once a parameter has a default, every parameter after it needs one too.
 
+### Several functions with the same name
+
+Functions can share a name when their **parameters are different**: a different number of them, or different types. Forge picks the right one from the values you call it with:
+
+```cpp
+void drawHealth(int hp) {
+    graphics2d.drawText("HP: {hp}", 10, 10, 20, color.WHITE);
+}
+
+void drawHealth(float fraction) {
+    graphics2d.drawRect(10, 10, 200 * fraction, 20, color.GREEN);
+}
+
+drawHealth(75);      // the int version
+drawHealth(0.75);    // the float version
+```
+
+How Forge chooses:
+
+- Only the versions the values fit are considered.
+- Of those, the one whose parameter types match the values most exactly wins: `drawHealth(75)` uses the `int` version even though `75` would also fit a `float`.
+- If none fits, the error lists every version, so you can see what's possible.
+
+Rules:
+
+- Two versions with exactly the same parameter types are an error, even if they give back different types: a call couldn't tell them apart.
+- There's only one `main`.
+- Methods in a struct or class can't share a name (only constructors can).
+- When a function with several versions is used as a function value (see “Functions as values”), the version whose parameters match the `Function<...>` type is used.
+
 ### Order doesn't matter
 
 A function can be called from anywhere in the game, above or below where it's written, and from other files (with the file's name in front; see Files and folders (see “7. Files and Folders”)). Forge reads all the code before checking any of it.
@@ -3166,7 +3196,7 @@ Make sure there's always a way out (here, `n < 2`); otherwise it calls itself fo
 
 ### Rules
 
-- Each function name can be used only once per file. Two functions with the same name in one file is an error, even with different parameters.
+- Two functions in one file can only share a name if their parameters are different (see Several functions with the same name (see “Several functions with the same name”)).
 - A function's name can't be a reserved word (see “13. Reserved Words”), a built-in function name (`print`, `wait`), or the name of one of your top-level files.
 - Functions are always written at the top level of a file (or inside a struct or class, where they're called methods). You can't write a function inside another function.
 - To store a function in a variable or pass it to another function, use a function value (see “Functions as values”).
@@ -4631,7 +4661,7 @@ If you already know C++, C#, Java, JavaScript or Python, Forge will feel familia
 | `(Goblin)e` / `e as Goblin` (C#) | `e as Goblin` gives `Goblin?` | |
 | `protected` | `private` | `private` already includes classes that inherit |
 | `static` members | top-level functions and globals in a file | `static` isn't available for your own types |
-| overloading `void f(int)` / `void f(float)` | different names | only constructors can share a name |
+| overloading `void f(int)` / `void f(float)` | the same: `void f(int)` and `void f(float)` | top-level functions and constructors can share a name; methods can't |
 | `class B extends A` / `class B : public A` | `class B : A` | |
 | `@Override` / `override` | nothing | a method with the same name and types replaces the parent's |
 | `base.method()` / `super.method()` | `super.method()` | |
@@ -8943,6 +8973,8 @@ void greet(string who, string greeting = "Hi"){   // greeting has a default valu
 ```
 
 **Order doesn't matter.** A function can be used above or below the place it's written. Forge reads every file before it runs anything.
+
+Functions can share a name if their parameters differ: `void drawHealth(int hp)` and `void drawHealth(float fraction)`. Forge uses the version whose parameter types match the values best.
 
 #### Functions as values
 

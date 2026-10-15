@@ -220,7 +220,17 @@ std::string Gen::ref(const Expr* e) {
             // A built-in library's constant (OpenGL.TRIANGLES): its value is written straight in.
             if (e->res.var->module->isPrelude && e->res.var->isConst && e->res.var->init) return conv(e->res.var->init.get(), e->res.var->type);
             return qual(e->res.var->module, e->res.var->name);
-        case RK::Func: return qual(e->res.func->module, e->res.func->name);
+        case RK::Func: {
+            const FuncDecl* f = e->res.func;
+            std::string q = qual(f->module, f->name);
+            if (e->type && e->type->kind == TK::Function && f->module->overloads.count(f->name) && f->module->overloads.at(f->name).size() > 1) {
+                // A function value of one version of an overloaded function: say which one.
+                std::string ps;
+                for (size_t i = 0; i < f->params.size(); i++) ps += (i ? ", " : "") + f->params[i]->type->cpp;
+                return "static_cast<" + f->ret->cpp + "(*)(" + ps + ")>(&" + q + ")";
+            }
+            return q;
+        }
         case RK::Builtin: return e->res.builtin->cpp;
         case RK::StdConst: return "static_cast<" + e->type->cpp + ">(" + e->res.constant->cpp + ")";
         case RK::EnumValue: return e->res.tdecl->cpp + "::" + id(e->res.tdecl->enumValues[e->res.index]);
@@ -242,7 +252,13 @@ std::string Gen::ref(const Expr* e) {
 
 std::string Gen::args(const Expr* e, const std::vector<ExprPtr>& given, const FuncDecl* f) {
     std::string s;
-    for (size_t i = 0; i < given.size(); i++) s += (i ? ", " : "") + conv(given[i].get(), f->params[i]->type);
+    // With several versions of a function, every value gets its exact type, so C++ picks the same version Forge did.
+    bool overloaded = !f->owner && f->module && !f->module->isPrelude && f->module->overloads.count(f->name) &&
+                      f->module->overloads.at(f->name).size() > 1;
+    for (size_t i = 0; i < given.size(); i++) {
+        std::string v = conv(given[i].get(), f->params[i]->type);
+        s += (i ? ", " : "") + (overloaded ? "static_cast<" + f->params[i]->type->cpp + ">(" + v + ")" : v);
+    }
     for (size_t i = 0; i < e->defaultArgs.size(); i++) {
         size_t pi = given.size() + i;
         s += (pi ? ", " : "") + conv(e->defaultArgs[i], f->params[pi]->type);

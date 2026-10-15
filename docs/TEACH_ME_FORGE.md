@@ -247,7 +247,7 @@ void greet(string who, string greeting = "Hi"){   // a default value
 - A function can be used **before or after** the place it's written, and in any file.
 - A function that returns a value must return on every path, or Forge reports an error.
 - `void` means it gives nothing back.
-- Each function name can be used only once per file: no two functions with the same name.
+- Functions can share a name if their parameters differ (`void drawHealth(int hp)` and `void drawHealth(float fraction)`): Forge picks the version whose parameter types match the values best (`drawHealth(75)` is the int one). Two versions with exactly the same parameter types are an error. Methods can't share names (only constructors can).
 
 **Functions as values.** A function value is written like a function without a return type or name: `(Enemy e) { return e.hp <= 0; }`. Its type is `Function<` return type `(` parameter types `)>`, like `Function<bool(Enemy)>`, `Function<void()>` or `Function<int(int, int)>` (it reads like the function's first line without names). Call one like a function: `isEven(4)`. A named function can be used as a value by writing its name without `()`: `Function<int(int)> f = twice;`. A function value goes where a `Function<...>` is expected (variable, parameter, field, list method), never on its own. It gets a **copy** of the local variables around it, so it can't change them (an error says so); it can change globals, fields and class objects. A `Function<...>` field can be empty until set (calling an empty one is a runtime error); a variable needs a starting value or `?`. Tasks can't be function values: wrap them, `() { blink(); }`.
 
@@ -856,7 +856,7 @@ Runtime error in main.frg:10: position 5 is outside the list (it has 3 items, at
 
 - `char` (single letters are one-letter strings), fixed-size arrays (use `list`), tuples
 - Generics you write yourself (`class Box<T>`)
-- Two functions or methods with the same name (only constructors can share a name), operator overloading for your own types
+- Two methods with the same name (only constructors and top-level functions can share a name), operator overloading for your own types
 - Interfaces, abstract classes, `protected`, `static` fields or methods in your own types
 - Labeled breaks, exceptions (`try` / `catch`), `goto`
 - Networking, shaders in the engine, 3D lighting

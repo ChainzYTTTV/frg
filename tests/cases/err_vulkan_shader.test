@@ -1,0 +1,15 @@
+=== main.frg
+#include <Vulkan>
+
+int main(){
+    return 0;
+}
+=== broken.frag
+#version 450
+layout(location = 0) out vec4 outColor;
+void main() {
+    outColor = vec4(shade, 1.0);
+}
+=== error
+the shader broken.frag has errors
+broken.frag:4: 'shade' : undeclared identifier

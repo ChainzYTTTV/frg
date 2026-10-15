@@ -7,6 +7,7 @@
 #include "common.hpp"
 #include "project.hpp"
 
+#include <algorithm>
 #include <chrono>
 #include <cstdio>
 #include <filesystem>
@@ -41,6 +42,88 @@ static int runProcess(const std::wstring& cmdline, const fs::path& workDir = {})
     CloseHandle(pi.hProcess);
     CloseHandle(pi.hThread);
     return (int)code;
+}
+
+// Like runProcess, but collects what the command prints (stdout and stderr) instead of showing it.
+static int runCaptured(const std::wstring& cmdline, std::string& output) {
+    SECURITY_ATTRIBUTES sa{sizeof sa, nullptr, TRUE};
+    HANDLE readEnd = nullptr, writeEnd = nullptr;
+    if (!CreatePipe(&readEnd, &writeEnd, &sa, 0)) return -1;
+    SetHandleInformation(readEnd, HANDLE_FLAG_INHERIT, 0);
+    STARTUPINFOW si{};
+    si.cb = sizeof si;
+    si.dwFlags = STARTF_USESTDHANDLES;
+    si.hStdOutput = si.hStdError = writeEnd;
+    si.hStdInput = GetStdHandle(STD_INPUT_HANDLE);
+    PROCESS_INFORMATION pi{};
+    std::wstring cmd = cmdline;
+    BOOL started = CreateProcessW(nullptr, cmd.data(), nullptr, nullptr, TRUE, 0, nullptr, nullptr, &si, &pi);
+    CloseHandle(writeEnd);
+    if (!started) {
+        CloseHandle(readEnd);
+        return -1;
+    }
+    char buf[4096];
+    DWORD n = 0;
+    while (ReadFile(readEnd, buf, sizeof buf, &n, nullptr) && n > 0) output.append(buf, n);
+    CloseHandle(readEnd);
+    WaitForSingleObject(pi.hProcess, INFINITE);
+    DWORD code = 0;
+    GetExitCodeProcess(pi.hProcess, &code);
+    CloseHandle(pi.hProcess);
+    CloseHandle(pi.hThread);
+    return (int)code;
+}
+
+// <Vulkan> games: turns every GLSL shader in the game's folder (player.vert, sky.frag...) into the SPIR-V file
+// Vulkan loads (player.vert.spv), using glslang. Only shaders that changed since last time are compiled.
+static bool compileShaders(const fs::path& root, const fs::path& runtime) {
+    static const char* kStages[] = {".vert", ".frag", ".comp", ".geom", ".tesc", ".tese"};
+    fs::path glslang = runtime / "tools" / "glslang.exe";
+    std::error_code ec;
+    bool ok = true;
+    for (auto it = fs::recursive_directory_iterator(root, ec); it != fs::recursive_directory_iterator(); it.increment(ec)) {
+        if (ec) break;
+        const fs::path& file = it->path();
+        if (it->is_directory() && (file.filename() == "build" || file.filename().string().starts_with("."))) {
+            it.disable_recursion_pending();
+            continue;
+        }
+        std::string ext = file.extension().string();
+        if (std::find(std::begin(kStages), std::end(kStages), ext) == std::end(kStages)) continue;
+        fs::path spv = file;
+        spv += ".spv";
+        if (fs::exists(spv) && fs::last_write_time(spv, ec) >= fs::last_write_time(file, ec)) continue;
+        std::string shown = fs::relative(file, root, ec).generic_string();
+        printStatus("Shader", shown);
+        std::string out;
+        int code = runCaptured(quote(glslang) + L" -V " + quote(file) + L" -o " + quote(spv), out);
+        if (code == -1) {
+            reportPlainError("Forge's shader compiler is missing (" + glslang.string() + ")", "keep the runtime folder next to frg.exe");
+            return false;
+        }
+        if (code != 0) {
+            ok = false;
+            reportPlainError("the shader " + shown + " has errors");
+            // glslang's lines look like "ERROR: C:\game\cube.vert:12: 'x' : undeclared identifier"
+            size_t start = 0;
+            while (start < out.size()) {
+                size_t end = out.find('\n', start);
+                if (end == std::string::npos) end = out.size();
+                std::string line = out.substr(start, end - start);
+                if (!line.empty() && line.back() == '\r') line.pop_back();
+                if (line.starts_with("ERROR: ") && line.find("compilation terminated") == std::string::npos &&
+                    line.find("compilation errors") == std::string::npos) {
+                    line = line.substr(7);
+                    std::string full = file.string();
+                    if (line.starts_with(full)) line = shown + line.substr(full.size());
+                    std::fprintf(stderr, "    %s\n", line.c_str());
+                }
+                start = end + 1;
+            }
+        }
+    }
+    return ok;
 }
 
 // While the game runs, Ctrl+C should stop the game, not Forge.
@@ -93,7 +176,14 @@ static bool build(const fs::path& dir, fs::path& exeOut, bool release) {
         return false;
     }
 
+    bool vulkan = std::find(gen.sources.begin(), gen.sources.end(), "forge_vulkan_impl.cpp") != gen.sources.end();
+    if (vulkan && !compileShaders(proj.root, runtime)) {
+        std::fprintf(stderr, "Build failed: a shader has errors.\n");
+        return false;
+    }
+
     std::wstring cmd = L"g++ -std=gnu++20 -O2 -fwrapv -w -static -I" + quote(runtime) + L" " + quote(cppPath);
+    if (vulkan) cmd += L" -I" + quote(runtime / "vulkan" / "include");
     for (const std::string& src : gen.sources) cmd += L" " + quote(runtime / src);  // a toolkit's own runtime code
     cmd += L" -o " + quote(exe);
     if (release) cmd += L" -mwindows -s";  // no console window, smaller .exe

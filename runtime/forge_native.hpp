@@ -48,6 +48,9 @@ float mouseWheel();
 // A file the game uses: where the game was started from, next to the .exe, or one folder up. "" if missing.
 std::string findGameFile(const std::string& path);
 
+// True while drawing the frame that FRG_AUTOTEST_SHOT will capture.
+bool screenshotDue();
+
 // Saves RGBA pixels (top row first) as a .png, for screenshots.
 bool savePng(const std::string& path, const unsigned char* rgba, int width, int height);
 

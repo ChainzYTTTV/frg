@@ -281,6 +281,8 @@ bool mouseReleased(MouseButton_ b) { return !win().mouse[(int)b] && win().prevMo
 core::vec2_ mousePosition() { return {win().mx, win().my}; }
 float mouseWheel() { return win().wheel; }
 
+bool screenshotDue() { return win().autotestFrames >= 0 && win().frame + 1 == win().autotestFrames; }
+
 bool savePng(const std::string& path, const unsigned char* rgba, int w, int h) {
     FrgRlImage img{(void*)rgba, w, h, 1, 7 /* PIXELFORMAT_UNCOMPRESSED_R8G8B8A8 */};
     return ExportImage(img, path.c_str());

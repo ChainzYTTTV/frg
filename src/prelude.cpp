@@ -553,6 +553,48 @@ const int CULL_FRONT = 2;
 const int CULL_BACK = 3;
 )FRG";
 
+static const char* kVulkan = FRG_KEY_ENUMS FRG_TOOLKIT_WINDOW R"FRG(
+string deviceName();
+
+void setTopology(int topology);
+void setDepthTest(bool on);
+void setCulling(int mode);
+void setBlending(bool on);
+
+int loadShader(string spvPath);
+int createPipeline(int vertexShader, int fragmentShader, list<int> attributeSizes, int pushConstantFloats = 0);
+int createVertexBuffer(list<float> data);
+int createIndexBuffer(list<int> indices);
+
+bool beginFrame(float r, float g, float b, float a);
+void bindPipeline(int pipeline);
+void bindVertexBuffer(int buffer);
+void bindIndexBuffer(int buffer);
+void pushConstants(int pipeline, list<float> data);
+void draw(int vertexCount, int firstVertex = 0);
+void drawIndexed(int indexCount, int firstIndex = 0);
+void endFrame();
+
+list<float> identity();
+list<float> multiply(list<float> a, list<float> b);
+list<float> perspective(float fovDegrees, float aspect, float near, float far);
+list<float> orthographic(float left, float right, float bottom, float top, float near, float far);
+list<float> lookAt(vec3 eye, vec3 target, vec3 up);
+list<float> translate(vec3 offset);
+list<float> rotate(float degrees, vec3 axis);
+list<float> scale(vec3 amount);
+
+const int POINTS = 0;
+const int LINES = 1;
+const int LINE_STRIP = 2;
+const int TRIANGLES = 3;
+const int TRIANGLE_STRIP = 4;
+const int TRIANGLE_FAN = 5;
+const int CULL_NONE = 0;
+const int CULL_FRONT = 1;
+const int CULL_BACK = 2;
+)FRG";
+
 const std::vector<PreludeLib>& preludeLibs() {
     using K = LibKind;
     static const std::vector<PreludeLib> libs = {
@@ -573,6 +615,7 @@ const std::vector<PreludeLib>& preludeLibs() {
         {"ECS", kEcs, false, "forge_ecs.hpp"},
         {"OpenGL", kOpenGL, true, "forge_opengl.hpp", K::Toolkit, {"forge_opengl_impl.cpp"}, {"-lopengl32", "-lgdi32"}},
         {"DirectX", kDirectX, true, "forge_directx.hpp", K::Toolkit, {"forge_directx_impl.cpp"}, {"-ld3d11", "-ldxgi", "-ld3dcompiler_47"}},
+        {"Vulkan", kVulkan, true, "forge_vulkan.hpp", K::Toolkit, {"forge_vulkan_impl.cpp"}, {}},
     };
     return libs;
 }

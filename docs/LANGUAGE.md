@@ -1,6 +1,6 @@
-# The Forge Language (v0.5)
+# Forge Cheat Sheet (v0.5)
 
-This guide covers everything Forge can do **right now**. Planned features are listed at the end.
+The whole language on one page, for looking things up quickly. For full explanations, examples and every detail, see the [complete documentation](README.md). Planned features are listed at the end.
 
 **Contents:** [A Forge game](#a-forge-game) · [Variables](#variables-and-types) · [Text](#text) · [Operators](#operators) · [If and loops](#if-loops-and-switch) · [Functions](#functions) · [Files and folders](#multiple-files) · [Lists and maps](#lists-and-maps) · [Structs and classes](#structs-and-classes) · [Enums](#enums) · [Optional values and null](#optional-values-and-null) · [Pointers](#pointers) · [Tasks](#tasks-waiting-without-freezing-the-game) · [Built-in types](#built-in-types-vec2-color-rect) · [Libraries](#libraries) · [Making a game](#making-a-game) · [Errors](#errors)
 
@@ -22,6 +22,8 @@ int main(){
 | `frg new mygame` | makes a folder `mygame/` with a starter `main.frg` |
 | `frg build` | compiles the game into `build/<folder name>.exe` |
 | `frg run` | builds, then runs the game |
+| `frg check` | only looks for errors |
+| `--release` (after build or run) | no console window, smaller `.exe` |
 
 ## Comments
 
@@ -75,7 +77,7 @@ int n = int("42");            // text to number
 string s = string(99);        // anything to text
 ```
 
-Watch out: `7 / 2` is `3`, because both sides are whole numbers. Use `7.0 / 2` to get `3.5`.
+Watch out: dividing two whole numbers gives a whole number. `7 / 2` is `3`, and `int a = 70; int b = 30; float r = a / b;` gives `2.0`. Use `7.0 / 2` or `float(a) / b` to get a decimal. One special case: when both sides are numbers written straight into the code, they adapt to where the result goes, so `float r = 70 / 30;` is `2.3333333` while `print(70 / 30)` is `2`. ([Full rules](language/02-variables-and-types.md#how-division-works).)
 
 Whole numbers **wrap around** when they go past their limit. A `uint8` holding `250` becomes `4` after `+= 10`.
 
@@ -98,19 +100,32 @@ Text has `.length` plus these methods: `contains(t)` `indexOf(t)` `startsWith(t)
 
 ## Operators
 
-| | |
-|---|---|
-| Math | `+  -  *  /  %` (`%` is the remainder) |
-| Changing a variable | `=  +=  -=  *=  /=  %=  ++  --` |
-| Comparing | `==  !=  <  >  <=  >=` |
-| Logic | `and` / `&&`, `or` / `\|\|`, `not` / `!`. Each pair means the same thing. |
-| Pick one | `condition ? a : b`, which is `a` if the condition is true, otherwise `b` |
-| Backup value | `maybe ?? backup`, which is `backup` if `maybe` is null |
+Every operator has a symbol **and** a word. They mean exactly the same and can be mixed. ([Full details](language/04-operators.md).)
+
+| Symbol | Word | Meaning |
+|---|---|---|
+| `a + b` `a - b` `a * b` `a / b` `a % b` | `a plus b` `a minus b` `a times b` `a div b` `a mod b` | math (`%` / `mod` is the remainder) |
+| `-a` | `negative a` | flip the sign |
+| `a == b` `a != b` | `a equals b` `a not equals b` | equal, not equal |
+| `a > b` `a < b` | `a greater b` `a less b` | greater than, less than |
+| `a >= b` `a <= b` | `a greater or equal b` `a less or equal b` | |
+| `&&` `\|\|` `!` | `and` `or` `not` | logic |
+| `c ? a : b` | `a if c else b` | `a` if `c` is true, otherwise `b` |
+| `a ?? b` | `a otherwise b` | `a`, or `b` if `a` is null |
+| `&` `\|` `^` `~` `<<` `>>` | `bitand` `bitor` `bitxor` `bitnot` `shiftleft` `shiftright` | bits |
+| `x = 5;` | `set x to 5;` | |
+| `x += 5;` `x -= 5;` | `increase x by 5;` `decrease x by 5;` | |
+| `x *= 2;` `x /= 2;` | `multiply x by 2;` `divide x by 2;` | |
+| `x++;` `x--;` | `increase x;` `decrease x;` | |
 
 ```cpp
 if (alive and not paused) { ... }
+if (hp less or equal 0) { set lives to lives minus 1; }
 string label = hp > 50 ? "healthy" : "hurt";
+string label2 = "healthy" if hp greater 50 else "hurt";
 ```
+
+There's no power operator: `^` is bitwise xor. Use `x * x` or `math.pow(x, 2)`.
 
 ## If, loops and switch
 
@@ -599,6 +614,6 @@ If a file has several syntax mistakes, Forge reports all of them in one go.
 
 ## Coming next
 
-- **Graphics backends:** `#include <OpenGL>`, `<Vulkan>`, `<DirectX>` (everything currently draws through raylib, which uses OpenGL)
+- **Low-level graphics toolkits:** `<OpenGL>`, `<Vulkan>`, `<DirectX>`, for advanced users who want to write their own rendering. These are **separate** from the built-in engine: a game using one makes its own window and does its own drawing, instead of using `<window>` / `<graphics2d>` / etc.
 - **Language:** generic types you write yourself (`class Box<T>`), functions as values
 - **Editor:** autocomplete for your own code (a language server)

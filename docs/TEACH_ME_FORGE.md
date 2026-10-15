@@ -121,7 +121,7 @@ const int MAX_HP = 100;     // const: can never be set to a new value
 
 - A number, bool or string variable with no starting value is `0`, `0.0`, `false` or `""`.
 - Forge converts automatically only when nothing is lost: an `int` can go into a `float`, but a `float` can't go into an `int`. You convert yourself with `int(3.9)` (gives 3, cutting off the decimals), `float(x)`, `int("42")` (text to number), and `string(x)` (anything to text).
-- `7 / 2` is `3`, because whole numbers divide to whole numbers. `7.0 / 2` is `3.5`.
+- **Division** of two whole numbers gives a whole number, cut toward zero: `7 / 2` is `3`, and `int a = 70; int b = 30; float r = a / b;` gives `2.0` (the division happens first, with whole numbers). To get a decimal, make one side a decimal: `7.0 / 2` or `float(a) / b`. **One special case:** numbers written straight into the code adapt to where the result goes, so `float r = 70 / 30;` is `2.3333333`, while `print(70 / 30)` is `2`. The learner chose to keep this C-style behavior on purpose, so teach it clearly rather than treating it as a bug.
 - Whole numbers **wrap around** past their limit: a `uint8` holding 250 becomes 4 after `+= 10`.
 - Decimal numbers print with a `.0` when they're whole: `print(5.0)` shows `5.0`.
 
@@ -148,16 +148,29 @@ string full = "Game" + " Over";         // + joins two pieces of text
 
 ### Operators
 
-| | |
-|---|---|
-| Math | `+ - * / %` (`%` is the remainder) |
-| Change a variable | `= += -= *= /= %= ++ --` |
-| Compare | `== != < > <= >=` |
-| Logic | `and` or `&&`, `or` or `\|\|`, `not` or `!` (each pair means exactly the same thing) |
-| Choose | `condition ? a : b` gives `a` if the condition is true, otherwise `b` |
-| Backup | `maybe ?? backup` gives `backup` when `maybe` is null |
+**Every operator has a symbol and a word form.** They mean exactly the same and can be mixed. Teach both, and let the learner use whichever they like:
 
-Note that `not a == b` means `not (a == b)`, the same as in Python.
+| Symbol | Word | Meaning |
+|---|---|---|
+| `a + b` `a - b` `a * b` `a / b` `a % b` | `a plus b` `a minus b` `a times b` `a div b` `a mod b` | math (`%`/`mod` is the remainder) |
+| `-a` | `negative a` | flip the sign |
+| `a == b` / `a != b` | `a equals b` / `a not equals b` | |
+| `a > b` / `a < b` | `a greater b` / `a less b` | |
+| `a >= b` / `a <= b` | `a greater or equal b` / `a less or equal b` | |
+| `&&` `\|\|` `!` | `and` `or` `not` | logic |
+| `c ? a : b` | `a if c else b` | pick one (`if` must be on the same line) |
+| `a ?? b` | `a otherwise b` | `a`, or `b` if `a` is null |
+| `&` `\|` `^` `~` `<<` `>>` | `bitand` `bitor` `bitxor` `bitnot` `shiftleft` `shiftright` | bit operations (rarely needed) |
+| `x = 5;` | `set x to 5;` | |
+| `x += n;` `x -= n;` | `increase x by n;` `decrease x by n;` | |
+| `x *= n;` `x /= n;` | `multiply x by n;` `divide x by n;` | |
+| `x++;` `x--;` | `increase x;` `decrease x;` | |
+
+- The words `plus`, `times`, `greater` and so on only act as operators between two values, so they can still be used as names. Only `negative` and `bitnot` are reserved.
+- `not a == b` means `not (a == b)`, the same as in Python.
+- There's **no power operator**; `^` is bitwise xor. Use `x * x` or `math.pow(x, 2)`.
+- `++`, `--`, `increase x;` and `decrease x;` are statements only (`y = x++;` doesn't work).
+- The order of operations follows C: `* / %`, then `+ -`, then comparisons, then `==`, then `and`, then `or`. Note that the bit operators come after `==`, so `(x & 1) == 0` needs its parentheses.
 
 ### If, loops, switch
 
@@ -648,7 +661,7 @@ Runtime error in main.frg:10: position 5 is outside the list (it has 3 items, at
 - Interfaces, abstract classes, `protected`, `static` fields or methods in your own types
 - `do ... while`, labeled breaks, exceptions (`try` / `catch`), `goto`
 - Networking, gamepads/controllers, shaders, 3D lighting, cameras that scroll or zoom in 2D, text input boxes in `<ui>`
-- Libraries with these names are planned but **don't exist yet**: `<OpenGL>` `<Vulkan>` `<DirectX>`
+- Libraries with these names are planned but **don't exist yet**: `<OpenGL>` `<Vulkan>` `<DirectX>`. They're planned as separate low-level toolkits for advanced users, **not** as part of the built-in engine.
 
 ---
 

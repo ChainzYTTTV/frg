@@ -1,0 +1,193 @@
+=== main.frg
+#include <window>
+#include <graphics2d>
+#include <graphics3d>
+#include <input>
+#include <audio>
+#include <assets>
+#include <physics>
+#include <time>
+#include <file>
+#include <scenes>
+#include <ui>
+#include <ECS>
+#include <random>
+#include <math>
+#include <stdio>
+
+Camera cam = Camera(vec3(6, 5, 6), vec3(0, 0, 0));
+float t = 0;
+bool showFps = true;
+float volume = 0.7;
+Timer cooldown = Timer(0.5);
+Timer roundTimer = Timer(60);
+int level = 1;
+int coins = 0;
+string playerName = "Ana";
+vec2 position = vec2(0, 0);
+float speed = 100;
+
+class Player : Body {
+    int lives = 3;
+    void respawn() {
+        position = vec2(80, 300);
+        velocity = vec2.ZERO;
+    }
+}
+
+Player hero = Player(80, 300, 32, 32);
+Body coin = Body(300, 200, 16, 16);
+
+class Menu : Scene {
+    void update(float dt) {
+        if (input.keyPressed(Key.ENTER)) {
+            scenes.change(Level(1));
+        }
+    }
+    void draw() {
+        graphics2d.drawText("Press Enter to play", 300, 200, 30, color.WHITE);
+        if (ui.button(rect(380, 200, 200, 50), "Play")) {
+            scenes.change(Level(2));
+        }
+        showFps = ui.checkbox(rect(360, 265, 30, 30), "Show FPS", showFps);
+        volume = ui.slider(rect(360, 340, 240, 24), volume, 0, 1);
+        ui.label("Volume: {int(volume * 100)}%", 360, 310);
+    }
+}
+
+class Level : Scene {
+    int number;
+    Level(int number) {
+        this.number = number;
+    }
+    void enter() {
+        print("starting level {number}");
+    }
+}
+
+class Health : Component {
+    int hp = 3;
+    void update(float dt) {
+        if (hp <= 0) {
+            entity().destroy();
+        }
+    }
+}
+
+class Mover : Component {
+    vec2 position = vec2.ZERO;
+    vec2 velocity = vec2.ZERO;
+    void update(float dt) {
+        position += velocity * dt;
+    }
+    void draw() {
+        graphics2d.drawCircle(position, 10, color.GOLD);
+    }
+}
+
+class Poison : Component {
+    void update(float dt) {
+        Health? h = entity().get("Health") as Health;
+        if (h != null) {
+            h.hp -= 1;
+        }
+    }
+}
+
+int main(){
+    window.open(960, 540, "docs");
+    coin.isStatic = true;
+    coin.solid = false;
+    physics.add(coin);
+    Entity ball = ECS.create("ball");
+    Mover m = Mover();
+    m.position = vec2(100, 200);
+    ball.add(m);
+    scenes.change(Menu());
+    window.run();
+    return 0;
+}
+
+int loadHighScore(){
+    if (!file.exists("highscore.txt")) {
+        return 0;
+    }
+    return int(file.read("highscore.txt").trim());
+}
+
+void save(){
+    list<string> lines = [
+        "level={level}",
+        "coins={coins}",
+        "name={playerName}"
+    ];
+    file.writeLines("save.txt", lines);
+}
+
+void load(){
+    for (string line in file.readLines("save.txt")) {
+        list<string> parts = line.split("=");
+        if (parts.length != 2) {
+            continue;
+        }
+        switch (parts[0]) {
+            case "level":
+                level = int(parts[1]);
+            case "coins":
+                coins = int(parts[1]);
+            case "name":
+                playerName = parts[1];
+        }
+    }
+}
+
+void drawHealthBar(float x, float y, int hp, int maxHp){
+    float width = 200;
+    float filled = width * hp / maxHp;
+    graphics2d.drawRect(x, y, width, 20, color.DARKGRAY);
+    graphics2d.drawRect(x, y, filled, 20, hp > maxHp / 4 ? color.GREEN : color.RED);
+    graphics2d.drawRectOutline(x, y, width, 20, color.WHITE, 2);
+    graphics2d.drawText("{hp}/{maxHp}", x + 8, y + 2, 16, color.WHITE);
+}
+
+void update(float dt){
+    t += dt;
+    cam.orbit(20 * dt);
+    graphics3d.setCamera(cam);
+    vec2 move = vec2.ZERO;
+    if (input.keyDown(Key.LEFT) or input.keyDown(Key.A)) { move.x -= 1; }
+    position += move.normalized() * speed * dt;
+    if (input.keyPressed(Key.SPACE) and hero.onGround) {
+        hero.velocity.y = -600;
+    }
+    physics.step(dt);
+    if (hero.overlaps(coin)) {
+        physics.remove(coin);
+    }
+    if (scenes.current() is Level) {
+        Level lvl = scenes.current() as Level;
+        print(lvl.number);
+    }
+    int roll = random.range(1, 6);
+    float alsoDecimal = random.range(0, 2.5);
+    list<string> loot = ["sword", "shield", "potion"];
+    string drop = loot[random.range(0, loot.length - 1)];
+    vec2 spawn = vec2(random.range(0.0, 960.0), -20);
+    scenes.update(dt);
+    ECS.update(dt);
+}
+
+void draw(){
+    graphics3d.drawGrid(10, 1);
+    graphics3d.drawSphere(vec3(0, 3 + math.abs(math.sin(t * 3)), 0), 0.5, color.ORANGE);
+    vec2 p = graphics3d.toScreen(vec3(0, 2, 0));
+    graphics2d.drawText("label", p.x, p.y, 20, color.WHITE);
+    string title = "GAME OVER";
+    int w = graphics2d.textWidth(title, 48);
+    graphics2d.drawText(title, (window.width() - w) / 2, 200, 48, color.WHITE);
+    graphics2d.drawText("{int(roundTimer.left())}", 20, 20, 32, color.WHITE);
+    drawHealthBar(10, 10, 3, 10);
+    scenes.draw();
+    ECS.draw();
+}
+=== build

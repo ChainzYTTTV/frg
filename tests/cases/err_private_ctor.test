@@ -1,0 +1,12 @@
+=== main.frg
+class Singleton {
+    private Singleton(int id) {
+    }
+}
+
+int main(){
+    Singleton s = Singleton(1);
+    return 0;
+}
+=== error
+this constructor of Singleton is private

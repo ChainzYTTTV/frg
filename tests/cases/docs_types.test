@@ -1,0 +1,66 @@
+=== main.frg
+#include <stdio>
+#include <"enemies">
+
+struct Node {
+    int value;
+    list<Node> children;
+}
+
+class Singleton {
+    int id = 7;
+    private Singleton(int id) {
+        this.id = id;
+    }
+    Singleton make() {
+        return Singleton(id + 1);
+    }
+}
+
+class Boss : enemies.goblin.Goblin {
+    string toString() {
+        return "Boss with {gold} gold";
+    }
+}
+
+class Enemy {
+    string name;
+    int hp = 100;
+    float speed = 2.5;
+    list<string> loot = [];
+    Enemy? target;
+}
+
+int main(){
+    Node root = Node(1, [Node(2, []), Node(3, [])]);
+    print(root.children.length);
+    print(root == Node(1, [Node(2, []), Node(3, [])]));
+    print(Boss());
+    Enemy e = Enemy();
+    e.name = "Grok";
+    print(e);
+    e.target = Enemy();
+    print(e.target != null);
+
+    map<string, int> counts = {};
+    list<string> drops = ["coin", "gem", "coin", "coin"];
+    for (string d in drops) {
+        counts[d] += 1;
+    }
+    print(counts);
+    list<float> mixed = [1, 2.5];
+    print(mixed);
+    return 0;
+}
+=== enemies/goblin.frg
+class Goblin {
+    int gold = 5;
+}
+=== output
+2
+true
+Boss with 5 gold
+Enemy(name: Grok, hp: 100, speed: 2.5, loot: [], target: null)
+true
+{coin: 3, gem: 1}
+[1.0, 2.5]

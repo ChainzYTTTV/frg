@@ -4,6 +4,9 @@
 #   === main.frg        a source file (any path, e.g. "=== enemies/goblin.frg")
 #   === output          the exact text the program must print
 #   === error           text that must appear in the compile errors (one check per line)
+#   === build           (empty) the program must compile; it isn't run (for games that open a window)
+#
+# Needs PowerShell 7 (pwsh), not the older Windows PowerShell 5.
 #
 # Usage:  .\tests\run_tests.ps1            run everything
 #         .\tests\run_tests.ps1 strings    run only strings.test
@@ -55,14 +58,17 @@ foreach ($file in Get-ChildItem (Join-Path $PSScriptRoot "cases") -Filter "$Filt
     foreach ($key in @($sections.Keys)) {
         $lines = $sections[$key]
         while ($lines.Count -gt 0 -and $lines[$lines.Count - 1] -eq '') { $lines.RemoveAt($lines.Count - 1) }
-        if ($key -in 'output', 'error') { continue }
+        if ($key -in 'output', 'error', 'build') { continue }
         $path = Join-Path $dir $key
         New-Item -ItemType Directory -Force (Split-Path $path) | Out-Null
         [IO.File]::WriteAllText($path, ($lines -join "`n") + "`n")
     }
 
     $problem = $null
-    if ($sections.Contains('error')) {
+    if ($sections.Contains('build')) {
+        $r = Invoke-Frg build $dir
+        if ($r.Code -ne 0) { $problem = "expected it to build, but:`n$($r.Err)" }
+    } elseif ($sections.Contains('error')) {
         $r = Invoke-Frg build $dir
         if ($r.Code -eq 0) { $problem = "expected a compile error, but it built" }
         foreach ($want in $sections['error']) {

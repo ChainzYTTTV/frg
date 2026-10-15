@@ -15,7 +15,7 @@ int main(){
 }
 ```
 
-The language guide is [docs/LANGUAGE.md](docs/LANGUAGE.md). For VS Code support (colors, errors as you save, a Run button), see [editors/vscode](editors/vscode/README.md).
+**Documentation:** start at [docs/README.md](docs/README.md), which has a getting-started guide, a chapter for each part of the language, a page for every library, and guides. [docs/LANGUAGE.md](docs/LANGUAGE.md) is a one-page cheat sheet. For VS Code support (colors, errors as you save, a Run button), see [editors/vscode](editors/vscode/README.md).
 
 ## How it works
 
@@ -69,7 +69,7 @@ cmake -S . -B build -G Ninja
 cmake --build build
 ```
 
-This produces `bin/frg.exe`, with `bin/runtime/` next to it. Add `bin` to your PATH to use `frg` from anywhere. Run the tests with:
+This produces `bin/frg.exe`, with `bin/runtime/` next to it. Add `bin` to your PATH to use `frg` from anywhere. Run the tests (they need PowerShell 7, `pwsh`) with:
 
 ```
 .\tests\run_tests.ps1

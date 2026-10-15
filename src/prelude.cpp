@@ -505,6 +505,54 @@ const int INVALID_OPERATION = 1282;
 const int OUT_OF_MEMORY = 1285;
 )FRG";
 
+static const char* kDirectX = FRG_KEY_ENUMS FRG_TOOLKIT_WINDOW R"FRG(
+string adapterName();
+
+void clear(float r, float g, float b, float a);
+void setDepthTest(bool on);
+void setBlending(bool on);
+void setCulling(int mode);
+void setTopology(int topology);
+
+int compileVertexShader(string hlsl, string entry = "main");
+int compilePixelShader(string hlsl, string entry = "main");
+void setShaders(int vertexShader, int pixelShader);
+int createInputLayout(int vertexShader, list<string> names, list<int> sizes);
+void setInputLayout(int layout);
+
+int createVertexBuffer(list<float> data);
+int createIndexBuffer(list<int> indices);
+int createConstantBuffer(int floatCount);
+void updateConstantBuffer(int buffer, list<float> data);
+void setVertexBuffer(int buffer, int strideFloats);
+void setIndexBuffer(int buffer);
+void setConstantBuffer(int slot, int buffer);
+void draw(int vertexCount, int startVertex = 0);
+void drawIndexed(int indexCount, int startIndex = 0);
+
+int loadTexture(string path);
+void setTexture(int slot, int texture);
+void setTextureFilter(bool smooth);
+
+list<float> identity();
+list<float> multiply(list<float> a, list<float> b);
+list<float> perspective(float fovDegrees, float aspect, float near, float far);
+list<float> orthographic(float left, float right, float bottom, float top, float near, float far);
+list<float> lookAt(vec3 eye, vec3 target, vec3 up);
+list<float> translate(vec3 offset);
+list<float> rotate(float degrees, vec3 axis);
+list<float> scale(vec3 amount);
+
+const int POINTS = 1;
+const int LINES = 2;
+const int LINE_STRIP = 3;
+const int TRIANGLES = 4;
+const int TRIANGLE_STRIP = 5;
+const int CULL_NONE = 1;
+const int CULL_FRONT = 2;
+const int CULL_BACK = 3;
+)FRG";
+
 const std::vector<PreludeLib>& preludeLibs() {
     using K = LibKind;
     static const std::vector<PreludeLib> libs = {
@@ -524,6 +572,7 @@ const std::vector<PreludeLib>& preludeLibs() {
         {"graphics3d", kGraphics3d, true, "forge_graphics3d.hpp", K::Engine},
         {"ECS", kEcs, false, "forge_ecs.hpp"},
         {"OpenGL", kOpenGL, true, "forge_opengl.hpp", K::Toolkit, {"forge_opengl_impl.cpp"}, {"-lopengl32", "-lgdi32"}},
+        {"DirectX", kDirectX, true, "forge_directx.hpp", K::Toolkit, {"forge_directx_impl.cpp"}, {"-ld3d11", "-ldxgi", "-ld3dcompiler_47"}},
     };
     return libs;
 }

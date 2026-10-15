@@ -159,6 +159,7 @@ struct BMethod {
 const std::vector<BMethod>& bmethods() {
     static const std::vector<BMethod> t = {
         {TK::List, "add", {"E"}, "void"},
+        {TK::List, "addAll", {"list<E>"}, "void"},
         {TK::List, "insert", {"int", "E"}, "void"},
         {TK::List, "removeAt", {"int"}, "E"},
         {TK::List, "remove", {"E"}, "bool"},

@@ -1,0 +1,19 @@
+=== main.frg
+#include <DirectX>
+#include <stdio>
+
+int main(){
+    print(DirectX.TRIANGLES);
+    print(DirectX.CULL_BACK);
+    list<float> data = [];
+    data.addAll(DirectX.identity());
+    data.addAll([1, 2]);
+    print(data.length);
+    print(DirectX.perspective(90, 1, 1, 3)[10]);
+    return 0;
+}
+=== output
+4
+3
+18
+-1.5

@@ -1,0 +1,9 @@
+=== main.frg
+#include <OpenGL>
+int main(){
+    return 0;
+}
+=== other.frg
+#include <DirectX>
+=== error
+a game can only use one of <OpenGL>, <DirectX> and <Vulkan>

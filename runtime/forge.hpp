@@ -402,6 +402,11 @@ decltype(auto) at(L&& list, int64_t i, const char* where) {
 
 template <class L, class X>
 void list_add(L& l, X&& x, const char*) { l.push_back(std::forward<X>(x)); }
+template <class L, class M>
+void list_addAll(L& l, const M& more, const char*) {
+    auto copy = more;  // safe even when adding a list to itself
+    l.insert(l.end(), copy.begin(), copy.end());
+}
 template <class L, class X>
 void list_insert(L& l, int64_t i, X&& x, const char* where) {
     if (i < 0 || i > (int64_t)l.size()) panic(where, "can't insert at position " + str(i) + " (the list has " + str((int64_t)l.size()) + " items)");

@@ -287,7 +287,8 @@ std::string Gen::call(const Expr* e) {
             for (auto& a : e->args) {
                 // The element/key type the method expects, so literals are converted correctly.
                 const Type* want = a->type;
-                if (obj->kind == TK::List && callee->text != "insert" && callee->text != "removeAt") want = obj->elem;
+                if (obj->kind == TK::List && callee->text != "insert" && callee->text != "removeAt" && callee->text != "addAll")
+                    want = obj->elem;
                 if (obj->kind == TK::List && callee->text == "insert" && &a == &e->args[1]) want = obj->elem;
                 if (obj->kind == TK::Map) want = &a == &e->args[0] ? obj->key : obj->elem;
                 s += ", " + conv(a.get(), want);

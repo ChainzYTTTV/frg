@@ -1,0 +1,41 @@
+=== main.frg
+#include <stdio>
+
+enum State { Idle, Running }
+
+int main(){
+    print(int8(300));
+    print(uint8(-1));
+    print(int(3.9));
+    print(int(-3.9));
+    print(float(7) / 2);
+    print(int("  42 "));
+    print(float("2.5"));
+    print(string(true) + string(12));
+    print(int(State.Running));
+    print(State(1));
+    float result = 70 / 30;
+    print(result);
+    print(70 / 30);
+    int coins = 70;
+    int players = 30;
+    float wrong = coins / players;
+    print(wrong);
+    print(float(coins) / players);
+    return 0;
+}
+=== output
+44
+255
+3
+-3
+3.5
+42
+2.5
+true12
+1
+Running
+2.3333333
+2
+2.0
+2.3333333

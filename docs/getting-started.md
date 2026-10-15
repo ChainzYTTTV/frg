@@ -1,0 +1,145 @@
+# Getting Started
+
+This page gets you from nothing to a running game, and covers every `frg` command.
+
+## What you need
+
+| | Why |
+|---|---|
+| **Windows 10 or 11** | Forge only builds Windows games for now |
+| **w64devkit**, with its `bin` folder on your PATH | Forge turns your code into C++ and uses w64devkit's `g++` to make the `.exe` |
+| **Forge itself** (`frg.exe`), with its `bin` folder on your PATH | So you can type `frg` in any terminal |
+| **VS Code** (optional, recommended) | With the Forge extension: colors, errors as you save, a Run button |
+
+To check that everything is set up, open a terminal and run:
+
+```
+frg version
+g++ --version
+```
+
+The first should print `Forge 0.5.0` and the second should print a GCC version. If `frg` isn't found, add Forge's `bin` folder to your PATH and restart the terminal.
+
+### Building Forge from source
+
+You only need this if you're changing Forge itself. From the Forge folder:
+
+```
+cmake -S . -B build -G Ninja
+cmake --build build
+```
+
+That produces `bin/frg.exe`, with `bin/runtime/` next to it. The runtime folder must stay next to `frg.exe`.
+
+## Your first program
+
+```
+frg new hello
+cd hello
+frg run
+```
+
+`frg new` makes a folder with one file, `main.frg`:
+
+```cpp
+#include <stdio>
+
+int main(){
+    print("Hello, World!");
+    return 0;
+}
+```
+
+`frg run` checks your code, compiles it and runs it. You should see:
+
+```
+   Compiling hello (1 file)
+    Finished build/hello.exe in 1.02s
+     Running hello.exe
+Hello, World!
+```
+
+What each line of the program means:
+
+| Line | Meaning |
+|---|---|
+| `#include <stdio>` | Use the `stdio` library, which is where `print` comes from |
+| `int main(){` | The start of `main`, the function every program begins in. `int` means it gives back a whole number when it finishes. |
+| `print("Hello, World!");` | Show some text. Every statement ends with `;`. |
+| `return 0;` | Finish `main` and report "everything went fine" (0). Returning 1 means "something went wrong". |
+| `}` | The end of `main` |
+
+## The `frg` command
+
+Run these in a terminal. `[folder]` is the game's top folder (the one with `main.frg`); leave it out to use the current folder.
+
+| Command | What it does |
+|---|---|
+| `frg new <name>` | Makes a folder `<name>/` containing a starter `main.frg` |
+| `frg run [folder]` | Checks, compiles and runs the game |
+| `frg build [folder]` | Checks and compiles into `build/<folder name>.exe`, without running it |
+| `frg check [folder]` | Only looks for errors (fast, makes no `.exe`) |
+| `frg version` | Shows the Forge version |
+| `frg help` | Shows this list |
+
+Add **`--release`** to `build` or `run` when the game is finished. That makes an `.exe` without the black console window, and a bit smaller. In a release build, `print` output isn't shown anywhere.
+
+When `frg run` starts your game, the game's **working folder** is the game's top folder. That matters for files your game loads or saves; see [Files](libraries/file.md) and [Assets](libraries/assets.md).
+
+If the game crashes or `main` returns something other than 0, `frg run` says so after the game ends, for example `[hello.exe exited with code 1]`.
+
+## A game's folder
+
+```
+mygame/
+  main.frg          <- required: the game starts in its main()
+  player.frg        <- any other .frg files next to main.frg are part of the game automatically
+  enemies/          <- subfolders join the game with #include <"enemies">
+    goblin.frg
+  player.png        <- images, sounds, fonts and models your game loads
+  build/            <- made by frg: mygame.exe, plus the C++ Forge generated (you can ignore it)
+```
+
+- `main.frg` must be in the **top** folder, not in a subfolder, and it must contain `int main()`.
+- File and folder names may only use letters, numbers and `_`, and can't start with a number. They also can't be a Forge keyword or library name, so no `map.frg` or `math.frg`.
+- See [Files and folders](language/07-files-and-folders.md) for how files use each other.
+
+## Sharing your game
+
+The `.exe` in `build/` runs on any Windows PC, with nothing else installed. Everything is built into it.
+
+If your game loads images, fonts, sounds or 3D models, copy them next to the `.exe`, or into the folder above it, keeping the same sub-folders as in your game's folder. Forge looks in both places.
+
+Text files read and written with [`<file>`](libraries/file.md) work differently: they're found relative to the folder the game was **started from**. When someone double-clicks the `.exe`, that's the folder the `.exe` is in.
+
+## VS Code
+
+The Forge extension adds:
+
+| Feature | How |
+|---|---|
+| Syntax colors | Automatic for `.frg` files |
+| Errors while you work | Saving a file checks the whole game; mistakes are underlined in red, with the hint attached. The Problems panel (Ctrl+Shift+M) lists them all. |
+| Run the game | The ▶ button at the top-right of the editor, or **F5** |
+| Build only | **Ctrl+Shift+B** |
+| Autocomplete | Type a library name and a dot (`window.`, `graphics2d.`, `color.`, `Key.`) to see what's in it |
+| Hover help | Hold the mouse over a library function to see how it's used |
+| Snippets | Type `main`, `game`, `gameloop`, `class`, `struct`, `enum`, `func`, `if`, `for`, `foreach`, `while`, `switch`, `task`, `scene`, `component` or `body`, then press Tab |
+| Comments | **Ctrl+/** toggles `//` comments; **Shift+Alt+A** wraps a selection in a ` ``` ` comment |
+
+To install or update it, run `.\editors\vscode\package.ps1 -Install` from the Forge folder, then in VS Code run **Developer: Reload Window**.
+
+Settings: `forge.path` is the full path to `frg.exe` if VS Code can't find it. `forge.checkOnSave` turns checking on save on or off.
+
+## Troubleshooting
+
+| Problem | Fix |
+|---|---|
+| `frg` is not recognized | Forge's `bin` folder isn't on your PATH. Add it, then open a new terminal. |
+| `couldn't find g++` | w64devkit's `bin` folder isn't on your PATH. |
+| `there's no main.frg in ...` | You're in the wrong folder, or the file is named differently. `main.frg` must be in the game's top folder. |
+| `couldn't replace build\game.exe` | The game is still running. Close it and try again. |
+| `the C++ compiler rejected Forge's output` | That's a bug in Forge, not in your code. The message shows where the generated C++ is; please report it. |
+| `Forge's runtime files are missing` | The `runtime` folder must be next to `frg.exe`. Rebuild Forge, or copy it back. |
+| The game can't find `player.png` | Put the file in the game's top folder (next to `main.frg`), and check the spelling and capitals. |
+| VS Code shows old red underlines | Save the file again; they update on every save. |

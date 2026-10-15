@@ -1730,7 +1730,9 @@ Type* Checker::castExpr(Expr* e) {
     if (T->kind == TK::String) return T;
     if (isNumeric(T)) {
         if (isNumeric(S)) {
-            coerce(e->a.get(), T);
+            // A written-out number becomes the new type directly - unless it doesn't fit, like int8(300),
+            // which has to be converted (and wrap around) when the game runs.
+            if (!e->a->litInt || literalFits(e->a.get(), T)) coerce(e->a.get(), T);
             return T;
         }
         if (S->kind == TK::String || (S->kind == TK::Enum && T->kind == TK::Int)) return T;

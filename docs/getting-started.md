@@ -125,7 +125,7 @@ The very first time you build a game (and the first time with `--release` or wit
    Preparing Forge's runtime for these libraries (only the first time, to make later builds faster)
 ```
 
-It's getting Forge's own code ready once, so every build after that is quicker, for all your games. It's kept in a `cache` folder next to `frg.exe` (a few hundred MB at most). You can delete that folder whenever you like; Forge just makes it again.
+It's getting Forge's own code ready once, so every build after that is quicker, for all your games. It's kept in a `cache` folder next to `frg.exe` (a few hundred MB at most). When Forge (or w64devkit) is updated, the old files are deleted by themselves. You can also delete that folder whenever you like; Forge just makes it again.
 
 `--release` builds take a little longer, because they make the game run as fast as possible. Normal builds skip some of that work: they're quicker to make, and the game behaves exactly the same.
 

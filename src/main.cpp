@@ -166,23 +166,37 @@ static std::string toolStamp(const fs::path& runtime) {
     return s;
 }
 
-// The folder for one cached thing: <frg.exe's folder>/cache/<hash>, or the game's build folder if that can't be written.
-static fs::path cacheFolder(const std::string& key, const fs::path& buildDir) {
-    fs::path dir = exeDir() / "cache" / hashName(key);
+// Each cache folder has a stamp.txt naming the Forge and g++ it was made by. When a new folder is made, folders
+// from an older Forge (or another g++) are deleted, so the cache doesn't keep growing after updates.
+static void removeOldCache(const fs::path& cacheRoot, const std::string& tools) {
     std::error_code ec;
-    fs::create_directories(dir, ec);
-    if (!ec) {
-        fs::path probe = dir / "write-test";
-        std::ofstream f(probe, std::ios::binary);
-        if (f << "ok") {
-            f.close();
-            fs::remove(probe, ec);
-            return dir;
-        }
+    std::string mine = hashName(tools);
+    for (const auto& entry : fs::directory_iterator(cacheRoot, ec)) {
+        if (!entry.is_directory()) continue;
+        std::ifstream f(entry.path() / "stamp.txt");
+        std::string theirs;
+        std::getline(f, theirs);
+        f.close();
+        if (theirs != mine) fs::remove_all(entry.path(), ec);  // a folder in use by a running build just stays
     }
-    dir = buildDir / "cache" / hashName(key);
-    fs::create_directories(dir, ec);
-    return dir;
+}
+
+// The folder for one cached thing: <frg.exe's folder>/cache/<hash>, or the game's build folder if that can't be written.
+// `tools` is toolStamp(): what made it.
+static fs::path cacheFolder(const std::string& key, const std::string& tools, const fs::path& buildDir) {
+    std::error_code ec;
+    for (fs::path root : {exeDir() / "cache", buildDir / "cache"}) {
+        fs::path dir = root / hashName(tools + "|" + key);
+        if (fs::exists(dir / "stamp.txt", ec)) return dir;
+        fs::create_directories(dir, ec);
+        if (ec) continue;
+        std::ofstream f(dir / "stamp.txt", std::ios::binary);
+        if (!(f << hashName(tools) << "\n")) continue;
+        f.close();
+        removeOldCache(root, tools);
+        return dir;
+    }
+    return buildDir;
 }
 
 // Runs one g++ command that makes `output`, writing to a temporary name first so a half-written file is never used.
@@ -318,7 +332,7 @@ static bool build(const fs::path& dir, fs::path& exeOut, const BuildOptions& opt
     if (vulkan) flags += L" -I" + quote(runtime / "vulkan" / "include");
     fs::path raylib = runtime / "raylib";
     if (gen.needsRaylib) flags += L" -I" + quote(raylib / "include");
-    std::string stamp = toolStamp(runtime) + "|" + fs::path(flags).string();
+    std::string tools = toolStamp(runtime), stamp = fs::path(flags).string();
 
     // Forge's runtime headers, precompiled once (see "build cache" above). There are two sets, so that all games share
     // them: the core and the libraries that don't use raylib, and for engine games, those plus every raylib library.
@@ -333,7 +347,7 @@ static bool build(const fs::path& dir, fs::path& exeOut, const BuildOptions& opt
         }
     std::string pchText;
     for (const std::string& h : pchHeaders) pchText += "#include \"" + h + "\"\n";
-    fs::path pchDir = cacheFolder("pch|" + stamp + "|" + pchText, buildDir);
+    fs::path pchDir = cacheFolder("pch|" + stamp + "|" + pchText, tools, buildDir);
     fs::path pchHeader = pchDir / "forge_pch.hpp", pch = pchDir / "forge_pch.hpp.gch";
     if (!fs::exists(pchHeader)) {
         std::ofstream f(pchHeader, std::ios::binary);
@@ -351,7 +365,7 @@ static bool build(const fs::path& dir, fs::path& exeOut, const BuildOptions& opt
     // A toolkit's own runtime code, compiled once into an object file.
     std::vector<fs::path> objects;
     for (const std::string& src : gen.sources) {
-        fs::path obj = cacheFolder("obj|" + stamp + "|" + src, buildDir) / (fs::path(src).stem().string() + ".o");
+        fs::path obj = cacheFolder("obj|" + stamp + "|" + src, tools, buildDir) / (fs::path(src).stem().string() + ".o");
         if (!fs::exists(obj)) {
             printStatus("Preparing", src + " (only the first time)");
             if (compileTo(flags + L" -c " + quote(runtime / src), obj) != 0) {

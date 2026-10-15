@@ -94,6 +94,7 @@ Both loops do the same things each frame:
 - Drawing can happen any time after `open()`; a frame starts by itself if one isn't running.
 - Calling drawing functions before `window.open(...)` stops the game with "the window isn't open yet".
 - Escape closes the window by default.
+- If the game's folder has an `icon.png`, it becomes the window's icon (and the `.exe`'s icon). See [The game's icon](../getting-started.md#the-games-icon).
 - [`<input>`](input.md), [`<graphics2d>`](graphics2d.md), [`<graphics3d>`](graphics3d.md) and [`<ui>`](ui.md) all work with this window.
 
 ## Testing games automatically

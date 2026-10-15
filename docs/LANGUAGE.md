@@ -637,6 +637,8 @@ The screen is cleared to the background color before each frame (`window.setBack
 
 See `examples/platformer` for a complete game. The other examples are `shapes` (2D drawing), `sprites` (images and sound), `menu` (scenes and UI) and `world3d` (3D).
 
+An `icon.png` in the game's folder becomes the icon of the `.exe` and of the window.
+
 When the game is finished, `frg build --release` makes an `.exe` without the console window. Without a console, `print` output isn't shown, and runtime errors pop up in a box instead. `--no-console` turns the console off without making a release build, and `--console` keeps it on even in one. ([Details](getting-started.md#the-console-window-on-for-testing-off-for-players).)
 
 ## Errors

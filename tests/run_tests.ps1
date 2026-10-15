@@ -2,6 +2,7 @@
 #
 # A .test file is split into sections by lines like "=== name":
 #   === main.frg        a source file (any path, e.g. "=== enemies/goblin.frg")
+#   === icon.png (base64)   a binary file, written from the base64 text below it
 #   === output          the exact text the program must print
 #   === error           text that must appear in the compile errors (one check per line)
 #   === build           (empty) the program must compile; it isn't run (for games that open a window)
@@ -62,6 +63,12 @@ foreach ($file in Get-ChildItem (Join-Path $PSScriptRoot "cases") -Filter "$Filt
         $lines = $sections[$key]
         while ($lines.Count -gt 0 -and $lines[$lines.Count - 1] -eq '') { $lines.RemoveAt($lines.Count - 1) }
         if ($key -in 'output', 'error', 'build', 'warning', 'no warnings', 'runtime error') { continue }
+        if ($key -match '^(.+) \(base64\)$') {
+            $path = Join-Path $dir $Matches[1]
+            New-Item -ItemType Directory -Force (Split-Path $path) | Out-Null
+            [IO.File]::WriteAllBytes($path, [Convert]::FromBase64String(($lines -join '')))
+            continue
+        }
         $path = Join-Path $dir $key
         New-Item -ItemType Directory -Force (Split-Path $path) | Out-Null
         [IO.File]::WriteAllText($path, ($lines -join "`n") + "`n")

@@ -128,12 +128,19 @@ mygame/
   enemies/          <- subfolders join the game with #include <"enemies">
     goblin.frg
   player.png        <- images, sounds, fonts and models your game loads
+  icon.png          <- optional: the game's icon (see below)
   build/            <- made by frg: mygame.exe, plus the C++ Forge generated (you can ignore it)
 ```
 
 - `main.frg` must be in the **top** folder, not in a subfolder, and it must contain `int main()`.
 - File and folder names may only use letters, numbers and `_`, and can't start with a number. They also can't be a Forge keyword or library name, so no `map.frg` or `math.frg`.
 - See [Files and folders](language/07-files-and-folders.md) for how files use each other.
+
+### The game's icon
+
+Put a picture called **`icon.png`** in the game's top folder (next to `main.frg`), and `frg build` makes it the icon of the `.exe`, which shows in File Explorer and the taskbar. In window games it's the window's icon too. A square picture works best, ideally 256 × 256 pixels. Without an `icon.png`, the game gets Windows' plain program icon.
+
+If `icon.png` isn't really a PNG picture, Forge gives a warning and builds the game without an icon.
 
 ## Sharing your game
 

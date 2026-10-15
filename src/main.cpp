@@ -13,6 +13,7 @@
 #include <cstdio>
 #include <filesystem>
 #include <fstream>
+#include <iterator>
 #include <string>
 #include <vector>
 
@@ -193,6 +194,57 @@ static int compileTo(const std::wstring& args, const fs::path& output) {
     return code;
 }
 
+// ---------------------------------------------------------------- the game's icon
+//
+// If the game's folder has icon.png, it becomes the .exe's icon (and, through raylib's window library GLFW, which
+// looks for an icon called GLFW_ICON, the window's icon too). An .ico file can simply hold a PNG image, so the PNG's
+// bytes are wrapped in a 22-byte .ico header, and windres (part of w64devkit) turns that into an object file to link.
+// Returns the object file, or an empty path if there's no icon (or it couldn't be made, after saying why).
+static fs::path makeIcon(const fs::path& root, const fs::path& buildDir) {
+    fs::path png = root / "icon.png";
+    std::error_code ec;
+    if (!fs::is_regular_file(png, ec)) return {};
+    fs::path obj = buildDir / "icon_res.o";
+    if (fs::exists(obj, ec) && fs::last_write_time(obj, ec) >= fs::last_write_time(png, ec)) return obj;
+
+    std::ifstream in(png, std::ios::binary);
+    std::string data((std::istreambuf_iterator<char>(in)), std::istreambuf_iterator<char>());
+    static const char kPngStart[] = "\x89PNG\r\n\x1a\n";
+    if (data.size() < 24 || data.compare(0, 8, kPngStart, 8) != 0 || data.compare(12, 4, "IHDR") != 0) {
+        reportPlainWarning("icon.png isn't a PNG image, so the game won't have an icon",
+                           "save the picture as a .png file (256 x 256 pixels works best)");
+        return {};
+    }
+    auto be32 = [&](size_t at) {
+        return (uint32_t)(unsigned char)data[at] << 24 | (uint32_t)(unsigned char)data[at + 1] << 16 |
+               (uint32_t)(unsigned char)data[at + 2] << 8 | (uint32_t)(unsigned char)data[at + 3];
+    };
+    uint32_t w = be32(16), h = be32(20);
+    std::string ico;
+    auto put16 = [&](uint32_t v) { ico += (char)(v & 0xFF), ico += (char)(v >> 8 & 0xFF); };
+    auto put32 = [&](uint32_t v) { put16(v & 0xFFFF), put16(v >> 16); };
+    put16(0), put16(1), put16(1);                                    // an icon file with 1 image
+    ico += (char)(w >= 256 ? 0 : w), ico += (char)(h >= 256 ? 0 : h);  // its size (0 means 256 or more)
+    ico += '\0', ico += '\0';                                        // no palette
+    put16(1), put16(32), put32((uint32_t)data.size()), put32(22);     // 32-bit color, the PNG's size, where it starts
+    ico += data;
+    {
+        std::ofstream f(buildDir / "icon.ico", std::ios::binary);
+        f << ico;
+        std::ofstream rc(buildDir / "icon.rc", std::ios::binary);
+        rc << "GLFW_ICON ICON \"icon.ico\"\n";
+    }
+    int code = runProcess(L"windres -O coff -i icon.rc -o icon_res.o", buildDir);
+    if (code != 0) {
+        reportPlainWarning("couldn't put icon.png into the .exe, so it won't have an icon",
+                           code == -1 ? "windres, which comes with w64devkit, wasn't found - is w64devkit's bin folder on your PATH?"
+                                      : "windres didn't accept it - try saving icon.png again with a paint program");
+        fs::remove(obj, ec);
+        return {};
+    }
+    return obj;
+}
+
 // While the game runs, Ctrl+C should stop the game, not Forge.
 static BOOL WINAPI ignoreCtrlC(DWORD type) { return type == CTRL_C_EVENT || type == CTRL_BREAK_EVENT; }
 
@@ -310,6 +362,8 @@ static bool build(const fs::path& dir, fs::path& exeOut, const BuildOptions& opt
 
     std::wstring cmd = L"g++ " + flags + L" -I" + quote(pchDir) + L" " + quote(cppPath);
     for (const fs::path& obj : objects) cmd += L" " + quote(obj);
+    fs::path icon = makeIcon(proj.root, buildDir);
+    if (!icon.empty()) cmd += L" " + quote(icon);
     cmd += L" -o " + quote(exe) + L" -static";
     if (!opt.console) cmd += L" -mwindows";
     if (opt.release) cmd += L" -s";  // a smaller .exe

@@ -171,6 +171,16 @@ inline void open_(int32_t width, int32_t height, const std::string& title) {
     SetTraceLogLevel(LOG_WARNING);
     InitWindow(width, height, title.c_str());
     SetTargetFPS(60);
+    // icon.png in the game's folder becomes the window's icon (frg build also puts it into the .exe).
+    std::string icon = findGameFile("icon.png");
+    if (!icon.empty()) {
+        ::Image img = LoadImage(icon.c_str());
+        if (img.data) {
+            ImageFormat(&img, PIXELFORMAT_UNCOMPRESSED_R8G8B8A8);
+            SetWindowIcon(img);
+            UnloadImage(img);
+        }
+    }
     s.open = true;
     addHook(shutdownHooks(), &close_);
     auto& at = autotest::st();

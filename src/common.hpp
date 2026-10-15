@@ -34,6 +34,8 @@ void reportError(const Loc& loc, const std::string& msg, const std::string& hint
 void reportWarning(const Loc& loc, const std::string& msg, const std::string& hint = "");
 // Prints the collected warnings and returns how many there were. While there are errors, only editors see them.
 int flushWarnings();
+// A warning about the game's files rather than a line of code (like a broken icon.png). Printed straight away.
+void reportPlainWarning(const std::string& msg, const std::string& hint = "");
 void reportPlainError(const std::string& msg, const std::string& hint = "");
 void printStatus(const std::string& label, const std::string& msg);
 int errorCount();

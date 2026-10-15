@@ -1,0 +1,14 @@
+=== main.frg
+#include <stdio>
+
+int main(){
+    print("still builds");
+    return 0;
+}
+=== icon.png
+this is text, not a picture
+=== output
+still builds
+=== warning
+warning: icon.png isn't a PNG image, so the game won't have an icon
+hint: save the picture as a .png file (256 x 256 pixels works best)

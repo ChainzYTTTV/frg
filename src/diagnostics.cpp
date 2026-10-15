@@ -109,6 +109,10 @@ void reportWarning(const Loc& loc, const std::string& msg, const std::string& hi
     g_warnings.push_back({loc, msg, hint});
 }
 
+void reportPlainWarning(const std::string& msg, const std::string& hint) {
+    if (!g_machine) printDiagnostic(true, Loc{}, msg, hint);
+}
+
 int flushWarnings() {
     // For people, warnings wait until the errors are fixed, so the errors stand out. Editors get both.
     if (g_errors > 0 && !g_machine) return 0;

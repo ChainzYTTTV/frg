@@ -78,6 +78,8 @@ Commands, typed in a terminal inside the game's folder:
 | `frg build --release` | the finished game: no console window, smaller `.exe` |
 | `--no-console` / `--console` | add to `run` or `build` to turn the console window off or on |
 
+A picture called `icon.png` in the game's top folder becomes the `.exe`'s icon and the window's icon (square, ideally 256 × 256). Without one, the game just gets the plain Windows icon.
+
 The **console window** (the black window next to the game) shows `print` output and errors. It's on while testing. Turn it off with `--no-console` to see the game as players will, and `--release` turns it off for the finished game. Without a console, runtime errors pop up in a box titled "The game stopped". Text-only programs need the console: without it nothing shows. In VS Code, **Forge: Turn the Console On/Off** switches it for the ▶ button, and **Forge: Build Release** builds the finished game.
 
 In **VS Code** (with the Forge extension): errors are underlined when you save, the **▶ button** at the top right (or **F5**) runs the game, typing `window.` or `color.` shows autocomplete, and snippets like `game`, `class` and `foreach` insert templates.

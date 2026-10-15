@@ -380,7 +380,7 @@ int score = 10;
 addOne(score);        // score is now 11
 ```
 
-Don't keep a pointer to a function's local variable after that function ends.
+Don't keep a pointer to a function's local variable after that function ends. `p.remove()` makes a pointer point at nothing: `p.isRemoved()` is then true, and using `p` stops the game with a clear message ("this pointer was removed ...") until it's pointed at something again (`p = score;`).
 
 ## Tasks: waiting without freezing the game
 

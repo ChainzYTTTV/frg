@@ -1,0 +1,11 @@
+=== main.frg
+int main(){
+    int score = 10;
+    Pointer<int> p = score;
+    p.remove(3);
+    bool b = p.isRemoved(1);
+    return 0;
+}
+=== error
+a Pointer<int> only has '.value', remove() and isRemoved()
+isRemoved() needs 0 values, but got 1

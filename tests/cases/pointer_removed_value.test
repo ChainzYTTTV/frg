@@ -1,0 +1,12 @@
+=== main.frg
+#include <stdio>
+
+int main(){
+    int score = 10;
+    Pointer<int> p = score;
+    p.remove();
+    print(p.value);
+    return 0;
+}
+=== runtime error
+main.frg:7: this pointer was removed (with remove()), so it doesn't point at anything any more

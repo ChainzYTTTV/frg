@@ -1,0 +1,16 @@
+=== main.frg
+#include <stdio>
+
+struct Point {
+    float x;
+}
+
+int main(){
+    Point pt = Point(1);
+    Pointer<Point> pp = pt;
+    pp.remove();
+    pp.x = 3;
+    return 0;
+}
+=== runtime error
+main.frg:11: this pointer was removed (with remove()), so it doesn't point at anything any more

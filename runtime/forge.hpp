@@ -380,6 +380,21 @@ P&& nn(P&& p, const char* where, const char* what) {
     return std::forward<P>(p);
 }
 
+// Pointer<T>: p.remove() makes it point at nothing; using it after that stops the game with a clear message.
+template <class T>
+T* live(T* p, const char* where) {
+    if (p == nullptr)
+        panic(where, "this pointer was removed (with remove()), so it doesn't point at anything any more - point it at "
+                     "something again first (p = someVariable;), or check p.isRemoved()");
+    return p;
+}
+template <class T>
+void ptr_remove(T*& p, const char*) { p = nullptr; }
+template <class T>
+bool ptr_isRemoved(T* p, const char*) { return p == nullptr; }
+template <class T, class F>
+std::string strPtr(T* p, F&& show) { return p ? show(*p) : std::string("removed pointer"); }
+
 template <class T, class B>
 T orElse(const std::optional<T>& o, B&& b) { return o ? *o : T(std::forward<B>(b)); }
 template <class T, class B>

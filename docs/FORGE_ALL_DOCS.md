@@ -478,7 +478,7 @@ Pointer<int> p = score;       // points at score
 p.value = 50;                 // score is now 50
 ```
 
-A pointer must point at a variable, field or list item. Don't keep one pointing at a function's local variable after that function ends. Pointers are rarely needed, since classes are already shared, so teach them late.
+A pointer must point at a variable, field or list item. Don't keep one pointing at a function's local variable after that function ends. `p.remove()` throws a pointer away (the variable it pointed at is untouched): afterwards `p.isRemoved()` is true, and using `p` stops the game with "this pointer was removed (with remove()) ..." until it's pointed at something again with `p = someVariable;`. With a pointer to a list or map, `p.remove(x)` (with a value) is still the list's own remove. Pointers are rarely needed, since classes are already shared, so teach them late.
 
 #### Built-in types (always available, no include)
 
@@ -3940,6 +3940,27 @@ print(score);               // 50
 - For a pointer to a struct, fields can be used directly: `Pointer<Point> pp = p; pp.x = 5;`.
 - A `Pointer<T>` must start pointing at something. `Pointer<T>?` can be `null`.
 
+#### Throwing a pointer away: remove()
+
+`p.remove()` makes the pointer point at nothing. The thing it pointed at isn't changed; only the pointer lets go of it. After that, `p.isRemoved()` is `true`, and using `p` stops the game with a clear message instead of doing something strange:
+
+```cpp
+int score = 10;
+Pointer<int> p = score;
+p.remove();
+print(p.isRemoved());    // true
+print(score);            // 10 - score itself is fine
+p.value = 5;             // stops the game: "this pointer was removed (with remove()), so it doesn't point at anything any more"
+p = score;               // pointing it at something again makes it usable again
+```
+
+| | What it does |
+|---|---|
+| `p.remove()` | makes `p` point at nothing |
+| `p.isRemoved()` | `true` after `remove()`, until `p` is pointed at something again |
+
+If a pointer points at a list or a map, `p.remove(x)` **with** a value is still the list's (or map's) own `remove`. Only `p.remove()` with nothing in the brackets is the pointer's.
+
 #### When to use pointers
 
 Rarely. Class objects are already shared (a function that gets a `Player` can change it), so pointers are only needed to let a function change a caller's **number, bool, string, struct or list** variable. Often it's clearer to return the new value instead:
@@ -3953,7 +3974,7 @@ score = addOne(score);
 
 #### Danger: don't keep pointers to things that go away
 
-A pointer to a function's local variable stops being valid when that function ends, and the same goes for a pointer to a list item once the list grows or shrinks. Forge can't always catch this. Using such a pointer gives garbage values or a crash. Keep pointers short-lived: pass them into a function, and don't store them.
+A pointer to a function's local variable stops being valid when that function ends, and the same goes for a pointer to a list item once the list grows or shrinks. Forge can't always catch this. Using such a pointer gives garbage values or a crash. Keep pointers short-lived: pass them into a function, and don't store them. When you do keep one and you're done with it, `p.remove()` it, so using it by mistake gives a clear error.
 
 ### What's next
 
@@ -8490,7 +8511,7 @@ int score = 10;
 addOne(score);        // score is now 11
 ```
 
-Don't keep a pointer to a function's local variable after that function ends.
+Don't keep a pointer to a function's local variable after that function ends. `p.remove()` makes a pointer point at nothing: `p.isRemoved()` is then true, and using `p` stops the game with a clear message ("this pointer was removed ...") until it's pointed at something again (`p = score;`).
 
 ### Tasks: waiting without freezing the game
 

@@ -211,6 +211,8 @@ const std::vector<BMethod>& bmethods() {
         {TK::String, "isInt", {}, "bool"},
         {TK::String, "isFloat", {}, "bool"},
         {TK::Task, "isDone", {}, "bool"},
+        {TK::Pointer, "remove", {}, "void"},
+        {TK::Pointer, "isRemoved", {}, "bool"},
         {TK::Task, "stop", {}, "void"},
     };
     return t;
@@ -247,6 +249,7 @@ private:
     TypeDecl* curType = nullptr;
     std::vector<std::map<std::string, VarDecl*>> scopes;
     std::vector<char> breakables;  // 'l' for a loop, 's' for a switch
+    size_t callArgs = SIZE_MAX;    // while checking the callee of a call: how many values it's called with
 
     // For warnings
     std::vector<VarDecl*> structLoopVars;  // the struct variables of the for (T x in list) loops we're inside
@@ -1048,6 +1051,16 @@ void Checker::valueMember(Expr* e, Expr* o) {
         e->type = t->elem;
         return;
     }
+    // The pointer's own methods. p.remove(x) with a value still goes to a list or map it points at.
+    if (t->kind == TK::Pointer && (n == "isRemoved" || (n == "remove" && callArgs == 0))) {
+        auto& tbl = bmethods();
+        for (size_t i = 0; i < tbl.size(); i++)
+            if (tbl[i].on == TK::Pointer && n == tbl[i].name) r.index = (int)i;
+        r.kind = RK::BuiltinMethod;
+        if (n == "remove" && !isLvalue(o))
+            reportError(o->loc, "only a Pointer variable or field can be removed", "store the pointer in a variable first");
+        return;
+    }
     Type* d = derefType(t);
     if (d->kind == TK::Struct || d->kind == TK::Class) {
         if (VarDecl* f = findField(d->decl, n)) {
@@ -1091,7 +1104,7 @@ void Checker::valueMember(Expr* e, Expr* o) {
         return;
     }
     if (t->kind == TK::Pointer)
-        reportError(e->loc, "a Pointer<" + t->elem->name + "> only has '.value'", "use p.value to read or change what it points at");
+        reportError(e->loc, "a Pointer<" + t->elem->name + "> only has '.value', remove() and isRemoved()", "use p.value to read or change what it points at");
     else
         reportError(e->loc, "'" + o->text + "' is " + aType(t) + ", which has nothing inside it to reach with '.'");
 }
@@ -1341,7 +1354,10 @@ Type* Checker::construct(Expr* e, std::vector<ExprPtr>& args, TypeDecl* d) {
 Type* Checker::callExpr(Expr* e, Type* expected) {
     (void)expected;
     Expr* callee = e->a.get();
+    size_t outer = callArgs;
+    callArgs = e->args.size();
     expr(callee, nullptr, true);
+    callArgs = outer;
     switch (callee->res.kind) {
         case RK::Func: {
             Module* m = callee->res.module ? callee->res.module : callee->res.func->module;

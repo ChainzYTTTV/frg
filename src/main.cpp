@@ -111,7 +111,7 @@ static bool compileShaders(const fs::path& root, const fs::path& runtime) {
                 size_t end = out.find('\n', start);
                 if (end == std::string::npos) end = out.size();
                 std::string line = out.substr(start, end - start);
-                if (!line.empty() && line.back() == '\r') line.pop_back();
+                while (!line.empty() && (line.back() == '\r' || line.back() == ' ')) line.pop_back();
                 if (line.starts_with("ERROR: ") && line.find("compilation terminated") == std::string::npos &&
                     line.find("compilation errors") == std::string::npos) {
                     line = line.substr(7);

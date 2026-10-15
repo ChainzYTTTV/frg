@@ -60,6 +60,38 @@ print("Use {{braces}} like this");   // Use {braces} like this
 
 Any other letter after `\` is an error.
 
+## Raw text
+
+Normal text has to start and end on the same line. For longer text, write it between **three** double quotes, `"""`. This is called **raw text**:
+
+```cpp
+string HELP = """
+Arrow keys: move
+Space: jump
+Escape: quit
+""";
+print(HELP);
+```
+
+Raw text is used exactly as written:
+
+- **It can go over many lines.** A line break straight after the opening `"""` is left out, so the text above starts with `Arrow keys`. The line break before the closing `"""` is kept.
+- **Escapes don't work.** `\n` stays as a backslash and an `n`. `{ }` doesn't put values in: `"""{score}"""` is the text `{score}`.
+- **It can contain `"` and `\`.** The only thing it can't contain is `"""`, which ends it.
+
+That makes raw text the way to write things like shader code for [`<OpenGL>`](../libraries/opengl.md) and [`<DirectX>`](../libraries/directx.md), maps made of characters, or Windows paths:
+
+```cpp
+string LEVEL = """
+##########
+#..P....$#
+##########
+""";
+string folder = """C:\Games\forge""";
+```
+
+To put values into longer text, add them on with `+`: `"""Score: """ + "{score}"`.
+
 ## Comparing text
 
 | | Example | |

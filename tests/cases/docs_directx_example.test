@@ -1,0 +1,50 @@
+=== main.frg
+#include <DirectX>
+
+string SHADER = """
+struct VertexIn {
+    float2 position : POSITION;
+    float3 color : COLOR;
+};
+
+struct PixelIn {
+    float4 position : SV_POSITION;
+    float3 color : COLOR;
+};
+
+PixelIn vsMain(VertexIn v) {
+    PixelIn o;
+    o.position = float4(v.position, 0.0, 1.0);
+    o.color = v.color;
+    return o;
+}
+
+float4 psMain(PixelIn p) : SV_TARGET {
+    return float4(p.color, 1.0);
+}
+""";
+
+int main(){
+    DirectX.openWindow(800, 600, "Triangle");
+    int vs = DirectX.compileVertexShader(SHADER, "vsMain");
+    int ps = DirectX.compilePixelShader(SHADER, "psMain");
+    int layout = DirectX.createInputLayout(vs, ["POSITION", "COLOR"], [2, 3]);
+
+    // Each corner: x y, then r g b.
+    int corners = DirectX.createVertexBuffer([
+        -0.5, -0.5,   1, 0, 0,
+         0.5, -0.5,   0, 1, 0,
+         0.0,  0.5,   0, 0, 1
+    ]);
+
+    DirectX.setShaders(vs, ps);
+    DirectX.setInputLayout(layout);
+    DirectX.setVertexBuffer(corners, 5);
+    while (!DirectX.shouldClose()) {
+        DirectX.clear(0.1, 0.1, 0.15, 1);
+        DirectX.draw(3);
+    }
+    DirectX.closeWindow();
+    return 0;
+}
+=== build

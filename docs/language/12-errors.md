@@ -109,7 +109,10 @@ Tips:
 | Error | What it means | Fix |
 |---|---|---|
 | `there's no library called <stdoi>` + did you mean | a typo in an include | `#include <stdio>` |
-| `the <OpenGL> library isn't built yet` | it's planned, but doesn't exist yet | |
+| `the <network> library isn't built yet` | it's planned, but doesn't exist yet | |
+| `<OpenGL> is a separate toolkit, so it can't be used together with Forge's engine (<window>)` | the [low-level toolkits](../libraries/toolkits.md) replace the engine; they can't be mixed with it | use the engine **or** the toolkit, not both |
+| `a game can only use one of <OpenGL>, <DirectX> and <Vulkan>` | | pick one toolkit |
+| `the shader shape.frag has errors` | a `<Vulkan>` shader file has a mistake; the lines below say where | fix the shader |
 | `there's no folder called 'x' next to this file` | `#include <"x">`, but no such folder | check the name and where the folder is |
 | `the file name 'my game.frg' can't be used` | file names can only have letters, numbers and `_` | rename the file |
 

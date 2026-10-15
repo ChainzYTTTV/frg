@@ -50,6 +50,7 @@ Go in this order. Each stage ends with a small project. Move at the learner's pa
 | 18. Checking kinds, hiding things | `is` / `as`, `private`, several constructors | Different enemy types in one list |
 | 19. Components | `<ECS>` | Rebuild a small game out of components |
 | 20. 3D | `<graphics3d>` | A spinning cube scene |
+| 21. (Optional, advanced) Graphics APIs | `<OpenGL>` first, then `<DirectX>` or `<Vulkan>` if they're curious. Only if the learner asks: the engine is all they need for games. | One colored triangle, then a spinning cube |
 
 ---
 
@@ -135,6 +136,7 @@ string full = "Game" + " Over";         // + joins two pieces of text
 ```
 
 - Escapes: `\n` new line, `\t` tab, `\"` quote, `\\` backslash, `{{` or `\{` for a literal `{`, and `}}` or `\}` for a literal `}`.
+- **Raw text** goes between three quotes, `"""like this"""`, and can cover many lines. It's used exactly as written: escapes and `{ }` don't work inside it, and it can contain `"` and `\`. A line break straight after the opening `"""` is left out. It's mainly for shader code, maps made of characters, and Windows paths.
 - `"Score: " + 5` is an **error**. Write `"Score: {5}"` instead.
 - Text has `.length` (no parentheses) and these methods: `contains(t)`, `indexOf(t)` (-1 if not found), `startsWith(t)`, `endsWith(t)`, `upper()`, `lower()`, `trim()`, `replace(old, new)`, `split(separator)` (gives a list), `substring(start, count)`, `charAt(i)` (gives a one-letter string), `repeat(n)`, `isEmpty()`.
 - Text **can't** be indexed with `[ ]`. Use `charAt(i)`.
@@ -266,7 +268,7 @@ print(ages["Ana"]);
 if (ages.has("Zed")) { print("found"); }
 ```
 
-- **List methods:** `.length`, `add(x)`, `insert(i, x)`, `removeAt(i)` (gives back the removed item), `remove(x)` (removes the first match and gives true/false), `contains(x)`, `indexOf(x)`, `first()`, `last()`, `pop()` (removes and gives back the last item), `clear()`, `isEmpty()`, `sort()` (numbers or text only), `reverse()`, `copy()`.
+- **List methods:** `.length`, `add(x)`, `addAll(otherList)` (adds every item of another list to the end), `insert(i, x)`, `removeAt(i)` (gives back the removed item), `remove(x)` (removes the first match and gives true/false), `contains(x)`, `indexOf(x)`, `first()`, `last()`, `pop()` (removes and gives back the last item), `clear()`, `isEmpty()`, `sort()` (numbers or text only), `reverse()`, `copy()`.
 - **Map methods:** `.length`, `has(key)`, `get(key, backup)`, `remove(key)`, `keys()` (a list), `values()` (a list), `clear()`, `isEmpty()`.
 - Map keys can be numbers, text, bools or enums.
 - An empty list or map needs its type written out: `list<int> xs = [];` or `map<string, int> m = {};`.
@@ -468,6 +470,7 @@ Library functions are reached through the library name (`window.open(...)`). Lib
 | `<ui>` | `ui.button(rect, "text")` (true when clicked), `ui.checkbox(rect, "text", checked)` (new value), `ui.slider(rect, value, min, max)` (new value), `ui.label(text, x, y, size, color)`, `ui.panel(rect)`, `ui.setTheme(bg, accent, text)` |
 | `<ECS>` | the `Entity` and `Component` classes, `ECS.create(name)`, `add(entity)`, `update(dt)`, `draw()`, `find(name)`, `all()`, `withComponent("Type")`, `clear()`, `count()` |
 | `<tasks>` | `tasks.update(dt)`, `runAll()`, `count()`, `stopAll()` (only needed without a window) |
+| `<OpenGL>` `<DirectX>` `<Vulkan>` | low-level toolkits for writing your own rendering, **instead of** the engine (see "Low-level toolkits" below) |
 
 The details of the newer libraries are in "More libraries" after the Physics section.
 
@@ -608,6 +611,112 @@ void draw(){ /* draw things */ }
 
 The screen is cleared to the background color before every frame. **Escape** or the window's X closes the game. Multiply speeds by `dt` so movement is the same speed on every computer: `x += 200 * dt;` moves 200 pixels per second.
 
+### Low-level toolkits (advanced, optional)
+
+`<OpenGL>`, `<DirectX>` and `<Vulkan>` let advanced users draw with a real graphics API, writing their own shaders. **Only teach these if the learner asks.** Forge's engine is all anyone needs to make games.
+
+The rules, which the learner chose on purpose:
+
+- A toolkit is **not** part of the engine, and the engine can't be switched over to use one.
+- A game that includes a toolkit **can't** include `<window>`, `<input>`, `<graphics2d>`, `<graphics3d>`, `<assets>` or `<ui>`. Doing so is a build error: "<OpenGL> is a separate toolkit, so it can't be used together with Forge's engine (<window>)".
+- A game can use only **one** toolkit.
+- `<stdio>`, `<math>`, `<random>`, `<time>`, `<file>`, `<audio>`, `<physics>`, `<scenes>`, `<ECS>` and tasks still work with a toolkit.
+
+Every toolkit has the same window, keyboard and mouse functions, with its own name in front:
+
+- the window: `openWindow(w, h, title)`, `shouldClose()` (call it at the top of the loop: it shows the last frame), `closeWindow()`, `width()`, `height()`, `deltaTime()`, `time()`, `setTitle(t)`, `setVSync(on)`;
+- input: `keyDown(Key.X)`, `keyPressed`, `keyReleased`, `mouseDown(MouseButton.LEFT)`, `mousePressed`, `mouseReleased`, `mousePosition()`, `mouseWheel()`;
+- matrices, each a `list<float>` of 16 numbers: `identity()`, `multiply(a, b)`, `translate(vec3)`, `rotate(degrees, vec3 axis)`, `scale(vec3)`, `lookAt(eye, target, up)`, `perspective(fov, aspect, near, far)`, `orthographic(l, r, b, t, n, f)`.
+
+There's no `window.run()` with a toolkit: the game always writes its own `while (!X.shouldClose())` loop. Graphics objects are `int` handles.
+
+**`<OpenGL>`** (OpenGL 3.3) is the one to start with. Its functions are the real OpenGL ones without the `gl` prefix (`OpenGL.clearColor`, `OpenGL.TRIANGLES`), so OpenGL tutorials can be followed. One difference: `vertexAttribPointer(index, size, strideFloats, offsetFloats)` counts in floats, not bytes.
+
+```cpp
+#include <OpenGL>
+
+string VERTEX = """
+#version 330 core
+layout (location = 0) in vec2 position;
+layout (location = 1) in vec3 color;
+out vec3 vColor;
+void main() {
+    gl_Position = vec4(position, 0.0, 1.0);
+    vColor = color;
+}
+""";
+
+string FRAGMENT = """
+#version 330 core
+in vec3 vColor;
+out vec4 fragColor;
+void main() {
+    fragColor = vec4(vColor, 1.0);
+}
+""";
+
+int main(){
+    OpenGL.openWindow(800, 600, "Triangle");
+    int program = OpenGL.buildProgram(VERTEX, FRAGMENT);
+    list<float> corners = [
+        -0.5, -0.5,   1, 0, 0,
+         0.5, -0.5,   0, 1, 0,
+         0.0,  0.5,   0, 0, 1
+    ];
+    int vao = OpenGL.genVertexArray();
+    OpenGL.bindVertexArray(vao);
+    int vbo = OpenGL.genBuffer();
+    OpenGL.bindBuffer(OpenGL.ARRAY_BUFFER, vbo);
+    OpenGL.bufferData(OpenGL.ARRAY_BUFFER, corners, OpenGL.STATIC_DRAW);
+    OpenGL.vertexAttribPointer(0, 2, 5, 0);
+    OpenGL.enableVertexAttribArray(0);
+    OpenGL.vertexAttribPointer(1, 3, 5, 2);
+    OpenGL.enableVertexAttribArray(1);
+    while (!OpenGL.shouldClose()) {
+        OpenGL.clearColor(0.1, 0.1, 0.15, 1);
+        OpenGL.clear(OpenGL.COLOR_BUFFER_BIT);
+        OpenGL.useProgram(program);
+        OpenGL.bindVertexArray(vao);
+        OpenGL.drawArrays(OpenGL.TRIANGLES, 0, 3);
+    }
+    OpenGL.closeWindow();
+    return 0;
+}
+```
+
+The other OpenGL functions:
+
+| Group | Functions |
+|---|---|
+| state | `clear(mask)` `viewport` `enable` `disable` `blendFunc` `depthFunc` `cullFace` `lineWidth` `getError` |
+| shaders | `createShader` `shaderSource` `compileShader` `shaderCompiled` `shaderLog` `deleteShader` `createProgram` `attachShader` `linkProgram` `programLinked` `programLog` `useProgram` `deleteProgram` |
+| uniforms | `getUniformLocation` `getAttribLocation` `uniform1f`…`uniform4f` `uniform1i` `uniformMatrix4(location, list<float>)` |
+| buffers | `genVertexArray` `bindVertexArray` `deleteVertexArray` `genBuffer` `bindBuffer` `deleteBuffer` `bufferData(target, list<float>, usage)` `bufferDataInts(target, list<int>, usage)` `vertexAttribPointer` `enableVertexAttribArray` |
+| drawing | `drawArrays(mode, first, count)` `drawElements(mode, count)` |
+| textures | `loadTexture(path)` (texture coordinate (0, 0) is the bottom-left) `genTexture` `bindTexture` `deleteTexture` `activeTexture` `texParameteri` `generateMipmap` |
+
+**`<DirectX>`** (Direct3D 11) takes HLSL shader text. In order:
+
+- shaders: `compileVertexShader(hlsl, entry)` and `compilePixelShader(hlsl, entry)`, then `setShaders(vs, ps)`;
+- the layout of each corner: `createInputLayout(vs, ["POSITION", "COLOR"], [2, 3])`, then `setInputLayout`;
+- buffers: `createVertexBuffer(list<float>)`, `setVertexBuffer(buffer, strideFloats)`, `createIndexBuffer(list<int>)` and `setIndexBuffer`;
+- values for the shaders: `createConstantBuffer(floatCount)`, `updateConstantBuffer(buffer, list<float>)` and `setConstantBuffer(slot, buffer)`;
+- each frame: `clear(r, g, b, a)`, then `draw(count)` or `drawIndexed(count)`.
+
+Settings: `setDepthTest`, `setBlending`, `setCulling(DirectX.CULL_BACK)`, `setTopology(DirectX.TRIANGLES)`. Textures use `loadTexture` ((0, 0) is the top-left), `setTexture(slot, texture)` and `setTextureFilter(smooth)`. `adapterName()` gives the graphics card's name.
+
+**`<Vulkan>`** takes compiled shaders. The learner writes GLSL files (`#version 450`) in the game folder, like `shape.vert` and `shape.frag`. `frg build` compiles each one to `shape.vert.spv`, and a shader mistake fails the build with the line number. In the game:
+
+- loading: `loadShader("shape.vert.spv")`, then `createPipeline(vs, fs, [3, 3], pushConstantFloats)`. The list gives each vertex input's size in floats.
+- settings, which apply to pipelines made after them: `setTopology`, `setDepthTest`, `setCulling`, `setBlending`.
+- buffers: `createVertexBuffer(list<float>)` and `createIndexBuffer(list<int>)`.
+- each frame: `if (Vulkan.beginFrame(r, g, b, a)) { bindPipeline(p); pushConstants(p, list<float>); bindVertexBuffer(b); bindIndexBuffer(b); draw(n) or drawIndexed(n); endFrame(); }`. `beginFrame` is false when the window is minimized.
+- values for the shaders go through **push constants**: a `layout(push_constant) uniform` block, with room for at least 32 floats.
+- `deviceName()` gives the graphics card's name.
+- Vulkan has no textures yet.
+
+The finished cube examples are in `examples/opengl`, `examples/directx` and `examples/vulkan`.
+
 ### Error messages
 
 Mistakes are caught before the game runs. Each message shows the file, the line, an arrow at the problem, and usually a hint:
@@ -660,8 +769,8 @@ Runtime error in main.frg:10: position 5 is outside the list (it has 3 items, at
 - Two functions or methods with the same name (only constructors can share a name), operator overloading for your own types
 - Interfaces, abstract classes, `protected`, `static` fields or methods in your own types
 - `do ... while`, labeled breaks, exceptions (`try` / `catch`), `goto`
-- Networking, gamepads/controllers, shaders, 3D lighting, cameras that scroll or zoom in 2D, text input boxes in `<ui>`
-- Libraries with these names are planned but **don't exist yet**: `<OpenGL>` `<Vulkan>` `<DirectX>`. They're planned as separate low-level toolkits for advanced users, **not** as part of the built-in engine.
+- Networking, gamepads/controllers, shaders in the engine, 3D lighting, cameras that scroll or zoom in 2D, text input boxes in `<ui>`
+- `<network>` is planned but **doesn't exist yet**.
 
 ---
 

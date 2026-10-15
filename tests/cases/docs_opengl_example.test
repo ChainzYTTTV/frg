@@ -1,0 +1,54 @@
+=== main.frg
+#include <OpenGL>
+
+string VERTEX = """
+#version 330 core
+layout (location = 0) in vec2 position;
+layout (location = 1) in vec3 color;
+out vec3 vColor;
+void main() {
+    gl_Position = vec4(position, 0.0, 1.0);
+    vColor = color;
+}
+""";
+
+string FRAGMENT = """
+#version 330 core
+in vec3 vColor;
+out vec4 fragColor;
+void main() {
+    fragColor = vec4(vColor, 1.0);
+}
+""";
+
+int main(){
+    OpenGL.openWindow(800, 600, "Triangle");
+    int program = OpenGL.buildProgram(VERTEX, FRAGMENT);
+
+    // Each corner: x y, then r g b.
+    list<float> corners = [
+        -0.5, -0.5,   1, 0, 0,
+         0.5, -0.5,   0, 1, 0,
+         0.0,  0.5,   0, 0, 1
+    ];
+    int vao = OpenGL.genVertexArray();
+    OpenGL.bindVertexArray(vao);
+    int vbo = OpenGL.genBuffer();
+    OpenGL.bindBuffer(OpenGL.ARRAY_BUFFER, vbo);
+    OpenGL.bufferData(OpenGL.ARRAY_BUFFER, corners, OpenGL.STATIC_DRAW);
+    OpenGL.vertexAttribPointer(0, 2, 5, 0);    // position: 2 floats, every 5 floats, starting at 0
+    OpenGL.enableVertexAttribArray(0);
+    OpenGL.vertexAttribPointer(1, 3, 5, 2);    // color: 3 floats, starting at float 2
+    OpenGL.enableVertexAttribArray(1);
+
+    while (!OpenGL.shouldClose()) {
+        OpenGL.clearColor(0.1, 0.1, 0.15, 1);
+        OpenGL.clear(OpenGL.COLOR_BUFFER_BIT);
+        OpenGL.useProgram(program);
+        OpenGL.bindVertexArray(vao);
+        OpenGL.drawArrays(OpenGL.TRIANGLES, 0, 3);
+    }
+    OpenGL.closeWindow();
+    return 0;
+}
+=== build

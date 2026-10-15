@@ -21,7 +21,7 @@ Read these in order the first time.
 |---|---|---|
 | 1 | [The basics](language/01-basics.md) | How a program is laid out, `main`, statements, comments, braces, names |
 | 2 | [Variables and types](language/02-variables-and-types.md) | Every type, number sizes, `const`, converting between types, how division works |
-| 3 | [Text](language/03-text.md) | Strings, putting values inside text, escapes, every text method |
+| 3 | [Text](language/03-text.md) | Strings, putting values inside text, escapes, raw text, every text method |
 | 4 | [Operators](language/04-operators.md) | Every operator in symbol and word form, and which ones happen first |
 | 5 | [Making decisions and repeating](language/05-control-flow.md) | `if`, `while`, `for`, `for ... in`, `switch`, `break`, `continue` |
 | 6 | [Functions](language/06-functions.md) | Writing and calling functions, parameters, default values, `return` |
@@ -57,6 +57,16 @@ Everything that isn't the core language lives in a library you `#include`. See t
 | [`<ui>`](libraries/ui.md) | Buttons, checkboxes, sliders |
 | [`<ECS>`](libraries/ecs.md) | Building game objects out of components |
 | [`<tasks>`](libraries/tasks.md) | Running tasks in programs without a window |
+
+### Low-level toolkits
+
+For advanced users who want to write their own rendering with a real graphics API. These are **separate from the engine**: a game uses either the engine or one toolkit, never both. Start with [Low-Level Toolkits](libraries/toolkits.md).
+
+| Toolkit | For |
+|---|---|
+| [`<OpenGL>`](libraries/opengl.md) | OpenGL 3.3, with GLSL shaders |
+| [`<DirectX>`](libraries/directx.md) | Direct3D 11, with HLSL shaders |
+| [`<Vulkan>`](libraries/vulkan.md) | Vulkan, with GLSL shaders compiled to SPIR-V |
 
 ## Guides
 

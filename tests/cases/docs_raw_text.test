@@ -1,0 +1,28 @@
+=== main.frg
+#include <stdio>
+
+string HELP = """
+Arrow keys: move
+Space: jump
+""";
+
+int main(){
+    write(HELP);
+    int score = 5;
+    print("""{score} \n "quoted" """);
+    string folder = """C:\Games\forge""";
+    print(folder);
+    print("""Score: """ + "{score}");
+    list<int> a = [1, 2];
+    a.addAll([3, 4]);
+    a.addAll(a);
+    print(a);
+    return 0;
+}
+=== output
+Arrow keys: move
+Space: jump
+{score} \n "quoted" 
+C:\Games\forge
+Score: 5
+[1, 2, 3, 4, 1, 2, 3, 4]

@@ -1,0 +1,47 @@
+=== main.frg
+#include <Vulkan>
+
+int main(){
+    Vulkan.openWindow(800, 600, "Triangle");
+
+    int vertexShader = Vulkan.loadShader("triangle.vert.spv");
+    int fragmentShader = Vulkan.loadShader("triangle.frag.spv");
+    // Each corner: 2 floats of position (location 0), then 3 of color (location 1).
+    int pipeline = Vulkan.createPipeline(vertexShader, fragmentShader, [2, 3]);
+
+    int corners = Vulkan.createVertexBuffer([
+        -0.5,  0.5,   1, 0, 0,
+         0.5,  0.5,   0, 1, 0,
+         0.0, -0.5,   0, 0, 1
+    ]);
+
+    while (!Vulkan.shouldClose()) {
+        if (Vulkan.beginFrame(0.1, 0.1, 0.15, 1)) {
+            Vulkan.bindPipeline(pipeline);
+            Vulkan.bindVertexBuffer(corners);
+            Vulkan.draw(3);
+            Vulkan.endFrame();
+        }
+    }
+    Vulkan.closeWindow();
+    return 0;
+}
+=== triangle.vert
+#version 450
+layout(location = 0) in vec2 position;
+layout(location = 1) in vec3 color;
+layout(location = 0) out vec3 vColor;
+
+void main() {
+    gl_Position = vec4(position, 0.0, 1.0);
+    vColor = color;
+}
+=== triangle.frag
+#version 450
+layout(location = 0) in vec3 vColor;
+layout(location = 0) out vec4 outColor;
+
+void main() {
+    outColor = vec4(vColor, 1.0);
+}
+=== build

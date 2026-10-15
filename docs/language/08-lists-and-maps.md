@@ -41,6 +41,7 @@ Runtime error in main.frg:9: position 5 is outside the list (it has 3 items, at 
 |---|---|---|
 | `.length` | `int` | how many items (no `()`) |
 | `add(x)` | — | puts `x` at the end |
+| `addAll(other)` | — | puts every item of the list `other` at the end, in order: `[1, 2]` then `addAll([3, 4])` gives `[1, 2, 3, 4]` |
 | `insert(i, x)` | — | puts `x` at position `i`, moving later items along. `i` can be `length`, which is the same as `add`. |
 | `removeAt(i)` | the item | takes out the item at position `i` and gives it back |
 | `remove(x)` | `bool` | takes out the first item equal to `x`; true if one was found |

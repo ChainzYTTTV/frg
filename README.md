@@ -43,12 +43,20 @@ runtime/
   forge_ecs.hpp         <ECS>
   forge_time.hpp        <time>
   forge_file.hpp        <file>
+  forge_native.hpp      the plain Windows window shared by the low-level toolkits (code in native_window.inl)
+  forge_opengl.hpp      <OpenGL> toolkit (code in forge_opengl_impl.cpp)
+  forge_directx.hpp     <DirectX> toolkit (code in forge_directx_impl.cpp)
+  forge_vulkan.hpp      <Vulkan> toolkit (code in forge_vulkan_impl.cpp)
   raylib/               raylib 5.5 (zlib license)
+  vulkan/               Vulkan-Headers 1.3.296 (Apache 2.0 / MIT license)
+  tools/glslang.exe     glslang 16, compiles <Vulkan> shaders to SPIR-V (licenses in tools/glslang-LICENSE.txt)
 tests/             .\tests\run_tests.ps1
-examples/          hello, tour, shapes, platformer, sprites, menu, world3d
+examples/          hello, tour, shapes, platformer, sprites, menu, world3d, opengl, directx, vulkan
 ```
 
 Games that use the window, graphics, input, assets, audio or UI libraries are linked with raylib. Everything is linked statically, so the `.exe` runs on any Windows PC.
+
+The low-level toolkits (`<OpenGL>`, `<DirectX>`, `<Vulkan>`) are separate from that engine: each opens its own Win32 window, and its `_impl.cpp` file is compiled into the game only when the game uses it. `<Vulkan>` loads `vulkan-1.dll` when the game starts, so building needs no Vulkan SDK.
 
 ### Testing games automatically
 

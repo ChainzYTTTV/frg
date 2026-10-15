@@ -40,6 +40,14 @@ How libraries work:
 
 `<window>`, `<input>`, `<graphics2d>`, `<graphics3d>`, `<assets>`, `<audio>` and `<ui>` are Forge's built-in game engine. They're built on [raylib](https://www.raylib.com/), which Forge includes, and they all work together: one window, one game loop, and 2D and 3D drawing mixed in one frame.
 
-## Planned: OpenGL, Vulkan and DirectX
+## Low-level toolkits: OpenGL, DirectX and Vulkan
 
-`<OpenGL>`, `<Vulkan>` and `<DirectX>` are planned as **separate, low-level toolkits** for advanced users who want to write their own rendering. They will **not** replace or plug into the built-in engine: a game that uses one of them makes its own window and does its own drawing, instead of using `<window>`, `<graphics2d>` and the rest. Including one today gives the error "the <OpenGL> library isn't built yet".
+For advanced users who want to write their own rendering, there are three **separate** toolkits:
+
+| Toolkit | For |
+|---|---|
+| [`<OpenGL>`](opengl.md) | Drawing with OpenGL 3.3 and GLSL shaders |
+| [`<DirectX>`](directx.md) | Drawing with Direct3D 11 and HLSL shaders |
+| [`<Vulkan>`](vulkan.md) | Drawing with Vulkan and SPIR-V shaders (compiled from GLSL by `frg build`) |
+
+They are **not** part of the engine, and the engine can't be switched over to use them. A game that includes one makes its own window and does all its own drawing; it can't use `<window>`, `<input>`, `<graphics2d>`, `<graphics3d>`, `<assets>` or `<ui>`, and it can use only one toolkit. Libraries that don't draw (`<math>`, `<audio>`, `<physics>`...) still work. [Low-Level Toolkits](toolkits.md) explains it all, and lists what the three have in common.

@@ -96,6 +96,15 @@ print("Is it there? {name.contains("ero")}");
 | `\"` `\\` | a quote, a backslash |
 | `{{` and `}}`, or `\{` and `\}` | a literal `{` or `}` |
 
+**Raw text** goes between three quotes and can cover many lines. It's used exactly as written: escapes and `{ }` don't work in it. A line break straight after the opening `"""` is left out. ([Details](language/03-text.md#raw-text).)
+
+```cpp
+string SHADER = """
+#version 330 core
+void main() { }
+""";
+```
+
 Text has `.length` plus these methods: `contains(t)` `indexOf(t)` `startsWith(t)` `endsWith(t)` `upper()` `lower()` `trim()` `replace(a, b)` `split(sep)` `substring(start, count)` `charAt(i)` `repeat(n)` `isEmpty()`.
 
 ## Operators
@@ -231,7 +240,7 @@ if (ages.has("Zed")) { ... }
 
 | | Methods |
 |---|---|
-| `list<T>` | `.length` `add(x)` `insert(i, x)` `removeAt(i)` `remove(x)` `contains(x)` `indexOf(x)` `first()` `last()` `pop()` `clear()` `isEmpty()` `sort()` `reverse()` `copy()` |
+| `list<T>` | `.length` `add(x)` `addAll(otherList)` `insert(i, x)` `removeAt(i)` `remove(x)` `contains(x)` `indexOf(x)` `first()` `last()` `pop()` `clear()` `isEmpty()` `sort()` `reverse()` `copy()` |
 | `map<K, V>` | `.length` `has(key)` `get(key, backup)` `remove(key)` `keys()` `values()` `clear()` `isEmpty()` |
 
 Positions in a list start at 0. Using a position that isn't in the list, or a key that isn't in the map, stops the game with a clear message.
@@ -425,6 +434,26 @@ Each file includes the libraries it uses. Functions are reached through the libr
 
 Screen coordinates start at the **top-left** corner, and **y goes down**.
 
+### Low-level toolkits
+
+`<OpenGL>`, `<DirectX>` and `<Vulkan>` are for writing your own rendering with a real graphics API. They're **separate from the engine**: a game that includes one can't use `<window>`, `<input>`, `<graphics2d>`, `<graphics3d>`, `<assets>` or `<ui>`, and can only use one toolkit. Libraries that don't draw (`<math>`, `<audio>`, `<physics>`, `<time>`...) still work.
+
+```cpp
+#include <OpenGL>
+
+int main(){
+    OpenGL.openWindow(800, 600, "My renderer");
+    while (!OpenGL.shouldClose()) {
+        OpenGL.clearColor(0.1, 0.1, 0.15, 1);
+        OpenGL.clear(OpenGL.COLOR_BUFFER_BIT);
+        // shaders, buffers and draw calls...
+    }
+    return 0;
+}
+```
+
+All three have the same window, keyboard and mouse functions (`openWindow` `shouldClose` `closeWindow` `width` `height` `deltaTime` `time` `setTitle` `setVSync` `keyDown` `keyPressed` `keyReleased` `mouseDown` `mousePressed` `mouseReleased` `mousePosition` `mouseWheel`) and matrix helpers (`identity` `multiply` `perspective` `orthographic` `lookAt` `translate` `rotate` `scale`). See [Low-Level Toolkits](libraries/toolkits.md), and the pages for [OpenGL](libraries/opengl.md), [DirectX](libraries/directx.md) and [Vulkan](libraries/vulkan.md).
+
 ### Images, fonts and sounds
 
 Put the files in your game's folder (next to `main.frg`). Loading works anywhere, even before the window opens.
@@ -614,6 +643,6 @@ If a file has several syntax mistakes, Forge reports all of them in one go.
 
 ## Coming next
 
-- **Low-level graphics toolkits:** `<OpenGL>`, `<Vulkan>`, `<DirectX>`, for advanced users who want to write their own rendering. These are **separate** from the built-in engine: a game using one makes its own window and does its own drawing, instead of using `<window>` / `<graphics2d>` / etc.
+- **Networking:** a `<network>` library for multiplayer games
 - **Language:** generic types you write yourself (`class Box<T>`), functions as values
 - **Editor:** autocomplete for your own code (a language server)

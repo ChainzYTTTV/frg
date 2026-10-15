@@ -281,6 +281,14 @@ std::string Gen::call(const Expr* e) {
             return ref(callee) + "(" + args(e, e->args, f) + ")";
         }
         case RK::Type: return construct(e, e->args);
+        case RK::Local:
+        case RK::Global:
+        case RK::Field: {  // calling a function value
+            const Type* ft = callee->type->kind == TK::Optional ? callee->type->elem : callee->type;
+            std::string s = "::frg::fn(" + conv(callee, ft) + ", " + where(e->loc) + ")(";
+            for (size_t i = 0; i < e->args.size(); i++) s += (i ? ", " : "") + conv(e->args[i].get(), ft->params[i]);
+            return s + ")";
+        }
         case RK::BuiltinMethod: {
             if (callee->a->type->kind == TK::Pointer && (callee->text == "remove" || callee->text == "isRemoved") && e->args.empty())
                 return "::frg::ptr_" + callee->text + "(" + ex(callee->a.get()) + ", " + where(e->loc) + ")";
@@ -289,7 +297,8 @@ std::string Gen::call(const Expr* e) {
             for (auto& a : e->args) {
                 // The element/key type the method expects, so literals are converted correctly.
                 const Type* want = a->type;
-                if (obj->kind == TK::List && callee->text != "insert" && callee->text != "removeAt" && callee->text != "addAll")
+                bool takesFunction = callee->text == "removeWhere" || callee->text == "filter" || callee->text == "any" || callee->text == "sortBy";
+                if (obj->kind == TK::List && callee->text != "insert" && callee->text != "removeAt" && callee->text != "addAll" && !takesFunction)
                     want = obj->elem;
                 if (obj->kind == TK::List && callee->text == "insert" && &a == &e->args[1]) want = obj->elem;
                 if (obj->kind == TK::Map) want = &a == &e->args[0] ? obj->key : obj->elem;
@@ -430,6 +439,22 @@ std::string Gen::ex(const Expr* e) {
             return "(" + cast + " != nullptr)";
         }
         case EK::As: return "::std::dynamic_pointer_cast<" + e->opType->decl->cpp + ">(" + ex(e->a.get()) + ")";
+        case EK::Lambda: {
+            // A C++ lambda that gets copies of the variables around it (and `this`, inside a method).
+            FuncDecl* f = e->lambda.get();
+            std::string head = std::string(curType ? "[=, this]" : "[=]") + "(" + params(f) + ") mutable -> " + f->ret->cpp + " {\n";
+            std::string savedOut = std::move(out);
+            FuncDecl* savedFn = fn;
+            out.clear();
+            ind++;
+            fn = f;
+            children(f->body.get());
+            fn = savedFn;
+            ind--;
+            std::string body = std::move(out);
+            out = std::move(savedOut);
+            return head + body + std::string(ind * 4, ' ') + "}";
+        }
     }
     return "/*?*/";
 }

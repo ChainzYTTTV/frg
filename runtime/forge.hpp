@@ -2,6 +2,7 @@
 // Names the generated code uses end in '_' (Forge names) or contain '$' (Forge internals).
 #pragma once
 
+#include <functional>
 #include <algorithm>
 #include <charconv>
 #include <chrono>
@@ -499,6 +500,48 @@ template <class L>
 void list_sort(L& l, const char*) { std::sort(l.begin(), l.end()); }
 template <class L>
 std::decay_t<L> list_copy(const L& l, const char*) { return l; }
+// Calling a function value that was never given a function.
+template <class F>
+F& fn(F& f, const char* where) {
+    if (!f) panic(where, "this function value is empty - give it a function before calling it");
+    return f;
+}
+template <class F>
+const F& fn(const F& f, const char* where) {
+    if (!f) panic(where, "this function value is empty - give it a function before calling it");
+    return f;
+}
+
+// The list methods that take a function value. The list is copied first where the function could change it.
+template <class L, class F>
+void list_removeWhere(L& l, F f, const char*) {
+    std::decay_t<L> kept;
+    for (auto& x : std::decay_t<L>(l))
+        if (!f(x)) kept.push_back(x);
+    l = std::move(kept);
+}
+template <class L, class F>
+std::decay_t<L> list_filter(const L& l, F f, const char*) {
+    std::decay_t<L> out;
+    for (auto& x : std::decay_t<L>(l))
+        if (f(x)) out.push_back(x);
+    return out;
+}
+template <class L, class F>
+bool list_any(const L& l, F f, const char*) {
+    for (auto& x : std::decay_t<L>(l))
+        if (f(x)) return true;
+    return false;
+}
+template <class L, class F>
+void list_sortBy(L& l, F key, const char*) {
+    std::vector<std::pair<float, size_t>> keys;
+    for (size_t i = 0; i < l.size(); i++) keys.push_back({key(l[i]), i});
+    std::stable_sort(keys.begin(), keys.end(), [](const auto& a, const auto& b) { return a.first < b.first; });
+    std::decay_t<L> sorted;
+    for (auto& k : keys) sorted.push_back(l[k.second]);
+    l = std::move(sorted);
+}
 
 template <class L, class F>
 std::string strList(const L& l, F f) {

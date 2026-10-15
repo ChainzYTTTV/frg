@@ -290,6 +290,8 @@ Hints:
   }
   ```
 
+  When nothing else has to happen for each removed item, a [function value](../language/06-functions.md#functions-as-values) does it in one line: `stars.removeWhere((vec2 s) { return s.y > window.height(); });`
+
 - `bool gameOver = false;`. In `update`, when it's true, only check for Enter. In `draw`, show the message.
 
 Make it yours: stars fall faster as the score grows. Rare golden stars worth 5. A sound when one is caught (`<audio>`).

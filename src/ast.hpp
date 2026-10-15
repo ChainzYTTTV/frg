@@ -21,13 +21,18 @@ struct TypeRef {
     std::vector<std::string> path;  // {"entities", "Player"}; empty means "no type"
     std::vector<TypeRef> args;      // generic arguments
     bool optional = false;
+    bool isFunction = false;        // Function<ret(params)>: args[0] is the return type, the rest the parameters
     Loc loc;
 
     bool empty() const { return path.empty(); }
     std::string display() const {
         std::string s;
         for (size_t i = 0; i < path.size(); i++) s += (i ? "." : "") + path[i];
-        if (!args.empty()) {
+        if (isFunction) {
+            s += "<" + args[0].display() + "(";
+            for (size_t i = 1; i < args.size(); i++) s += (i > 1 ? ", " : "") + args[i].display();
+            s += ")>";
+        } else if (!args.empty()) {
             s += "<";
             for (size_t i = 0; i < args.size(); i++) s += (i ? ", " : "") + args[i].display();
             s += ">";
@@ -47,6 +52,7 @@ enum class EK {
     Super,
     Is,        // obj is Type
     As,        // obj as Type (null if it isn't one)
+    Lambda,    // (Enemy e) { return e.hp <= 0; } - a function value
 };
 
 // What a name (or a.b.c path) refers to. Filled in by the checker.
@@ -102,6 +108,7 @@ struct Expr {
     FuncDecl* ctor = nullptr;            // Call/BraceLit that builds an object: the constructor used (or null = field-by-field)
     TypeDecl* builds = nullptr;          // Call/BraceLit that builds an object: the type built
     std::vector<Expr*> defaultArgs;      // Call: default values filled in for missing arguments
+    std::shared_ptr<FuncDecl> lambda;    // Lambda: its parameters and body (ret is filled in by the checker)
 
     Expr(EK k, Loc l) : kind(k), loc(l) {}
 };

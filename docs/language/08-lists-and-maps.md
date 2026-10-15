@@ -55,6 +55,10 @@ Runtime error in main.frg:9: position 5 is outside the list (it has 3 items, at 
 | `sort()` | — | puts the items in order, smallest first (lists of numbers or text only) |
 | `reverse()` | — | flips the order |
 | `copy()` | a list | a separate copy of the list |
+| `removeWhere(f)` | — | removes every item that the [function value](06-functions.md#functions-as-values) `f` says `true` for: `enemies.removeWhere((Enemy e) { return e.hp <= 0; });` |
+| `filter(f)` | a list | a new list with only the items `f` says `true` for |
+| `any(f)` | `bool` | `true` if `f` says `true` for at least one item |
+| `sortBy(f)` | — | sorts the items by the number `f` gives for each, smallest first: `enemies.sortBy((Enemy e) { return e.hp; });` |
 
 `first()`, `last()`, `pop()`, `removeAt()` and `insert()` stop the game with a runtime error if the list is empty or the position is wrong.
 

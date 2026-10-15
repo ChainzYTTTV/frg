@@ -105,6 +105,22 @@ Type* tPointer(Type* target) {
     return intern("ptr:" + idOf(target), t);
 }
 
+Type* tFunction(Type* ret, const std::vector<Type*>& params) {
+    Type t{};
+    t.kind = TK::Function;
+    std::string names, cpps, key = "fn:" + idOf(ret);
+    for (size_t i = 0; i < params.size(); i++) {
+        names += (i ? ", " : "") + params[i]->name;
+        cpps += (i ? ", " : "") + params[i]->cpp;
+        key += ":" + idOf(params[i]);
+    }
+    t.name = "Function<" + ret->name + "(" + names + ")>";
+    t.cpp = "::std::function<" + ret->cpp + "(" + cpps + ")>";
+    t.elem = ret;
+    t.params = params;
+    return intern(key, t);
+}
+
 Type* tNamed(TypeDecl* decl) {
     if (decl->type) return decl->type;
     Type t{};
@@ -132,7 +148,7 @@ Type* primitiveTypeByName(const std::string& name) {
     return it == primitiveTable().end() ? nullptr : it->second;
 }
 
-static const char* kOtherBuiltinTypes[] = {"list", "map", "Pointer", "vec2", "vec3", "vec4", "color", "rect"};
+static const char* kOtherBuiltinTypes[] = {"list", "map", "Pointer", "Function", "vec2", "vec3", "vec4", "color", "rect"};
 
 bool isBuiltinTypeName(const std::string& name) {
     if (primitiveTypeByName(name)) return true;

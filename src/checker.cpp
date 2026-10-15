@@ -188,6 +188,10 @@ const std::vector<BMethod>& bmethods() {
         {TK::List, "reverse", {}, "void"},
         {TK::List, "sort", {}, "void", true},
         {TK::List, "copy", {}, "list<E>"},
+        {TK::List, "removeWhere", {"Function<bool(E)>"}, "void"},
+        {TK::List, "filter", {"Function<bool(E)>"}, "list<E>"},
+        {TK::List, "any", {"Function<bool(E)>"}, "bool"},
+        {TK::List, "sortBy", {"Function<float(E)>"}, "void"},
         {TK::Map, "has", {"K"}, "bool"},
         {TK::Map, "remove", {"K"}, "bool"},
         {TK::Map, "get", {"K", "V"}, "V"},
@@ -227,6 +231,8 @@ Type* bmType(const std::string& pat, Type* obj) {
     if (pat == "list<E>" || pat == "list<V>") return tList(obj->elem);
     if (pat == "list<K>") return tList(obj->key);
     if (pat == "list<string>") return tList(tString());
+    if (pat == "Function<bool(E)>") return tFunction(tBool(), {obj->elem});
+    if (pat == "Function<float(E)>") return tFunction(tFloat(32), {obj->elem});
     return tVoid();
 }
 
@@ -250,6 +256,8 @@ private:
     std::vector<std::map<std::string, VarDecl*>> scopes;
     std::vector<char> breakables;  // 'l' for a loop, 's' for a switch
     size_t callArgs = SIZE_MAX;    // while checking the callee of a call: how many values it's called with
+    Type* wantFunction = nullptr;  // while checking a name where a Function<...> is expected
+    size_t lambdaScope = SIZE_MAX; // inside a function value: the first scope that belongs to it
 
     // For warnings
     std::vector<VarDecl*> structLoopVars;  // the struct variables of the for (T x in list) loops we're inside
@@ -323,6 +331,8 @@ private:
     Type* castExpr(Expr* e);
     Type* strExpr(Expr* e);
     Type* isAsExpr(Expr* e);
+    Type* lambdaExpr(Expr* e, Type* expected);
+    bool outerLocal(const VarDecl* v);
     bool privateBlocked(bool isPrivate, TypeDecl* owner, Module* module, const Loc& loc, const std::string& name);
     std::string unknownHint(const std::string& n);
     void checkRunCallbacks(const Loc& loc);
@@ -478,6 +488,21 @@ Type* Checker::resolveType(const TypeRef& r, bool allowVoid) {
             Type* target = resolveType(r.args[0], false);
             if (target == tError()) return tError();
             base = tPointer(target);
+        } else if (name == "Function") {
+            if (!r.isFunction) {
+                reportError(r.loc, "Function needs the kind of function inside < >",
+                            "for example: Function<bool(Enemy)> (gives back a bool, takes an Enemy) or Function<void()>");
+                return tError();
+            }
+            Type* ret = resolveType(r.args[0], true);
+            std::vector<Type*> params;
+            for (size_t i = 1; i < r.args.size(); i++) params.push_back(resolveType(r.args[i], false));
+            if (ret == tError() || std::find(params.begin(), params.end(), tError()) != params.end()) return tError();
+            if (ret == tTask()) {
+                reportError(r.args[0].loc, "a function value can't be a task", "make a normal task function, and call it from the function value");
+                return tError();
+            }
+            base = tFunction(ret, params);
         } else if (TypeDecl* d = findTypeDecl(name)) {
             if (!r.args.empty()) reportError(r.loc, "'" + name + "' doesn't take types inside < >");
             base = tNamed(d);
@@ -769,6 +794,11 @@ bool Checker::isLvalue(Expr* e) {
 bool Checker::checkAssignTarget(Expr* e) {
     if (e->type == tError()) return false;
     VarDecl* v = e->res.var;
+    if (e->kind == EK::Name && e->res.kind == RK::Local && outerLocal(v)) {
+        reportError(e->loc, "a function value can't change '" + v->name + "', a local variable from outside it",
+                    "it only gets a copy of the variables around it. To share a value, use a global variable or a field");
+        return false;
+    }
     if ((e->res.kind == RK::Local || e->res.kind == RK::Global) && v->isConst) {
         reportError(e->loc, "'" + v->name + "' is const, so it can't be changed");
         return false;
@@ -801,8 +831,17 @@ Type* Checker::expr(Expr* e, Type* expected, bool allowNonValue) {
         case EK::Bool: return e->type = tBool();
         case EK::Null: return e->type = tNull();
         case EK::Str: return strExpr(e);
-        case EK::Name: return nameExpr(e, allowNonValue);
-        case EK::Member: return memberExpr(e, allowNonValue);
+        case EK::Name:
+        case EK::Member: {
+            // Where a Function<...> is wanted, a function's name (without ()) is a function value.
+            Type* saved = wantFunction;
+            Type* want = expected && expected->kind == TK::Optional ? expected->elem : expected;
+            wantFunction = want && want->kind == TK::Function ? want : nullptr;
+            Type* t = e->kind == EK::Name ? nameExpr(e, allowNonValue) : memberExpr(e, allowNonValue);
+            wantFunction = saved;
+            return t;
+        }
+        case EK::Lambda: return lambdaExpr(e, expected);
         case EK::Call: return callExpr(e, expected);
         case EK::Unary: return unaryExpr(e);
         case EK::Binary: return binaryExpr(e, expected);
@@ -828,6 +867,62 @@ Type* Checker::expr(Expr* e, Type* expected, bool allowNonValue) {
 }
 
 // `enemy is Goblin` and `enemy as Goblin`: checking what kind of class an object really is.
+// Is `v` a local variable from outside the function value being checked?
+bool Checker::outerLocal(const VarDecl* v) {
+    if (lambdaScope == SIZE_MAX) return false;
+    for (size_t i = 0; i < lambdaScope && i < scopes.size(); i++)
+        for (auto& [name, var] : scopes[i])
+            if (var == v) return true;
+    return false;
+}
+
+// (Enemy e) { return e.hp <= 0; } - checked against the Function<...> type it's going into.
+Type* Checker::lambdaExpr(Expr* e, Type* expected) {
+    FuncDecl* f = e->lambda.get();
+    f->module = cur;
+    Type* ft = expected && expected->kind == TK::Optional ? expected->elem : expected;
+    if (!ft || ft->kind != TK::Function) {
+        reportError(e->loc, "Forge can't tell what kind of function value this is",
+                    "put it where a Function<...> is expected, like: Function<bool(Enemy)> isDead = (Enemy e) { ... };");
+        return e->type = tError();
+    }
+    bool ok = true;
+    if (f->params.size() != ft->params.size()) {
+        reportError(e->loc, "this function value takes " + std::to_string(f->params.size()) + " value" + (f->params.size() == 1 ? "" : "s") +
+                                ", but it has to be " + ft->name,
+                    "a " + ft->name + " takes " + std::to_string(ft->params.size()));
+        ok = false;
+    }
+    for (size_t i = 0; i < f->params.size(); i++) {
+        VarDecl* p = f->params[i].get();
+        p->type = resolveType(p->typeRef, false);
+        if (ok && p->type != tError() && p->type != ft->params[i]) {
+            reportError(p->typeRef.loc, "'" + p->name + "' has to be " + aType(ft->params[i]) + " here, because this is a " + ft->name,
+                        "write it as: " + ft->params[i]->name + " " + p->name);
+            ok = false;
+        }
+    }
+    f->ret = ft->elem;
+    // Its body is checked like a function's, inside the current one (it can use the variables around it).
+    FuncDecl* savedFn = fn;
+    size_t savedLambda = lambdaScope;
+    std::vector<char> savedBreak = breakables;
+    breakables.clear();
+    scopes.emplace_back();
+    lambdaScope = scopes.size() - 1;
+    for (auto& p : f->params) declareLocal(p.get());
+    fn = f;
+    stmt(f->body.get());
+    if (f->ret != tVoid() && f->ret != tError() && !alwaysReturns(f->body.get()))
+        reportError(e->loc, "this function value doesn't always return a value",
+                    "it's a " + ft->name + ", so every way through it needs a return");
+    fn = savedFn;
+    scopes.pop_back();
+    lambdaScope = savedLambda;
+    breakables = savedBreak;
+    return e->type = ok ? ft : tError();
+}
+
 Type* Checker::isAsExpr(Expr* e) {
     const char* word = e->kind == EK::Is ? "is" : "as";
     Type* S = value(e->a.get());
@@ -920,6 +1015,17 @@ Type* Checker::finishRef(Expr* e, bool allowNonValue) {
             if (n == "length") return e->type = tInt(32, true);
             break;
         default: break;
+    }
+    if (wantFunction && e->res.kind == RK::Func && !e->res.func->module->isPrelude && !e->res.func->owner) {
+        FuncDecl* f = e->res.func;
+        if (f->ret == tTask()) {
+            reportError(e->loc, "'" + n + "' is a task, so it can't be used as a function value",
+                        "use a function value that starts it: () { " + n + "(); }");
+            return e->type = tError();
+        }
+        std::vector<Type*> ps;
+        for (auto& p : f->params) ps.push_back(p->type ? p->type : tError());
+        return e->type = tFunction(f->ret ? f->ret : tError(), ps);
     }
     if (allowNonValue) return e->type = nullptr;
     switch (e->res.kind) {
@@ -1394,10 +1500,23 @@ Type* Checker::callExpr(Expr* e, Type* expected) {
         case RK::Global:
         case RK::Field:
         case RK::StdConst:
-        case RK::TypeStatic:
+        case RK::TypeStatic: {
+            Type* ct = callee->type && callee->type->kind == TK::Optional ? callee->type->elem : callee->type;
+            if (ct && ct->kind == TK::Function) {  // calling a function value
+                if (e->args.size() != ct->params.size()) {
+                    for (auto& a : e->args) value(a.get());
+                    reportError(e->loc, "'" + callee->text + "' needs " + std::to_string(ct->params.size()) + " value" +
+                                            (ct->params.size() == 1 ? "" : "s") + ", but got " + std::to_string(e->args.size()),
+                                "it's a " + ct->name);
+                    return e->type = tError();
+                }
+                for (size_t i = 0; i < e->args.size(); i++) checkInto(e->args[i].get(), ct->params[i], "value " + std::to_string(i + 1) + " of " + callee->text + "()");
+                return e->type = ct->elem;
+            }
             for (auto& a : e->args) value(a.get());
             reportError(e->loc, "'" + callee->text + "' is a variable, not a function");
             return e->type = tError();
+        }
         default:
             for (auto& a : e->args) value(a.get());
             reportError(e->loc, "'" + callee->text + "' isn't a function, so it can't be called");
@@ -1855,6 +1974,10 @@ void Checker::varStmt(VarDecl* v) {
         checkInto(v->init.get(), v->type, "'" + v->name + "'");
     } else if (v->isConst) {
         reportError(v->loc, "a const variable needs a value", "for example: const int MAX_HP = 100;");
+    } else if (v->type->kind == TK::Function) {
+        reportError(v->loc, "'" + v->name + "' needs a starting value",
+                    "give it a function, like: " + v->type->name + " " + v->name + " = (...) { ... };  - or make it optional: " +
+                        v->type->name + "? " + v->name + " = null;");
     } else if (v->type->kind == TK::Class || v->type->kind == TK::Pointer) {
         reportError(v->loc, "'" + v->name + "' needs a starting value",
                     v->type->kind == TK::Class ? "make one, like: " + v->type->name + " " + v->name + " = " + v->type->name +

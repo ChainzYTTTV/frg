@@ -139,7 +139,97 @@ Make sure there's always a way out (here, `n < 2`); otherwise it calls itself fo
 - Each function name can be used only once per file. Two functions with the same name in one file is an error, even with different parameters.
 - A function's name can't be a [reserved word](13-reserved-words.md), a built-in function name (`print`, `wait`), or the name of one of your top-level files.
 - Functions are always written at the top level of a file (or inside a struct or class, where they're called methods). You can't write a function inside another function.
-- Functions can't be stored in variables or passed to other functions.
+- To store a function in a variable or pass it to another function, use a [function value](#functions-as-values).
+
+## Functions as values
+
+A function can be kept in a variable, handed to another function, or stored in a field, like any other value. That's how you tell a list *how* to pick items, or tell a button *what to do* when it's clicked.
+
+### Writing one
+
+A **function value** is written like a function without a return type or a name: the parameters in `( )`, then the code in `{ }`:
+
+```cpp
+list<Enemy> alive = enemies.filter((Enemy e) { return e.hp > 0; });
+enemies.removeWhere((Enemy e) { return e.hp <= 0; });
+```
+
+Read `(Enemy e) { return e.hp <= 0; }` as "a function that takes an enemy `e` and says whether its hp is 0 or less". `removeWhere` calls it for every enemy, and removes the ones it says `true` for.
+
+A function with no parameters has empty brackets: `() { print("Clicked!"); }`.
+
+### Its type: Function<...>
+
+To keep a function value in a variable, a field or a parameter, its type is `Function<` the type it gives back `(` the types it takes `)>`:
+
+| Type | A function that... |
+|---|---|
+| `Function<void()>` | takes nothing and gives nothing back |
+| `Function<bool(Enemy)>` | takes an `Enemy`, gives back a `bool` |
+| `Function<int(int, int)>` | takes two `int`s, gives back an `int` |
+
+```cpp
+Function<bool(int)> isEven = (int n) { return n % 2 == 0; };
+print(isEven(4));      // true: call it like a function
+```
+
+The part inside `< >` reads like the first line of a function, without the names: `bool isEven(int n)` becomes `Function<bool(int)>`.
+
+A function you've written can be used as a value too: write its name **without** `()`.
+
+```cpp
+int twice(int n) {
+    return n * 2;
+}
+
+Function<int(int)> f = twice;    // f is twice, not the result of calling it
+print(f(21));                    // 42
+```
+
+### Handing one to a function
+
+```cpp
+int applyTwice(Function<int(int)> f, int x) {
+    return f(f(x));
+}
+
+print(applyTwice(twice, 5));                       // 20
+print(applyTwice((int n) { return n + 1; }, 5));   // 7
+```
+
+### In a field: code that runs later
+
+```cpp
+class Button {
+    string label;
+    Function<void()> onClick;
+}
+
+Button play = Button("Play", () { scenes.change(Playing()); });
+...
+play.onClick();      // runs the code
+```
+
+A field like `onClick` can be left empty until it's given a function. Calling an empty one stops the game with "this function value is empty". A variable needs a starting value, or can be optional (`Function<void()>? onClick = null;`).
+
+### Using the variables around it
+
+A function value can use the variables around the place it's written. It gets a **copy** of them, made when the function value is made:
+
+```cpp
+int bonus = 100;
+Function<int(int)> addBonus = (int n) { return n + bonus; };
+print(addBonus(1));     // 101
+```
+
+Because it's a copy, a function value **can't change** those local variables: `() { total++; }` is an error ("a function value can't change 'total'..."). It *can* change global variables, fields, and objects of a class (those are shared, not copied). So to count something from inside a function value, use a global variable or a field.
+
+### Things to know
+
+- The function value's parameters must have exactly the types of the `Function<...>` it goes into.
+- If the `Function<...>` gives something back, every way through the function value must `return` a value.
+- A task can't be a function value. Use a function value that starts it: `() { blink(); }`.
+- A function value always goes where a `Function<...>` is expected (a variable, a parameter, a list method). On its own, Forge can't tell what kind it is.
 
 ## Methods
 

@@ -48,7 +48,7 @@ If you already know C++, C#, Java, JavaScript or Python, Forge will feel familia
 | `@Override` / `override` | nothing | a method with the same name and types replaces the parent's |
 | `base.method()` / `super.method()` | `super.method()` | |
 | `try` / `catch` | not available | runtime errors stop the game with a message |
-| lambdas, function pointers, callbacks | not available | |
+| lambdas, function pointers, callbacks | `(Enemy e) { return e.hp <= 0; }`, typed `Function<bool(Enemy)>` | a function value gets a copy of the local variables it uses. See [Functions as values](06-functions.md#functions-as-values) |
 | templates / generics you write yourself | not available | the built-in `list<T>`, `map<K, V>` and `Pointer<T>` are generic |
 | threads | not available | use [tasks](11-tasks.md) for things that happen over time |
 

@@ -1,0 +1,14 @@
+=== main.frg
+task blink() {
+    wait(1);
+}
+
+int main(){
+    Function<void()> f = blink;
+    Function<task()> g = blink;
+    return 0;
+}
+=== error
+'blink' is a task, so it can't be used as a function value
+hint: use a function value that starts it: () { blink(); }
+a function value can't be a task

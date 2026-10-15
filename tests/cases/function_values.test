@@ -1,0 +1,96 @@
+=== main.frg
+#include <stdio>
+
+class Enemy {
+    string name;
+    int hp;
+}
+
+class Button {
+    string label;
+    Function<void()> onClick;
+}
+
+int twice(int n) {
+    return n * 2;
+}
+
+void hello() {
+    print("hello!");
+}
+
+int counter = 0;
+
+int apply(Function<int(int)> f, int x) {
+    return f(x);
+}
+
+Function<int(int)> adder(int amount) {
+    return (int n) { return n + amount; };
+}
+
+int main(){
+    // A function value in a variable, called like a function.
+    Function<bool(int)> isEven = (int n) { return n % 2 == 0; };
+    print(isEven(4));
+    print(isEven(7));
+
+    // A named function used as a value (no () after its name).
+    Function<int(int)> f = twice;
+    print(f(21));
+    print(apply(twice, 5));
+    print(apply((int n) { return n - 1; }, 5));
+
+    // It can use the variables around it (it gets a copy of them).
+    int bonus = 100;
+    Function<int(int)> addBonus = (int n) { return n + bonus; };
+    print(addBonus(1));
+    Function<int(int)> add5 = adder(5);
+    print(add5(10));
+
+    // A function value can change globals.
+    Function<void()> count = () { counter++; };
+    count();
+    count();
+    print(counter);
+
+    // List methods that take a function value.
+    list<Enemy> enemies = [Enemy("Grub", 0), Enemy("Zog", 12), Enemy("Bix", 3), Enemy("Pok", 0)];
+    print(enemies.any((Enemy e) { return e.hp > 10; }));
+    list<Enemy> weak = enemies.filter((Enemy e) { return e.hp < 5; });
+    print(weak.length);
+    enemies.removeWhere((Enemy e) { return e.hp <= 0; });
+    print(enemies.length);
+    enemies.sortBy((Enemy e) { return e.hp; });
+    print("{enemies[0].name} {enemies[1].name}");
+
+    // In a field, and in a list.
+    Button b = Button("Play", hello);
+    b.onClick();
+    Function<void()>? maybe = null;
+    print(maybe == null);
+    list<Function<int(int)>> steps = [twice, (int n) { return n + 1; }];
+    int x = 3;
+    for (Function<int(int)> step in steps) {
+        x = step(x);
+    }
+    print(x);
+    return 0;
+}
+=== output
+true
+false
+42
+10
+4
+101
+15
+2
+true
+3
+2
+Bix Zog
+hello!
+true
+7
+=== no warnings

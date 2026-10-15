@@ -1,0 +1,23 @@
+=== main.frg
+#include <stdio>
+
+int main(){
+    int total = 0;
+    Function<void()> add = () { total++; };
+    Function<bool(int)> wrong = (string s) { return true; };
+    Function<int(int)> missing = (int n) { print(n); };
+    Function<int(int)> two = (int a, int b) { return a; };
+    Function<int(int)> f = (int n) { return n; };
+    f("text");
+    f(1, 2);
+    var x = (int n) { return n; };
+    Function<void()> x2;
+    return 0;
+}
+=== error
+a function value can't change 'total', a local variable from outside it
+'s' has to be an int here, because this is a Function<bool(int)>
+this function value doesn't always return a value
+this function value takes 2 values, but it has to be Function<int(int)>
+'f' needs 1 value, but got 2
+'x2' needs a starting value

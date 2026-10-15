@@ -83,6 +83,8 @@ private:
         return r;
     }
     bool declAhead(bool allowParen);
+    bool lambdaAhead();
+    ExprPtr parseLambda();
     Include parseInclude();
     TypeDeclPtr parseTypeDecl();
     FuncPtr parseFuncRest(const TypeRef& ret, const Token& name, bool isCtor);
@@ -150,7 +152,32 @@ bool Parser::parseTypeImpl(TypeRef& r, bool quiet) {
     } else {
         return bail("a type");
     }
-    if (at(Tok::Lt)) {
+    if (r.path.size() == 1 && r.path[0] == "Function" && at(Tok::Lt)) {
+        // Function<bool(Enemy, int)>: the return type, then the parameter types in ( ).
+        p++;
+        r.isFunction = true;
+        TypeRef ret;
+        if (!parseTypeImpl(ret, quiet)) return false;
+        r.args.push_back(std::move(ret));
+        if (!accept(Tok::LParen)) return bail("'(' and the parameter types, like Function<bool(Enemy)>");
+        if (!at(Tok::RParen)) {
+            do {
+                TypeRef arg;
+                if (!parseTypeImpl(arg, quiet)) return false;
+                r.args.push_back(std::move(arg));
+            } while (accept(Tok::Comma));
+        }
+        if (!accept(Tok::RParen)) return bail("')'");
+        if (at(Tok::Shr)) {
+            splitLog.push_back({p, t[p]});
+            t[p].kind = Tok::Gt;
+            t[p].text = ">";
+            t[p].loc.col++;
+            t[p].loc.len = 1;
+        } else if (!accept(Tok::Gt)) {
+            return bail("'>'");
+        }
+    } else if (at(Tok::Lt)) {
         p++;
         do {
             TypeRef arg;
@@ -173,6 +200,54 @@ bool Parser::parseTypeImpl(TypeRef& r, bool quiet) {
 }
 
 // Is a declaration (`Type name ...`) coming up? Looks ahead without consuming anything.
+// Is a function value like `(Enemy e) { ... }` or `() { ... }` coming up? Looks ahead without consuming anything.
+bool Parser::lambdaAhead() {
+    size_t save = p, splits = splitLog.size();
+    bool result = false;
+    p++;  // (
+    if (at(Tok::RParen)) {
+        result = peek().kind == Tok::LBrace;
+    } else {
+        for (;;) {
+            TypeRef tmp;
+            if (!parseTypeImpl(tmp, true) || !at(Tok::Ident)) break;
+            p++;
+            if (accept(Tok::Comma)) continue;
+            if (at(Tok::RParen)) result = peek().kind == Tok::LBrace;
+            break;
+        }
+    }
+    while (splitLog.size() > splits) {
+        t[splitLog.back().first] = splitLog.back().second;
+        splitLog.pop_back();
+    }
+    p = save;
+    return result;
+}
+
+ExprPtr Parser::parseLambda() {
+    auto e = std::make_unique<Expr>(EK::Lambda, cur().loc);
+    auto f = std::make_shared<FuncDecl>();
+    f->name = "function value";
+    f->loc = cur().loc;
+    expect(Tok::LParen, "'('");
+    if (!at(Tok::RParen)) {
+        do {
+            auto v = std::make_unique<VarDecl>();
+            v->typeRef = parseType();
+            const Token& pn = expect(Tok::Ident, "a parameter name");
+            v->name = pn.text;
+            v->loc = pn.loc;
+            v->isParam = true;
+            f->params.push_back(std::move(v));
+        } while (accept(Tok::Comma));
+    }
+    expect(Tok::RParen, "')'");
+    f->body = parseBlock();
+    e->lambda = f;
+    return e;
+}
+
 bool Parser::declAhead(bool allowParen) {
     if (!at(Tok::Ident) && !at(Tok::KwVoid)) return false;
     size_t save = p, splits = splitLog.size();
@@ -963,6 +1038,7 @@ ExprPtr Parser::parsePrimary() {
             if (!at(Tok::Dot)) fail(k.loc, "super is used like super.method() or super(...) in a constructor");
             return std::make_unique<Expr>(EK::Super, k.loc);
         case Tok::LParen: {
+            if (lambdaAhead()) return parseLambda();
             p++;
             ExprPtr e = parseExpr();
             if (at(Tok::Assign)) fail(cur().loc, "'=' sets a variable - to compare two values, use '=='");

@@ -4,7 +4,7 @@
 
 struct TypeDecl;
 
-enum class TK { Error, Void, Null, Bool, Int, Float, String, Task, Struct, Class, Enum, List, Map, Optional, Pointer };
+enum class TK { Error, Void, Null, Bool, Int, Float, String, Task, Struct, Class, Enum, List, Map, Optional, Pointer, Function };
 
 struct Type {
     TK kind;
@@ -14,6 +14,7 @@ struct Type {
     std::string cpp;           // C++ spelling used by the code generator
     Type* elem = nullptr;      // List element, Map value, Optional inner type, Pointer target
     Type* key = nullptr;       // Map key
+    std::vector<Type*> params; // Function: the parameter types (elem is the return type)
     TypeDecl* decl = nullptr;  // Struct / Class / Enum
 };
 
@@ -29,6 +30,7 @@ Type* tList(Type* elem);
 Type* tMap(Type* key, Type* value);
 Type* tOptional(Type* inner);
 Type* tPointer(Type* target);
+Type* tFunction(Type* ret, const std::vector<Type*>& params);  // Function<ret(params)>
 Type* tNamed(TypeDecl* decl);  // the type of a struct, class or enum
 
 // Primitive types by name (int, float, string, ...). nullptr if `name` isn't one.

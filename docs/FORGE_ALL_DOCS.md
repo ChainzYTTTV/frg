@@ -275,6 +275,21 @@ void greet(string who, string greeting = "Hi"){   // a default value
 - `void` means it gives nothing back.
 - Each function name can be used only once per file: no two functions with the same name.
 
+**Functions as values.** A function value is written like a function without a return type or name: `(Enemy e) { return e.hp <= 0; }`. Its type is `Function<` return type `(` parameter types `)>`, like `Function<bool(Enemy)>`, `Function<void()>` or `Function<int(int, int)>` (it reads like the function's first line without names). Call one like a function: `isEven(4)`. A named function can be used as a value by writing its name without `()`: `Function<int(int)> f = twice;`. A function value goes where a `Function<...>` is expected (variable, parameter, field, list method), never on its own. It gets a **copy** of the local variables around it, so it can't change them (an error says so); it can change globals, fields and class objects. A `Function<...>` field can be empty until set (calling an empty one is a runtime error); a variable needs a starting value or `?`. Tasks can't be function values: wrap them, `() { blink(); }`.
+
+```cpp
+enemies.removeWhere((Enemy e) { return e.hp <= 0; });
+list<Enemy> weak = enemies.filter((Enemy e) { return e.hp < 5; });
+enemies.sortBy((Enemy e) { return e.hp; });      // sorts by the number it gives, smallest first
+
+class Button {
+    string label;
+    Function<void()> onClick;
+}
+Button play = Button("Play", () { print("Clicked!"); });
+play.onClick();
+```
+
 #### Multiple files
 
 Every `.frg` file next to `main.frg` is part of the game automatically. To use anything from another file, **always** put the file's name first. This is a rule even when there's no confusion.
@@ -311,7 +326,7 @@ print(ages["Ana"]);
 if (ages.has("Zed")) { print("found"); }
 ```
 
-- **List methods:** `.length`, `add(x)`, `addAll(otherList)` (adds every item of another list to the end), `insert(i, x)`, `removeAt(i)` (gives back the removed item), `remove(x)` (removes the first match and gives true/false), `contains(x)`, `indexOf(x)`, `first()`, `last()`, `pop()` (removes and gives back the last item), `clear()`, `isEmpty()`, `sort()` (numbers or text only), `reverse()`, `copy()`.
+- **List methods:** `.length`, `add(x)`, `addAll(otherList)` (adds every item of another list to the end), `insert(i, x)`, `removeAt(i)` (gives back the removed item), `remove(x)` (removes the first match and gives true/false), `contains(x)`, `indexOf(x)`, `first()`, `last()`, `pop()` (removes and gives back the last item), `clear()`, `isEmpty()`, `sort()` (numbers or text only), `reverse()`, `copy()`, and with a function value: `removeWhere(f)`, `filter(f)` (a new list), `any(f)` (bool), `sortBy(f)` (by the number `f` gives).
 - **Map methods:** `.length`, `has(key)`, `get(key, backup)`, `remove(key)`, `keys()` (a list), `values()` (a list), `clear()`, `isEmpty()`.
 - Map keys can be numbers, text, bools or enums.
 - An empty list or map needs its type written out: `list<int> xs = [];` or `map<string, int> m = {};`.
@@ -866,7 +881,7 @@ Runtime error in main.frg:10: position 5 is outside the list (it has 3 items, at
 **Things Forge does not have yet.** Don't teach or use these. Say "not in Forge yet" and work around them:
 
 - `char` (single letters are one-letter strings), fixed-size arrays (use `list`), tuples
-- Generics you write yourself (`class Box<T>`), function values, lambdas, callbacks
+- Generics you write yourself (`class Box<T>`)
 - Two functions or methods with the same name (only constructors can share a name), operator overloading for your own types
 - Interfaces, abstract classes, `protected`, `static` fields or methods in your own types
 - Labeled breaks, exceptions (`try` / `catch`), `goto`
@@ -1454,6 +1469,8 @@ Hints:
       }
   }
   ```
+
+  When nothing else has to happen for each removed item, a function value does it in one line: `stars.removeWhere((vec2 s) { return s.y > window.height(); });`
 
 - `bool gameOver = false;`. In `update`, when it's true, only check for Enter. In `draw`, show the message.
 
@@ -3152,7 +3169,97 @@ Make sure there's always a way out (here, `n < 2`); otherwise it calls itself fo
 - Each function name can be used only once per file. Two functions with the same name in one file is an error, even with different parameters.
 - A function's name can't be a reserved word (see “13. Reserved Words”), a built-in function name (`print`, `wait`), or the name of one of your top-level files.
 - Functions are always written at the top level of a file (or inside a struct or class, where they're called methods). You can't write a function inside another function.
-- Functions can't be stored in variables or passed to other functions.
+- To store a function in a variable or pass it to another function, use a function value (see “Functions as values”).
+
+### Functions as values
+
+A function can be kept in a variable, handed to another function, or stored in a field, like any other value. That's how you tell a list *how* to pick items, or tell a button *what to do* when it's clicked.
+
+#### Writing one
+
+A **function value** is written like a function without a return type or a name: the parameters in `( )`, then the code in `{ }`:
+
+```cpp
+list<Enemy> alive = enemies.filter((Enemy e) { return e.hp > 0; });
+enemies.removeWhere((Enemy e) { return e.hp <= 0; });
+```
+
+Read `(Enemy e) { return e.hp <= 0; }` as "a function that takes an enemy `e` and says whether its hp is 0 or less". `removeWhere` calls it for every enemy, and removes the ones it says `true` for.
+
+A function with no parameters has empty brackets: `() { print("Clicked!"); }`.
+
+#### Its type: Function<...>
+
+To keep a function value in a variable, a field or a parameter, its type is `Function<` the type it gives back `(` the types it takes `)>`:
+
+| Type | A function that... |
+|---|---|
+| `Function<void()>` | takes nothing and gives nothing back |
+| `Function<bool(Enemy)>` | takes an `Enemy`, gives back a `bool` |
+| `Function<int(int, int)>` | takes two `int`s, gives back an `int` |
+
+```cpp
+Function<bool(int)> isEven = (int n) { return n % 2 == 0; };
+print(isEven(4));      // true: call it like a function
+```
+
+The part inside `< >` reads like the first line of a function, without the names: `bool isEven(int n)` becomes `Function<bool(int)>`.
+
+A function you've written can be used as a value too: write its name **without** `()`.
+
+```cpp
+int twice(int n) {
+    return n * 2;
+}
+
+Function<int(int)> f = twice;    // f is twice, not the result of calling it
+print(f(21));                    // 42
+```
+
+#### Handing one to a function
+
+```cpp
+int applyTwice(Function<int(int)> f, int x) {
+    return f(f(x));
+}
+
+print(applyTwice(twice, 5));                       // 20
+print(applyTwice((int n) { return n + 1; }, 5));   // 7
+```
+
+#### In a field: code that runs later
+
+```cpp
+class Button {
+    string label;
+    Function<void()> onClick;
+}
+
+Button play = Button("Play", () { scenes.change(Playing()); });
+...
+play.onClick();      // runs the code
+```
+
+A field like `onClick` can be left empty until it's given a function. Calling an empty one stops the game with "this function value is empty". A variable needs a starting value, or can be optional (`Function<void()>? onClick = null;`).
+
+#### Using the variables around it
+
+A function value can use the variables around the place it's written. It gets a **copy** of them, made when the function value is made:
+
+```cpp
+int bonus = 100;
+Function<int(int)> addBonus = (int n) { return n + bonus; };
+print(addBonus(1));     // 101
+```
+
+Because it's a copy, a function value **can't change** those local variables: `() { total++; }` is an error ("a function value can't change 'total'..."). It *can* change global variables, fields, and objects of a class (those are shared, not copied). So to count something from inside a function value, use a global variable or a field.
+
+#### Things to know
+
+- The function value's parameters must have exactly the types of the `Function<...>` it goes into.
+- If the `Function<...>` gives something back, every way through the function value must `return` a value.
+- A task can't be a function value. Use a function value that starts it: `() { blink(); }`.
+- A function value always goes where a `Function<...>` is expected (a variable, a parameter, a list method). On its own, Forge can't tell what kind it is.
 
 ### Methods
 
@@ -3363,6 +3470,10 @@ Runtime error in main.frg:9: position 5 is outside the list (it has 3 items, at 
 | `sort()` | — | puts the items in order, smallest first (lists of numbers or text only) |
 | `reverse()` | — | flips the order |
 | `copy()` | a list | a separate copy of the list |
+| `removeWhere(f)` | — | removes every item that the function value (see “6. Functions” › “Functions as values”) `f` says `true` for: `enemies.removeWhere((Enemy e) { return e.hp <= 0; });` |
+| `filter(f)` | a list | a new list with only the items `f` says `true` for |
+| `any(f)` | `bool` | `true` if `f` says `true` for at least one item |
+| `sortBy(f)` | — | sorts the items by the number `f` gives for each, smallest first: `enemies.sortBy((Enemy e) { return e.hp; });` |
 
 `first()`, `last()`, `pop()`, `removeAt()` and `insert()` stop the game with a runtime error if the list is empty or the position is wrong.
 
@@ -4432,7 +4543,7 @@ These words have special meanings, so they can't be used as names for variables,
 
 ### Built-in type names
 
-`void` `bool` `string` `task` `int` `int8` `int16` `int32` `int64` `int128` `uint` `uint8` `uint16` `uint32` `uint64` `uint128` `float` `double` `list` `map` `Pointer` `vec2` `vec3` `vec4` `color` `rect`
+`void` `bool` `string` `task` `int` `int8` `int16` `int32` `int64` `int128` `uint` `uint8` `uint16` `uint32` `uint64` `uint128` `float` `double` `list` `map` `Pointer` `Function` `vec2` `vec3` `vec4` `color` `rect`
 
 ### Built-in functions
 
@@ -4525,7 +4636,7 @@ If you already know C++, C#, Java, JavaScript or Python, Forge will feel familia
 | `@Override` / `override` | nothing | a method with the same name and types replaces the parent's |
 | `base.method()` / `super.method()` | `super.method()` | |
 | `try` / `catch` | not available | runtime errors stop the game with a message |
-| lambdas, function pointers, callbacks | not available | |
+| lambdas, function pointers, callbacks | `(Enemy e) { return e.hp <= 0; }`, typed `Function<bool(Enemy)>` | a function value gets a copy of the local variables it uses. See Functions as values (see “6. Functions” › “Functions as values”) |
 | templates / generics you write yourself | not available | the built-in `list<T>`, `map<K, V>` and `Pointer<T>` are generic |
 | threads | not available | use tasks (see “11. Tasks”) for things that happen over time |
 
@@ -6297,7 +6408,7 @@ task showMenu() {
 
 ### Why it works like this
 
-A tween is a value you update and read, like a `Timer` (see “`<time>`: Clock, Date and Timers”). Forge doesn't have functions as values yet, so a tween can't run code by itself when it ends: check `isDone()` instead. That also means it works the same way in every kind of game loop, and in tasks.
+A tween is a value you update and read, like a `Timer` (see “`<time>`: Clock, Date and Timers”). A tween doesn't run code by itself when it ends: check `isDone()` instead (or keep a function value (see “6. Functions” › “Functions as values”) and call it when `isDone()` becomes true). That also means it works the same way in every kind of game loop, and in tasks.
 
 <!-- docs/libraries/particles.md -->
 
@@ -8833,6 +8944,17 @@ void greet(string who, string greeting = "Hi"){   // greeting has a default valu
 
 **Order doesn't matter.** A function can be used above or below the place it's written. Forge reads every file before it runs anything.
 
+#### Functions as values
+
+```cpp
+Function<bool(int)> isEven = (int n) { return n % 2 == 0; };   // Function<gives back(takes)>
+print(isEven(4));                                               // true
+enemies.removeWhere((Enemy e) { return e.hp <= 0; });          // a function value passed straight in
+Function<int(int)> f = twice;                                   // a named function, without ()
+```
+
+A function value gets a copy of the local variables it uses, so it can't change them (it can change globals and fields). List methods that take one: `removeWhere(f)` `filter(f)` `any(f)` `sortBy(f)`. See Functions as values (see “6. Functions” › “Functions as values”).
+
 ### Multiple files
 
 Every `.frg` file next to `main.frg` is part of the game automatically. To use something from another file, always start with the file's name. This works for functions, variables and types:
@@ -8882,7 +9004,7 @@ if (ages.has("Zed")) { ... }
 
 | | Methods |
 |---|---|
-| `list<T>` | `.length` `add(x)` `addAll(otherList)` `insert(i, x)` `removeAt(i)` `remove(x)` `contains(x)` `indexOf(x)` `first()` `last()` `pop()` `clear()` `isEmpty()` `sort()` `reverse()` `copy()` |
+| `list<T>` | `.length` `add(x)` `addAll(otherList)` `insert(i, x)` `removeAt(i)` `remove(x)` `contains(x)` `indexOf(x)` `first()` `last()` `pop()` `clear()` `isEmpty()` `sort()` `reverse()` `copy()` `removeWhere(f)` `filter(f)` `any(f)` `sortBy(f)` (with a function value) |
 | `map<K, V>` | `.length` `has(key)` `get(key, backup)` `remove(key)` `keys()` `values()` `clear()` `isEmpty()` |
 
 Positions in a list start at 0. Using a position that isn't in the list, or a key that isn't in the map, stops the game with a clear message.
@@ -9323,5 +9445,5 @@ If a file has several syntax mistakes, Forge reports all of them in one go.
 ### Coming next
 
 - **Networking:** a `<network>` library for multiplayer games
-- **Language:** generic types you write yourself (`class Box<T>`), functions as values
+- **Language:** generic types you write yourself (`class Box<T>`)
 - **Editor:** autocomplete for your own code (a language server)

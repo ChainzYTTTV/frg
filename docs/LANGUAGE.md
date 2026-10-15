@@ -200,6 +200,17 @@ void greet(string who, string greeting = "Hi"){   // greeting has a default valu
 
 **Order doesn't matter.** A function can be used above or below the place it's written. Forge reads every file before it runs anything.
 
+### Functions as values
+
+```cpp
+Function<bool(int)> isEven = (int n) { return n % 2 == 0; };   // Function<gives back(takes)>
+print(isEven(4));                                               // true
+enemies.removeWhere((Enemy e) { return e.hp <= 0; });          // a function value passed straight in
+Function<int(int)> f = twice;                                   // a named function, without ()
+```
+
+A function value gets a copy of the local variables it uses, so it can't change them (it can change globals and fields). List methods that take one: `removeWhere(f)` `filter(f)` `any(f)` `sortBy(f)`. See [Functions as values](language/06-functions.md#functions-as-values).
+
 ## Multiple files
 
 Every `.frg` file next to `main.frg` is part of the game automatically. To use something from another file, always start with the file's name. This works for functions, variables and types:
@@ -249,7 +260,7 @@ if (ages.has("Zed")) { ... }
 
 | | Methods |
 |---|---|
-| `list<T>` | `.length` `add(x)` `addAll(otherList)` `insert(i, x)` `removeAt(i)` `remove(x)` `contains(x)` `indexOf(x)` `first()` `last()` `pop()` `clear()` `isEmpty()` `sort()` `reverse()` `copy()` |
+| `list<T>` | `.length` `add(x)` `addAll(otherList)` `insert(i, x)` `removeAt(i)` `remove(x)` `contains(x)` `indexOf(x)` `first()` `last()` `pop()` `clear()` `isEmpty()` `sort()` `reverse()` `copy()` `removeWhere(f)` `filter(f)` `any(f)` `sortBy(f)` (with a function value) |
 | `map<K, V>` | `.length` `has(key)` `get(key, backup)` `remove(key)` `keys()` `values()` `clear()` `isEmpty()` |
 
 Positions in a list start at 0. Using a position that isn't in the list, or a key that isn't in the map, stops the game with a clear message.
@@ -690,5 +701,5 @@ If a file has several syntax mistakes, Forge reports all of them in one go.
 ## Coming next
 
 - **Networking:** a `<network>` library for multiplayer games
-- **Language:** generic types you write yourself (`class Box<T>`), functions as values
+- **Language:** generic types you write yourself (`class Box<T>`)
 - **Editor:** autocomplete for your own code (a language server)

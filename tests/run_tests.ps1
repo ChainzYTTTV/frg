@@ -6,6 +6,8 @@
 #   === output          the exact text the program must print
 #   === error           text that must appear in the compile errors (one check per line)
 #   === build           (empty) the program must compile; it isn't run (for games that open a window)
+#   === command         (one line) runs frg with these words instead of building, like "cache". Each line of
+#                       === prints must appear in what it prints; with === error, it must fail with those messages.
 #   === new             (one line: a template name, and optionally the game's name) makes a game with
 #                       frg new --template, which must build without warnings. With === error, frg new must fail.
 #   === package         runs frg package; each line is a path (from the game's folder) that must exist afterwards,
@@ -28,7 +30,7 @@ $work = Join-Path ([IO.Path]::GetTempPath()) "forge-tests"
 function Invoke-Frg([string]$command, [string]$dir, [string[]]$extra = @()) {
     $psi = [Diagnostics.ProcessStartInfo]::new($frg)
     $psi.ArgumentList.Add($command)
-    $psi.ArgumentList.Add($dir)
+    if ($dir) { $psi.ArgumentList.Add($dir) }
     foreach ($a in $extra) { $psi.ArgumentList.Add($a) }
     $psi.UseShellExecute = $false
     $psi.RedirectStandardOutput = $true
@@ -67,7 +69,7 @@ foreach ($file in Get-ChildItem (Join-Path $PSScriptRoot "cases") -Filter "$Filt
     foreach ($key in @($sections.Keys)) {
         $lines = $sections[$key]
         while ($lines.Count -gt 0 -and $lines[$lines.Count - 1] -eq '') { $lines.RemoveAt($lines.Count - 1) }
-        if ($key -in 'output', 'error', 'build', 'warning', 'no warnings', 'runtime error', 'package', 'new') { continue }
+        if ($key -in 'output', 'error', 'build', 'warning', 'no warnings', 'runtime error', 'package', 'new', 'command', 'prints') { continue }
         if ($key -match '^(.+) \(base64\)$') {
             $path = Join-Path $dir $Matches[1]
             New-Item -ItemType Directory -Force (Split-Path $path) | Out-Null
@@ -80,7 +82,22 @@ foreach ($file in Get-ChildItem (Join-Path $PSScriptRoot "cases") -Filter "$Filt
     }
 
     $problem = $null
-    if ($sections.Contains('new')) {
+    if ($sections.Contains('command')) {
+        $words = @($sections['command'][0] -split ' ')
+        $r = Invoke-Frg $words[0] '' @($words | Select-Object -Skip 1)
+        $all = $r.Out + $r.Err
+        if ($sections.Contains('error')) {
+            if ($r.Code -eq 0) { $problem = "expected frg $($sections['command'][0]) to fail, but it worked" }
+            foreach ($want in $sections['error']) {
+                if ($want -and -not $all.Contains($want)) { $problem = "errors don't contain: $want`n--- it printed:`n$all" }
+            }
+        } else {
+            if ($r.Code -ne 0) { $problem = "frg $($sections['command'][0]) failed:`n$all" }
+            foreach ($want in $sections['prints']) {
+                if ($want -and -not $all.Contains($want)) { $problem = "it didn't print: $want`n--- it printed:`n$all" }
+            }
+        }
+    } elseif ($sections.Contains('new')) {
         $words = $sections['new'][0] -split ' ', 2
         $game = Join-Path $dir ($(if ($words.Count -gt 1) { $words[1] } else { 'game' }))
         $r = Invoke-Frg new $game @('--template', $words[0])

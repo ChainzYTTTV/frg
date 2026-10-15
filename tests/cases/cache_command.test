@@ -1,0 +1,5 @@
+=== command
+cache
+=== prints
+Forge keeps it under about 400 MB
+To delete it: frg cache clear

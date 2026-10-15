@@ -286,6 +286,35 @@ void panel(rect area);
 void setTheme(color background, color accent, color text);
 )FRG";
 
+static const char* kGraphics3d = R"FRG(
+struct Camera {
+    vec3 position;
+    vec3 target;
+    vec3 up;
+    float fov;
+    Camera(vec3 position, vec3 target);
+    void orbit(float degrees);
+}
+
+class Model {
+    void draw(vec3 position, float scale = 1, color tint = color.WHITE);
+    void drawRotated(vec3 position, vec3 axis, float degrees, float scale = 1, color tint = color.WHITE);
+}
+
+void setCamera(Camera camera);
+Camera camera();
+void drawCube(vec3 position, vec3 size, color c);
+void drawCubeOutline(vec3 position, vec3 size, color c);
+void drawSphere(vec3 center, float radius, color c);
+void drawSphereOutline(vec3 center, float radius, color c);
+void drawCylinder(vec3 position, float radius, float height, color c);
+void drawPlane(vec3 center, vec2 size, color c);
+void drawGrid(int slices, float spacing);
+void drawLine(vec3 from, vec3 to, color c);
+vec2 toScreen(vec3 point);
+Model loadModel(string path);
+)FRG";
+
 static const char* kTasks = R"FRG(
 void update(float dt);
 void runAll();
@@ -316,6 +345,7 @@ const std::vector<PreludeLib>& preludeLibs() {
         {"file", kFile, false, "forge_file.hpp"},
         {"scenes", kScenes, false, "forge_scenes.hpp"},
         {"ui", kUi, true, "forge_ui.hpp"},
+        {"graphics3d", kGraphics3d, true, "forge_graphics3d.hpp"},
     };
     return libs;
 }

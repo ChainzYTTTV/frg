@@ -67,6 +67,7 @@ struct State {
     bool inFrame = false;
     core::color_ background{24, 24, 32, 255};
     long frame = 0;
+    void (*leave3D)() = nullptr;  // set while 3D drawing is active; 2D drawing calls it first
 };
 inline State& st() {
     static State s;
@@ -119,6 +120,7 @@ inline void endFrame() {
 inline void ensureFrame(const char* what) {
     if (!st().open) panic(what, "the window isn't open yet - call window.open(width, height, \"title\") first");
     if (!st().inFrame) beginFrame();
+    if (st().leave3D) st().leave3D();  // 2D drawing goes on top of any 3D drawn so far
 }
 
 inline void parseAutotestInput(const char* spec);

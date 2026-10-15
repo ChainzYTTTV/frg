@@ -9,6 +9,8 @@ Everyone's code has mistakes. Forge's job is to find them early and explain them
 
 Most mistakes are compile errors, so they're caught before you ever see the game.
 
+Forge also gives **warnings**: code that works, but probably doesn't do what you meant. A warning never stops the game from building. See [Warnings](#warnings) below.
+
 ## Reading a compile error
 
 ```
@@ -115,6 +117,33 @@ Tips:
 | `the shader shape.frag has errors` | a `<Vulkan>` shader file has a mistake; the lines below say where | fix the shader |
 | `there's no folder called 'x' next to this file` | `#include <"x">`, but no such folder | check the name and where the folder is |
 | `the file name 'my game.frg' can't be used` | file names can only have letters, numbers and `_` | rename the file |
+
+## Warnings
+
+A warning looks like an error, but it's yellow and says `warning:`:
+
+```
+warning: this divides two whole numbers, so the decimals are cut off before it becomes a decimal number
+  --> main.frg:5:24
+   |
+ 5 |     float ratio = hits / shots;
+   |                        ^
+  hint: turn one side into a decimal number first, like float(hits) / shots
+```
+
+The game still builds and runs. The warning is there because the code probably doesn't do what you meant. In VS Code, warnings are underlined in yellow.
+
+While there are errors, Forge only shows the errors, so they stand out. The warnings appear once the errors are fixed. (VS Code always shows both.)
+
+| Warning | What it means | Fix |
+|---|---|---|
+| `this changes 'e', which is only a copy of the item in the list` | `for (Enemy e in enemies) { e.hp = 0; }` with a **struct**: the loop gets a copy, so the list doesn't change | loop with a number: `for (int i = 0; i < enemies.length; i++) { enemies[i].hp = 0; }` |
+| `this divides two whole numbers, so the decimals are cut off` | `float ratio = hits / shots;` with two ints: `7 / 2` is `3`, and only then does it become `3.0` | `float(hits) / shots` gives `3.5` |
+| `the variable 'x' is never used` | you made a variable and never used it | remove it, or use it |
+| `this code can never run, because it comes after 'return'` | lines after `return`, `break` or `continue` in the same `{ }` | remove them, or move them above |
+| `comparing decimal numbers with '==' often gives the wrong answer` | `0.1 + 0.2 == 0.3` is false, because decimals are a tiny bit off | check whether they're close: `math.abs(a - b) < 0.001` |
+
+Divisions of plain numbers, like `float f = 70 / 30;`, don't give a warning: Forge already works those out as decimals, because it can see that the result goes into a float.
 
 ## Runtime errors
 

@@ -1,0 +1,36 @@
+=== main.frg
+#include <stdio>
+
+struct Enemy {
+    int hp = 10;
+    vec2 pos;
+}
+
+class Coin {
+    int value = 1;
+}
+
+int main(){
+    list<Enemy> enemies = [Enemy(), Enemy()];
+    for (Enemy e in enemies) {
+        e.hp = 0;
+        e.pos.x += 5;
+    }
+    print(enemies[0].hp);
+
+    // Classes are shared, not copied, so this one is fine.
+    list<Coin> coins = [Coin()];
+    for (Coin c in coins) {
+        c.value = 5;
+    }
+    print(coins[0].value);
+    return 0;
+}
+=== output
+10
+5
+=== warning
+warning: this changes 'e', which is only a copy of the item in the list, so the change is lost
+main.frg:15:9
+main.frg:16:9
+hint: a for (... in ...) loop gives you a copy of each struct

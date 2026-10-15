@@ -1,0 +1,30 @@
+=== main.frg
+#include <stdio>
+#include <math>
+
+// None of these should give a warning.
+int main(){
+    float third = 70 / 30;
+    float exact = float(7) / 2;
+    int whole = 7 / 2;
+    float speed = 2.5;
+    if (math.abs(speed - 2.5) < 0.001) {
+        print("close");
+    }
+    if (whole == 3) {
+        print(third + exact);
+    }
+    for (int i = 0; i < 3; i++) {
+        if (i == 1) {
+            continue;
+        }
+        print(i);
+    }
+    return 0;
+}
+=== output
+close
+5.833333
+0
+2
+=== no warnings

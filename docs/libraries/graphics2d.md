@@ -57,7 +57,7 @@ Centering text:
 ```cpp
 string title = "GAME OVER";
 int w = graphics2d.textWidth(title, 48);
-graphics2d.drawText(title, (window.width() - w) / 2, 200, 48, color.WHITE);
+graphics2d.drawText(title, (window.width() - w) / 2.0, 200, 48, color.WHITE);
 ```
 
 ### Other

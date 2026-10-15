@@ -1,0 +1,22 @@
+=== main.frg
+#include <stdio>
+
+int main(){
+    float a = 0.1;
+    float b = 0.2;
+    double c = 0.3;
+    if (a + b == c) {
+        print("same");
+    }
+    if (a not equals b) {
+        print("different");
+    }
+    return 0;
+}
+=== output
+different
+=== warning
+warning: comparing decimal numbers with '==' often gives the wrong answer
+main.frg:7:15
+warning: comparing decimal numbers with 'not equals' often gives the wrong answer
+hint: decimals are often a tiny bit off (0.1 + 0.2 isn't exactly 0.3), so check whether they're close instead: math.abs(a - b) < 0.001

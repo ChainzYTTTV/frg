@@ -110,7 +110,7 @@ void update(float dt){
             lives--;
         }
     }
-    float x = (window.width() - graphics2d.textWidth("hi", 40)) / 2;
+    float x = (window.width() - graphics2d.textWidth("hi", 40)) / 2.0;
     rect ballRect = rect(position.x - 10, position.y - 10, 20, 20);
     print(ballRect.overlaps(rect(0, 0, 10, 10)));
     print(input.mousePressed(MouseButton.LEFT) and input.mousePosition().distance(vec2(1, 1)) < 3);

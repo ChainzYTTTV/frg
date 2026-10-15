@@ -25,11 +25,15 @@ struct Loc {
 struct CompileAbort {};
 
 void initConsole();
-// Machine mode (for editors): each error is one tab-separated line on stdout:
-//   E <tab> full path <tab> line <tab> column <tab> length <tab> message <tab> hint
+// Machine mode (for editors): each error or warning is one tab-separated line on stdout:
+//   E (or W for a warning) <tab> full path <tab> line <tab> column <tab> length <tab> message <tab> hint
 // with \, tabs and newlines inside fields escaped as \\, \t and \n. Columns count bytes.
 void setMachineOutput(bool on);
 void reportError(const Loc& loc, const std::string& msg, const std::string& hint = "");
+// Warnings never stop a build. They're collected, and printed (in yellow) by flushWarnings.
+void reportWarning(const Loc& loc, const std::string& msg, const std::string& hint = "");
+// Prints the collected warnings and returns how many there were. While there are errors, only editors see them.
+int flushWarnings();
 void reportPlainError(const std::string& msg, const std::string& hint = "");
 void printStatus(const std::string& label, const std::string& msg);
 int errorCount();

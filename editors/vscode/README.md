@@ -3,7 +3,7 @@
 Support for the Forge (`.frg`) game language.
 
 - **Syntax colors**, including `{values}` inside text, `"""raw text"""` and ` ``` ` comments
-- **Errors when you save**: problems are underlined in red, with Forge's hint attached
+- **Errors and warnings when you save**: errors are underlined in red and warnings in yellow, with Forge's hint attached
 - **Run button** (▶ in the editor's title bar, or **F5**) builds and runs the game. **Ctrl+Shift+B** only builds it.
 - **Console on/off**: **Forge: Turn the Console On/Off** (from Ctrl+Shift+P) chooses whether games run with a console window for `print` output and errors. **Forge: Build Release** builds the finished game, which never has one.
 - **Autocomplete and hover help** for the libraries: type `window.`, `graphics2d.`, `color.` or `Key.` (and `OpenGL.`, `DirectX.`, `Vulkan.` for the low-level toolkits)

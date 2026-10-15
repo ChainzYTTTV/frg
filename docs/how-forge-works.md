@@ -49,7 +49,7 @@ The **checker** is where most of Forge's friendliness lives. It runs in two pass
 - **Pass 1** learns every type, function and global variable in every file. That's why things can be used before they're written, even across files.
 - **Pass 2** goes through every function body, working out the type of every expression and making sure everything fits: you can't put a `float` into an `int`, conditions must be `bool`, and every path of a function returns.
 
-Each error comes with a location and, often, a hint. "Did you mean...?" suggestions come from comparing the unknown name with known names and picking the closest one.
+Each error comes with a location and, often, a hint. The checker also gives **warnings** for code that works but probably isn't what was meant (a changed copy in a `for ... in` loop, `int / int` going into a float, unused variables, code after `return`, `==` on decimals). Warnings are collected while checking and printed afterwards, in yellow; they're only shown to people when there are no errors, and they never stop the build. "Did you mean...?" suggestions come from comparing the unknown name with known names and picking the closest one.
 
 Built-in types and libraries (`vec2`, `window`, `physics`...) are written in **Forge syntax** inside the compiler (in `prelude.cpp`). The checker reads them like any other code, which is why they follow the same rules and give the same kind of error messages.
 
@@ -133,11 +133,11 @@ int main(){ print(1 + 1); return 0; }
 2
 ```
 
-The other kinds are `=== error` (the build must fail with these messages) and `=== build` (it must compile; it isn't run, for games with windows). Run them all with `.\tests\run_tests.ps1` (in PowerShell 7).
+The other kinds are `=== error` (the build must fail with these messages) and `=== build` (it must compile; it isn't run, for games with windows). `=== warning` can be added to any test: each of its lines must appear in the warnings. `=== no warnings` (empty) means there must be none. Run them all with `.\tests\run_tests.ps1` (in PowerShell 7).
 
 ## How the VS Code extension finds errors
 
-When you save, the extension runs `frg check <game folder> --machine`. In machine mode, each error is printed as one tab-separated line (`E`, file, line, column, length, message, hint), which the extension turns into red underlines.
+When you save, the extension runs `frg check <game folder> --machine`. In machine mode, each error is printed as one tab-separated line (`E`, file, line, column, length, message, hint), which the extension turns into red underlines. Warnings are the same, but start with `W` and become yellow underlines.
 
 ## Adding a library
 

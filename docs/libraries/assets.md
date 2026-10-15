@@ -77,7 +77,7 @@ Font title = assets.loadFont("fonts/Title.ttf", 96);
 void draw(){
     string text = "Forge Quest";
     float w = title.measure(text, 72);
-    title.drawText(text, (window.width() - w) / 2, 80, 72, color.GOLD);
+    title.drawText(text, (window.width() - w) / 2.0, 80, 72, color.GOLD);
 }
 ```
 

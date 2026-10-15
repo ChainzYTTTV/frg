@@ -42,7 +42,7 @@ void update(float dt){
     if (input.keyDown(Key.LEFT)) {
         x -= 250 * dt;
     }
-    if (input.keyPressed(Key.SPACE) and hop == 0) {
+    if (input.keyPressed(Key.SPACE) and hop <= 0) {
         hop = 1;
         bloop.play();
     }

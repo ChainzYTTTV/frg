@@ -1,0 +1,21 @@
+=== main.frg
+#include <stdio>
+
+int twice(int n) {
+    int unusedHelper = 5;
+    return n * 2;
+}
+
+int main(){
+    int score = 10;
+    string name = "Ada";
+    print(twice(score));
+    return 0;
+}
+=== output
+20
+=== warning
+warning: the variable 'unusedHelper' is never used
+warning: the variable 'name' is never used
+main.frg:10:12
+hint: remove it if you don't need it

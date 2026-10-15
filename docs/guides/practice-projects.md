@@ -246,7 +246,7 @@ Hints:
 
 - The ball as a rect: `rect(position.x - 10, position.y - 10, 20, 20)`, then `ballRect.overlaps(leftPaddle)`.
 - After flipping, also move the ball out of the paddle, or it can stick inside and flip every frame.
-- Center text: `float x = (window.width() - graphics2d.textWidth(text, 40)) / 2;`.
+- Center text: `float x = (window.width() - graphics2d.textWidth(text, 40)) / 2.0;` (the `.0` keeps the half pixel; with `/ 2` Forge warns that the decimals are cut off).
 
 Make it yours: the ball speeds up a little on every hit. A computer player that follows the ball (not too fast, or it can't lose). First to 5 wins.
 

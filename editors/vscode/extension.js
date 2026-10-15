@@ -431,7 +431,9 @@ function check(doc, announce = false) {
         const byFile = new Map();
         const cache = new Map();
         for (const line of stdout.split(/\r?\n/)) {
-            if (!line.startsWith('E\t')) continue;
+            // E = error (red), W = warning (yellow)
+            const isWarning = line.startsWith('W\t');
+            if (!line.startsWith('E\t') && !isWarning) continue;
             const f = line.split('\t');
             let file = unescapeField(f[1] || '');
             const lineNo = Math.max(0, parseInt(f[2], 10) - 1);
@@ -444,7 +446,8 @@ function check(doc, announce = false) {
             const start = byteColToChar(text, col);
             const end = byteColToChar(text, col + len);
             const d = new vscode.Diagnostic(new vscode.Range(lineNo, start, lineNo, Math.max(end, start + 1)),
-                hint ? `${msg}\nhint: ${hint}` : msg, vscode.DiagnosticSeverity.Error);
+                hint ? `${msg}\nhint: ${hint}` : msg,
+                isWarning ? vscode.DiagnosticSeverity.Warning : vscode.DiagnosticSeverity.Error);
             d.source = 'forge';
             const key = path.resolve(file);
             if (!byFile.has(key)) byFile.set(key, []);
@@ -457,8 +460,12 @@ function check(doc, announce = false) {
         reportedFiles.set(root, new Set(byFile.keys()));
 
         if (announce) {
-            const count = [...byFile.values()].reduce((n, l) => n + l.length, 0);
-            vscode.window.showInformationMessage(count ? `Forge found ${count} error${count === 1 ? '' : 's'}.` : 'Forge found no errors.');
+            const all = [...byFile.values()].flat();
+            const count = all.filter(d => d.severity === vscode.DiagnosticSeverity.Error).length;
+            const warnings = all.length - count;
+            const warningText = warnings ? ` and ${warnings} warning${warnings === 1 ? '' : 's'}` : '';
+            vscode.window.showInformationMessage(count ? `Forge found ${count} error${count === 1 ? '' : 's'}${warningText}.`
+                : `Forge found no errors${warningText}.`);
         }
         const again = running.get(root) === 'again';
         running.delete(root);

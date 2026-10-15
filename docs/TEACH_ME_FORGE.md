@@ -734,6 +734,18 @@ error: 'hp' needs an int, but this is a float
   hint: use int(...) to turn it into a whole number (the decimals get cut off)
 ```
 
+**Warnings** look the same but are yellow and start with `warning:`. They never stop the build: the code works, but probably doesn't do what the learner meant. Warnings only show once there are no errors left (VS Code shows both, with yellow underlines for warnings). The warnings are:
+
+| Warning | What it means | Fix |
+|---|---|---|
+| `this changes 'e', which is only a copy of the item in the list` | `for (Enemy e in enemies) { e.hp = 0; }` with a **struct**: the loop gets a copy, so the list doesn't change | loop with a number: `for (int i = 0; i < enemies.length; i++) { enemies[i].hp = 0; }` |
+| `this divides two whole numbers, so the decimals are cut off` | `float ratio = hits / shots;` with two ints: `7 / 2` is `3`, and only then does it become `3.0` | `float(hits) / shots` gives `3.5` |
+| `the variable 'x' is never used` | you made a variable and never used it | remove it, or use it |
+| `this code can never run, because it comes after 'return'` | lines after `return`, `break` or `continue` in the same `{ }` | remove them, or move them above |
+| `comparing decimal numbers with '==' often gives the wrong answer` | `0.1 + 0.2 == 0.3` is false, because decimals are a tiny bit off | check whether they're close: `math.abs(a - b) < 0.001` |
+
+Literal-only divisions like `float f = 70 / 30;` don't warn, because they already give a decimal answer when the result goes into a float.
+
 Problems that can only happen while running (a list position that doesn't exist, using something that's null, dividing by zero, `int("abc")`) stop the game with a message like:
 
 ```
@@ -821,7 +833,7 @@ void draw(){
 
     if (level.coins.isEmpty()) {
         string win = "You got them all!";
-        graphics2d.drawText(win, 480 - graphics2d.textWidth(win, 48) / 2, 200, 48, color.WHITE);
+        graphics2d.drawText(win, 480 - graphics2d.textWidth(win, 48) / 2.0, 200, 48, color.WHITE);
     }
 }
 ````
@@ -1220,7 +1232,7 @@ Hints:
 
 - The ball as a rect: `rect(position.x - 10, position.y - 10, 20, 20)`, then `ballRect.overlaps(leftPaddle)`.
 - After flipping, also move the ball out of the paddle, or it can stick inside and flip every frame.
-- Center text: `float x = (window.width() - graphics2d.textWidth(text, 40)) / 2;`.
+- Center text: `float x = (window.width() - graphics2d.textWidth(text, 40)) / 2.0;` (the `.0` keeps the half pixel; with `/ 2` Forge warns that the decimals are cut off).
 
 Make it yours: the ball speeds up a little on every hit. A computer player that follows the ball (not too fast, or it can't lose). First to 5 wins.
 

@@ -5,6 +5,8 @@
 #   === output          the exact text the program must print
 #   === error           text that must appear in the compile errors (one check per line)
 #   === build           (empty) the program must compile; it isn't run (for games that open a window)
+#   === warning         text that must appear in the warnings (one check per line); add it to any of the others
+#   === no warnings     (empty) there must be no warnings at all
 #
 # Needs PowerShell 7 (pwsh), not the older Windows PowerShell 5.
 #
@@ -58,14 +60,14 @@ foreach ($file in Get-ChildItem (Join-Path $PSScriptRoot "cases") -Filter "$Filt
     foreach ($key in @($sections.Keys)) {
         $lines = $sections[$key]
         while ($lines.Count -gt 0 -and $lines[$lines.Count - 1] -eq '') { $lines.RemoveAt($lines.Count - 1) }
-        if ($key -in 'output', 'error', 'build') { continue }
+        if ($key -in 'output', 'error', 'build', 'warning', 'no warnings') { continue }
         $path = Join-Path $dir $key
         New-Item -ItemType Directory -Force (Split-Path $path) | Out-Null
         [IO.File]::WriteAllText($path, ($lines -join "`n") + "`n")
     }
 
     $problem = $null
-    if ($sections.Contains('build')) {
+    if ($sections.Contains('build') -or (-not $sections.Contains('error') -and -not $sections.Contains('output'))) {
         $r = Invoke-Frg build $dir
         if ($r.Code -ne 0) { $problem = "expected it to build, but:`n$($r.Err)" }
     } elseif ($sections.Contains('error')) {
@@ -81,6 +83,15 @@ foreach ($file in Get-ChildItem (Join-Path $PSScriptRoot "cases") -Filter "$Filt
         $got = (($r.Out -split "`n") | ForEach-Object { $_.TrimEnd() }) -join "`n"
         if ($r.Code -ne 0) { $problem = "exit code $($r.Code)`n$($r.Err)" }
         elseif ($got -ne $expected) { $problem = "--- expected:`n$expected--- got:`n$($r.Out)" }
+    }
+    if (-not $problem -and $sections.Contains('warning')) {
+        if (-not $r.Err.Contains('warning:')) { $problem = "expected warnings, but there were none`n$($r.Err)" }
+        foreach ($want in $sections['warning']) {
+            if ($want -and -not $r.Err.Contains($want)) { $problem = "warnings don't contain: $want`n--- warnings were:`n$($r.Err)" }
+        }
+    }
+    if (-not $problem -and $sections.Contains('no warnings') -and $r.Err.Contains('warning:')) {
+        $problem = "expected no warnings, but got:`n$($r.Err)"
     }
 
     if ($problem) {

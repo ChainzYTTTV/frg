@@ -634,6 +634,16 @@ error: 'hp' needs an int, but this is a float
   hint: use int(...) to turn it into a whole number (the decimals get cut off)
 ```
 
+**Warnings** (yellow, `warning:`) point at code that works but probably isn't what you meant. They never stop the build, and appear once there are no errors:
+
+| Warning | What it means | Fix |
+|---|---|---|
+| `this changes 'e', which is only a copy of the item in the list` | `for (Enemy e in enemies) { e.hp = 0; }` with a **struct**: the loop gets a copy, so the list doesn't change | loop with a number: `for (int i = 0; i < enemies.length; i++) { enemies[i].hp = 0; }` |
+| `this divides two whole numbers, so the decimals are cut off` | `float ratio = hits / shots;` with two ints: `7 / 2` is `3`, and only then does it become `3.0` | `float(hits) / shots` gives `3.5` |
+| `the variable 'x' is never used` | you made a variable and never used it | remove it, or use it |
+| `this code can never run, because it comes after 'return'` | lines after `return`, `break` or `continue` in the same `{ }` | remove them, or move them above |
+| `comparing decimal numbers with '==' often gives the wrong answer` | `0.1 + 0.2 == 0.3` is false, because decimals are a tiny bit off | check whether they're close: `math.abs(a - b) < 0.001` |
+
 Problems that can only be found while the game runs stop it with the file and line:
 
 ```

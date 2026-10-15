@@ -184,7 +184,7 @@ void draw(){
     graphics2d.drawText("label", p.x, p.y, 20, color.WHITE);
     string title = "GAME OVER";
     int w = graphics2d.textWidth(title, 48);
-    graphics2d.drawText(title, (window.width() - w) / 2, 200, 48, color.WHITE);
+    graphics2d.drawText(title, (window.width() - w) / 2.0, 200, 48, color.WHITE);
     graphics2d.drawText("{int(roundTimer.left())}", 20, 20, 32, color.WHITE);
     drawHealthBar(10, 10, 3, 10);
     scenes.draw();

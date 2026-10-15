@@ -154,6 +154,7 @@ static bool build(const fs::path& dir, fs::path& exeOut, const BuildOptions& opt
         std::fprintf(stderr, "Build failed: %d error%s.\n", n, n == 1 ? "" : "s");
         return false;
     }
+    flushWarnings();
     printStatus("Compiling", proj.name + " (" + std::to_string(proj.allModules.size()) + " file" +
                                  (proj.allModules.size() == 1 ? "" : "s") + ")");
 
@@ -336,12 +337,14 @@ int main(int argc, char** argv) {
         }
         Project proj;
         bool ok = loadProject(proj, dir) && checkProject(proj);
+        int warnings = flushWarnings();
         if (!ok) {
             int n = errorCount();
             std::fprintf(stderr, "%d error%s found.\n", n, n == 1 ? "" : "s");
             return 1;
         }
-        printStatus("Checked", proj.name + ": no errors");
+        printStatus("Checked", proj.name + ": no errors" +
+                                   (warnings ? ", " + std::to_string(warnings) + " warning" + (warnings == 1 ? "" : "s") : ""));
         return 0;
     }
     if (cmd == "new") {

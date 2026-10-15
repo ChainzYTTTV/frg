@@ -1,0 +1,32 @@
+=== main.frg
+#include <stdio>
+
+void show(float f) {
+    print(f);
+}
+
+int main(){
+    int hits = 7;
+    int shots = 2;
+    float ratio = hits / shots;
+    print(ratio);
+    double d = 0;
+    d = hits / shots;
+    show(hits / shots);
+    float scaled = hits / shots * 1.5;
+    print(scaled);
+    print(d);
+    return 0;
+}
+=== output
+3.0
+3.0
+4.5
+3.0
+=== warning
+warning: this divides two whole numbers, so the decimals are cut off before it becomes a decimal number
+main.frg:10:24
+main.frg:13:14
+main.frg:14:15
+main.frg:15:25
+hint: turn one side into a decimal number first, like float(hits) / shots

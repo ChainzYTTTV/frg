@@ -1,0 +1,33 @@
+=== main.frg
+#include <stdio>
+
+int pick(int n) {
+    return n;
+    print("never");
+}
+
+int main(){
+    for (int i = 0; i < 3; i++) {
+        break;
+        print(i);
+    }
+    while (true) {
+        if (pick(1) == 1) {
+            break;
+        }
+        continue;
+        print("never");
+    }
+    print(pick(2));
+    return 0;
+}
+=== output
+2
+=== warning
+warning: this code can never run, because it comes after 'return'
+main.frg:5:5
+warning: this code can never run, because it comes after 'break'
+main.frg:11:9
+warning: this code can never run, because it comes after 'continue'
+main.frg:18:9
+hint: remove it, or move it above the 'return'

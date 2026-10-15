@@ -73,7 +73,7 @@ This lines text up against the right edge: measure it, then start it `width` pix
 ```cpp
     if (level.coins.isEmpty()) {
         string win = "You got them all!";
-        graphics2d.drawText(win, 480 - graphics2d.textWidth(win, 48) / 2, 200, 48, color.WHITE);
+        graphics2d.drawText(win, 480 - graphics2d.textWidth(win, 48) / 2.0, 200, 48, color.WHITE);
     }
 ```
 

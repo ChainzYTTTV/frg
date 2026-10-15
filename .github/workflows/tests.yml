@@ -1,0 +1,44 @@
+# Builds frg.exe on Windows, runs every test in tests/cases, and builds every example game.
+name: tests
+
+on:
+  push:
+  pull_request:
+  workflow_dispatch:
+
+jobs:
+  test:
+    runs-on: windows-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      # w64devkit has the same g++ (with C++20 coroutines), CMake and Ninja that Forge's users install.
+      - name: Get w64devkit
+        shell: pwsh
+        run: |
+          $url = "https://github.com/skeeto/w64devkit/releases/download/v2.0.0/w64devkit-x64-2.0.0.exe"
+          Invoke-WebRequest $url -OutFile "$env:RUNNER_TEMP\w64devkit.exe"
+          & "$env:RUNNER_TEMP\w64devkit.exe" -y "-o$env:RUNNER_TEMP" | Out-Null
+          "$env:RUNNER_TEMP\w64devkit\bin" | Out-File -Append -Encoding utf8 $env:GITHUB_PATH
+
+      - name: Build frg
+        shell: pwsh
+        run: |
+          g++ --version
+          cmake -S . -B build -G Ninja
+          cmake --build build
+
+      - name: Run the tests
+        shell: pwsh
+        run: .\tests\run_tests.ps1
+
+      - name: Build every example
+        shell: pwsh
+        run: |
+          $failed = @()
+          foreach ($dir in Get-ChildItem examples -Directory) {
+            Write-Host "--- $($dir.Name)"
+            & .\bin\frg.exe build $dir.FullName
+            if ($LASTEXITCODE -ne 0) { $failed += $dir.Name }
+          }
+          if ($failed.Count) { Write-Host "Examples that didn't build: $($failed -join ', ')"; exit 1 }

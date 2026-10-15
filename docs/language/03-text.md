@@ -25,6 +25,19 @@ print("Has an e? {name.contains("e")}");     // quotes inside { } are fine
 
 Any expression works inside `{ }`, and any type can be shown: numbers, bools, lists, maps, structs, classes, enums and optionals. See [How values look as text](#how-values-look-as-text) below.
 
+### Choosing how many decimals
+
+Put `:.` and a number from 0 to 9 at the end, inside the `{ }`, to show a decimal number with exactly that many decimals. It rounds to the nearest:
+
+```cpp
+float speed = 3.14159;
+print("Speed: {speed:.2}");              // Speed: 3.14
+print("{speed:.0} m/s");                 // 3 m/s
+print("{float(hits) / shots * 100:.1}%");  // 87.5%
+```
+
+It only works on `float` and `double`. For a whole number, turn it into one first: `{float(score):.2}`. The ternary still works as usual inside `{ }`: in `{fast ? 1 : 2}` the `:` belongs to the ternary, because a number never starts with a dot.
+
 ### Joining text with +
 
 `+` joins two strings:
@@ -110,6 +123,8 @@ A **method** is a function that belongs to a value, called with a dot: `name.upp
 |---|---|---|---|---|
 | `.length` | `int` | How many characters (bytes) there are. No `()`. | `"Hero".length` | `4` |
 | `isEmpty()` | `bool` | True if it's `""` | `"".isEmpty()` | `true` |
+| `isInt()` | `bool` | True if `int(...)` would work on it | `" 42 ".isInt()` | `true` |
+| `isFloat()` | `bool` | True if `float(...)` would work on it (whole numbers count) | `"2.5".isFloat()` | `true` |
 | `upper()` | `string` | All capitals | `"Hero".upper()` | `"HERO"` |
 | `lower()` | `string` | All lowercase | `"Hero".lower()` | `"hero"` |
 | `trim()` | `string` | Removes spaces, tabs and new lines from both ends | `"  hi  ".trim()` | `"hi"` |
@@ -152,6 +167,18 @@ string t = "{99}";          // the same thing
 
 If the text isn't a valid number (`int("abc")`), the game stops with: `Runtime error in main.frg:7: couldn't turn "abc" into an int`. Spaces around the number are fine.
 
+To avoid that, check first with `isInt()` or `isFloat()`:
+
+```cpp
+string typed = input("How many players? ");
+if (typed.isInt()) {
+    int players = int(typed);
+    print("{players} players");
+} else {
+    print("'{typed}' isn't a whole number");
+}
+```
+
 ## How values look as text
 
 This is what `print(x)` and `"{x}"` produce for each kind of value:
@@ -192,6 +219,8 @@ string name = input("What's your name? ");
 int age = int(input("How old are you? "));
 print("Hi {name}, next year you'll be {age + 1}");
 ```
+
+If the player might type something that isn't a number, check it with `isInt()` before using `int(...)` (see [Turning text into numbers and back](#turning-text-into-numbers-and-back)).
 
 ## What's next
 

@@ -60,7 +60,7 @@ struct color {
     uint8 g;
     uint8 b;
     uint8 a;
-    color(uint8 r, uint8 g, uint8 b, uint8 a = 255);
+    color(int r, int g, int b, int a = 255);
     color fade(float alpha);
     color lerp(color target, float t);
     static color WHITE;
@@ -154,6 +154,22 @@ float mouseWheel();
 )FRG"
 
 static const char* kInput = FRG_KEY_ENUMS R"FRG(
+enum GamepadButton {
+    A, B, X, Y,
+    LEFT_BUMPER, RIGHT_BUMPER, LEFT_TRIGGER, RIGHT_TRIGGER,
+    BACK, START, LEFT_STICK, RIGHT_STICK,
+    UP, DOWN, LEFT, RIGHT
+}
+
+bool gamepadConnected(int gamepad = 0);
+string gamepadName(int gamepad = 0);
+bool gamepadDown(GamepadButton button, int gamepad = 0);
+bool gamepadPressed(GamepadButton button, int gamepad = 0);
+bool gamepadReleased(GamepadButton button, int gamepad = 0);
+vec2 leftStick(int gamepad = 0);
+vec2 rightStick(int gamepad = 0);
+float leftTrigger(int gamepad = 0);
+float rightTrigger(int gamepad = 0);
 bool keyDown(Key key);
 bool keyPressed(Key key);
 bool keyReleased(Key key);
@@ -167,6 +183,19 @@ float mouseWheel();
 )FRG";
 
 static const char* kGraphics2d = R"FRG(
+struct Camera2D {
+    vec2 target;
+    vec2 offset;
+    float zoom;
+    float rotation;
+    Camera2D(vec2 target, vec2 offset, float zoom = 1, float rotation = 0);
+}
+
+void setCamera(Camera2D camera);
+void resetCamera();
+Camera2D camera();
+vec2 screenToWorld(vec2 point);
+vec2 worldToScreen(vec2 point);
 void clear(color c);
 void drawRect(float x, float y, float width, float height, color c);
 void drawRect(rect r, color c);
@@ -190,6 +219,7 @@ class Body {
     vec2 velocity;
     bool isStatic;
     bool solid;
+    bool oneWay;
     float gravityScale;
     bool onGround;
     bool onCeiling;
@@ -207,6 +237,7 @@ void setGravity(vec2 gravity);
 vec2 gravity();
 void step(float dt);
 int count();
+void drawDebug();
 )FRG";
 
 static const char* kAssets = R"FRG(
@@ -217,6 +248,25 @@ class Texture {
     void drawScaled(float x, float y, float scale, color tint = color.WHITE);
     void drawRotated(vec2 center, float degrees, float scale = 1, color tint = color.WHITE);
     void drawPart(rect source, rect destination, color tint = color.WHITE);
+}
+
+class Animation {
+    float fps;
+    bool looping;
+    Animation(Texture sheet, int frameWidth, int frameHeight, int frames, float fps, int row = 0);
+    void update(float dt);
+    void draw(float x, float y, color tint = color.WHITE);
+    void drawScaled(float x, float y, float scale, color tint = color.WHITE);
+    void play();
+    void pause();
+    void reset();
+    bool isPlaying();
+    bool isDone();
+    void flip(bool flipped);
+    bool isFlipped();
+    int frame();
+    void setFrame(int frame);
+    int frameCount();
 }
 
 class Font {
@@ -384,6 +434,7 @@ int range(int min, int max);
 float range(float min, float max);
 float value();
 bool chance(float probability);
+color color();
 )FRG";
 
 static const char* kOpenGL = FRG_KEY_ENUMS FRG_TOOLKIT_WINDOW R"FRG(
@@ -595,6 +646,20 @@ const int CULL_FRONT = 1;
 const int CULL_BACK = 2;
 )FRG";
 
+static const char* kSave = R"FRG(
+void setInt(string key, int value);
+int getInt(string key, int backup = 0);
+void setFloat(string key, float value);
+float getFloat(string key, float backup = 0);
+void setString(string key, string value);
+string getString(string key, string backup = "");
+void setBool(string key, bool value);
+bool getBool(string key, bool backup = false);
+bool has(string key);
+void remove(string key);
+void clear();
+)FRG";
+
 const std::vector<PreludeLib>& preludeLibs() {
     using K = LibKind;
     static const std::vector<PreludeLib> libs = {
@@ -609,6 +674,7 @@ const std::vector<PreludeLib>& preludeLibs() {
         {"tasks", kTasks, false, ""},
         {"time", kTime, false, "forge_time.hpp"},
         {"file", kFile, false, "forge_file.hpp"},
+        {"save", kSave, false, "forge_save.hpp"},
         {"scenes", kScenes, false, "forge_scenes.hpp"},
         {"ui", kUi, true, "forge_ui.hpp", K::Engine},
         {"graphics3d", kGraphics3d, true, "forge_graphics3d.hpp", K::Engine},

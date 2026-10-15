@@ -1,0 +1,10 @@
+=== main.frg
+#include <physics>
+
+int main(){
+    physics.drawDebug();
+    return 0;
+}
+=== error
+physics.drawDebug() draws with the graphics2d library, which this file doesn't include
+hint: add #include <graphics2d> at the top of main.frg

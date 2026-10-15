@@ -2,7 +2,7 @@
     "name": "forge",
     "displayName": "Forge",
     "description": "Forge (.frg) game language: syntax colors, errors as you save, autocomplete for the built-in libraries, and a Run button.",
-    "version": "0.4.0",
+    "version": "0.5.0",
     "publisher": "forge-lang",
     "license": "MIT",
     "engines": {
@@ -65,6 +65,10 @@
             {
                 "command": "forge.buildRelease",
                 "title": "Forge: Build Release (finished game, no console)"
+            },
+            {
+                "command": "forge.package",
+                "title": "Forge: Package Game (zip it, ready to share)"
             },
             {
                 "command": "forge.toggleConsole",

@@ -1,4 +1,4 @@
-# Forge Cheat Sheet (v0.5)
+# Forge Cheat Sheet (v0.6)
 
 The whole language on one page, for looking things up quickly. For full explanations, examples and every detail, see the [complete documentation](README.md). Planned features are listed at the end.
 
@@ -19,10 +19,12 @@ int main(){
 
 | Command | What it does |
 |---|---|
-| `frg new mygame` | makes a folder `mygame/` with a starter `main.frg` |
+| `frg new mygame` | makes a folder `mygame/` with a starter `main.frg` (a hello world) |
+| `frg new mygame --template window` | starts from a small game instead: `window` (a ball to move), `platformer`, or `3d` |
 | `frg build` | compiles the game into `build/<folder name>.exe` |
 | `frg run` | builds, then runs the game |
 | `frg check` | only looks for errors |
+| `frg package` | makes the finished game and zips it into `dist/<name>.zip`, ready to share |
 | `--release` (after build or run) | the finished game: no console window, smaller `.exe` |
 | `--no-console` / `--console` | turn the console window off or on, whatever else is chosen |
 
@@ -89,6 +91,7 @@ Put any value inside `{ }` in a string to show it. This works for numbers, lists
 ```cpp
 print("HP: {hp}/{MAX_HP}");
 print("Is it there? {name.contains("ero")}");
+print("Speed: {speed:.2}");      // a float or double with 2 decimals: 3.14
 ```
 
 | Write this | To get |
@@ -106,7 +109,7 @@ void main() { }
 """;
 ```
 
-Text has `.length` plus these methods: `contains(t)` `indexOf(t)` `startsWith(t)` `endsWith(t)` `upper()` `lower()` `trim()` `replace(a, b)` `split(sep)` `substring(start, count)` `charAt(i)` `repeat(n)` `isEmpty()`.
+Text has `.length` plus these methods: `contains(t)` `indexOf(t)` `startsWith(t)` `endsWith(t)` `upper()` `lower()` `trim()` `replace(a, b)` `split(sep)` `substring(start, count)` `charAt(i)` `repeat(n)` `isEmpty()` `isInt()` `isFloat()` (true if `int(...)` / `float(...)` would work on it).
 
 ## Operators
 
@@ -269,6 +272,7 @@ The difference between them is what happens when you copy one:
 
 - A **struct** is a value. `Point b = a;` makes a separate copy, so changing `b` doesn't change `a`. Use structs for small bits of data like positions and colors.
 - A **class** is shared. `Player b = a;` makes `b` another name for the *same* player. Use classes for game objects: players, enemies, items.
+- A class object is freed as soon as nothing refers to it any more. Two objects that refer to **each other** (`a.partner = b; b.partner = a;`) are never freed while the game runs. That rarely matters in small games, but if you make such pairs over and over, set one side to `null` when you're done with them (`a.partner = null;`). See [When class objects go away](language/09-structs-and-classes.md#when-class-objects-go-away).
 
 Classes can **inherit** from another class. They get all its fields and methods, and can replace methods with their own version:
 
@@ -405,7 +409,7 @@ These are always available:
 | `vec2` | `x` `y` | `length()` `normalized()` `dot(v)` `distance(v)` `angle()` `rotated(r)` `lerp(v, t)`, `vec2.ZERO` `ONE` `UP` `DOWN` `LEFT` `RIGHT` |
 | `vec3` | `x` `y` `z` | `length()` `normalized()` `dot(v)` `cross(v)` `distance(v)` `lerp(v, t)`, `vec3.ZERO` `ONE` `UP` `FORWARD` `RIGHT` |
 | `vec4` | `x` `y` `z` `w` | `length()` `normalized()` `dot(v)` |
-| `color` | `r` `g` `b` `a` (0 to 255) | `color(r, g, b)` or `color(r, g, b, a)`, `fade(alpha)` `lerp(c, t)`, and `color.WHITE` `BLACK` `RED` `GREEN` `BLUE` `YELLOW` `ORANGE` `PURPLE` `PINK` `GOLD` `SKYBLUE` `GRAY` `LIGHTGRAY` `DARKGRAY` `BROWN` `MAGENTA` `LIME` `MAROON` `VIOLET` `BEIGE` `DARKGREEN` `DARKBLUE` `BLANK` |
+| `color` | `r` `g` `b` `a` (0 to 255) | `color(r, g, b)` or `color(r, g, b, a)` (ints; below 0 becomes 0, above 255 becomes 255), `fade(alpha)` `lerp(c, t)`, and `color.WHITE` `BLACK` `RED` `GREEN` `BLUE` `YELLOW` `ORANGE` `PURPLE` `PINK` `GOLD` `SKYBLUE` `GRAY` `LIGHTGRAY` `DARKGRAY` `BROWN` `MAGENTA` `LIME` `MAROON` `VIOLET` `BEIGE` `DARKGREEN` `DARKBLUE` `BLANK` |
 | `rect` | `x` `y` `width` `height` | `overlaps(r)` `contains(point)` `center()` `position()` `size()` |
 
 Vectors work with math: `pos += velocity * dt;`
@@ -418,15 +422,16 @@ Each file includes the libraries it uses. Functions are reached through the libr
 |---|---|
 | `<stdio>` | `print(x)` (adds a new line), `print()`, `write(x)` (no new line), `input()` / `input("prompt")` |
 | `<math>` | `math.sqrt` `pow` `sin` `cos` `tan` `asin` `acos` `atan` `atan2` `exp` `log` `floor` `ceil` `round` `abs` `sign` `min` `max` `clamp` `lerp`, plus `math.PI` `TAU` `E` |
-| `<random>` | `random.range(1, 6)` (whole numbers, both ends included), `random.range(0.5, 2.0)`, `random.value()` (0 to 1), `random.chance(0.25)`, `random.seed(n)` |
+| `<random>` | `random.range(1, 6)` (whole numbers, both ends included), `random.range(0.5, 2.0)`, `random.value()` (0 to 1), `random.chance(0.25)`, `random.seed(n)`, `random.color()` |
 | `<window>` | `window.open(width, height, "title")` `shouldClose()` `run()` `close()` `deltaTime()` `time()` `width()` `height()` `fps()` `setFPS(n)` `setTitle(t)` `setBackground(color)` `toggleFullscreen()` `screenshot("file.png")` |
-| `<input>` | `input.keyDown(Key.SPACE)` (held), `keyPressed` (just pressed this frame), `keyReleased`, `mouseDown(MouseButton.LEFT)` `mousePressed` `mouseReleased` `mousePosition()` `mouseX()` `mouseY()` `mouseWheel()`. Keys: `Key.A`…`Key.Z`, `Key.NUM0`…`Key.NUM9`, `SPACE` `ENTER` `ESCAPE` `BACKSPACE` `TAB` `LEFT` `RIGHT` `UP` `DOWN` `LEFT_SHIFT` `RIGHT_SHIFT` `LEFT_CONTROL` `RIGHT_CONTROL` `LEFT_ALT` `RIGHT_ALT` `F1`…`F12` |
-| `<graphics2d>` | `graphics2d.drawRect(x, y, w, h, color)` or `drawRect(rect, color)`, `drawRectOutline(..., color, thickness)`, `drawCircle(x, y, radius, color)` or `drawCircle(vec2, radius, color)`, `drawCircleOutline`, `drawLine(from, to, color, thickness)`, `drawTriangle(a, b, c, color)`, `drawText(text, x, y, size, color)`, `textWidth(text, size)`, `drawFPS(x, y)`, `clear(color)` |
+| `<input>` | `input.keyDown(Key.SPACE)` (held), `keyPressed` (just pressed this frame), `keyReleased`, `mouseDown(MouseButton.LEFT)` `mousePressed` `mouseReleased` `mousePosition()` `mouseX()` `mouseY()` `mouseWheel()`. Keys: `Key.A`…`Key.Z`, `Key.NUM0`…`Key.NUM9`, `SPACE` `ENTER` `ESCAPE` `BACKSPACE` `TAB` `LEFT` `RIGHT` `UP` `DOWN` `LEFT_SHIFT` `RIGHT_SHIFT` `LEFT_CONTROL` `RIGHT_CONTROL` `LEFT_ALT` `RIGHT_ALT` `F1`…`F12`. Controllers: `input.gamepadDown(GamepadButton.A)` (also `gamepadPressed`, `gamepadReleased`; buttons `A` `B` `X` `Y` `LEFT_BUMPER` `RIGHT_BUMPER` `LEFT_TRIGGER` `RIGHT_TRIGGER` `BACK` `START` `LEFT_STICK` `RIGHT_STICK` `UP` `DOWN` `LEFT` `RIGHT`), `leftStick()` `rightStick()` (vec2, -1 to 1), `leftTrigger()` `rightTrigger()` (0 to 1), `gamepadConnected()`, `gamepadName()`. Each takes an optional controller number (0 = the first) |
+| `<graphics2d>` | `graphics2d.drawRect(x, y, w, h, color)` or `drawRect(rect, color)`, `drawRectOutline(..., color, thickness)`, `drawCircle(x, y, radius, color)` or `drawCircle(vec2, radius, color)`, `drawCircleOutline`, `drawLine(from, to, color, thickness)`, `drawTriangle(a, b, c, color)`, `drawText(text, x, y, size, color)`, `textWidth(text, size)`, `drawFPS(x, y)`, `clear(color)`, and a 2D camera: `setCamera(Camera2D(target, offset, zoom, rotation))`, `resetCamera()`, `screenToWorld(p)`, `worldToScreen(p)` |
 | `<physics>` | the `Body` class and `physics.add(body)` `remove(body)` `step(dt)` `setGravity(vec2)` `gravity()` `clear()` `count()` (see below) |
 | `<assets>` | images and fonts: `assets.loadTexture("player.png")`, `assets.loadFont("font.ttf")`, `assets.exists(path)` (see below) |
 | `<audio>` | `audio.loadSound("jump.wav")`, `audio.loadMusic("song.ogg")`, `audio.setVolume(0.5)` (see below) |
 | `<graphics3d>` | 3D drawing (see below) |
 | `<time>` | `time.now()` (seconds since the game started), `time.sleep(seconds)`, `time.clock()` ("14:05:09"), `time.date()` ("2026-10-14"), `time.year()` `month()` `day()` `hour()` `minute()` `second()`, and the `Timer` class |
+| `<save>` | `save.setInt(key, n)` and `save.getInt(key, backup)`, also `setFloat`/`getFloat`, `setString`/`getString`, `setBool`/`getBool`, and `has(key)` `remove(key)` `clear()`. Kept in `save.txt` in the game's folder, written straight away. |
 | `<file>` | `file.read(path)` `write(path, text)` `append(path, text)` `exists(path)` `remove(path)` `readLines(path)` `writeLines(path, lines)` `files(folder)`. Paths are relative to the game's folder. |
 | `<scenes>` | the `Scene` class and `scenes.change(scene)` `update(dt)` `draw()` `current()` (see below) |
 | `<ui>` | `ui.button(rect, "text")` (true when clicked), `ui.checkbox(rect, "text", checked)` (gives the new value), `ui.slider(rect, value, min, max)` (gives the new value), `ui.label(text, x, y, size, color)`, `ui.panel(rect)`, `ui.setTheme(background, accent, text)` |
@@ -469,6 +474,9 @@ player.draw(x, y);                                     // also: draw(x, y, tint)
 player.drawScaled(x, y, 4);                            // 4 times as big
 player.drawRotated(vec2(x, y), 45, 1);                 // centered at (x, y), turned 45 degrees
 player.drawPart(rect(0, 0, 16, 16), rect(x, y, 64, 64));   // one frame of a sprite sheet, stretched
+Animation walk = Animation(sheet, 16, 16, 4, 8);       // a sprite sheet's frames: frame width, height, how many, per second
+walk.update(dt);                                       // in update
+walk.drawScaled(x, y, 4);                              // in draw; also draw(x, y), flip(true), play(), pause(), reset()
 big.drawText("Hello", 20, 20, 48, color.WHITE);
 jump.play();
 song.play();                                           // loops until song.stop()
@@ -477,6 +485,7 @@ song.play();                                           // loops until song.stop(
 | | Methods |
 |---|---|
 | `Texture` | `width()` `height()` `draw` `drawScaled` `drawRotated` `drawPart` |
+| `Animation` | `Animation(sheet, frameWidth, frameHeight, frames, fps, row = 0)`, `update(dt)` `draw(x, y)` `drawScaled(x, y, scale)` `flip(bool)` `play()` `pause()` `reset()` `isPlaying()` `isDone()` `frame()` `setFrame(i)` `frameCount()`, fields `fps` `looping` |
 | `Font` | `drawText(text, x, y, size, color)` `measure(text, size)` |
 | `Sound` | `play()` `stop()` `isPlaying()` `setVolume(v)` `setPitch(p)` |
 | `Music` | `play()` `stop()` `pause()` `resume()` `isPlaying()` `setVolume(v)` `setLooping(b)` `length()` `position()` |
@@ -554,9 +563,23 @@ if (cooldown.isDone()) {
 
 `Timer` also has `left()` and `elapsed()`.
 
+### 2D camera
+
+For a level bigger than the window. Draw the world through the camera, then reset it for the text:
+
+```cpp
+Camera2D camera = Camera2D(vec2(480, 270), vec2(480, 270));   // target (a world point), offset (where it shows)
+camera.target = camera.target.lerp(hero.center(), 5 * dt);   // in update: glide toward the player
+graphics2d.setCamera(camera);                                 // in draw: the world...
+level.draw();
+graphics2d.resetCamera();                                     // ...then the score, which stays put
+```
+
+`Camera2D` also has `zoom` (1 = normal) and `rotation` (degrees). `graphics2d.screenToWorld(input.mousePosition())` gives the mouse's position in the world; `worldToScreen` goes the other way. See [graphics2d](libraries/graphics2d.md#camera-scrolling-and-zooming).
+
 ### Physics
 
-A `Body` is a box: `Body(x, y, width, height)`. It has `position`, `size`, `velocity`, `isStatic`, `gravityScale`, plus `onGround`, `onCeiling` and `onWall`, which say what it touched during the last step. It also has `bounds()`, `center()` and `overlaps(other)`.
+A `Body` is a box: `Body(x, y, width, height)`. It has `position`, `size`, `velocity`, `isStatic`, `solid`, `oneWay`, `gravityScale`, plus `onGround`, `onCeiling` and `onWall`, which say what it touched during the last step. It also has `bounds()`, `center()` and `overlaps(other)`.
 
 ```cpp
 Body ground = Body(0, 500, 960, 40);
@@ -571,7 +594,9 @@ physics.step(dt);                // falls with gravity, stops on static bodies
 if (box.onGround) { ... }
 ```
 
-Your own classes can inherit from `Body`: `class Player : Body { ... }`. Moving bodies push each other apart, so crates stack. Set `solid = false` on things that should pass through everything, like coins and trigger zones, and check those with `a.overlaps(b)`.
+Your own classes can inherit from `Body`: `class Player : Body { ... }`. Moving bodies push each other apart, so crates stack. Set `solid = false` on things that should pass through everything, like coins and trigger zones, and check those with `a.overlaps(b)`. Set `oneWay = true` on a static platform to make it one-way: you can jump up through it and land on top.
+
+`physics.drawDebug()` draws every body's outline (static blue, moving green, not solid purple, and a yellow bar under a body that's `onGround`), to see what physics sees. It draws with `<graphics2d>`, so that file needs `#include <graphics2d>` too.
 
 ## Making a game
 
@@ -619,6 +644,8 @@ The screen is cleared to the background color before each frame (`window.setBack
 
 See `examples/platformer` for a complete game. The other examples are `shapes` (2D drawing), `sprites` (images and sound), `menu` (scenes and UI) and `world3d` (3D).
 
+An `icon.png` in the game's folder becomes the icon of the `.exe` and of the window.
+
 When the game is finished, `frg build --release` makes an `.exe` without the console window. Without a console, `print` output isn't shown, and runtime errors pop up in a box instead. `--no-console` turns the console off without making a release build, and `--console` keeps it on even in one. ([Details](getting-started.md#the-console-window-on-for-testing-off-for-players).)
 
 ## Errors
@@ -633,6 +660,16 @@ error: 'hp' needs an int, but this is a float
    |              ^^^
   hint: use int(...) to turn it into a whole number (the decimals get cut off)
 ```
+
+**Warnings** (yellow, `warning:`) point at code that works but probably isn't what you meant. They never stop the build, and appear once there are no errors:
+
+| Warning | What it means | Fix |
+|---|---|---|
+| `this changes 'e', which is only a copy of the item in the list` | `for (Enemy e in enemies) { e.hp = 0; }` with a **struct**: the loop gets a copy, so the list doesn't change | loop with a number: `for (int i = 0; i < enemies.length; i++) { enemies[i].hp = 0; }` |
+| `this divides two whole numbers, so the decimals are cut off` | `float ratio = hits / shots;` with two ints: `7 / 2` is `3`, and only then does it become `3.0` | `float(hits) / shots` gives `3.5` |
+| `the variable 'x' is never used` | you made a variable and never used it | remove it, or use it |
+| `this code can never run, because it comes after 'return'` | lines after `return`, `break` or `continue` in the same `{ }` | remove them, or move them above |
+| `comparing decimal numbers with '==' often gives the wrong answer` | `0.1 + 0.2 == 0.3` is false, because decimals are a tiny bit off | check whether they're close: `math.abs(a - b) < 0.001` |
 
 Problems that can only be found while the game runs stop it with the file and line:
 

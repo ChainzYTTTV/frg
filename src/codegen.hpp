@@ -6,6 +6,8 @@
 
 struct GeneratedCpp {
     std::string code;
+    std::vector<std::string> headers;      // the runtime headers it uses. The code includes "forge_pch.hpp" first (the
+                                           // build writes and precompiles it), and then these.
     bool needsRaylib = false;              // the game uses raylib (the engine, or images/sound), so it's linked with it
     std::vector<std::string> sources;      // extra runtime .cpp files to compile with it (toolkits)
     std::vector<std::string> linkFlags;    // extra libraries to link

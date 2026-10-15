@@ -1,0 +1,28 @@
+=== main.frg
+#include <stdio>
+#include <graphics2d>
+
+int main(){
+    vec2 mouse = vec2(100, 50);
+    print(graphics2d.screenToWorld(mouse));
+    Camera2D cam = Camera2D(vec2(1000, 300), vec2(480, 270));
+    print(cam);
+    graphics2d.setCamera(cam);
+    print(graphics2d.screenToWorld(vec2(480, 270)));
+    print(graphics2d.worldToScreen(vec2(1010, 300)));
+    cam.zoom = 2;
+    graphics2d.setCamera(cam);
+    print(graphics2d.worldToScreen(vec2(1010, 300)));
+    print(graphics2d.camera().zoom);
+    graphics2d.resetCamera();
+    print(graphics2d.worldToScreen(vec2(1010, 300)));
+    return 0;
+}
+=== output
+vec2(100.0, 50.0)
+Camera2D(target: vec2(1000.0, 300.0), offset: vec2(480.0, 270.0), zoom: 1.0, rotation: 0.0)
+vec2(1000.0, 300.0)
+vec2(490.0, 270.0)
+vec2(500.0, 270.0)
+2.0
+vec2(1010.0, 300.0)

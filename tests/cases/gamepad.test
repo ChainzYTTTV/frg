@@ -1,0 +1,32 @@
+=== main.frg
+#include <stdio>
+#include <input>
+
+// No controller is plugged in while the tests run, so everything reads as "not pressed".
+int main(){
+    print(input.gamepadConnected());
+    print(input.gamepadConnected(1));
+    print("'{input.gamepadName()}'");
+    print(input.gamepadDown(GamepadButton.A));
+    print(input.gamepadPressed(GamepadButton.START, 1));
+    print(input.gamepadReleased(GamepadButton.LEFT_BUMPER));
+    print(input.leftStick());
+    print(input.rightStick(2));
+    print(input.leftTrigger() + input.rightTrigger());
+    GamepadButton jump = GamepadButton.A;
+    print(jump);
+    print(GamepadButton.RIGHT);
+    return 0;
+}
+=== output
+false
+false
+''
+false
+false
+false
+vec2(0.0, 0.0)
+vec2(0.0, 0.0)
+0.0
+A
+RIGHT

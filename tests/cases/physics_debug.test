@@ -1,0 +1,27 @@
+=== main.frg
+#include <window>
+#include <graphics2d>
+#include <physics>
+
+Body floor = Body(0, 500, 960, 40);
+Body box = Body(100, 100, 40, 40);
+
+void update(float dt) {
+    physics.step(dt);
+}
+
+void draw() {
+    graphics2d.setCamera(Camera2D(vec2(480, 270), vec2(480, 270)));
+    physics.drawDebug();
+    graphics2d.resetCamera();
+}
+
+int main(){
+    floor.isStatic = true;
+    physics.add(floor);
+    physics.add(box);
+    window.open(960, 540, "Debug view");
+    window.run();
+    return 0;
+}
+=== build

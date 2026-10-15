@@ -16,6 +16,7 @@ static int g_errors = 0;
 static bool g_color = false;
 
 static const char* red() { return g_color ? "\x1b[1;31m" : ""; }
+static const char* yellow() { return g_color ? "\x1b[1;33m" : ""; }
 static const char* green() { return g_color ? "\x1b[1;32m" : ""; }
 static const char* blue() { return g_color ? "\x1b[1;34m" : ""; }
 static const char* cyan() { return g_color ? "\x1b[1;36m" : ""; }
@@ -59,15 +60,16 @@ static std::string machineEscape(const std::string& s) {
     return out;
 }
 
-void reportError(const Loc& loc, const std::string& msg, const std::string& hint) {
-    g_errors++;
+// Prints one error or warning: the message, where it is (with the line and ^^^ under the spot), and the hint.
+static void printDiagnostic(bool warning, const Loc& loc, const std::string& msg, const std::string& hint) {
     if (g_machine) {
         std::string path = loc.file ? loc.file->fullPath : "";
-        std::printf("E\t%s\t%d\t%d\t%d\t%s\t%s\n", machineEscape(path).c_str(), loc.line, loc.col, loc.len,
+        std::printf("%s\t%s\t%d\t%d\t%d\t%s\t%s\n", warning ? "W" : "E", machineEscape(path).c_str(), loc.line, loc.col, loc.len,
                     machineEscape(msg).c_str(), machineEscape(hint).c_str());
         return;
     }
-    std::fprintf(stderr, "%serror:%s %s%s%s\n", red(), reset(), bold(), msg.c_str(), reset());
+    const char* color = warning ? yellow() : red();
+    std::fprintf(stderr, "%s%s:%s %s%s%s\n", color, warning ? "warning" : "error", reset(), bold(), msg.c_str(), reset());
     if (loc.file) {
         std::fprintf(stderr, "  %s-->%s %s:%d:%d\n", blue(), reset(), loc.file->displayPath.c_str(), loc.line, loc.col);
         std::string src = loc.file->getLine(loc.line);
@@ -84,10 +86,45 @@ void reportError(const Loc& loc, const std::string& msg, const std::string& hint
         std::string carets(std::max(1, loc.len), '^');
         std::fprintf(stderr, " %s %s|%s\n", gutter.c_str(), blue(), reset());
         std::fprintf(stderr, " %s%s |%s %s\n", blue(), num.c_str(), reset(), shown.c_str());
-        std::fprintf(stderr, " %s %s|%s %s%s%s%s\n", gutter.c_str(), blue(), reset(), pad.c_str(), red(), carets.c_str(), reset());
+        std::fprintf(stderr, " %s %s|%s %s%s%s%s\n", gutter.c_str(), blue(), reset(), pad.c_str(), color, carets.c_str(), reset());
     }
     if (!hint.empty()) std::fprintf(stderr, "  %shint:%s %s\n", cyan(), reset(), hint.c_str());
     std::fprintf(stderr, "\n");
+}
+
+void reportError(const Loc& loc, const std::string& msg, const std::string& hint) {
+    g_errors++;
+    printDiagnostic(false, loc, msg, hint);
+}
+
+struct Warning {
+    Loc loc;
+    std::string msg, hint;
+};
+static std::vector<Warning> g_warnings;
+
+void reportWarning(const Loc& loc, const std::string& msg, const std::string& hint) {
+    for (const Warning& w : g_warnings)
+        if (w.loc.file == loc.file && w.loc.line == loc.line && w.loc.col == loc.col && w.msg == msg) return;
+    g_warnings.push_back({loc, msg, hint});
+}
+
+void reportPlainWarning(const std::string& msg, const std::string& hint) {
+    if (!g_machine) printDiagnostic(true, Loc{}, msg, hint);
+}
+
+int flushWarnings() {
+    // For people, warnings wait until the errors are fixed, so the errors stand out. Editors get both.
+    if (g_errors > 0 && !g_machine) return 0;
+    std::stable_sort(g_warnings.begin(), g_warnings.end(), [](const Warning& a, const Warning& b) {
+        std::string fa = a.loc.file ? a.loc.file->displayPath : "", fb = b.loc.file ? b.loc.file->displayPath : "";
+        if (fa != fb) return fa < fb;
+        return a.loc.line != b.loc.line ? a.loc.line < b.loc.line : a.loc.col < b.loc.col;
+    });
+    for (const Warning& w : g_warnings) printDiagnostic(true, w.loc, w.msg, w.hint);
+    int n = (int)g_warnings.size();
+    g_warnings.clear();
+    return n;
 }
 
 void reportPlainError(const std::string& msg, const std::string& hint) {

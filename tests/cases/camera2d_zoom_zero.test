@@ -1,0 +1,11 @@
+=== main.frg
+#include <stdio>
+#include <graphics2d>
+
+int main(){
+    Camera2D cam = Camera2D(vec2(0, 0), vec2(0, 0), 0);
+    graphics2d.setCamera(cam);
+    return 0;
+}
+=== runtime error
+graphics2d.setCamera(): the camera's zoom must be more than 0 (1 is normal size, 2 is twice as big), but it's 0.0

@@ -49,7 +49,7 @@ The **checker** is where most of Forge's friendliness lives. It runs in two pass
 - **Pass 1** learns every type, function and global variable in every file. That's why things can be used before they're written, even across files.
 - **Pass 2** goes through every function body, working out the type of every expression and making sure everything fits: you can't put a `float` into an `int`, conditions must be `bool`, and every path of a function returns.
 
-Each error comes with a location and, often, a hint. "Did you mean...?" suggestions come from comparing the unknown name with known names and picking the closest one.
+Each error comes with a location and, often, a hint. The checker also gives **warnings** for code that works but probably isn't what was meant (a changed copy in a `for ... in` loop, `int / int` going into a float, unused variables, code after `return`, `==` on decimals). Warnings are collected while checking and printed afterwards, in yellow; they're only shown to people when there are no errors, and they never stop the build. "Did you mean...?" suggestions come from comparing the unknown name with known names and picking the closest one.
 
 Built-in types and libraries (`vec2`, `window`, `physics`...) are written in **Forge syntax** inside the compiler (in `prelude.cpp`). The checker reads them like any other code, which is why they follow the same rules and give the same kind of error messages.
 
@@ -76,10 +76,12 @@ Forge's own helper names contain `$`, which Forge names can't, so they never cla
 `frg` runs g++ on the generated file:
 
 ```
-g++ -std=gnu++20 -O2 -fwrapv -static -I<runtime> forge_generated.cpp -o game.exe
+g++ -std=gnu++20 -O1 -fwrapv -w -I<runtime> -I<cache> forge_generated.cpp -o game.exe -static
 ```
 
-- `-O2` optimizes for speed.
+- If the game's folder has `icon.png`, Forge wraps the PNG in an `.ico` file (an `.ico` can simply hold a PNG), writes a one-line resource script `GLFW_ICON ICON "icon.ico"`, and runs **windres** (from w64devkit) to turn it into `build/icon_res.o`, which is linked in. That gives the `.exe` its icon; the name `GLFW_ICON` is the one raylib's window library looks for, and the window also loads `icon.png` with raylib's `SetWindowIcon`.
+- `-O1` optimizes a little, and compiles fast. `--release` builds use `-O2`, which optimizes more but takes longer.
+- **Precompiled headers.** Most of a build's time goes into reading Forge's runtime headers (and raylib's). So the generated file starts with `#include "forge_pch.hpp"`, and Forge compiles that header once into `forge_pch.hpp.gch` in a `cache` folder next to `frg.exe` (or in the game's `build/` folder if that one can't be written). There are two versions: one with the core and the libraries that don't use raylib, and one that adds every raylib library, so all games share them. The toolkits' own `.cpp` files are cached as `.o` files the same way. The cache folder's name comes from everything that affects the result (Forge's version, the runtime files' dates, which g++ is used, and the flags), so it's never stale. Each cache folder also has a `stamp.txt` naming the Forge and g++ that made it; when a new folder is made, folders from an older Forge or g++ are deleted, so the cache doesn't grow after updates. If a cached file is unusable anyway, g++ just reads the real headers, so the cache only changes speed, never behavior.
 - `-fwrapv` makes whole numbers wrap around predictably when they overflow.
 - `-static` puts everything into the `.exe`, so it runs anywhere without extra files.
 - Games that use the engine libraries also link **raylib** (`-lraylib -lopengl32 -lgdi32 -lwinmm`).
@@ -94,7 +96,8 @@ The **runtime** (`runtime/*.hpp`) is the C++ code every game is built with:
 | `forge.hpp` | printing, text conversion, lists and maps, optionals, tasks, the core types (`vec2`, `color`...), random |
 | `forge_window.hpp` | `<window>`, `<input>`, `<graphics2d>` on top of raylib |
 | `forge_graphics3d.hpp`, `forge_assets.hpp`, `forge_audio.hpp`, `forge_ui.hpp` | the other engine libraries |
-| `forge_physics.hpp`, `forge_scenes.hpp`, `forge_ecs.hpp`, `forge_time.hpp`, `forge_file.hpp` | libraries that don't need raylib |
+| `forge_physics.hpp`, `forge_scenes.hpp`, `forge_ecs.hpp`, `forge_time.hpp`, `forge_file.hpp`, `forge_save.hpp` | libraries that don't need raylib |
+| `forge_physics_draw.hpp` | `physics.drawDebug()`, which draws with raylib. Forge adds it only to games that use both `<physics>` and `<graphics2d>`, so `<physics>` itself never needs raylib |
 | `raylib/` | raylib 5.5 (by Ramon Santamaria and contributors, zlib license) |
 
 ## Forge's source code
@@ -133,11 +136,11 @@ int main(){ print(1 + 1); return 0; }
 2
 ```
 
-The other kinds are `=== error` (the build must fail with these messages) and `=== build` (it must compile; it isn't run, for games with windows). Run them all with `.\tests\run_tests.ps1` (in PowerShell 7).
+The other kinds are `=== error` (the build must fail with these messages) and `=== build` (it must compile; it isn't run, for games with windows). `=== new` (with a template name) runs `frg new --template` and builds the result. `=== package` runs `frg package` and lists files that must (or, with `!`, must not) be there afterwards. `=== runtime error` runs the program and expects it to stop with these messages. `=== warning` can be added to any test: each of its lines must appear in the warnings. `=== no warnings` (empty) means there must be none. Run them all with `.\tests\run_tests.ps1` (in PowerShell 7).
 
 ## How the VS Code extension finds errors
 
-When you save, the extension runs `frg check <game folder> --machine`. In machine mode, each error is printed as one tab-separated line (`E`, file, line, column, length, message, hint), which the extension turns into red underlines.
+When you save, the extension runs `frg check <game folder> --machine`. In machine mode, each error is printed as one tab-separated line (`E`, file, line, column, length, message, hint), which the extension turns into red underlines. Warnings are the same, but start with `W` and become yellow underlines.
 
 ## Adding a library
 

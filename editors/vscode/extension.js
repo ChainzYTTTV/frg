@@ -43,6 +43,7 @@ const LIBRARIES = {
         ['value', 'float value()', 'A random number from 0 to 1.'],
         ['chance', 'bool chance(float probability)', 'True with the given probability: chance(0.25) is true 1 time in 4.'],
         ['seed', 'void seed(int value)', 'Makes the random numbers repeat the same way every run.'],
+        ['color', 'color color()', 'A random solid color.'],
     ],
     window: [
         ['open', 'void open(int width, int height, string title)', 'Opens the game window.'],
@@ -71,6 +72,15 @@ const LIBRARIES = {
         ['mouseX', 'float mouseX()', 'Mouse x position.'],
         ['mouseY', 'float mouseY()', 'Mouse y position.'],
         ['mouseWheel', 'float mouseWheel()', 'How far the mouse wheel moved this frame.'],
+        ['gamepadConnected', 'bool gamepadConnected(int gamepad = 0)', 'True if a controller is plugged in. gamepad is 0 for the first one, 1 for the second...'],
+        ['gamepadName', 'string gamepadName(int gamepad = 0)', 'The controller\'s name, or "" if there isn\'t one.'],
+        ['gamepadDown', 'bool gamepadDown(GamepadButton button, int gamepad = 0)', 'True while a controller button is held, like GamepadButton.A.'],
+        ['gamepadPressed', 'bool gamepadPressed(GamepadButton button, int gamepad = 0)', 'True only in the frame the button was pressed.'],
+        ['gamepadReleased', 'bool gamepadReleased(GamepadButton button, int gamepad = 0)', 'True only in the frame the button was let go.'],
+        ['leftStick', 'vec2 leftStick(int gamepad = 0)', 'The left stick, from (-1, -1) (up-left) to (1, 1) (down-right). Small wobbles count as (0, 0).'],
+        ['rightStick', 'vec2 rightStick(int gamepad = 0)', 'The right stick, like leftStick.'],
+        ['leftTrigger', 'float leftTrigger(int gamepad = 0)', 'How far the left trigger is pressed: 0 to 1.'],
+        ['rightTrigger', 'float rightTrigger(int gamepad = 0)', 'How far the right trigger is pressed: 0 to 1.'],
     ],
     graphics2d: [
         ['drawRect', 'void drawRect(float x, float y, float width, float height, color c)\nvoid drawRect(rect r, color c)', 'A filled rectangle.'],
@@ -83,9 +93,14 @@ const LIBRARIES = {
         ['textWidth', 'int textWidth(string text, int size)', 'How wide some text would be, in pixels.'],
         ['drawFPS', 'void drawFPS(float x, float y)', 'Shows the frames per second.'],
         ['clear', 'void clear(color c)', 'Fills the whole screen with a color.'],
+        ['setCamera', 'void setCamera(Camera2D camera)', 'Drawing after this is moved, zoomed and turned by the camera. Camera2D(target, offset, zoom = 1, rotation = 0): target is the world point to look at, offset is where it shows on the screen.'],
+        ['resetCamera', 'void resetCamera()', 'Stops using the camera, so the next drawing is on the screen again (for scores and menus).'],
+        ['camera', 'Camera2D camera()', 'The camera set with setCamera.'],
+        ['screenToWorld', 'vec2 screenToWorld(vec2 point)', 'Where a point on the screen (like the mouse) is in the world, with the camera.'],
+        ['worldToScreen', 'vec2 worldToScreen(vec2 point)', 'Where a point in the world shows on the screen, with the camera.'],
     ],
     assets: [
-        ['loadTexture', 'Texture loadTexture(string path)', 'Loads an image (.png .jpg .bmp .tga .gif .qoi). Then: tex.draw(x, y), drawScaled, drawRotated, drawPart, width(), height().'],
+        ['loadTexture', 'Texture loadTexture(string path)', 'Loads an image (.png .jpg .bmp .tga .gif .qoi). Then: tex.draw(x, y), drawScaled, drawRotated, drawPart, width(), height(). For a sprite sheet: Animation(tex, frameWidth, frameHeight, frames, fps), then anim.update(dt) and anim.draw(x, y).'],
         ['loadFont', 'Font loadFont(string path, int quality = 64)', 'Loads a font (.ttf .otf). Then: font.drawText(text, x, y, size, color), font.measure(text, size).'],
         ['exists', 'bool exists(string path)', 'True if the file is in the game folder.'],
     ],
@@ -120,6 +135,19 @@ const LIBRARIES = {
         ['hour', 'int hour()', 'The hour (0 to 23).'],
         ['minute', 'int minute()', 'The minute.'],
         ['second', 'int second()', 'The second.'],
+    ],
+    save: [
+        ['setInt', 'void setInt(string key, int value)', 'Saves a whole number under a name. The save file is written straight away.'],
+        ['getInt', 'int getInt(string key, int backup = 0)', 'A saved whole number, or backup if it isn\'t saved.'],
+        ['setFloat', 'void setFloat(string key, float value)', 'Saves a decimal number under a name.'],
+        ['getFloat', 'float getFloat(string key, float backup = 0)', 'A saved decimal number, or backup if it isn\'t saved.'],
+        ['setString', 'void setString(string key, string value)', 'Saves text under a name.'],
+        ['getString', 'string getString(string key, string backup = "")', 'Saved text, or backup if it isn\'t saved.'],
+        ['setBool', 'void setBool(string key, bool value)', 'Saves true or false under a name.'],
+        ['getBool', 'bool getBool(string key, bool backup = false)', 'A saved true/false, or backup if it isn\'t saved.'],
+        ['has', 'bool has(string key)', 'True if something is saved under that name.'],
+        ['remove', 'void remove(string key)', 'Forgets one saved value.'],
+        ['clear', 'void clear()', 'Forgets everything that was saved (for a "reset save" button).'],
     ],
     file: [
         ['read', 'string read(string path)', 'All the text in a file.'],
@@ -163,13 +191,14 @@ const LIBRARIES = {
         ['stopAll', 'void stopAll()', 'Stops every task.'],
     ],
     physics: [
-        ['add', 'void add(Body body)', 'Adds a body to the world so step() moves it.'],
+        ['add', 'void add(Body body)', 'Adds a body to the world so step() moves it. A Body has position, size, velocity, isStatic, solid, oneWay (a platform you can jump up through), gravityScale, and onGround / onCeiling / onWall.'],
         ['remove', 'void remove(Body body)', 'Takes a body out of the world.'],
         ['step', 'void step(float dt)', 'Moves every body: gravity, velocity, and stopping at static bodies. Call it once per frame.'],
         ['setGravity', 'void setGravity(vec2 gravity)', 'Gravity, in pixels per second per second. Starts at vec2(0, 980).'],
         ['gravity', 'vec2 gravity()', 'The current gravity.'],
         ['clear', 'void clear()', 'Removes every body.'],
         ['count', 'int count()', 'How many bodies are in the world.'],
+        ['drawDebug', 'void drawDebug()', 'Draws the outline of every body: static blue, moving green, not solid purple, and a yellow bar under bodies that are onGround. Needs #include <graphics2d> too.'],
     ],
 };
 
@@ -331,6 +360,7 @@ const TYPE_STATICS = {
     vec4: ['ZERO', 'ONE'],
     Key: KEYS,
     MouseButton: ['LEFT', 'RIGHT', 'MIDDLE'],
+    GamepadButton: ['A', 'B', 'X', 'Y', 'LEFT_BUMPER', 'RIGHT_BUMPER', 'LEFT_TRIGGER', 'RIGHT_TRIGGER', 'BACK', 'START', 'LEFT_STICK', 'RIGHT_STICK', 'UP', 'DOWN', 'LEFT', 'RIGHT'],
 };
 
 // ---------------------------------------------------------------- finding frg.exe and the game folder
@@ -431,7 +461,9 @@ function check(doc, announce = false) {
         const byFile = new Map();
         const cache = new Map();
         for (const line of stdout.split(/\r?\n/)) {
-            if (!line.startsWith('E\t')) continue;
+            // E = error (red), W = warning (yellow)
+            const isWarning = line.startsWith('W\t');
+            if (!line.startsWith('E\t') && !isWarning) continue;
             const f = line.split('\t');
             let file = unescapeField(f[1] || '');
             const lineNo = Math.max(0, parseInt(f[2], 10) - 1);
@@ -444,7 +476,8 @@ function check(doc, announce = false) {
             const start = byteColToChar(text, col);
             const end = byteColToChar(text, col + len);
             const d = new vscode.Diagnostic(new vscode.Range(lineNo, start, lineNo, Math.max(end, start + 1)),
-                hint ? `${msg}\nhint: ${hint}` : msg, vscode.DiagnosticSeverity.Error);
+                hint ? `${msg}\nhint: ${hint}` : msg,
+                isWarning ? vscode.DiagnosticSeverity.Warning : vscode.DiagnosticSeverity.Error);
             d.source = 'forge';
             const key = path.resolve(file);
             if (!byFile.has(key)) byFile.set(key, []);
@@ -457,8 +490,12 @@ function check(doc, announce = false) {
         reportedFiles.set(root, new Set(byFile.keys()));
 
         if (announce) {
-            const count = [...byFile.values()].reduce((n, l) => n + l.length, 0);
-            vscode.window.showInformationMessage(count ? `Forge found ${count} error${count === 1 ? '' : 's'}.` : 'Forge found no errors.');
+            const all = [...byFile.values()].flat();
+            const count = all.filter(d => d.severity === vscode.DiagnosticSeverity.Error).length;
+            const warnings = all.length - count;
+            const warningText = warnings ? ` and ${warnings} warning${warnings === 1 ? '' : 's'}` : '';
+            vscode.window.showInformationMessage(count ? `Forge found ${count} error${count === 1 ? '' : 's'}${warningText}.`
+                : `Forge found no errors${warningText}.`);
         }
         const again = running.get(root) === 'again';
         running.delete(root);
@@ -470,7 +507,7 @@ function check(doc, announce = false) {
 
 let gameTerminal = null;
 
-// command is 'run' or 'build'. Unless extraArgs says otherwise, the forge.console setting decides the console.
+// command is 'run', 'build' or 'package'. Unless extraArgs says otherwise, the forge.console setting decides the console.
 async function runCommand(command, extraArgs) {
     const editor = vscode.window.activeTextEditor;
     const file = editor ? editor.document.fileName : null;
@@ -539,6 +576,7 @@ function activate(context) {
         vscode.commands.registerCommand('forge.run', () => runCommand('run')),
         vscode.commands.registerCommand('forge.build', () => runCommand('build')),
         vscode.commands.registerCommand('forge.buildRelease', () => runCommand('build', ['--release'])),
+        vscode.commands.registerCommand('forge.package', () => runCommand('package', [])),
         vscode.commands.registerCommand('forge.toggleConsole', async () => {
             const on = !settings().get('console', true);
             await settings().update('console', on, vscode.ConfigurationTarget.Global);

@@ -4,7 +4,7 @@
 #include <file>
 ```
 
-Reads and writes text files, for save games, settings, high scores and level data.
+Reads and writes text files: level data, lists, your own file formats. (To simply remember a high score or settings between runs, [`<save>`](save.md) is easier.)
 
 ## Where files go
 
@@ -49,8 +49,10 @@ void saveHighScore(int score){
 
 ## Saving several values: one per line as key=value
 
+For saving settings and progress, the [`<save>`](save.md) library does all of this for you (`save.setInt("coins", coins)`, `save.getInt("coins")`). This section shows how to do it by hand with `<file>`, for when you want your own format.
+
 ```cpp
-void save(){
+void saveGame(){
     list<string> lines = [
         "level={level}",
         "coins={coins}",
@@ -59,7 +61,7 @@ void save(){
     file.writeLines("save.txt", lines);
 }
 
-void load(){
+void loadGame(){
     if (!file.exists("save.txt")) {
         return;
     }

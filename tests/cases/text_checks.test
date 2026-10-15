@@ -1,0 +1,25 @@
+=== main.frg
+#include <stdio>
+
+int main(){
+    list<string> inputs = ["42", " -7 ", "3.5", "abc", "", "99999999999", "1e3", "+8"];
+    for (string s in inputs) {
+        print("'{s}' isInt={s.isInt()} isFloat={s.isFloat()}");
+    }
+    string typed = "12";
+    if (typed.isInt()) {
+        int n = int(typed);
+        print(n * 2);
+    }
+    return 0;
+}
+=== output
+'42' isInt=true isFloat=true
+' -7 ' isInt=true isFloat=true
+'3.5' isInt=false isFloat=true
+'abc' isInt=false isFloat=false
+'' isInt=false isFloat=false
+'99999999999' isInt=false isFloat=true
+'1e3' isInt=false isFloat=true
+'+8' isInt=true isFloat=false
+24

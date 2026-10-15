@@ -57,7 +57,77 @@ For a sheet with several rows (one row per animation), also pick the row: `rect(
 
 ## Animation
 
-To animate, show the next frame every so often. Count time with `dt`:
+To animate, show the frames one after the other. The `Animation` class from `<assets>` does that for you:
+
+```cpp
+#include <assets>
+
+Texture blob = assets.loadTexture("blob.png");
+Animation wobble = Animation(blob, 16, 16, 4, 8);    // the sheet, frame width, frame height, how many frames, frames per second
+
+void update(float dt){
+    wobble.update(dt);                 // moves on to the next frame when it's time
+}
+
+void draw(){
+    wobble.drawScaled(x, y, 4);        // the current frame, 4 times bigger
+}
+```
+
+Frames are read from the sheet **left to right**. If there are more frames than fit in a row, they carry on at the start of the next row.
+
+| Making one | |
+|---|---|
+| `Animation(Texture sheet, int frameWidth, int frameHeight, int frames, float fps)` | frames starting at the top-left of the sheet |
+| `Animation(sheet, frameWidth, frameHeight, frames, fps, int row)` | frames starting at the beginning of row `row` (0 is the top row), for sheets with one row per animation |
+
+| Method or field | What it does |
+|---|---|
+| `update(float dt)` | moves the animation on by `dt` seconds. Call it once per frame |
+| `draw(float x, float y, color tint = color.WHITE)` | draws the current frame at its real size, with its top-left corner at (x, y) |
+| `drawScaled(float x, float y, float scale, color tint = color.WHITE)` | the same, `scale` times bigger |
+| `play()` / `pause()` | starts and stops it. A paused animation stays on its frame |
+| `reset()` | back to the first frame, playing |
+| `flip(bool flipped)` | `flip(true)` draws it mirrored left-to-right, `flip(false)` normally (see below) |
+| `isFlipped()`, `isPlaying()` | what was chosen |
+| `frame()`, `setFrame(int frame)`, `frameCount()` | the frame being shown (from 0), jumping to one, and how many there are |
+| `float fps` | frames per second; change it any time (0 stops it) |
+| `bool looping` | `true` (the start): after the last frame it starts again. `false`: it stops on the last frame |
+| `isDone()` | `true` when an animation that doesn't loop has reached its last frame |
+
+If the sheet doesn't have room for the frames you asked for, the game stops with a message saying how big the sheet really is.
+
+### Several animations
+
+Make one `Animation` per action, and keep the one being shown in a variable. With a sheet that has the idle frames in row 0 and the running frames in row 1:
+
+```cpp
+Texture sheet = assets.loadTexture("hero.png");
+Animation idle = Animation(sheet, 16, 16, 2, 3);        // row 0: 2 frames, slow
+Animation run = Animation(sheet, 16, 16, 6, 12, 1);     // row 1: 6 frames, fast
+Animation current = idle;
+
+void update(float dt){
+    Animation wanted = moving ? run : idle;
+    if (wanted != current) {
+        current = wanted;
+        current.reset();       // start the new animation from its first frame
+    }
+    current.update(dt);
+}
+
+void draw(){
+    current.drawScaled(x, y, 4);
+}
+```
+
+`Animation` is a class, so `current = run` makes `current` mean the very same animation as `run` (not a copy).
+
+A one-time animation, like an explosion: set `looping = false`, and remove the explosion when `isDone()` is true.
+
+### How it works
+
+There's no magic inside: an animation counts time with `dt` and picks a part of the sheet with `drawPart`. Doing it by hand looks like this, which is useful if you ever need something `Animation` can't do:
 
 ```cpp
 int frame = 0;
@@ -78,35 +148,22 @@ void draw(){
 }
 ```
 
-### Several animations
+## Facing left and right
 
-Keep the animation's row and frame count together in a struct:
+Draw sprites facing right, then flip them when moving left:
 
 ```cpp
-struct Animation {
-    int row;
-    int frames;
-    float frameTime;
+if (velocity.x < 0) {
+    walk.flip(true);
 }
-
-Animation IDLE = Animation(0, 2, 0.4);
-Animation RUN = Animation(1, 6, 0.08);
-Animation current = IDLE;
-
-void setAnimation(Animation a){
-    if (a != current) {
-        current = a;
-        frame = 0;
-        frameTimer = 0;
-    }
+if (velocity.x > 0) {
+    walk.flip(false);
 }
 ```
 
-Then in `update`: `setAnimation(moving ? RUN : IDLE);`, and in `draw`: `sheet.drawPart(rect(frame * 16, current.row * 16, 16, 16), ...)`.
+(Only change it when the player is actually moving, so they keep facing the same way when they stop.)
 
-## Facing left and right
-
-Draw sprites facing right, then flip them when moving left. A **negative width** in the source rectangle flips the image left-to-right:
+Without an `Animation`, a **negative width** in the source rectangle of `drawPart` flips the image the same way:
 
 ```cpp
 bool facingLeft = velocity.x < 0;
@@ -160,4 +217,4 @@ task hitFlash() {
 
 ## A working example
 
-[examples/sprites](../../examples/sprites/main.frg) loads a 4-frame sprite sheet, animates it, moves it with the arrow keys, and plays a sound when it hops.
+[examples/sprites](../../examples/sprites/main.frg) loads a 4-frame sprite sheet, animates it with an `Animation`, moves it with the arrow keys (flipping it to face the way it's going), and plays a sound when it hops.

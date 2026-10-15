@@ -109,6 +109,8 @@ graphics2d.drawRect(0, 0, 100, 100, color.ORANGE);
 |---|---|
 | `color(r, g, b)` | solid (`a` = 255) |
 | `color(r, g, b, a)` | |
+
+The parts are `int`s. Anything below 0 becomes 0, and anything above 255 becomes 255, so `color(random.range(0, 255), 100, 300)` works and is the same as `color(..., 100, 255)`.
 | `color()` | solid black |
 
 | Method | What it does |

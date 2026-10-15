@@ -1,0 +1,50 @@
+=== main.frg
+#include <stdio>
+#include <save>
+#include <file>
+
+int main(){
+    print(save.has("best"));
+    print(save.getInt("best"));
+    print(save.getInt("best", 7));
+    save.setInt("best", 120);
+    save.setFloat("volume", 0.75);
+    save.setString("name", "Ana = the \"best\"\nline two");
+    save.setBool("music", true);
+    save.setString("#weird=key", "ok");
+    print(save.getInt("best", 7));
+    print(save.getFloat("volume"));
+    print(save.getString("name"));
+    print(save.getBool("music"));
+    print(save.getString("#weird=key"));
+    print(save.has("best"));
+
+    ``` A value saved as text isn't a number, so the backup comes back. ```
+    print(save.getInt("name", -1));
+    print(save.getBool("best", false));
+
+    save.remove("best");
+    print(save.has("best"));
+    print(file.exists("save.txt"));
+    print(file.readLines("save.txt"));
+    save.clear();
+    print(file.readLines("save.txt"));
+    return 0;
+}
+=== output
+false
+0
+7
+120
+0.75
+Ana = the "best"
+line two
+true
+ok
+true
+-1
+false
+false
+true
+[# Forge save file: one key=value per line, \#weird\=key=ok, music=true, name=Ana = the "best"\nline two, volume=0.75]
+[# Forge save file: one key=value per line]

@@ -3,6 +3,7 @@
 // Every Body is an axis-aligned box. Each step, moving bodies fall with gravity, move by their velocity,
 // and get pushed out of static bodies (floors, walls, platforms), then out of each other.
 // Bodies with solid = false (coins, triggers) never push or get pushed - check them with overlaps().
+// Static bodies with oneWay = true are platforms you can jump up through and land on.
 #pragma once
 
 #include "forge.hpp"
@@ -15,6 +16,7 @@ struct Body_ : std::enable_shared_from_this<Body_> {
     core::vec2_ velocity_{};
     bool isStatic_ = false;
     bool solid_ = true;
+    bool oneWay_ = false;  // static bodies only: moving bodies pass through from below and the sides, and land on top
     float gravityScale_ = 1;
     bool onGround_ = false;
     bool onCeiling_ = false;
@@ -115,7 +117,7 @@ inline void step_(float dt) {
             b.position_.x_ += b.velocity_.x_ * part;
             for (auto& op : bodies) {
                 Body_& o = *op;
-                if (&o == &b || !o.isStatic_ || !b.solid_ || !o.solid_ || !touching(b, o)) continue;
+                if (&o == &b || !o.isStatic_ || o.oneWay_ || !b.solid_ || !o.solid_ || !touching(b, o)) continue;
                 if (b.velocity_.x_ > 0)
                     b.position_.x_ = o.position_.x_ - b.size_.x_;
                 else if (b.velocity_.x_ < 0)
@@ -123,10 +125,13 @@ inline void step_(float dt) {
                 b.velocity_.x_ = 0;
                 b.onWall_ = true;
             }
+            float bottomBefore = b.position_.y_ + b.size_.y_;
             b.position_.y_ += b.velocity_.y_ * part;
             for (auto& op : bodies) {
                 Body_& o = *op;
                 if (&o == &b || !o.isStatic_ || !b.solid_ || !o.solid_ || !touching(b, o)) continue;
+                // A one-way platform only stops a body that's falling onto it from above.
+                if (o.oneWay_ && (b.velocity_.y_ <= 0 || bottomBefore > o.position_.y_ + 0.01f)) continue;
                 if (b.velocity_.y_ > 0) {
                     b.position_.y_ = o.position_.y_ - b.size_.y_;
                     b.onGround_ = true;

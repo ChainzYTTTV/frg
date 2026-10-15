@@ -30,6 +30,16 @@ std::string opName(const std::string& op) {
 
 bool isLit(const Expr* e) { return e->litInt || e->litFloat; }
 
+// `a / b` with two whole numbers (not just literals, which adapt to where the result goes): the decimals are cut off.
+bool isIntDivision(const Expr* e) {
+    return e->kind == EK::Binary && e->text == "/" && e->opType && e->opType->kind == TK::Int && !e->litInt;
+}
+
+std::string intDivisionHint(const Expr* e) {
+    std::string fix = e->a->kind == EK::Name && e->b->kind == EK::Name ? "float(" + e->a->text + ") / " + e->b->text : "float(a) / b";
+    return "turn one side into a decimal number first, like " + fix;
+}
+
 // Literal numbers like `5` or `0.5 * 2` take on the type they're used as: `int8 x = 5;` makes 5 an int8.
 void coerce(Expr* e, Type* T) {
     if (T->kind == TK::Optional) T = T->elem;
@@ -193,6 +203,8 @@ const std::vector<BMethod>& bmethods() {
         {TK::String, "charAt", {"int"}, "string"},
         {TK::String, "repeat", {"int"}, "string"},
         {TK::String, "isEmpty", {}, "bool"},
+        {TK::String, "isInt", {}, "bool"},
+        {TK::String, "isFloat", {}, "bool"},
         {TK::Task, "isDone", {}, "bool"},
         {TK::Task, "stop", {}, "void"},
     };
@@ -230,6 +242,23 @@ private:
     TypeDecl* curType = nullptr;
     std::vector<std::map<std::string, VarDecl*>> scopes;
     std::vector<char> breakables;  // 'l' for a loop, 's' for a switch
+
+    // For warnings
+    std::vector<VarDecl*> structLoopVars;  // the struct variables of the for (T x in list) loops we're inside
+    std::set<const VarDecl*> usedLocals;
+    std::vector<VarDecl*> newLocals;       // the variables made in the function being checked
+
+    // Warnings are only for the game's own files, never for Forge's built-in code.
+    void warn(const Loc& loc, const std::string& msg, const std::string& hint = "") {
+        if (cur && cur->isPrelude) return;
+        reportWarning(loc, msg, hint);
+    }
+    void warnIntDivision(Expr* e) {
+        if (isIntDivision(e))
+            warn(e->loc, "this divides two whole numbers, so the decimals are cut off before it becomes a decimal number",
+                 intDivisionHint(e));
+    }
+    void warnChangedLoopCopy(Expr* target);
 
     std::vector<Module*> everyModule() {
         std::vector<Module*> all;
@@ -674,7 +703,10 @@ bool Checker::assignable(Expr* e, Type* T, const std::string& dest) {
         coerce(e, inner);
         return true;
     }
-    if (canAssignQuiet(e, T)) return true;
+    if (canAssignQuiet(e, T)) {
+        if (inner->kind == TK::Float) warnIntDivision(e);
+        return true;
+    }
 
     std::string hint;
     if (S->kind == TK::Null)
@@ -848,9 +880,19 @@ Type* Checker::intLit(Expr* e) {
 }
 
 Type* Checker::strExpr(Expr* e) {
-    for (auto& a : e->args) {
-        Type* t = value(a.get());
+    for (size_t i = 0; i < e->args.size(); i++) {
+        Expr* a = e->args[i].get();
+        Type* t = value(a);
         if (t->kind == TK::Void) reportError(a->loc, "this doesn't give back a value to show");
+        if (i < e->decimals.size() && e->decimals[i] >= 0 && t != tError() && t->kind != TK::Void) {
+            if (isLit(a) && isNumeric(t)) {
+                coerce(a, tFloat(64));
+            } else if (t->kind != TK::Float) {
+                reportError(a->loc, "{...:." + std::to_string(e->decimals[i]) + "} shows decimals, so it needs a float or a double, but this is " + aType(t),
+                            isNumeric(t) ? "turn it into a decimal number first, like {float(" + (a->kind == EK::Name ? a->text : std::string("...")) + "):." + std::to_string(e->decimals[i]) + "}"
+                                         : "remove the :." + std::to_string(e->decimals[i]));
+            }
+        }
     }
     return e->type = tString();
 }
@@ -940,6 +982,7 @@ Type* Checker::nameExpr(Expr* e, bool allowNonValue) {
     if (VarDecl* v = findLocal(n)) {
         r.kind = RK::Local;
         r.var = v;
+        usedLocals.insert(v);
     } else if (VarDecl* f = curType ? findField(curType, n) : nullptr) {
         r.kind = RK::Field;
         r.var = f;
@@ -1303,6 +1346,10 @@ Type* Checker::callExpr(Expr* e, Type* expected) {
             if (!f) return e->type = tError();
             callee->res.func = f;
             if (m->isPrelude && m->name == "window" && f->name == "run") checkRunCallbacks(e->loc);
+            // <physics> never draws by itself; its debug view draws with <graphics2d>.
+            if (m->isPrelude && m->name == "physics" && f->name == "drawDebug" && !cur->libs.count("graphics2d"))
+                reportError(e->loc, "physics.drawDebug() draws with the graphics2d library, which this file doesn't include",
+                            "add #include <graphics2d> at the top of " + cur->src->displayPath);
             return e->type = f->ret ? f->ret : tError();
         }
         case RK::Method: {
@@ -1604,7 +1651,18 @@ Type* Checker::equalityOp(Expr* e) {
         reportError(e->loc, aType(other) + " can never be null", "only optional types (like " + other->name + "?) can be null");
         return e->type = tError();
     }
-    if (isNumeric(L) && isNumeric(R)) return ok(commonOf({a, b}));
+    if (isNumeric(L) && isNumeric(R)) {
+        Type* T = commonOf({a, b});
+        if (T->kind == TK::Float && !(isLit(a) && isLit(b))) {
+            warnIntDivision(a);
+            warnIntDivision(b);
+            bool same = e->text == "==";
+            warn(e->loc, "comparing decimal numbers with '" + (e->opWord.empty() ? e->text : e->opWord) + "' often gives the wrong answer",
+                 "decimals are often a tiny bit off (0.1 + 0.2 isn't exactly 0.3), so check whether they're close instead: " +
+                     std::string(same ? "math.abs(a - b) < 0.001" : "math.abs(a - b) > 0.001") + " (needs #include <math>)");
+        }
+        return ok(T);
+    }
     if (L->kind == TK::Optional || R->kind == TK::Optional) {
         Type* opt = L->kind == TK::Optional ? L : R;
         Expr* other = L->kind == TK::Optional ? b : a;
@@ -1683,15 +1741,23 @@ Type* Checker::binaryExpr(Expr* e, Type* expected) {
         if (!isNumeric(L) || !isNumeric(R)) return fail("can't use '" + shown + "' on " + aType(L) + " and " + aType(R));
         Type* T = commonOf({a, b});
         e->opType = T;
+        if (T->kind == TK::Float) {
+            warnIntDivision(a);
+            warnIntDivision(b);
+        }
         e->litInt = a->litInt && b->litInt;
         e->litFloat = isLit(a) && isLit(b) && !e->litInt;
         return e->type = T;
     }
     if (isEquality(op)) return equalityOp(e);
     if (isCompare(op)) {
-        if (isNumeric(L) && isNumeric(R))
+        if (isNumeric(L) && isNumeric(R)) {
             e->opType = commonOf({a, b});
-        else if (L->kind == TK::String && R->kind == TK::String)
+            if (e->opType->kind == TK::Float) {
+                warnIntDivision(a);
+                warnIntDivision(b);
+            }
+        } else if (L->kind == TK::String && R->kind == TK::String)
             e->opType = tString();
         else
             return fail("can't compare " + aType(L) + " with " + aType(R) + " using '" + shown + "'");
@@ -1776,6 +1842,7 @@ void Checker::varStmt(VarDecl* v) {
                                                : "point it at a variable, like: Pointer<int> p = score;");
     }
     declareLocal(v);
+    newLocals.push_back(v);
 }
 
 void Checker::assignStmt(Stmt* s) {
@@ -1786,6 +1853,7 @@ void Checker::assignStmt(Stmt* s) {
         value(val);
         return;
     }
+    warnChangedLoopCopy(target);
     std::string dest = "'" + target->text + "'";
     if (target->kind == EK::Index) dest = "this item";
     if (s->op == "=") {
@@ -1843,11 +1911,33 @@ void Checker::superCall(Stmt* s) {
     }
 }
 
+// for (Enemy e in enemies) { e.hp = 0; }  only changes a copy when Enemy is a struct.
+void Checker::warnChangedLoopCopy(Expr* target) {
+    Expr* root = target;
+    while (root->kind == EK::Member && root->res.kind == RK::Field && root->a->type && root->a->type->kind == TK::Struct)
+        root = root->a.get();
+    if (root->kind != EK::Name || root->res.kind != RK::Local) return;
+    VarDecl* v = root->res.var;
+    if (std::find(structLoopVars.begin(), structLoopVars.end(), v) == structLoopVars.end()) return;
+    warn(root->loc, "this changes '" + v->name + "', which is only a copy of the item in the list, so the change is lost",
+         "a for (... in ...) loop gives you a copy of each struct. To change the list itself, loop with a number and use "
+         "list[i], like: for (int i = 0; i < list.length; i++) { list[i]... }");
+}
+
 void Checker::stmt(Stmt* s) {
     switch (s->kind) {
         case SK::Block:
             scopes.emplace_back();
-            for (auto& c : s->body) stmt(c.get());
+            for (size_t i = 0; i < s->body.size(); i++) {
+                Stmt* c = s->body[i].get();
+                stmt(c);
+                bool jumps = c->kind == SK::Return || c->kind == SK::Break || c->kind == SK::Continue;
+                if (jumps && i + 1 < s->body.size()) {
+                    std::string word = c->kind == SK::Return ? "return" : c->kind == SK::Break ? "break" : "continue";
+                    warn(s->body[i + 1]->loc, "this code can never run, because it comes after '" + word + "'",
+                         "remove it, or move it above the '" + word + "'");
+                }
+            }
             scopes.pop_back();
             break;
         case SK::Var: varStmt(s->var.get()); break;
@@ -1865,6 +1955,7 @@ void Checker::stmt(Stmt* s) {
         case SK::IncDec: {
             Type* t = value(s->expr.get());
             if (t == tError() || !checkAssignTarget(s->expr.get())) break;
+            warnChangedLoopCopy(s->expr.get());
             if (!isNumeric(t)) reportError(s->loc, "'" + s->op + "' only works on numbers, but this is " + aType(t));
             break;
         }
@@ -1905,9 +1996,12 @@ void Checker::stmt(Stmt* s) {
             }
             scopes.emplace_back();
             declareLocal(v);
+            bool structCopy = v->type && v->type->kind == TK::Struct;
+            if (structCopy) structLoopVars.push_back(v);
             breakables.push_back('l');
             stmt(s->then.get());
             breakables.pop_back();
+            if (structCopy) structLoopVars.pop_back();
             scopes.pop_back();
             break;
         }
@@ -1987,7 +2081,13 @@ void Checker::checkBody(FuncDecl* f, TypeDecl* owner) {
     }
     if (owner && owner->kind == DK::Struct && f->ret == tTask())
         reportError(f->loc, "a struct's methods can't be tasks", "make " + owner->name + " a class, or move the task to a normal function");
-    for (auto& s : f->body->body) stmt(s.get());
+    usedLocals.clear();
+    newLocals.clear();
+    structLoopVars.clear();
+    stmt(f->body.get());
+    for (VarDecl* v : newLocals)
+        if (!usedLocals.count(v))
+            warn(v->loc, "the variable '" + v->name + "' is never used", "remove it if you don't need it");
     if (f->ret && f->ret != tVoid() && f->ret != tTask() && f->ret != tError() && !alwaysReturns(f->body.get())) {
         std::string example = f->ret->kind == TK::String ? "\"\"" : f->ret->kind == TK::Bool ? "false" : isNumeric(f->ret) ? "0" : "...";
         reportError(f->loc, "'" + f->name + "' doesn't always return a value", "add a return at the end, like 'return " + example + ";'");

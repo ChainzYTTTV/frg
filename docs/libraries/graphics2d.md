@@ -57,7 +57,7 @@ Centering text:
 ```cpp
 string title = "GAME OVER";
 int w = graphics2d.textWidth(title, 48);
-graphics2d.drawText(title, (window.width() - w) / 2, 200, 48, color.WHITE);
+graphics2d.drawText(title, (window.width() - w) / 2.0, 200, 48, color.WHITE);
 ```
 
 ### Other
@@ -65,6 +65,51 @@ graphics2d.drawText(title, (window.width() - w) / 2, 200, 48, color.WHITE);
 | Function | What it does |
 |---|---|
 | `graphics2d.clear(color c)` | fills the whole screen with a color (the window already clears to its background color each frame) |
+
+## Camera: scrolling and zooming
+
+When a level is bigger than the window, use a **camera**. Everything drawn after `graphics2d.setCamera(...)` is moved (and zoomed, and turned) so that the camera's `target`, a point in your level, shows at its `offset`, a point on the screen. `graphics2d.resetCamera()` goes back to drawing straight on the screen, which is what you want for the score and menus.
+
+```cpp
+Camera2D camera = Camera2D(vec2(480, 270), vec2(480, 270));   // target, offset
+
+void update(float dt){
+    // glide toward the player: a bit of the way there each frame
+    camera.target = camera.target.lerp(hero.center(), 5 * dt);
+}
+
+void draw(){
+    graphics2d.setCamera(camera);      // the world...
+    drawLevel();
+    graphics2d.drawRect(hero.bounds(), color.ORANGE);
+    graphics2d.resetCamera();          // ...and then the text, which stays put
+    graphics2d.drawText("Coins: {coins}", 20, 20, 24, color.GOLD);
+}
+```
+
+| `Camera2D` field | What it is |
+|---|---|
+| `vec2 target` | the point in the world the camera looks at |
+| `vec2 offset` | where on the screen `target` shows. Use the middle of the window (`vec2(window.width() / 2.0, window.height() / 2.0)`) to keep the target centered |
+| `float zoom` | `1` is normal size, `2` makes everything twice as big, `0.5` half. Must be more than 0 |
+| `float rotation` | turns the view, in degrees |
+
+Make one with `Camera2D(target, offset)` or `Camera2D(target, offset, zoom, rotation)`.
+
+| Function | What it does |
+|---|---|
+| `graphics2d.setCamera(Camera2D camera)` | draw through this camera from now on. It stays set (even in later frames) until `resetCamera` |
+| `graphics2d.resetCamera()` | stop using the camera: draw straight on the screen again |
+| `graphics2d.camera()` | the camera that was set (a copy) |
+| `graphics2d.screenToWorld(vec2 point)` | where a point on the screen is in the world. Use it for the mouse: `graphics2d.screenToWorld(input.mousePosition())` |
+| `graphics2d.worldToScreen(vec2 point)` | where a point in the world shows on the screen |
+
+Things to know:
+
+- `Camera2D` is a struct, so `setCamera` takes a copy. After changing `camera.target`, call `setCamera(camera)` again (usually at the start of `draw()`, every frame).
+- To stop the camera from showing past the edges of the level, keep the target away from them with `math.clamp`: `math.clamp(x, window.width() / 2.0, LEVEL_WIDTH - window.width() / 2.0)`.
+- Physics doesn't know about the camera. Bodies keep their world positions; only the drawing moves.
+- The 3D camera (`Camera`, in `<graphics3d>`) is a different thing. A game can use both: 3D drawing ignores the 2D camera, and the 2D camera comes back at the next 2D drawing.
 
 ## Colors and transparency
 

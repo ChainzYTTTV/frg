@@ -68,6 +68,7 @@ inline void enter3D(const char* what) {
     if (!window::st().open) panic(what, "the window isn't open yet - call window.open(width, height, \"title\") first");
     if (!window::st().inFrame) window::beginFrame();
     if (st().in3D) return;
+    window::leaveCamera2D();  // 3D uses its own camera; the 2D one comes back at the next 2D drawing
     BeginMode3D(rlCamera());
     st().in3D = true;
     window::st().leave3D = &leave3D;

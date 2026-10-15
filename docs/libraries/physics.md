@@ -28,6 +28,7 @@ physics.add(crate);
 | `velocity` | `vec2` | pixels per second |
 | `isStatic` | `bool` | `true` for things that never move: floors, walls, platforms. Static bodies ignore gravity and velocity. (`false` to start with.) |
 | `solid` | `bool` | `false` for things that shouldn't push or be pushed, like coins and trigger zones. (`true` to start with.) |
+| `oneWay` | `bool` | for static bodies: `true` makes a **one-way platform** that you can jump up through from below and walk through sideways, but land on from above. (`false` to start with.) |
 | `gravityScale` | `float` | how strongly gravity pulls this body: 1 is normal, 0 floats, 2 is twice as heavy |
 | `onGround` | `bool` | **set by Forge:** true if it landed on something during the last step |
 | `onCeiling` | `bool` | **set by Forge:** true if it bumped its head |
@@ -53,6 +54,35 @@ physics.add(crate);
 
 Bodies only move during `physics.step`, and only if they've been added.
 
+## Seeing the bodies: the debug view
+
+When something collides in a way you don't expect, draw what physics sees:
+
+```cpp
+#include <graphics2d>    // physics.drawDebug() draws with graphics2d, so the file needs both
+#include <physics>
+
+void draw(){
+    level.draw();
+    player.draw();
+    physics.drawDebug();     // on top of everything else
+}
+```
+
+`physics.drawDebug()` draws the outline of every body in the world:
+
+| Outline | Body |
+|---|---|
+| blue | static (`isStatic = true`): floors, walls, platforms |
+| light blue, with a thick top edge | a one-way platform (`oneWay = true`) |
+| green | moving |
+| purple | not solid (`solid = false`): coins, triggers |
+| a yellow bar along the bottom | a moving body that's standing on something (`onGround` is true) |
+
+It's drawn like anything else in `<graphics2d>`, so with a [2D camera](graphics2d.md#camera-scrolling-and-zooming), call it before `resetCamera()` so the outlines line up with the level. Take the line out (or put it behind a key, like `if (showDebug) { ... }`) when you're done.
+
+The physics library itself never draws (it doesn't use raylib), which is why the file calling `drawDebug` needs `#include <graphics2d>`. Without it, Forge says so.
+
 ## What happens in a step
 
 For each moving (not static) body:
@@ -60,7 +90,7 @@ For each moving (not static) body:
 1. `onGround`, `onCeiling` and `onWall` are reset to false.
 2. Gravity is added to its velocity: `velocity += gravity × gravityScale × dt`.
 3. It moves sideways by `velocity.x × dt`. If that runs it into a static solid body, it's pushed back out, `velocity.x` becomes 0, and `onWall` becomes true.
-4. It moves up or down by `velocity.y × dt`. If that runs it into a static solid body, it's pushed out, `velocity.y` becomes 0, and `onGround` (when moving down) or `onCeiling` (when moving up) becomes true.
+4. It moves up or down by `velocity.y × dt`. If that runs it into a static solid body, it's pushed out, `velocity.y` becomes 0, and `onGround` (when moving down) or `onCeiling` (when moving up) becomes true. A one-way platform (`oneWay = true`) only counts here, and only when the body is falling onto it from above; in step 3 it never counts.
 5. Fast bodies move in several small steps, so they can't pass straight through thin platforms.
 
 Then moving solid bodies that overlap each other are pushed apart, in whichever direction they overlap least. A body resting on the ground isn't pushed down into it; the one on top is pushed up instead (and gets `onGround`), so things stack.
@@ -86,6 +116,19 @@ void update(float dt){
 ```
 
 Read `onGround` **before** calling `physics.step` in the same frame: it describes the previous step.
+
+### One-way platforms
+
+Platforms you can jump up through from below, and then stand on, like in many classic platformers:
+
+```cpp
+Body ledge = Body(300, 320, 160, 12);
+ledge.isStatic = true;
+ledge.oneWay = true;
+physics.add(ledge);
+```
+
+A body only lands on it when it's **falling** and was **above** the platform's top just before. From below and from the sides, it passes straight through. `oneWay` only matters for static bodies. In the [debug view](#seeing-the-bodies-the-debug-view), one-way platforms are light blue with a thick top edge.
 
 ### Platforms and walls
 

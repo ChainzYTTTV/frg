@@ -44,7 +44,7 @@ Steps:
 Hints:
 
 - `#include <random>`, then `int secret = random.range(1, 100);`. Both 1 and 100 can come up.
-- `input` gives back text. Turn it into a number with `int(...)`: `int guess = int(input("Your guess: "));`. Typing something that isn't a number stops the program with an error. That's fine for now.
+- `input` gives back text. Turn it into a number with `int(...)`: `int guess = int(input("Your guess: "));`. Typing something that isn't a number stops the program with an error. To ask again instead, check the text first with `isInt()`: `string typed = input("Your guess: ");`, then `if (typed.isInt()) { int guess = int(typed); ... } else { print("Please type a number"); }`.
 - A `bool found = false;` and `while (!found) { ... }` is one way to loop until the guess is right.
 
 Make it yours: allow only 7 guesses. Ask "Play again? (y/n)" at the end. Let the player choose easy (1-50) or hard (1-500).
@@ -64,7 +64,7 @@ Steps:
 
 Hints:
 
-- The percentage is the classic division trap. `score / 10 * 100` uses whole numbers, so 7 right gives `0`. Use `float(score) / 10 * 100`.
+- The percentage is the classic division trap. `score / 10 * 100` uses whole numbers, so 7 right gives `0`. Use `float(score) / 10 * 100`. (Forge warns about the whole-number version when it goes into a `float`.) Show it with one decimal: `print("{percent:.1}%");`.
 - `random.range(1, 3)` picks which operation, and `switch` on that number chooses what to ask.
 
 Make it yours: time the whole quiz with `<time>` (`time.now()` at the start and end). Make the numbers bigger as the score goes up.
@@ -112,6 +112,7 @@ Hints:
 
 - `sort()` only sorts lists of numbers or text, which is why step 3 keeps the list in order by hand.
 - Loading: `file.readLines("scores.txt")` gives a list of lines. For each line, `line.split(",")` gives `["Ana", "120"]`, and `int(parts[1])` is the score.
+- Another way to save: the `<save>` library keeps values by name, so there's no file format to write. Save entry `i` as `save.setString("name{i}", e.name)` and `save.setInt("score{i}", e.score)`, plus `save.setInt("count", entries.length)`, and read them back with `save.getString` and `save.getInt`. Doing it by hand with `<file>` first is good practice, though.
 
 Make it yours: show a medal (`*`) next to the top score. Don't allow empty names (`name.trim().isEmpty()`).
 
@@ -224,7 +225,7 @@ void draw(){
 ```
 
 - A ball in a list is a struct, which is a copy. To change it, change `balls[i].position`, not a copy taken out of the list with `for (Ball b in balls)`.
-- A random color: `color(uint8(random.range(50, 255)), uint8(random.range(50, 255)), uint8(random.range(50, 255)))`. Colors are made of `uint8`s (0 to 255), so each `int` has to be converted.
+- A random color: `random.color()`. For brighter colors, pick each part yourself: `color(random.range(50, 255), random.range(50, 255), random.range(50, 255))`.
 
 Make it yours: balls bounce off each other (`a.position.distance(b.position) < 2 * RADIUS`). Gravity pulls them down.
 
@@ -246,7 +247,7 @@ Hints:
 
 - The ball as a rect: `rect(position.x - 10, position.y - 10, 20, 20)`, then `ballRect.overlaps(leftPaddle)`.
 - After flipping, also move the ball out of the paddle, or it can stick inside and flip every frame.
-- Center text: `float x = (window.width() - graphics2d.textWidth(text, 40)) / 2;`.
+- Center text: `float x = (window.width() - graphics2d.textWidth(text, 40)) / 2.0;` (the `.0` keeps the half pixel; with `/ 2` Forge warns that the decimals are cut off).
 
 Make it yours: the ball speeds up a little on every hit. A computer player that follows the ball (not too fast, or it can't lose). First to 5 wins.
 
@@ -361,14 +362,15 @@ Steps:
 1. A big circle in the middle. Clicking inside it adds 1 cookie. Show the total.
 2. A `ui.button` "Better click (cost 10)". Buying it makes clicks worth more, and raises its cost.
 3. A "Helper" upgrade: each helper earns 1 cookie per second (`cookies += helpers * dt`).
-4. Save the numbers to a file when the game closes, and load them when it starts: `file.writeLines("save.txt", ["{cookies}", "{helpers}"])`.
+4. Save the numbers, and load them when the game starts, with `<save>`: `save.setFloat("cookies", cookies);` and `float cookies = save.getFloat("cookies");`.
 5. A title scene with "Play" and "Reset save" buttons (`<scenes>`).
 
 Hints:
 
 - Clicked inside the circle: `input.mousePressed(MouseButton.LEFT) and input.mousePosition().distance(center) < radius`.
-- Helpers earn fractions of a cookie, so keep `float cookies`, and show `int(cookies)`.
-- Save several numbers as several lines with `file.writeLines`, and read them back in the same order.
+- Helpers earn fractions of a cookie, so keep `float cookies`, and show `int(cookies)` (or `"{cookies:.1}"` for one decimal).
+- `<save>` writes the file straight away, so saving after every purchase (and every few seconds for the helpers) is fine. Load with a backup value for the very first run: `save.getInt("helpers", 0)`.
+- "Reset save" is `save.clear()`, then set the variables back to their starting values.
 
 Make it yours: the cookie shrinks a little when clicked, then grows back. Achievements at 100, 1,000 and 10,000 cookies.
 

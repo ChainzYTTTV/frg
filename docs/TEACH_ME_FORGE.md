@@ -46,7 +46,7 @@ Go in this order. Each stage ends with a small project. Move at the learner's pa
 | 14. The platformer | read Part 5 together and change it | Add a coin, a level, or a moving hazard |
 | 15. Tasks | `task` functions, `wait()` | Make the player flash, or a 3-2-1 countdown |
 | 16. Images and sound | `<assets>`, `<audio>`, sprite sheets | Give the platformer a sprite and a jump sound |
-| 17. Menus | `<scenes>`, `<ui>`, `<file>` | A main menu, and a best score saved to a file |
+| 17. Menus | `<scenes>`, `<ui>`, `<save>` | A main menu, and a best score that's remembered |
 | 18. Checking kinds, hiding things | `is` / `as`, `private`, several constructors | Different enemy types in one list |
 | 19. Components | `<ECS>` | Rebuild a small game out of components |
 | 20. 3D | `<graphics3d>` | A spinning cube scene |
@@ -71,18 +71,24 @@ Commands, typed in a terminal inside the game's folder:
 
 | Command | What it does |
 |---|---|
-| `frg new mygame` | makes a new folder `mygame/` with a starter `main.frg` |
+| `frg new mygame` | makes a new folder `mygame/` with a starter `main.frg` (a hello world) |
+| `frg new mygame --template window` | starts from a working game instead: `--template window` (a ball moved with the arrow keys), `platformer` (physics, jumping, a following camera) or `3d` (a cube and a turning camera). Good starting points once the learner reaches those lessons |
 | `frg run` | checks the code, compiles it, and runs the game |
 | `frg build` | compiles into `build/<folder name>.exe` without running it |
 | `frg check` | only looks for errors |
+| `frg package` | the finished game, with every file it needs (but not the `.frg` files or `save.txt`), zipped into `dist/<name>.zip` to share. If the game is in git, add `build/`, `dist/` and `save.txt` to `.gitignore` |
 | `frg build --release` | the finished game: no console window, smaller `.exe` |
 | `--no-console` / `--console` | add to `run` or `build` to turn the console window off or on |
+
+A picture called `icon.png` in the game's top folder becomes the `.exe`'s icon and the window's icon (square, ideally 256 × 256). Without one, the game just gets the plain Windows icon.
 
 The **console window** (the black window next to the game) shows `print` output and errors. It's on while testing. Turn it off with `--no-console` to see the game as players will, and `--release` turns it off for the finished game. Without a console, runtime errors pop up in a box titled "The game stopped". Text-only programs need the console: without it nothing shows. In VS Code, **Forge: Turn the Console On/Off** switches it for the ▶ button, and **Forge: Build Release** builds the finished game.
 
 In **VS Code** (with the Forge extension): errors are underlined when you save, the **▶ button** at the top right (or **F5**) runs the game, typing `window.` or `color.` shows autocomplete, and snippets like `game`, `class` and `foreach` insert templates.
 
 Forge is **compiled**. The whole program is checked before it runs, so most mistakes are caught before the game starts.
+
+The first build (and the first `--release` build) shows "Preparing Forge's runtime ... (only the first time)" and takes longer: Forge is getting its own code ready once, so later builds of every game are faster. It's stored in a `cache` folder next to `frg.exe` that can be deleted at any time.
 
 ---
 
@@ -136,13 +142,16 @@ const int MAX_HP = 100;     // const: can never be set to a new value
 print("HP: {hp}/{MAX_HP}");             // anything inside { } is shown as text
 print("Half: {speed / 2}");
 print("Has it? {name.contains("er")}");
+print("Speed: {speed:.2}");             // :.2 shows a float or double with 2 decimals (3.14)
 string full = "Game" + " Over";         // + joins two pieces of text
 ```
+
+- `{value:.N}` (N from 0 to 9) shows a `float` or `double` with exactly N decimals, rounded. For an int, convert it first: `{float(score):.1}`. It doesn't clash with the ternary: in `{a ? 1 : 2}` the `:` is the ternary's, because numbers never start with a dot.
 
 - Escapes: `\n` new line, `\t` tab, `\"` quote, `\\` backslash, `{{` or `\{` for a literal `{`, and `}}` or `\}` for a literal `}`.
 - **Raw text** goes between three quotes, `"""like this"""`, and can cover many lines. It's used exactly as written: escapes and `{ }` don't work inside it, and it can contain `"` and `\`. A line break straight after the opening `"""` is left out. It's mainly for shader code, maps made of characters, and Windows paths.
 - `"Score: " + 5` is an **error**. Write `"Score: {5}"` instead.
-- Text has `.length` (no parentheses) and these methods: `contains(t)`, `indexOf(t)` (-1 if not found), `startsWith(t)`, `endsWith(t)`, `upper()`, `lower()`, `trim()`, `replace(old, new)`, `split(separator)` (gives a list), `substring(start, count)`, `charAt(i)` (gives a one-letter string), `repeat(n)`, `isEmpty()`.
+- Text has `.length` (no parentheses) and these methods: `contains(t)`, `indexOf(t)` (-1 if not found), `startsWith(t)`, `endsWith(t)`, `upper()`, `lower()`, `trim()`, `replace(old, new)`, `split(separator)` (gives a list), `substring(start, count)`, `charAt(i)` (gives a one-letter string), `repeat(n)`, `isEmpty()`, `isInt()` and `isFloat()` (true if `int(...)` / `float(...)` would work on the text, so input can be checked before converting it: `if (typed.isInt()) { int n = int(typed); }`).
 - Text **can't** be indexed with `[ ]`. Use `charAt(i)`.
 
 ### Printing and reading (`#include <stdio>`)
@@ -303,6 +312,7 @@ Point c = Point();        // every field at its starting value
 **The key difference:**
 - A **struct** is a *value*. `Point b = a;` makes a separate **copy**. Use structs for small data like positions.
 - A **class** is *shared*. `Player b = a;` makes `b` another name for the **same** player, and passing a class to a function lets the function change it. Use classes for game objects.
+- **When class objects are freed:** automatically, as soon as nothing (no variable, field or list) refers to them any more. There's no `delete`. The one exception: two objects that refer to **each other** (`a.partner = b; b.partner = a;`, or a team with a list of players where each player has a `Team? team` field) keep each other alive, so they're never freed while the game runs, even after the rest of the game has forgotten them. Memory comes back when the game closes. It rarely matters in small games (leftover objects aren't drawn or updated unless they're still in a list); it only adds up if such pairs are made over and over, like for every bullet. To avoid it, set one side to `null` when done: `e.partner = null;` before removing `e`. Explain it only if the learner builds objects that point at each other.
 
 ```cpp
 class Entity {
@@ -447,7 +457,7 @@ A pointer must point at a variable, field or list item. Don't keep one pointing 
 | `vec2` | `x y` | `length()` `normalized()` `dot(v)` `distance(v)` `angle()` `rotated(radians)` `lerp(v, t)`, `vec2.ZERO` `ONE` `UP` `DOWN` `LEFT` `RIGHT` |
 | `vec3` | `x y z` | `length()` `normalized()` `dot(v)` `cross(v)` `distance(v)` `lerp(v, t)`, `vec3.ZERO` `ONE` `UP` `FORWARD` `RIGHT` |
 | `vec4` | `x y z w` | `length()` `normalized()` `dot(v)` |
-| `color` | `r g b a` (0–255) | `color(r, g, b)` or `color(r, g, b, a)`, `fade(alpha)`, `lerp(c, t)`. Named colors: `color.WHITE BLACK BLANK LIGHTGRAY GRAY DARKGRAY RED MAROON ORANGE YELLOW GOLD GREEN LIME DARKGREEN SKYBLUE BLUE DARKBLUE PURPLE VIOLET PINK MAGENTA BROWN BEIGE` |
+| `color` | `r g b a` (0–255) | `color(r, g, b)` or `color(r, g, b, a)` from ints (kept between 0 and 255, so `color(random.range(0, 255), ...)` just works), `fade(alpha)`, `lerp(c, t)`. Named colors: `color.WHITE BLACK BLANK LIGHTGRAY GRAY DARKGRAY RED MAROON ORANGE YELLOW GOLD GREEN LIME DARKGREEN SKYBLUE BLUE DARKBLUE PURPLE VIOLET PINK MAGENTA BROWN BEIGE` |
 | `rect` | `x y width height` | `overlaps(other)` `contains(point)` `center()` `position()` `size()` |
 
 Vectors work with math: `pos += velocity * dt;`. Vectors add and subtract with vectors, and multiply or divide by numbers.
@@ -460,15 +470,16 @@ Library functions are reached through the library name (`window.open(...)`). Lib
 |---|---|
 | `<stdio>` | `print`, `write`, `input` |
 | `<math>` | `math.sqrt pow sin cos tan asin acos atan atan2 exp log floor ceil round abs sign min max clamp lerp`, and `math.PI TAU E`. Angles are in radians. |
-| `<random>` | `random.range(1, 6)` (whole numbers, both ends included), `random.range(0.5, 2.0)` (decimals), `random.value()` (0 to 1), `random.chance(0.25)`, `random.seed(n)` |
+| `<random>` | `random.range(1, 6)` (whole numbers, both ends included), `random.range(0.5, 2.0)` (decimals), `random.value()` (0 to 1), `random.chance(0.25)`, `random.seed(n)`, `random.color()` (a random solid color) |
 | `<window>` | `window.open(width, height, "title")`, `shouldClose()`, `run()`, `close()`, `deltaTime()` (seconds since the last frame), `time()`, `width()`, `height()`, `fps()`, `setFPS(n)`, `setTitle(t)`, `setBackground(color)`, `toggleFullscreen()`, `screenshot("file.png")` |
-| `<input>` | `input.keyDown(Key.SPACE)` (held), `input.keyPressed(...)` (only the frame it was pressed), `input.keyReleased(...)`, `input.mouseDown(MouseButton.LEFT)`, `mousePressed`, `mouseReleased`, `mousePosition()` (a vec2), `mouseX()`, `mouseY()`, `mouseWheel()` |
-| `<graphics2d>` | `graphics2d.drawRect(x, y, w, h, color)` or `drawRect(rect, color)`, `drawRectOutline(x, y, w, h, color, thickness)`, `drawCircle(x, y, radius, color)` or `drawCircle(vec2, radius, color)`, `drawCircleOutline(x, y, radius, color)`, `drawLine(from, to, color, thickness)`, `drawTriangle(a, b, c, color)`, `drawText(text, x, y, size, color)`, `textWidth(text, size)`, `drawFPS(x, y)`, `clear(color)` |
+| `<input>` | `input.keyDown(Key.SPACE)` (held), `input.keyPressed(...)` (only the frame it was pressed), `input.keyReleased(...)`, `input.mouseDown(MouseButton.LEFT)`, `mousePressed`, `mouseReleased`, `mousePosition()` (a vec2), `mouseX()`, `mouseY()`, `mouseWheel()`. Controllers (gamepads): `input.gamepadDown(GamepadButton.A)`, `gamepadPressed`, `gamepadReleased` (Xbox-style names: `A B X Y LEFT_BUMPER RIGHT_BUMPER LEFT_TRIGGER RIGHT_TRIGGER BACK START LEFT_STICK RIGHT_STICK`, and the D-pad `UP DOWN LEFT RIGHT`), `input.leftStick()` / `rightStick()` (a vec2 from -1 to 1; y is down, like the screen; small wobbles read as 0), `leftTrigger()` / `rightTrigger()` (0 to 1), `gamepadConnected()`, `gamepadName()`. Each takes an optional controller number: 0 (the default) is the first one plugged in. Without a controller they all read "not pressed", so a game can check both: `if (input.keyDown(Key.SPACE) or input.gamepadDown(GamepadButton.A))` |
+| `<graphics2d>` | `graphics2d.drawRect(x, y, w, h, color)` or `drawRect(rect, color)`, `drawRectOutline(x, y, w, h, color, thickness)`, `drawCircle(x, y, radius, color)` or `drawCircle(vec2, radius, color)`, `drawCircleOutline(x, y, radius, color)`, `drawLine(from, to, color, thickness)`, `drawTriangle(a, b, c, color)`, `drawText(text, x, y, size, color)`, `textWidth(text, size)`, `drawFPS(x, y)`, `clear(color)`, and a 2D camera (below) |
 | `<physics>` | the `Body` class, plus `physics.add(body)`, `remove(body)`, `step(dt)`, `setGravity(vec2)`, `gravity()`, `clear()`, `count()` |
 | `<assets>` | `assets.loadTexture("x.png")` gives a `Texture`, `assets.loadFont("x.ttf")` gives a `Font`, `assets.exists(path)` |
 | `<audio>` | `audio.loadSound("x.wav")` gives a `Sound`, `audio.loadMusic("x.ogg")` gives a `Music`, `audio.setVolume(v)` |
 | `<graphics3d>` | the `Camera` struct and `Model` class, `graphics3d.setCamera(cam)`, `drawCube(pos, size, color)`, `drawCubeOutline`, `drawSphere(center, radius, color)`, `drawSphereOutline`, `drawCylinder(pos, radius, height, color)`, `drawPlane(center, vec2 size, color)`, `drawGrid(slices, spacing)`, `drawLine(from, to, color)`, `toScreen(vec3)`, `loadModel("x.glb")` |
 | `<time>` | `time.now()`, `time.sleep(s)`, `time.clock()`, `time.date()`, `year() month() day() hour() minute() second()`, the `Timer` class |
+| `<save>` | `save.setInt(key, n)` / `getInt(key, backup)`, the same for `Float`, `String` and `Bool`, `has(key)`, `remove(key)`, `clear()`. Kept in `save.txt` in the game's folder |
 | `<file>` | `file.read(path)`, `write(path, text)`, `append(path, text)`, `exists(path)`, `remove(path)`, `readLines(path)`, `writeLines(path, list)`, `files(folder)` |
 | `<scenes>` | the `Scene` class, `scenes.change(scene)`, `update(dt)`, `draw()`, `current()` |
 | `<ui>` | `ui.button(rect, "text")` (true when clicked), `ui.checkbox(rect, "text", checked)` (new value), `ui.slider(rect, value, min, max)` (new value), `ui.label(text, x, y, size, color)`, `ui.panel(rect)`, `ui.setTheme(bg, accent, text)` |
@@ -482,15 +493,35 @@ The details of the newer libraries are in "More libraries" after the Physics sec
 
 **Screen coordinates:** (0, 0) is the **top-left** corner. x goes right, and **y goes down**, so jumping means a *negative* y velocity.
 
+**2D camera** (`<graphics2d>`), for levels bigger than the window. `Camera2D` has `vec2 target` (the point in the world to look at), `vec2 offset` (where on the screen it shows, usually the middle of the window), `float zoom` (1 = normal, must be above 0) and `float rotation` (degrees). Everything drawn after `graphics2d.setCamera(camera)` goes through it, until `graphics2d.resetCamera()`, so draw the world first, then reset, then the score and menus:
+
+```cpp
+Camera2D camera = Camera2D(vec2(480, 270), vec2(480, 270));     // target, offset (zoom = 1, rotation = 0)
+
+void update(float dt){
+    camera.target = camera.target.lerp(hero.center(), 5 * dt);  // glide toward the player
+}
+
+void draw(){
+    graphics2d.setCamera(camera);   // the world moves with the camera
+    level.draw();
+    graphics2d.resetCamera();       // the text stays on the screen
+    graphics2d.drawText("Coins: {coins}", 20, 20, 24, color.GOLD);
+}
+```
+
+`graphics2d.screenToWorld(input.mousePosition())` turns the mouse position into a world position (and `worldToScreen` goes the other way). `Camera2D` is a struct, so call `setCamera` again after changing it (each frame, in `draw`). Physics doesn't know about the camera; only drawing moves. The 3D `Camera` from `<graphics3d>` is separate.
+
 ### Physics
 
 A `Body` is a box: `Body(x, y, width, height)`.
-- Fields you set: `position`, `size`, `velocity` (all vec2), `isStatic` (true for floors, walls and platforms that never move), and `gravityScale` (1 by default).
+- Fields you set: `position`, `size`, `velocity` (all vec2), `isStatic` (true for floors, walls and platforms that never move), `oneWay` (with `isStatic`: a one-way platform, which you can jump up through from below and walk through sideways, but land on from above), and `gravityScale` (1 by default).
 - Fields Forge sets during each `physics.step(dt)`: `onGround`, `onCeiling` and `onWall`.
 - Methods: `bounds()` (a rect), `center()`, `overlaps(otherBody)`.
 - Gravity starts at `vec2(0, 980)`, in pixels per second per second, pointing down.
 - Moving bodies stop when they hit static bodies, and push each other apart (so crates stack). A body with `solid = false` passes through everything, which is useful for coins and trigger zones; check those with `a.overlaps(b)`.
 - Your own classes can inherit from `Body`: `class Player : Body { ... }`. With no constructor of its own, it uses `Body(x, y, width, height)`.
+- **Debug view:** `physics.drawDebug()` (in `draw`) outlines every body: static ones blue, moving ones green, `solid = false` ones purple, and a yellow bar under a moving body that's `onGround`. Great for "why does my player fall through?" moments. The file that calls it needs `#include <graphics2d>` as well (physics itself never draws). With a 2D camera, call it before `resetCamera()`.
 
 ```cpp
 Body ground = Body(0, 500, 960, 40);
@@ -530,7 +561,7 @@ song.play();
 - `Sound`: `play()`, `stop()`, `isPlaying()`, `setVolume(v)`, `setPitch(p)`.
 - `Music`: `play()`, `stop()`, `pause()`, `resume()`, `isPlaying()`, `setVolume(v)`, `setLooping(b)`, `length()`, `position()`.
 - A missing file stops the game with "can't find the file 'x.png'".
-- **Sprite-sheet animation:** keep a frame number, and change it every 0.1 seconds or so with a timer variable. Draw `drawPart(rect(frame * 16, 0, 16, 16), rect(x, y, 64, 64))`.
+- **Sprite-sheet animation:** `Animation walk = Animation(sheet, 16, 16, 4, 8);` (the sheet, frame width and height, how many frames, frames per second, and optionally the row they start in, from 0). Then `walk.update(dt);` in `update` and `walk.drawScaled(x, y, 4);` (or `draw(x, y)`) in `draw`. Frames are read left to right. `flip(true)` mirrors it to face left, `play()` / `pause()` / `reset()`, `frame()`, `setFrame(i)`, `frameCount()`, `isPlaying()`, and fields `fps` and `looping` (set `looping = false` for a one-time animation, then check `isDone()`). It's a class, so `current = run;` shares the same animation. Learners can also do it by hand first to understand it: keep a frame number, change it every 0.1 seconds with a timer, and draw `drawPart(rect(frame * 16, 0, 16, 16), rect(x, y, 64, 64))`.
 
 **3D** (`<graphics3d>`). In 3D, **y goes up**.
 
@@ -576,7 +607,23 @@ An `Entity` has `name`, `active`, `components`, `add`, `get("Type")`, `has("Type
 
 **Timer** (`<time>`): `Timer cooldown = Timer(0.5);`, then `if (cooldown.isDone()) { ...; cooldown.restart(); }`. It also has `left()` and `elapsed()`.
 
-**Files** (`<file>`), useful for save games: `file.write("save.txt", "{score}");` and later `int score = int(file.read("save.txt").trim());`. Check `file.exists(path)` first.
+**Saving** (`<save>`), the easy way to remember things between runs (high scores, settings, progress). Values are kept by name in `save.txt` in the game's folder, and written straight away:
+
+```cpp
+#include <save>
+
+int best = save.getInt("best");           // 0 the very first time (or save.getInt("best", 100) for another backup)
+if (score > best) {
+    save.setInt("best", score);
+}
+save.setString("name", "Ana");
+save.setFloat("volume", 0.8);
+save.setBool("music", true);
+```
+
+`getInt` / `getFloat` / `getString` / `getBool` take the key and an optional backup value, given back when the key isn't saved yet. `save.has(key)`, `save.remove(key)` and `save.clear()` (to reset everything) are the rest. Because `save` is a library name, a function or variable can't be called `save` (use `saveGame`).
+
+**Files** (`<file>`), for your own file formats (levels, lists): `file.write("notes.txt", "{score}");` and later `int score = int(file.read("notes.txt").trim());`. Check `file.exists(path)` first.
 
 ### Making a game: two kinds of game loop
 
@@ -624,7 +671,7 @@ The rules, which the learner chose on purpose:
 - A toolkit is **not** part of the engine, and the engine can't be switched over to use one.
 - A game that includes a toolkit **can't** include `<window>`, `<input>`, `<graphics2d>`, `<graphics3d>`, `<assets>` or `<ui>`. Doing so is a build error: "<OpenGL> is a separate toolkit, so it can't be used together with Forge's engine (<window>)".
 - A game can use only **one** toolkit.
-- `<stdio>`, `<math>`, `<random>`, `<time>`, `<file>`, `<audio>`, `<physics>`, `<scenes>`, `<ECS>` and tasks still work with a toolkit.
+- `<stdio>`, `<math>`, `<random>`, `<time>`, `<file>`, `<save>`, `<audio>`, `<physics>`, `<scenes>`, `<ECS>` and tasks still work with a toolkit.
 
 Every toolkit has the same window, keyboard and mouse functions, with its own name in front:
 
@@ -734,6 +781,18 @@ error: 'hp' needs an int, but this is a float
   hint: use int(...) to turn it into a whole number (the decimals get cut off)
 ```
 
+**Warnings** look the same but are yellow and start with `warning:`. They never stop the build: the code works, but probably doesn't do what the learner meant. Warnings only show once there are no errors left (VS Code shows both, with yellow underlines for warnings). The warnings are:
+
+| Warning | What it means | Fix |
+|---|---|---|
+| `this changes 'e', which is only a copy of the item in the list` | `for (Enemy e in enemies) { e.hp = 0; }` with a **struct**: the loop gets a copy, so the list doesn't change | loop with a number: `for (int i = 0; i < enemies.length; i++) { enemies[i].hp = 0; }` |
+| `this divides two whole numbers, so the decimals are cut off` | `float ratio = hits / shots;` with two ints: `7 / 2` is `3`, and only then does it become `3.0` | `float(hits) / shots` gives `3.5` |
+| `the variable 'x' is never used` | you made a variable and never used it | remove it, or use it |
+| `this code can never run, because it comes after 'return'` | lines after `return`, `break` or `continue` in the same `{ }` | remove them, or move them above |
+| `comparing decimal numbers with '==' often gives the wrong answer` | `0.1 + 0.2 == 0.3` is false, because decimals are a tiny bit off | check whether they're close: `math.abs(a - b) < 0.001` |
+
+Literal-only divisions like `float f = 70 / 30;` don't warn, because they already give a decimal answer when the result goes into a float.
+
 Problems that can only happen while running (a list position that doesn't exist, using something that's null, dividing by zero, `int("abc")`) stop the game with a message like:
 
 ```
@@ -773,14 +832,14 @@ Runtime error in main.frg:10: position 5 is outside the list (it has 3 items, at
 - Two functions or methods with the same name (only constructors can share a name), operator overloading for your own types
 - Interfaces, abstract classes, `protected`, `static` fields or methods in your own types
 - `do ... while`, labeled breaks, exceptions (`try` / `catch`), `goto`
-- Networking, gamepads/controllers, shaders in the engine, 3D lighting, cameras that scroll or zoom in 2D, text input boxes in `<ui>`
+- Networking, shaders in the engine, 3D lighting, text input boxes in `<ui>`
 - `<network>` is planned but **doesn't exist yet**.
 
 ---
 
 ## Part 5: The example platformer
 
-This game is in `examples/platformer/`. It's the learner's first goal: they should eventually understand every line. Arrows or A/D move, Space/W/Up jumps, you collect 5 coins, and falling into the pit sends you back to the start.
+This game is in `examples/platformer/`. It's the learner's first goal: they should eventually understand every line. Arrows or A/D move, Space/W/Up jumps, you collect 12 coins, and falling into a pit sends you back to the start. The level is 2400 pixels wide, so a `Camera2D` follows the player smoothly (`followPlayer` in main.frg), and the text is drawn after `resetCamera()` so it stays on the screen.
 
 ### main.frg
 
@@ -788,13 +847,18 @@ This game is in `examples/platformer/`. It's the learner's first goal: they shou
 #include <window>
 #include <graphics2d>
 #include <physics>
+#include <math>
 
 ```
   A tiny platformer: move with the arrow keys (or A / D), jump with Space (or W / Up).
-  Collect all the coins. Don't fall in the pit!
+  Collect all the coins. Don't fall in the pits!
 
   This game uses the engine loop: window.run() calls update(dt) and draw() every frame.
+  The level is wider than the window, so a camera follows the player.
 ```
+
+// The camera looks at `target` (a point in the level) and shows it at `offset` (the middle of the window).
+Camera2D camera = Camera2D(vec2(480, 270), vec2(480, 270));
 
 int main(){
     window.open(960, 540, "Forge Platformer");
@@ -809,11 +873,21 @@ void update(float dt){
     physics.step(dt);
     player.checkFall();
     level.collectCoins(player.hero.bounds());
+    followPlayer(dt);
+}
+
+// The camera glides toward the player, but stops at the ends of the level so it never shows past them.
+void followPlayer(float dt){
+    float half = window.width() / 2.0;
+    float x = math.clamp(player.hero.center().x, half, level.WIDTH - half);
+    camera.target = camera.target.lerp(vec2(x, window.height() / 2.0), 5 * dt);
 }
 
 void draw(){
+    graphics2d.setCamera(camera);    // the level and the player are drawn where the camera looks...
     level.draw();
     player.draw();
+    graphics2d.resetCamera();        // ...and the text stays in the same place on the screen
 
     graphics2d.drawText("Arrows / A D to move, Space to jump", 20, 16, 20, color.LIGHTGRAY);
     string coins = "Coins: {level.collected}/{level.totalCoins}";
@@ -821,7 +895,7 @@ void draw(){
 
     if (level.coins.isEmpty()) {
         string win = "You got them all!";
-        graphics2d.drawText(win, 480 - graphics2d.textWidth(win, 48) / 2, 200, 48, color.WHITE);
+        graphics2d.drawText(win, 480 - graphics2d.textWidth(win, 48) / 2.0, 200, 48, color.WHITE);
     }
 }
 ````
@@ -914,27 +988,39 @@ void draw(){
 #include <graphics2d>
 #include <physics>
 
+const float WIDTH = 2400;    // the level is wider than the 960-pixel window
+
 list<Body> platforms = [];
 list<vec2> coins = [];
 int totalCoins = 0;
 int collected = 0;
 
 void build(){
-    // The ground has a pit in the middle.
+    // The ground, with three pits.
     addPlatform(0, 500, 400, 40);
-    addPlatform(540, 500, 420, 40);
+    addPlatform(540, 500, 560, 40);
+    addPlatform(1250, 500, 500, 40);
+    addPlatform(1880, 500, 520, 40);
 
     // Platforms to jump between.
     addPlatform(140, 400, 160, 20);
     addPlatform(380, 320, 160, 20);
     addPlatform(620, 240, 160, 20);
     addPlatform(410, 150, 100, 20);
+    addPlatform(900, 380, 140, 20);
+    addPlatform(1120, 330, 120, 20);
+    addPlatform(1400, 380, 160, 20);
+    addPlatform(1600, 280, 140, 20);
+    addPlatform(1780, 200, 120, 20);
+    addPlatform(2050, 380, 160, 20);
+    addPlatform(2250, 280, 120, 20);
 
-    // Walls at the edges of the screen.
+    // Walls at the two ends of the level.
     addPlatform(-20, 0, 20, 540);
-    addPlatform(960, 0, 20, 540);
+    addPlatform(WIDTH, 0, 20, 540);
 
-    coins = [vec2(220, 370), vec2(460, 290), vec2(700, 210), vec2(460, 120), vec2(880, 470)];
+    coins = [vec2(220, 370), vec2(460, 290), vec2(700, 210), vec2(460, 120), vec2(970, 350), vec2(1180, 300),
+             vec2(1480, 350), vec2(1670, 250), vec2(1840, 170), vec2(2130, 350), vec2(2310, 250), vec2(2350, 470)];
     totalCoins = coins.length;
 }
 
@@ -1018,7 +1104,7 @@ Steps:
 Hints:
 
 - `#include <random>`, then `int secret = random.range(1, 100);`. Both 1 and 100 can come up.
-- `input` gives back text. Turn it into a number with `int(...)`: `int guess = int(input("Your guess: "));`. Typing something that isn't a number stops the program with an error. That's fine for now.
+- `input` gives back text. Turn it into a number with `int(...)`: `int guess = int(input("Your guess: "));`. Typing something that isn't a number stops the program with an error. To ask again instead, check the text first with `isInt()`: `string typed = input("Your guess: ");`, then `if (typed.isInt()) { int guess = int(typed); ... } else { print("Please type a number"); }`.
 - A `bool found = false;` and `while (!found) { ... }` is one way to loop until the guess is right.
 
 Make it yours: allow only 7 guesses. Ask "Play again? (y/n)" at the end. Let the player choose easy (1-50) or hard (1-500).
@@ -1038,7 +1124,7 @@ Steps:
 
 Hints:
 
-- The percentage is the classic division trap. `score / 10 * 100` uses whole numbers, so 7 right gives `0`. Use `float(score) / 10 * 100`.
+- The percentage is the classic division trap. `score / 10 * 100` uses whole numbers, so 7 right gives `0`. Use `float(score) / 10 * 100`. (Forge warns about the whole-number version when it goes into a `float`.) Show it with one decimal: `print("{percent:.1}%");`.
 - `random.range(1, 3)` picks which operation, and `switch` on that number chooses what to ask.
 
 Make it yours: time the whole quiz with `<time>` (`time.now()` at the start and end). Make the numbers bigger as the score goes up.
@@ -1086,6 +1172,7 @@ Hints:
 
 - `sort()` only sorts lists of numbers or text, which is why step 3 keeps the list in order by hand.
 - Loading: `file.readLines("scores.txt")` gives a list of lines. For each line, `line.split(",")` gives `["Ana", "120"]`, and `int(parts[1])` is the score.
+- Another way to save: the `<save>` library keeps values by name, so there's no file format to write. Save entry `i` as `save.setString("name{i}", e.name)` and `save.setInt("score{i}", e.score)`, plus `save.setInt("count", entries.length)`, and read them back with `save.getString` and `save.getInt`. Doing it by hand with `<file>` first is good practice, though.
 
 Make it yours: show a medal (`*`) next to the top score. Don't allow empty names (`name.trim().isEmpty()`).
 
@@ -1198,7 +1285,7 @@ void draw(){
 ```
 
 - A ball in a list is a struct, which is a copy. To change it, change `balls[i].position`, not a copy taken out of the list with `for (Ball b in balls)`.
-- A random color: `color(uint8(random.range(50, 255)), uint8(random.range(50, 255)), uint8(random.range(50, 255)))`. Colors are made of `uint8`s (0 to 255), so each `int` has to be converted.
+- A random color: `random.color()`. For brighter colors, pick each part yourself: `color(random.range(50, 255), random.range(50, 255), random.range(50, 255))`.
 
 Make it yours: balls bounce off each other (`a.position.distance(b.position) < 2 * RADIUS`). Gravity pulls them down.
 
@@ -1220,7 +1307,7 @@ Hints:
 
 - The ball as a rect: `rect(position.x - 10, position.y - 10, 20, 20)`, then `ballRect.overlaps(leftPaddle)`.
 - After flipping, also move the ball out of the paddle, or it can stick inside and flip every frame.
-- Center text: `float x = (window.width() - graphics2d.textWidth(text, 40)) / 2;`.
+- Center text: `float x = (window.width() - graphics2d.textWidth(text, 40)) / 2.0;` (the `.0` keeps the half pixel; with `/ 2` Forge warns that the decimals are cut off).
 
 Make it yours: the ball speeds up a little on every hit. A computer player that follows the ball (not too fast, or it can't lose). First to 5 wins.
 
@@ -1335,14 +1422,15 @@ Steps:
 1. A big circle in the middle. Clicking inside it adds 1 cookie. Show the total.
 2. A `ui.button` "Better click (cost 10)". Buying it makes clicks worth more, and raises its cost.
 3. A "Helper" upgrade: each helper earns 1 cookie per second (`cookies += helpers * dt`).
-4. Save the numbers to a file when the game closes, and load them when it starts: `file.writeLines("save.txt", ["{cookies}", "{helpers}"])`.
+4. Save the numbers, and load them when the game starts, with `<save>`: `save.setFloat("cookies", cookies);` and `float cookies = save.getFloat("cookies");`.
 5. A title scene with "Play" and "Reset save" buttons (`<scenes>`).
 
 Hints:
 
 - Clicked inside the circle: `input.mousePressed(MouseButton.LEFT) and input.mousePosition().distance(center) < radius`.
-- Helpers earn fractions of a cookie, so keep `float cookies`, and show `int(cookies)`.
-- Save several numbers as several lines with `file.writeLines`, and read them back in the same order.
+- Helpers earn fractions of a cookie, so keep `float cookies`, and show `int(cookies)` (or `"{cookies:.1}"` for one decimal).
+- `<save>` writes the file straight away, so saving after every purchase (and every few seconds for the helpers) is fine. Load with a backup value for the very first run: `save.getInt("helpers", 0)`.
+- "Reset save" is `save.clear()`, then set the variables back to their starting values.
 
 Make it yours: the cookie shrinks a little when clicked, then grows back. Achievements at 100, 1,000 and 10,000 cookies.
 
@@ -1444,4 +1532,4 @@ Then build version 1, play it, and only then add more.
 
 ---
 
-*Forge v0.5. If the learner reports that something in this file doesn't work, believe the compiler over this file and tell them to report it to whoever maintains Forge.*
+*Forge v0.6. If the learner reports that something in this file doesn't work, believe the compiler over this file and tell them to report it to whoever maintains Forge.*

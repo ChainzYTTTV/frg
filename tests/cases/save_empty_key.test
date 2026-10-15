@@ -1,0 +1,9 @@
+=== main.frg
+#include <save>
+
+int main(){
+    save.setInt("", 5);
+    return 0;
+}
+=== runtime error
+save.setInt(): the key can't be empty text

@@ -1,4 +1,4 @@
-# `<input>`: Keyboard and Mouse
+# `<input>`: Keyboard, Mouse and Controllers
 
 ```cpp
 #include <input>
@@ -61,6 +61,52 @@ if (input.mousePressed(MouseButton.LEFT)) {
         print("clicked the box");
     }
 }
+```
+
+## Controllers (gamepads)
+
+Xbox-style controllers (and most others) plugged in by USB or Bluetooth work too. Buttons are named like on an Xbox controller:
+
+| `GamepadButton.` | Button |
+|---|---|
+| `A` `B` `X` `Y` | the four buttons on the right (on a PlayStation controller: cross, circle, square, triangle) |
+| `UP` `DOWN` `LEFT` `RIGHT` | the D-pad (the cross on the left) |
+| `LEFT_BUMPER` `RIGHT_BUMPER` | the shoulder buttons |
+| `LEFT_TRIGGER` `RIGHT_TRIGGER` | the triggers, as buttons (pressed or not). For how far, use `leftTrigger()` |
+| `BACK` `START` | the two small buttons in the middle |
+| `LEFT_STICK` `RIGHT_STICK` | pressing a stick down like a button |
+
+| Function | Gives back | What it does |
+|---|---|---|
+| `input.gamepadDown(GamepadButton button, int gamepad = 0)` | `bool` | true **while** the button is held |
+| `input.gamepadPressed(GamepadButton button, int gamepad = 0)` | `bool` | true only in the frame it was pressed |
+| `input.gamepadReleased(GamepadButton button, int gamepad = 0)` | `bool` | true only in the frame it was let go |
+| `input.leftStick(int gamepad = 0)` | `vec2` | the left stick: x from -1 (left) to 1 (right), y from -1 (up) to 1 (down) |
+| `input.rightStick(int gamepad = 0)` | `vec2` | the right stick, the same way |
+| `input.leftTrigger(int gamepad = 0)` | `float` | how far the left trigger is pressed, from 0 to 1 |
+| `input.rightTrigger(int gamepad = 0)` | `float` | the same for the right trigger |
+| `input.gamepadConnected(int gamepad = 0)` | `bool` | true if that controller is plugged in |
+| `input.gamepadName(int gamepad = 0)` | `string` | the controller's name, or `""` |
+
+`gamepad` picks the controller: `0` (the default) is the first one plugged in, `1` the second, and so on, for local multiplayer.
+
+Things to know:
+
+- Sticks never rest exactly in the middle, so small movements (less than a fifth of the way) read as exactly `(0, 0)`. That's called a **dead zone**. Past it, the value still goes all the way to 1.
+- The stick's `y` points **down**, like the screen, so `position += input.leftStick() * speed * dt;` moves the right way.
+- Without a controller, every function just says "not pressed" (`false`, `vec2(0, 0)`, `0`), so a game can always check the keyboard and the controller together:
+
+```cpp
+bool jump = input.keyPressed(Key.SPACE) or input.gamepadPressed(GamepadButton.A);
+
+vec2 move = input.leftStick();
+if (input.keyDown(Key.LEFT) or input.gamepadDown(GamepadButton.LEFT)) {
+    move.x = -1;
+}
+if (input.keyDown(Key.RIGHT) or input.gamepadDown(GamepadButton.RIGHT)) {
+    move.x = 1;
+}
+player.velocity.x = move.x * MOVE_SPEED;
 ```
 
 ## input vs input()

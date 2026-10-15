@@ -59,6 +59,27 @@ inline State& st() {
 }
 }  // namespace autotest
 
+// ---------------------------------------------------------------- 2D camera (the type; the functions are in graphics2d below)
+
+namespace graphics2d {
+struct Camera2D_ {
+    core::vec2_ target_{0, 0};  // the point in the world the camera looks at
+    core::vec2_ offset_{0, 0};  // where on the screen that point is shown (usually the middle of the window)
+    float zoom_ = 1;
+    float rotation_ = 0;        // in degrees
+    static Camera2D_ frg$make() { return {}; }
+    static Camera2D_ frg$make(core::vec2_ target, core::vec2_ offset, float zoom, float rotation) {
+        return {target, offset, zoom, rotation};
+    }
+    bool operator==(const Camera2D_&) const = default;
+};
+inline std::string frg$str(const Camera2D_& c) {
+    return "Camera2D(target: " + core::frg$str(c.target_) + ", offset: " + core::frg$str(c.offset_) + ", zoom: " + str(c.zoom_) +
+           ", rotation: " + str(c.rotation_) + ")";
+}
+inline ::Camera2D rlCamera(const Camera2D_& c) { return ::Camera2D{rl(c.offset_), rl(c.target_), c.rotation_, c.zoom_}; }
+}  // namespace graphics2d
+
 // ---------------------------------------------------------------- window
 
 namespace window {
@@ -68,6 +89,11 @@ struct State {
     core::color_ background{24, 24, 32, 255};
     long frame = 0;
     void (*leave3D)() = nullptr;  // set while 3D drawing is active; 2D drawing calls it first
+    // The 2D camera set with graphics2d.setCamera. It stays set until resetCamera, but raylib's camera mode is only
+    // switched on at the first 2D drawing of each frame, and always switched off before the frame is shown.
+    graphics2d::Camera2D_ camera2d;
+    bool camera2dSet = false;
+    bool camera2dOn = false;
 };
 inline State& st() {
     static State s;
@@ -85,10 +111,18 @@ inline std::vector<void (*)()>& beforeEndFrameHooks() {
     return hooks;
 }
 
+inline void leaveCamera2D() {
+    State& s = st();
+    if (!s.camera2dOn) return;
+    EndMode2D();
+    s.camera2dOn = false;
+}
+
 inline void close_() {
     State& s = st();
     if (!s.open) return;
     if (s.inFrame) {
+        leaveCamera2D();
         for (auto fn : beforeEndFrameHooks()) fn();
         EndDrawing();
     }
@@ -107,6 +141,7 @@ inline void beginFrame() {
 
 inline void endFrame() {
     State& s = st();
+    leaveCamera2D();
     for (auto fn : beforeEndFrameHooks()) fn();
     EndDrawing();
     for (auto fn : frameHooks()) fn();
@@ -121,6 +156,11 @@ inline void ensureFrame(const char* what) {
     if (!st().open) panic(what, "the window isn't open yet - call window.open(width, height, \"title\") first");
     if (!st().inFrame) beginFrame();
     if (st().leave3D) st().leave3D();  // 2D drawing goes on top of any 3D drawn so far
+    State& s = st();
+    if (s.camera2dSet && !s.camera2dOn) {
+        BeginMode2D(graphics2d::rlCamera(s.camera2d));
+        s.camera2dOn = true;
+    }
 }
 
 inline void parseAutotestInput(const char* spec);
@@ -131,6 +171,16 @@ inline void open_(int32_t width, int32_t height, const std::string& title) {
     SetTraceLogLevel(LOG_WARNING);
     InitWindow(width, height, title.c_str());
     SetTargetFPS(60);
+    // icon.png in the game's folder becomes the window's icon (frg build also puts it into the .exe).
+    std::string icon = findGameFile("icon.png");
+    if (!icon.empty()) {
+        ::Image img = LoadImage(icon.c_str());
+        if (img.data) {
+            ImageFormat(&img, PIXELFORMAT_UNCOMPRESSED_R8G8B8A8);
+            SetWindowIcon(img);
+            UnloadImage(img);
+        }
+    }
     s.open = true;
     addHook(shutdownHooks(), &close_);
     auto& at = autotest::st();
@@ -183,6 +233,11 @@ enum class Key_ : int32_t {
     F1_, F2_, F3_, F4_, F5_, F6_, F7_, F8_, F9_, F10_, F11_, F12_,
 };
 enum class MouseButton_ : int32_t { LEFT_, RIGHT_, MIDDLE_ };
+// Named like an Xbox controller. Keep the order in sync with GamepadButton in src/prelude.cpp.
+enum class GamepadButton_ : int32_t {
+    A_, B_, X_, Y_, LEFT_BUMPER_, RIGHT_BUMPER_, LEFT_TRIGGER_, RIGHT_TRIGGER_,
+    BACK_, START_, LEFT_STICK_, RIGHT_STICK_, UP_, DOWN_, LEFT_, RIGHT_,
+};
 
 inline const char* const* keyNames() {
     static const char* names[] = {
@@ -244,6 +299,54 @@ inline core::vec2_ mousePosition_() {
 inline float mouseX_() { return GetMousePosition().x; }
 inline float mouseY_() { return GetMousePosition().y; }
 inline float mouseWheel_() { return GetMouseWheelMove(); }
+
+// ---- gamepads (controllers). gamepad is 0 for the first one plugged in, 1 for the second...
+
+inline int rlGamepadButton(GamepadButton_ b) {
+    static const int map[] = {
+        GAMEPAD_BUTTON_RIGHT_FACE_DOWN, GAMEPAD_BUTTON_RIGHT_FACE_RIGHT, GAMEPAD_BUTTON_RIGHT_FACE_LEFT, GAMEPAD_BUTTON_RIGHT_FACE_UP,
+        GAMEPAD_BUTTON_LEFT_TRIGGER_1, GAMEPAD_BUTTON_RIGHT_TRIGGER_1, GAMEPAD_BUTTON_LEFT_TRIGGER_2, GAMEPAD_BUTTON_RIGHT_TRIGGER_2,
+        GAMEPAD_BUTTON_MIDDLE_LEFT, GAMEPAD_BUTTON_MIDDLE_RIGHT, GAMEPAD_BUTTON_LEFT_THUMB, GAMEPAD_BUTTON_RIGHT_THUMB,
+        GAMEPAD_BUTTON_LEFT_FACE_UP, GAMEPAD_BUTTON_LEFT_FACE_DOWN, GAMEPAD_BUTTON_LEFT_FACE_LEFT, GAMEPAD_BUTTON_LEFT_FACE_RIGHT,
+    };
+    return map[(int)b];
+}
+inline bool gamepadConnected_(int32_t pad) { return IsGamepadAvailable(pad); }
+inline std::string gamepadName_(int32_t pad) {
+    const char* n = IsGamepadAvailable(pad) ? GetGamepadName(pad) : nullptr;
+    return n ? n : "";
+}
+inline bool gamepadDown_(GamepadButton_ b, int32_t pad) { return IsGamepadAvailable(pad) && IsGamepadButtonDown(pad, rlGamepadButton(b)); }
+inline bool gamepadPressed_(GamepadButton_ b, int32_t pad) { return IsGamepadAvailable(pad) && IsGamepadButtonPressed(pad, rlGamepadButton(b)); }
+inline bool gamepadReleased_(GamepadButton_ b, int32_t pad) { return IsGamepadAvailable(pad) && IsGamepadButtonReleased(pad, rlGamepadButton(b)); }
+
+// A stick, from (-1, -1) (up and left) to (1, 1) (down and right). Sticks never rest exactly in the middle, so small
+// movements (the "dead zone") count as (0, 0), and the rest is stretched to still reach 1.
+inline core::vec2_ stick(int32_t pad, int axisX, int axisY) {
+    if (!IsGamepadAvailable(pad)) return {0, 0};
+    float x = GetGamepadAxisMovement(pad, axisX), y = GetGamepadAxisMovement(pad, axisY);
+    float len = std::sqrt(x * x + y * y);
+    const float dead = 0.2f;
+    if (len < dead) return {0, 0};
+    float scale = std::min(1.0f, (len - dead) / (1 - dead)) / len;
+    return {x * scale, y * scale};
+}
+inline core::vec2_ leftStick_(int32_t pad) { return stick(pad, GAMEPAD_AXIS_LEFT_X, GAMEPAD_AXIS_LEFT_Y); }
+inline core::vec2_ rightStick_(int32_t pad) { return stick(pad, GAMEPAD_AXIS_RIGHT_X, GAMEPAD_AXIS_RIGHT_Y); }
+// A trigger, from 0 (let go) to 1 (pressed all the way). raylib gives -1 to 1.
+inline float trigger(int32_t pad, int axis) {
+    if (!IsGamepadAvailable(pad)) return 0;
+    float v = (GetGamepadAxisMovement(pad, axis) + 1) / 2;
+    return v < 0.05f ? 0 : std::min(1.0f, v);
+}
+inline float leftTrigger_(int32_t pad) { return trigger(pad, GAMEPAD_AXIS_LEFT_TRIGGER); }
+inline float rightTrigger_(int32_t pad) { return trigger(pad, GAMEPAD_AXIS_RIGHT_TRIGGER); }
+
+inline std::string frg$str(GamepadButton_ b) {
+    static const char* names[] = {"A", "B", "X", "Y", "LEFT_BUMPER", "RIGHT_BUMPER", "LEFT_TRIGGER", "RIGHT_TRIGGER",
+                                  "BACK", "START", "LEFT_STICK", "RIGHT_STICK", "UP", "DOWN", "LEFT", "RIGHT"};
+    return names[(int)b];
+}
 
 inline std::string frg$str(Key_ k) { return keyNames()[(int)k]; }
 inline std::string frg$str(MouseButton_ b) {
@@ -316,6 +419,29 @@ inline void drawText_(const std::string& text, float x, float y, int32_t size, c
     DrawText(text.c_str(), (int)x, (int)y, size, rl(c));
 }
 inline int32_t textWidth_(const std::string& text, int32_t size) { return MeasureText(text.c_str(), size); }
+// The 2D camera: drawing after setCamera is moved, zoomed and turned by it; resetCamera goes back to the screen.
+inline void setCamera_(Camera2D_ c) {
+    if (!(c.zoom_ > 0)) panic("graphics2d.setCamera()", "the camera's zoom must be more than 0 (1 is normal size, 2 is twice as big), but it's " + str(c.zoom_));
+    window::leaveCamera2D();  // the next 2D drawing starts again with the new camera
+    window::st().camera2d = c;
+    window::st().camera2dSet = true;
+}
+inline void resetCamera_() {
+    window::leaveCamera2D();
+    window::st().camera2dSet = false;
+}
+inline Camera2D_ camera_() { return window::st().camera2d; }
+inline core::vec2_ screenToWorld_(core::vec2_ p) {
+    if (!window::st().camera2dSet) return p;
+    ::Vector2 v = GetScreenToWorld2D(rl(p), rlCamera(window::st().camera2d));
+    return {v.x, v.y};
+}
+inline core::vec2_ worldToScreen_(core::vec2_ p) {
+    if (!window::st().camera2dSet) return p;
+    ::Vector2 v = GetWorldToScreen2D(rl(p), rlCamera(window::st().camera2d));
+    return {v.x, v.y};
+}
+
 inline void drawFPS_(float x, float y) {
     window::ensureFrame("graphics2d.drawFPS()");
     DrawFPS((int)x, (int)y);

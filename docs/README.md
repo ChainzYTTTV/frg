@@ -4,7 +4,7 @@ Forge (`.frg`) is a compiled programming language for making 2D and 3D games. It
 
 These docs are for **anyone using or learning Forge**, including people who have never programmed before. If you're new, read them in order. If you already know another language, skim [Getting Started](getting-started.md), then read [Things that surprise people from other languages](language/14-coming-from-other-languages.md).
 
-> Forge was designed by a person and written by an AI (see the main [README](../README.md)). These docs describe **Forge 0.5**. If something here disagrees with what the compiler does, the compiler is right; please report the mismatch.
+> Forge was designed by a person and written by an AI (see the main [README](../README.md)). These docs describe **Forge 0.6**. If something here disagrees with what the compiler does, the compiler is right; please report the mismatch.
 
 ## Start here
 
@@ -45,14 +45,15 @@ Everything that isn't the core language lives in a library you `#include`. See t
 | [`<math>`](libraries/math.md) | Square roots, trigonometry, rounding, min/max/clamp |
 | [`<random>`](libraries/random.md) | Random numbers |
 | [`<window>`](libraries/window.md) | Opening the game window and running the game loop |
-| [`<input>`](libraries/input.md) | Keyboard and mouse |
+| [`<input>`](libraries/input.md) | Keyboard, mouse and controllers (gamepads) |
 | [`<graphics2d>`](libraries/graphics2d.md) | Drawing shapes and text |
 | [`<graphics3d>`](libraries/graphics3d.md) | Cameras, 3D shapes and 3D models |
 | [`<assets>`](libraries/assets.md) | Loading images and fonts |
 | [`<audio>`](libraries/audio.md) | Sound effects and music |
 | [`<physics>`](libraries/physics.md) | Gravity and collisions for boxes |
 | [`<time>`](libraries/time.md) | The clock, the date, and timers |
-| [`<file>`](libraries/file.md) | Reading and writing text files (save games) |
+| [`<save>`](libraries/save.md) | Remembering values between runs: high scores, settings, progress |
+| [`<file>`](libraries/file.md) | Reading and writing text files |
 | [`<scenes>`](libraries/scenes.md) | Switching between menu, levels and game over |
 | [`<ui>`](libraries/ui.md) | Buttons, checkboxes, sliders |
 | [`<ECS>`](libraries/ecs.md) | Building game objects out of components |

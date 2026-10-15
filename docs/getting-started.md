@@ -18,7 +18,7 @@ frg version
 g++ --version
 ```
 
-The first should print `Forge 0.5.0` and the second should print a GCC version. If `frg` isn't found, add Forge's `bin` folder to your PATH and restart the terminal.
+The first should print `Forge 0.6.0` and the second should print a GCC version. If `frg` isn't found, add Forge's `bin` folder to your PATH and restart the terminal.
 
 ### Building Forge from source
 
@@ -69,16 +69,30 @@ What each line of the program means:
 | `return 0;` | Finish `main` and report "everything went fine" (0). Returning 1 means "something went wrong". |
 | `}` | The end of `main` |
 
+### Starting from a template
+
+`frg new` can also start you off with a small working game. Add `--template` and one of these:
+
+| Command | You get |
+|---|---|
+| `frg new mygame` (or `--template console`) | the hello world above: a program that prints text, no window |
+| `frg new mygame --template window` | a window with a ball you move with the arrow keys, using `window.run()` with `update(dt)` and `draw()` |
+| `frg new mygame --template platformer` | a small platformer: a box that runs and jumps across platforms, with physics, a pit, and a camera that follows it through a level wider than the window |
+| `frg new mygame --template 3d` | a 3D scene: a cube and a ball on a grid, and a camera you turn with Left / Right |
+
+Each one is a single `main.frg` with comments, ready to `frg run` and then change into your own game. The game's name (`mygame`) becomes its window title and the name of its `.exe`, so it can only use letters, numbers and `_`, and can't start with a number.
+
 ## The `frg` command
 
 Run these in a terminal. `[folder]` is the game's top folder (the one with `main.frg`); leave it out to use the current folder.
 
 | Command | What it does |
 |---|---|
-| `frg new <name>` | Makes a folder `<name>/` containing a starter `main.frg` |
+| `frg new <name>` | Makes a folder `<name>/` containing a starter `main.frg`. Add `--template window`, `platformer` or `3d` to [start from a small game](#starting-from-a-template) |
 | `frg run [folder]` | Checks, compiles and runs the game |
 | `frg build [folder]` | Checks and compiles into `build/<folder name>.exe`, without running it |
 | `frg check [folder]` | Only looks for errors (fast, makes no `.exe`) |
+| `frg package [folder]` | Makes the finished game and zips it, ready to share: `dist/<name>.zip` (see [Sharing your game](#sharing-your-game)) |
 | `frg version` | Shows the Forge version |
 | `frg help` | Shows this list |
 
@@ -103,6 +117,18 @@ Without a console, `print` output isn't shown anywhere. **Runtime errors still a
 
 In VS Code, the **Forge: Turn the Console On/Off** command switches the console for the ▶ button, and **Forge: Build Release** builds the finished game.
 
+### Why the first build is slower
+
+The very first time you build a game (and the first time with `--release` or without a console), Forge shows:
+
+```
+   Preparing Forge's runtime for these libraries (only the first time, to make later builds faster)
+```
+
+It's getting Forge's own code ready once, so every build after that is quicker, for all your games. It's kept in a `cache` folder next to `frg.exe` (a few hundred MB at most). When Forge (or w64devkit) is updated, the old files are deleted by themselves. You can also delete that folder whenever you like; Forge just makes it again.
+
+`--release` builds take a little longer, because they make the game run as fast as possible. Normal builds skip some of that work: they're quicker to make, and the game behaves exactly the same.
+
 When `frg run` starts your game, the game's **working folder** is the game's top folder. That matters for files your game loads or saves; see [Files](libraries/file.md) and [Assets](libraries/assets.md).
 
 If the game crashes or `main` returns something other than 0, `frg run` says so after the game ends, for example `[hello.exe exited with code 1]`.
@@ -116,14 +142,47 @@ mygame/
   enemies/          <- subfolders join the game with #include <"enemies">
     goblin.frg
   player.png        <- images, sounds, fonts and models your game loads
+  icon.png          <- optional: the game's icon (see below)
   build/            <- made by frg: mygame.exe, plus the C++ Forge generated (you can ignore it)
+  dist/             <- made by frg package: the finished game, ready to share
 ```
 
 - `main.frg` must be in the **top** folder, not in a subfolder, and it must contain `int main()`.
 - File and folder names may only use letters, numbers and `_`, and can't start with a number. They also can't be a Forge keyword or library name, so no `map.frg` or `math.frg`.
 - See [Files and folders](language/07-files-and-folders.md) for how files use each other.
+- If you keep your game in **git**, don't save the folders Forge makes. Put a file called `.gitignore` in the game's folder with these lines:
+
+  ```
+  build/
+  dist/
+  save.txt
+  ```
+
+  (`save.txt` is where [`<save>`](libraries/save.md) keeps your own test saves.)
+
+### The game's icon
+
+Put a picture called **`icon.png`** in the game's top folder (next to `main.frg`), and `frg build` makes it the icon of the `.exe`, which shows in File Explorer and the taskbar. In window games it's the window's icon too. A square picture works best, ideally 256 × 256 pixels. Without an `icon.png`, the game gets Windows' plain program icon.
+
+If `icon.png` isn't really a PNG picture, Forge gives a warning and builds the game without an icon.
 
 ## Sharing your game
+
+The easy way is one command:
+
+```
+frg package
+```
+
+It makes a finished (`--release`) build, then puts the `.exe` and every file the game needs into `dist/<name>/`, and zips that folder into **`dist/<name>.zip`**. Send that zip to people: they unzip it and double-click the `.exe`.
+
+What goes into the package: everything in the game's folder (images, sounds, fonts, models, level files, `icon.png`, sub-folders...), **except** your `.frg` files, the `build/` and `dist/` folders, hidden files and folders (names starting with `.`, like `.git`), shader sources (`.vert`, `.frag` and the others; their compiled `.spv` files are included), and `save.txt`, so players don't start with your test save.
+
+`frg package --console` keeps the console window in the packaged game, for testers who should see errors.
+
+The zip is made with `tar.exe`, which comes with Windows 10 and newer. If it can't be made, the `dist/<name>/` folder is still there, and you can zip it yourself (right-click it, then **Send to → Compressed (zipped) folder**).
+
+### Doing it by hand
 
 The `.exe` in `build/` runs on any Windows PC, with nothing else installed. Everything is built into it.
 

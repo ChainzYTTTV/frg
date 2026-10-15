@@ -1,0 +1,41 @@
+=== main.frg
+#include <window>
+#include <input>
+#include <assets>
+
+// The "Several animations" and "Facing left and right" code from docs/guides/sprites-and-animation.md.
+Texture sheet = assets.loadTexture("hero.png");
+Animation idle = Animation(sheet, 16, 16, 2, 3);
+Animation run = Animation(sheet, 16, 16, 6, 12, 1);
+Animation current = idle;
+vec2 velocity = vec2(0, 0);
+float x = 100;
+float y = 100;
+
+void update(float dt){
+    velocity.x = input.keyDown(Key.RIGHT) ? 100 : 0;
+    bool moving = velocity.x != 0;
+    Animation wanted = moving ? run : idle;
+    if (wanted != current) {
+        current = wanted;
+        current.reset();
+    }
+    current.update(dt);
+    if (velocity.x < 0) {
+        current.flip(true);
+    }
+    if (velocity.x > 0) {
+        current.flip(false);
+    }
+}
+
+void draw(){
+    current.drawScaled(x, y, 4);
+}
+
+int main(){
+    window.open(400, 300, "Animations");
+    window.run();
+    return 0;
+}
+=== build

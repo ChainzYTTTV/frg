@@ -1,0 +1,10 @@
+=== main.frg
+#include <stdio>
+
+int main(){
+    int unused = 5;
+    int x = "text";
+    return 0;
+}
+=== error
+'x' needs an int, but this is a string

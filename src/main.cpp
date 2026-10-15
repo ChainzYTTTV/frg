@@ -6,18 +6,22 @@
 #include "codegen.hpp"
 #include "common.hpp"
 #include "project.hpp"
+#include "templates.hpp"
 
 #include <algorithm>
+#include <cctype>
 #include <chrono>
+#include <cstdint>
 #include <cstdio>
 #include <filesystem>
 #include <fstream>
+#include <iterator>
 #include <string>
 #include <vector>
 
 namespace fs = std::filesystem;
 
-static const char* kVersion = "0.5.0";
+static const char* kVersion = "0.6.0";
 
 static fs::path exeDir() {
     std::wstring buf(32768, L'\0');
@@ -126,6 +130,137 @@ static bool compileShaders(const fs::path& root, const fs::path& runtime) {
     return ok;
 }
 
+// ---------------------------------------------------------------- build cache
+//
+// Most of a build's time goes into reading Forge's runtime headers (and raylib's). So they're compiled once into a
+// precompiled header, and the toolkits' runtime .cpp files into object files, and kept in a cache folder next to
+// frg.exe. Games that use the same libraries with the same settings share them. If a cached file is out of date or
+// broken, g++ simply reads the real headers instead, so the cache can only make builds faster, never different.
+
+// A short name for a piece of text (FNV-1a hash), used to name cache folders.
+static std::string hashName(const std::string& s) {
+    uint64_t h = 1469598103934665603ull;
+    for (unsigned char c : s) {
+        h ^= c;
+        h *= 1099511628211ull;
+    }
+    char buf[17];
+    std::snprintf(buf, sizeof buf, "%016llx", (unsigned long long)h);
+    return buf;
+}
+
+static std::string timeStamp(const fs::path& p) {
+    std::error_code ec;
+    auto t = fs::last_write_time(p, ec);
+    return ec ? "?" : std::to_string(t.time_since_epoch().count());
+}
+
+// Everything that makes cached compiler output out of date: Forge's version, the runtime files, and which g++ is used.
+static std::string toolStamp(const fs::path& runtime) {
+    std::string s = std::string(kVersion) + "|";
+    std::error_code ec;
+    for (const auto& entry : fs::directory_iterator(runtime, ec))
+        if (entry.is_regular_file()) s += entry.path().filename().string() + "@" + timeStamp(entry.path()) + ";";
+    wchar_t gpp[MAX_PATH];
+    if (SearchPathW(nullptr, L"g++.exe", nullptr, MAX_PATH, gpp, nullptr)) s += fs::path(gpp).string() + "@" + timeStamp(gpp);
+    return s;
+}
+
+// Each cache folder has a stamp.txt naming the Forge and g++ it was made by. When a new folder is made, folders
+// from an older Forge (or another g++) are deleted, so the cache doesn't keep growing after updates.
+static void removeOldCache(const fs::path& cacheRoot, const std::string& tools) {
+    std::error_code ec;
+    std::string mine = hashName(tools);
+    for (const auto& entry : fs::directory_iterator(cacheRoot, ec)) {
+        if (!entry.is_directory()) continue;
+        std::ifstream f(entry.path() / "stamp.txt");
+        std::string theirs;
+        std::getline(f, theirs);
+        f.close();
+        if (theirs != mine) fs::remove_all(entry.path(), ec);  // a folder in use by a running build just stays
+    }
+}
+
+// The folder for one cached thing: <frg.exe's folder>/cache/<hash>, or the game's build folder if that can't be written.
+// `tools` is toolStamp(): what made it.
+static fs::path cacheFolder(const std::string& key, const std::string& tools, const fs::path& buildDir) {
+    std::error_code ec;
+    for (fs::path root : {exeDir() / "cache", buildDir / "cache"}) {
+        fs::path dir = root / hashName(tools + "|" + key);
+        if (fs::exists(dir / "stamp.txt", ec)) return dir;
+        fs::create_directories(dir, ec);
+        if (ec) continue;
+        std::ofstream f(dir / "stamp.txt", std::ios::binary);
+        if (!(f << hashName(tools) << "\n")) continue;
+        f.close();
+        removeOldCache(root, tools);
+        return dir;
+    }
+    return buildDir;
+}
+
+// Runs one g++ command that makes `output`, writing to a temporary name first so a half-written file is never used.
+static int compileTo(const std::wstring& args, const fs::path& output) {
+    fs::path tmp = output;
+    tmp += L"." + std::to_wstring(GetCurrentProcessId()) + L".tmp";
+    int code = runProcess(L"g++ " + args + L" -o " + quote(tmp));
+    std::error_code ec;
+    if (code == 0) fs::rename(tmp, output, ec);
+    if (code != 0 || ec) fs::remove(tmp, ec);
+    return code;
+}
+
+// ---------------------------------------------------------------- the game's icon
+//
+// If the game's folder has icon.png, it becomes the .exe's icon (and, through raylib's window library GLFW, which
+// looks for an icon called GLFW_ICON, the window's icon too). An .ico file can simply hold a PNG image, so the PNG's
+// bytes are wrapped in a 22-byte .ico header, and windres (part of w64devkit) turns that into an object file to link.
+// Returns the object file, or an empty path if there's no icon (or it couldn't be made, after saying why).
+static fs::path makeIcon(const fs::path& root, const fs::path& buildDir) {
+    fs::path png = root / "icon.png";
+    std::error_code ec;
+    if (!fs::is_regular_file(png, ec)) return {};
+    fs::path obj = buildDir / "icon_res.o";
+    if (fs::exists(obj, ec) && fs::last_write_time(obj, ec) >= fs::last_write_time(png, ec)) return obj;
+
+    std::ifstream in(png, std::ios::binary);
+    std::string data((std::istreambuf_iterator<char>(in)), std::istreambuf_iterator<char>());
+    static const char kPngStart[] = "\x89PNG\r\n\x1a\n";
+    if (data.size() < 24 || data.compare(0, 8, kPngStart, 8) != 0 || data.compare(12, 4, "IHDR") != 0) {
+        reportPlainWarning("icon.png isn't a PNG image, so the game won't have an icon",
+                           "save the picture as a .png file (256 x 256 pixels works best)");
+        return {};
+    }
+    auto be32 = [&](size_t at) {
+        return (uint32_t)(unsigned char)data[at] << 24 | (uint32_t)(unsigned char)data[at + 1] << 16 |
+               (uint32_t)(unsigned char)data[at + 2] << 8 | (uint32_t)(unsigned char)data[at + 3];
+    };
+    uint32_t w = be32(16), h = be32(20);
+    std::string ico;
+    auto put16 = [&](uint32_t v) { ico += (char)(v & 0xFF), ico += (char)(v >> 8 & 0xFF); };
+    auto put32 = [&](uint32_t v) { put16(v & 0xFFFF), put16(v >> 16); };
+    put16(0), put16(1), put16(1);                                    // an icon file with 1 image
+    ico += (char)(w >= 256 ? 0 : w), ico += (char)(h >= 256 ? 0 : h);  // its size (0 means 256 or more)
+    ico += '\0', ico += '\0';                                        // no palette
+    put16(1), put16(32), put32((uint32_t)data.size()), put32(22);     // 32-bit color, the PNG's size, where it starts
+    ico += data;
+    {
+        std::ofstream f(buildDir / "icon.ico", std::ios::binary);
+        f << ico;
+        std::ofstream rc(buildDir / "icon.rc", std::ios::binary);
+        rc << "GLFW_ICON ICON \"icon.ico\"\n";
+    }
+    int code = runProcess(L"windres -O coff -i icon.rc -o icon_res.o", buildDir);
+    if (code != 0) {
+        reportPlainWarning("couldn't put icon.png into the .exe, so it won't have an icon",
+                           code == -1 ? "windres, which comes with w64devkit, wasn't found - is w64devkit's bin folder on your PATH?"
+                                      : "windres didn't accept it - try saving icon.png again with a paint program");
+        fs::remove(obj, ec);
+        return {};
+    }
+    return obj;
+}
+
 // While the game runs, Ctrl+C should stop the game, not Forge.
 static BOOL WINAPI ignoreCtrlC(DWORD type) { return type == CTRL_C_EVENT || type == CTRL_BREAK_EVENT; }
 
@@ -154,6 +289,7 @@ static bool build(const fs::path& dir, fs::path& exeOut, const BuildOptions& opt
         std::fprintf(stderr, "Build failed: %d error%s.\n", n, n == 1 ? "" : "s");
         return false;
     }
+    flushWarnings();
     printStatus("Compiling", proj.name + " (" + std::to_string(proj.allModules.size()) + " file" +
                                  (proj.allModules.size() == 1 ? "" : "s") + ")");
 
@@ -189,16 +325,65 @@ static bool build(const fs::path& dir, fs::path& exeOut, const BuildOptions& opt
         return false;
     }
 
-    std::wstring cmd = L"g++ -std=gnu++20 -O2 -fwrapv -w -static -I" + quote(runtime) + L" " + quote(cppPath);
-    if (vulkan) cmd += L" -I" + quote(runtime / "vulkan" / "include");
-    for (const std::string& src : gen.sources) cmd += L" " + quote(runtime / src);  // a toolkit's own runtime code
-    cmd += L" -o " + quote(exe);
-    if (!opt.console) cmd += L" -mwindows -DFRG_NO_CONSOLE";  // no console window: runtime errors pop up in a box instead
-    if (opt.release) cmd += L" -s";                           // a smaller .exe
-    if (gen.needsRaylib) {
-        fs::path raylib = runtime / "raylib";
-        cmd += L" -I" + quote(raylib / "include") + L" -L" + quote(raylib / "lib") + L" -lraylib -lopengl32 -lgdi32 -lwinmm";
+    // Release builds are optimized more (-O2). Other builds use -O1, which compiles faster and still runs well.
+    // -fwrapv: whole numbers wrap around when they overflow, the same at every optimization level.
+    std::wstring flags = std::wstring(L"-std=gnu++20 ") + (opt.release ? L"-O2" : L"-O1") + L" -fwrapv -w -I" + quote(runtime);
+    if (!opt.console) flags += L" -DFRG_NO_CONSOLE";  // no console window: runtime errors pop up in a box instead
+    if (vulkan) flags += L" -I" + quote(runtime / "vulkan" / "include");
+    fs::path raylib = runtime / "raylib";
+    if (gen.needsRaylib) flags += L" -I" + quote(raylib / "include");
+    std::string tools = toolStamp(runtime), stamp = fs::path(flags).string();
+
+    // Forge's runtime headers, precompiled once (see "build cache" above). There are two sets, so that all games share
+    // them: the core and the libraries that don't use raylib, and for engine games, those plus every raylib library.
+    // (Including a header the game doesn't use changes nothing: they only hold declarations and inline functions.)
+    // Any other header the game uses (a toolkit, <time>) is read after it as usual.
+    std::vector<std::string> pchHeaders = {"forge.hpp", "forge_physics.hpp", "forge_scenes.hpp", "forge_ecs.hpp", "forge_file.hpp"};
+    const std::vector<std::string> engineHeaders = {"forge_window.hpp", "forge_assets.hpp", "forge_audio.hpp", "forge_ui.hpp", "forge_graphics3d.hpp"};
+    for (const std::string& h : gen.headers)
+        if (std::find(engineHeaders.begin(), engineHeaders.end(), h) != engineHeaders.end()) {
+            pchHeaders.insert(pchHeaders.end(), engineHeaders.begin(), engineHeaders.end());
+            break;
+        }
+    std::string pchText;
+    for (const std::string& h : pchHeaders) pchText += "#include \"" + h + "\"\n";
+    fs::path pchDir = cacheFolder("pch|" + stamp + "|" + pchText, tools, buildDir);
+    fs::path pchHeader = pchDir / "forge_pch.hpp", pch = pchDir / "forge_pch.hpp.gch";
+    if (!fs::exists(pchHeader)) {
+        std::ofstream f(pchHeader, std::ios::binary);
+        f << pchText;
     }
+    if (!fs::exists(pch)) {
+        printStatus("Preparing", "Forge's runtime for these libraries (only the first time, to make later builds faster)");
+        if (compileTo(flags + L" -x c++-header " + quote(pchHeader), pch) == -1) {
+            reportPlainError("couldn't find g++, which Forge uses to make .exe files",
+                             "install w64devkit and make sure its bin folder is on your PATH");
+            return false;
+        }
+    }
+
+    // A toolkit's own runtime code, compiled once into an object file.
+    std::vector<fs::path> objects;
+    for (const std::string& src : gen.sources) {
+        fs::path obj = cacheFolder("obj|" + stamp + "|" + src, tools, buildDir) / (fs::path(src).stem().string() + ".o");
+        if (!fs::exists(obj)) {
+            printStatus("Preparing", src + " (only the first time)");
+            if (compileTo(flags + L" -c " + quote(runtime / src), obj) != 0) {
+                reportPlainError("the C++ compiler rejected Forge's runtime file " + src + " - this is a bug in Forge, not in your code");
+                return false;
+            }
+        }
+        objects.push_back(obj);
+    }
+
+    std::wstring cmd = L"g++ " + flags + L" -I" + quote(pchDir) + L" " + quote(cppPath);
+    for (const fs::path& obj : objects) cmd += L" " + quote(obj);
+    fs::path icon = makeIcon(proj.root, buildDir);
+    if (!icon.empty()) cmd += L" " + quote(icon);
+    cmd += L" -o " + quote(exe) + L" -static";
+    if (!opt.console) cmd += L" -mwindows";
+    if (opt.release) cmd += L" -s";  // a smaller .exe
+    if (gen.needsRaylib) cmd += L" -L" + quote(raylib / "lib") + L" -lraylib -lopengl32 -lgdi32 -lwinmm";
     for (const std::string& flag : gen.linkFlags) cmd += L" " + fs::path(flag).wstring();
     int code = runProcess(cmd);
     if (code == -1) {
@@ -244,17 +429,109 @@ static int cmdRun(const fs::path& dir, const BuildOptions& opt) {
     return code;
 }
 
-static int cmdNew(const std::string& name) {
+// frg package: a --release build, then dist/<name>/ with the .exe and every file the game needs, zipped.
+static int cmdPackage(const fs::path& dir, const BuildOptions& opt) {
+    fs::path exe;
+    if (!build(dir, exe, opt)) return 1;
+    fs::path root = fs::absolute(dir).lexically_normal();
+    if (root.filename().empty()) root = root.parent_path();  // "C:\game\" -> "C:\game"
+    std::string name = exe.stem().string();
+    fs::path dist = root / "dist", out = dist / name, zip = dist / (name + ".zip");
+    std::error_code ec;
+    fs::remove_all(out, ec);
+    fs::remove(zip, ec);
+    fs::create_directories(out, ec);
+    if (ec) {
+        reportPlainError("couldn't make the folder " + out.string(), "is a file in it still open in another program?");
+        return 1;
+    }
+
+    // Everything the game might load comes along, except Forge's own source files and things only used while
+    // making the game: .frg files, build/ and dist/, hidden files and folders (.git), shader sources (their
+    // compiled .spv files do come along), and save.txt, so players don't start with your saved game.
+    static const char* kSkip[] = {".frg", ".vert", ".frag", ".comp", ".geom", ".tesc", ".tese"};
+    int copied = 0;
+    for (auto it = fs::recursive_directory_iterator(root, ec); it != fs::recursive_directory_iterator(); it.increment(ec)) {
+        if (ec) break;
+        const fs::path& p = it->path();
+        std::string fname = p.filename().string();
+        fs::path rel = fs::relative(p, root, ec);
+        bool top = rel.has_parent_path() == false;
+        if (it->is_directory()) {
+            if (fname.starts_with(".") || (top && (fname == "build" || fname == "dist"))) it.disable_recursion_pending();
+            continue;
+        }
+        std::string ext = p.extension().string();
+        for (char& c : ext) c = (char)std::tolower((unsigned char)c);
+        if (fname.starts_with(".") || (top && fname == "save.txt") ||
+            std::find_if(std::begin(kSkip), std::end(kSkip), [&](const char* s) { return ext == s; }) != std::end(kSkip))
+            continue;
+        fs::create_directories((out / rel).parent_path(), ec);
+        fs::copy_file(p, out / rel, fs::copy_options::overwrite_existing, ec);
+        if (ec) {
+            reportPlainError("couldn't copy " + rel.generic_string() + " into " + out.string());
+            return 1;
+        }
+        copied++;
+    }
+    fs::copy_file(exe, out / exe.filename(), fs::copy_options::overwrite_existing, ec);
+    if (ec) {
+        reportPlainError("couldn't copy " + exe.filename().string() + " into " + out.string());
+        return 1;
+    }
+    printStatus("Copied", exe.filename().string() + (copied ? " and " + std::to_string(copied) + " file" + (copied == 1 ? "" : "s") : "") +
+                              " into dist/" + name + "/");
+
+    // Windows 10 and newer come with tar.exe, which can make .zip files. It's called by its full path, because
+    // w64devkit has a different tar that can't.
+    wchar_t sys[MAX_PATH];
+    UINT n = GetSystemDirectoryW(sys, MAX_PATH);
+    fs::path tar = fs::path(std::wstring(sys, n)) / "tar.exe";
+    int code = runProcess(quote(tar) + L" -a -c -f " + quote(zip.filename()) + L" " + quote(fs::path(name)), dist);
+    if (code != 0 || !fs::exists(zip)) {
+        reportPlainError("couldn't make the .zip file", code == -1 ? "Windows' tar.exe wasn't found (it comes with Windows 10 and newer). "
+                                                                    "The game is ready in " + out.string() + " - you can zip that folder yourself"
+                                                                  : "the game is ready in " + out.string() + " - you can zip that folder yourself");
+        return 1;
+    }
+    printStatus("Packaged", "dist/" + name + ".zip");
+    std::fprintf(stderr, "\nYour game is ready to share:\n    %s\nPlayers unzip it and double-click %s.\n", zip.string().c_str(),
+                 exe.filename().string().c_str());
+    return 0;
+}
+
+static int cmdNew(const std::string& name, const std::string& templateName) {
+    const std::vector<std::string>& names = templateNames();
+    if (std::find(names.begin(), names.end(), templateName) == names.end()) {
+        std::string guess = suggestName(templateName, names);
+        reportPlainError("there's no template called '" + templateName + "'",
+                         (guess.empty() ? std::string() : "did you mean " + guess + "? ") + "The templates are console, window, platformer and 3d");
+        return 1;
+    }
     fs::path dir = name;
+    std::string game = dir.filename().string();
+    bool validName = !game.empty() && !std::isdigit((unsigned char)game[0]);
+    for (char c : game) validName = validName && (std::isalnum((unsigned char)c) || c == '_');
+    if (!validName) {
+        reportPlainError("'" + game + "' can't be the name of a game",
+                         "use only letters, numbers and _, and don't start with a number - for example: frg new my_game");
+        return 1;
+    }
     if (fs::exists(dir)) {
         reportPlainError("'" + name + "' already exists", "pick a different name for the new game");
         return 1;
     }
-    fs::create_directories(dir);
-    std::ofstream f(dir / "main.frg", std::ios::binary);
-    f << "#include <stdio>\n\nint main(){\n    print(\"Hello, World!\");\n    return 0;\n}\n";
-    f.close();
-    printStatus("Created", name + "/main.frg");
+    std::error_code ec;
+    fs::create_directories(dir, ec);
+    if (ec) {
+        reportPlainError("couldn't make the folder '" + name + "'");
+        return 1;
+    }
+    for (const auto& [file, text] : templateFiles(templateName, game)) {
+        std::ofstream f(dir / file, std::ios::binary);
+        f << text;
+        printStatus("Created", name + "/" + file);
+    }
     std::fprintf(stderr, "\nTo run it:\n    cd %s\n    frg run\n", name.c_str());
     return 0;
 }
@@ -264,9 +541,12 @@ static void printHelp() {
         "Forge %s - a compiled language for making games\n\n"
         "Usage:\n"
         "  frg new <name>      make a new game folder with a main.frg\n"
+        "      --template window | platformer | 3d   start from a window game, a platformer or a 3D scene\n"
+        "                                            instead of the console hello world\n"
         "  frg build [folder]  compile the game into build/<name>.exe\n"
         "  frg run [folder]    compile the game, then run it\n"
         "  frg check [folder]  look for errors without building\n"
+        "  frg package [folder]  make a finished build and zip it, ready to share: dist/<name>.zip\n"
         "  frg version         show the Forge version\n\n"
         "[folder] is the game's top folder (the one with main.frg). It defaults to the current folder.\n"
         "Options for build and run:\n"
@@ -289,7 +569,7 @@ int main(int argc, char** argv) {
         std::printf("Forge %s\n", kVersion);
         return 0;
     }
-    if (cmd == "build" || cmd == "run") {
+    if (cmd == "build" || cmd == "run" || cmd == "package") {
         BuildOptions opt;
         int consoleChoice = -1;  // -1: not chosen, 0: --no-console, 1: --console
         std::vector<std::string> rest;
@@ -317,6 +597,13 @@ int main(int argc, char** argv) {
         opt.console = consoleChoice == -1 ? !opt.release : consoleChoice == 1;
         fs::path dir = rest.empty() ? fs::current_path() : fs::path(rest[0]);
         if (cmd == "run") return cmdRun(dir, opt);
+        if (cmd == "package") {
+            if (!opt.release) {
+                opt.release = true;  // a package is always a finished build
+                if (consoleChoice == -1) opt.console = false;
+            }
+            return cmdPackage(dir, opt);
+        }
         fs::path exe;
         return build(dir, exe, opt) ? 0 : 1;
     }
@@ -336,20 +623,41 @@ int main(int argc, char** argv) {
         }
         Project proj;
         bool ok = loadProject(proj, dir) && checkProject(proj);
+        int warnings = flushWarnings();
         if (!ok) {
             int n = errorCount();
             std::fprintf(stderr, "%d error%s found.\n", n, n == 1 ? "" : "s");
             return 1;
         }
-        printStatus("Checked", proj.name + ": no errors");
+        printStatus("Checked", proj.name + ": no errors" +
+                                   (warnings ? ", " + std::to_string(warnings) + " warning" + (warnings == 1 ? "" : "s") : ""));
         return 0;
     }
     if (cmd == "new") {
-        if (args.size() != 2) {
-            reportPlainError("frg new needs a name", "for example: frg new platformer");
+        // frg new <name> [--template console|window|platformer|3d]
+        std::string name, templateName = "console";
+        for (size_t i = 1; i < args.size(); i++) {
+            if (args[i] == "--template") {
+                if (i + 1 >= args.size()) {
+                    reportPlainError("--template needs the name of a template", "for example: frg new mygame --template window");
+                    return 1;
+                }
+                templateName = args[++i];
+            } else if (args[i].starts_with("--")) {
+                reportPlainError("there's no option called " + args[i], "the only option for new is --template");
+                return 1;
+            } else if (name.empty()) {
+                name = args[i];
+            } else {
+                reportPlainError("too many names", "usage: frg new <name> [--template console|window|platformer|3d]");
+                return 1;
+            }
+        }
+        if (name.empty()) {
+            reportPlainError("frg new needs a name", "for example: frg new mygame, or frg new mygame --template platformer");
             return 1;
         }
-        return cmdNew(args[1]);
+        return cmdNew(name, templateName);
     }
     reportPlainError("unknown command '" + cmd + "'", "try frg build, frg run, or frg new <name>");
     return 1;

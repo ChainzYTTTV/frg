@@ -1,0 +1,22 @@
+=== main.frg
+#include <stdio>
+#include <random>
+
+int main(){
+    int r = 300;
+    int g = -20;
+    print(color(r, g, 128));
+    print(color(10, 20, 30, 999));
+    uint8 small = 7;
+    print(color(small, small, small));
+    random.seed(1);
+    color c = color(random.range(0, 255), random.range(0, 255), random.range(0, 255));
+    color d = random.color();
+    print(c.a == 255 and d.a == 255);
+    return 0;
+}
+=== output
+color(255, 0, 128, 255)
+color(10, 20, 30, 255)
+color(7, 7, 7, 255)
+true

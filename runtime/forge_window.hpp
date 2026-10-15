@@ -5,10 +5,37 @@
 #include "raylib.h"
 
 #include <cstring>
+#include <filesystem>
 
 namespace frg {
 
 inline ::Color rl(core::color_ c) { return ::Color{c.r_, c.g_, c.b_, c.a_}; }
+
+// Only show raylib's warnings, not its info messages - set before any game variable is created.
+inline const bool frg$quietRaylib = (SetTraceLogLevel(LOG_WARNING), true);
+
+extern "C" __declspec(dllimport) unsigned long __stdcall GetModuleFileNameA(void*, char*, unsigned long);
+
+// Finds a file the game uses: next to where the game was started from, or next to the .exe
+// (or one folder up, since frg puts the .exe in build/). Returns "" if it isn't anywhere.
+inline std::string findGameFile(const std::string& path) {
+    namespace fs = std::filesystem;
+    std::error_code ec;
+    if (fs::exists(path, ec)) return path;
+    char buf[4096];
+    unsigned long n = GetModuleFileNameA(nullptr, buf, sizeof buf);
+    fs::path exeDir = fs::path(std::string(buf, n)).parent_path();
+    for (fs::path candidate : {exeDir / path, exeDir.parent_path() / path})
+        if (fs::exists(candidate, ec)) return candidate.string();
+    return "";
+}
+
+inline std::string requireGameFile(const std::string& path, const char* what) {
+    std::string found = findGameFile(path);
+    if (found.empty())
+        panic(what, "can't find the file '" + path + "' - put it in the game's folder (next to main.frg), or check the spelling");
+    return found;
+}
 inline ::Vector2 rl(core::vec2_ v) { return ::Vector2{v.x_, v.y_}; }
 inline ::Rectangle rl(core::rect_ r) { return ::Rectangle{r.x_, r.y_, r.width_, r.height_}; }
 
@@ -46,11 +73,26 @@ inline State& st() {
     return s;
 }
 
+// Other libraries hook in here: unloading textures before the window (and its graphics memory) goes away,
+// and finishing 3D drawing before a frame is shown.
+inline std::vector<void (*)()>& beforeCloseHooks() {
+    static std::vector<void (*)()> hooks;
+    return hooks;
+}
+inline std::vector<void (*)()>& beforeEndFrameHooks() {
+    static std::vector<void (*)()> hooks;
+    return hooks;
+}
+
 inline void close_() {
     State& s = st();
     if (!s.open) return;
-    if (s.inFrame) EndDrawing();
+    if (s.inFrame) {
+        for (auto fn : beforeEndFrameHooks()) fn();
+        EndDrawing();
+    }
     s.inFrame = false;
+    for (auto fn : beforeCloseHooks()) fn();
     CloseWindow();
     s.open = false;
 }
@@ -63,7 +105,9 @@ inline void beginFrame() {
 
 inline void endFrame() {
     State& s = st();
+    for (auto fn : beforeEndFrameHooks()) fn();
     EndDrawing();
+    for (auto fn : frameHooks()) fn();
     s.inFrame = false;
     s.frame++;
     auto& at = autotest::st();
@@ -85,7 +129,7 @@ inline void open_(int32_t width, int32_t height, const std::string& title) {
     InitWindow(width, height, title.c_str());
     SetTargetFPS(60);
     s.open = true;
-    onShutdown() = &close_;
+    addHook(shutdownHooks(), &close_);
     auto& at = autotest::st();
     if (const char* f = std::getenv("FRG_AUTOTEST_FRAMES")) at.frames = std::atol(f);
     if (const char* f = std::getenv("FRG_AUTOTEST_SHOT")) at.shot = f;

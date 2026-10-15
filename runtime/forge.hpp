@@ -30,14 +30,23 @@ using u128 = unsigned __int128;
     std::exit(1);
 }
 
-// Libraries (like the window) register cleanup to run when main returns.
-inline void (*&onShutdown())() {
-    static void (*fn)() = nullptr;
-    return fn;
+// Libraries register cleanup to run when main returns (newest first), and work to do once per frame.
+inline std::vector<void (*)()>& shutdownHooks() {
+    static std::vector<void (*)()> hooks;
+    return hooks;
+}
+inline std::vector<void (*)()>& frameHooks() {
+    static std::vector<void (*)()> hooks;
+    return hooks;
+}
+inline void addHook(std::vector<void (*)()>& hooks, void (*fn)()) {
+    if (std::find(hooks.begin(), hooks.end(), fn) == hooks.end()) hooks.push_back(fn);
 }
 inline void init() { SetConsoleOutputCP(65001); }
 inline void shutdown() {
-    if (onShutdown()) onShutdown()();
+    auto& hooks = shutdownHooks();
+    for (auto it = hooks.rbegin(); it != hooks.rend(); ++it) (*it)();
+    hooks.clear();
     std::fflush(stdout);
 }
 

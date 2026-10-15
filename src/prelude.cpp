@@ -184,6 +184,53 @@ void step(float dt);
 int count();
 )FRG";
 
+static const char* kAssets = R"FRG(
+class Texture {
+    int width();
+    int height();
+    void draw(float x, float y, color tint = color.WHITE);
+    void drawScaled(float x, float y, float scale, color tint = color.WHITE);
+    void drawRotated(vec2 center, float degrees, float scale = 1, color tint = color.WHITE);
+    void drawPart(rect source, rect destination, color tint = color.WHITE);
+}
+
+class Font {
+    void drawText(string text, float x, float y, float size, color c);
+    float measure(string text, float size);
+}
+
+Texture loadTexture(string path);
+Font loadFont(string path, int quality = 64);
+bool exists(string path);
+)FRG";
+
+static const char* kAudio = R"FRG(
+class Sound {
+    void play();
+    void stop();
+    bool isPlaying();
+    void setVolume(float volume);
+    void setPitch(float pitch);
+}
+
+class Music {
+    void play();
+    void stop();
+    void pause();
+    void resume();
+    bool isPlaying();
+    void setVolume(float volume);
+    void setLooping(bool looping);
+    float length();
+    float position();
+}
+
+Sound loadSound(string path);
+Music loadMusic(string path);
+void setVolume(float volume);
+void update();
+)FRG";
+
 static const char* kRandom = R"FRG(
 void seed(int value);
 int range(int min, int max);
@@ -199,6 +246,8 @@ const std::vector<PreludeLib>& preludeLibs() {
         {"input", kInput, true, "forge_window.hpp"},
         {"graphics2d", kGraphics2d, true, "forge_window.hpp"},
         {"physics", kPhysics, false, "forge_physics.hpp"},
+        {"assets", kAssets, true, "forge_assets.hpp"},
+        {"audio", kAudio, true, "forge_audio.hpp"},
         {"random", kRandom, false, ""},
     };
     return libs;

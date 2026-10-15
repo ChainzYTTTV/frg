@@ -1,8 +1,8 @@
 === main.frg
-#include <audio>
+#include <OpenGL>
 
 int main(){
     return 0;
 }
 === error
-the <audio> library isn't built yet
+the <OpenGL> library isn't built yet

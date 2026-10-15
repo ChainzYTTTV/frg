@@ -31,7 +31,7 @@ How libraries work:
 | [`<save>`](save.md) | Remembering values (high scores, settings) between runs | no |
 | [`<file>`](file.md) | Reading and writing text files | no |
 | [`<scenes>`](scenes.md) | Splitting a game into scenes (menu, level...) | no |
-| [`<ui>`](ui.md) | Buttons, checkboxes, sliders, labels, panels | yes |
+| [`<ui>`](ui.md) | Buttons, checkboxes, sliders, text boxes, labels, panels | yes |
 | [`<ECS>`](ecs.md) | Entities built from components | no |
 | [`<tasks>`](tasks.md) | Running [tasks](../language/11-tasks.md) in programs without a window | no |
 

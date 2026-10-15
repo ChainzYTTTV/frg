@@ -56,7 +56,7 @@ Everything that isn't the core language lives in a library you `#include`. See t
 | [`<save>`](libraries/save.md) | Remembering values between runs: high scores, settings, progress |
 | [`<file>`](libraries/file.md) | Reading and writing text files |
 | [`<scenes>`](libraries/scenes.md) | Switching between menu, levels and game over |
-| [`<ui>`](libraries/ui.md) | Buttons, checkboxes, sliders |
+| [`<ui>`](libraries/ui.md) | Buttons, checkboxes, sliders, text boxes |
 | [`<ECS>`](libraries/ecs.md) | Building game objects out of components |
 | [`<tasks>`](libraries/tasks.md) | Running tasks in programs without a window |
 

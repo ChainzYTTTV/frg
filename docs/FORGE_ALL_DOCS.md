@@ -13,7 +13,7 @@ Where the parts disagree, the detailed pages (B to F) are more precise, and the 
 - **Part A: The teaching brief (for an AI tutor)**: Teaching Brief: the Forge Programming Language
 - **Part B: Start here**: Forge Documentation - Getting Started
 - **Part C: The language**: 1. The Basics - 2. Variables and Types - 3. Text - 4. Operators - 5. Making Decisions and Repeating - 6. Functions - 7. Files and Folders - 8. Lists and Maps - 9. Structs and Classes - 10. Enums, Optionals and Pointers - 11. Tasks - 12. Errors - 13. Reserved Words - 14. Coming From Other Languages
-- **Part D: The libraries**: Library Overview - Built-in Types: vec2, vec3, vec4, color, rect - <stdio>: Console Input and Output - <math>: Math Functions - <random>: Random Numbers - <window>: The Game Window - <input>: Keyboard, Mouse and Controllers - <graphics2d>: 2D Drawing - <graphics3d>: 3D Drawing - <assets>: Images, Animations and Fonts - <audio>: Sounds and Music - <physics>: Boxes, Gravity and Collisions - <time>: Clock, Date and Timers - <file>: Reading and Writing Text Files - <save>: Remembering Things Between Runs - <scenes>: Menus, Levels and Game Over - <ui>: Buttons, Checkboxes and Sliders - <ECS>: Entities and Components - <tasks>: Tasks Without a Window - Low-Level Toolkits: OpenGL, DirectX and Vulkan - <OpenGL>: Drawing with OpenGL Yourself - <DirectX>: Drawing with Direct3D 11 Yourself - <Vulkan>: Drawing with Vulkan Yourself
+- **Part D: The libraries**: Library Overview - Built-in Types: vec2, vec3, vec4, color, rect - <stdio>: Console Input and Output - <math>: Math Functions - <random>: Random Numbers - <window>: The Game Window - <input>: Keyboard, Mouse and Controllers - <graphics2d>: 2D Drawing - <graphics3d>: 3D Drawing - <assets>: Images, Animations and Fonts - <audio>: Sounds and Music - <physics>: Boxes, Gravity and Collisions - <time>: Clock, Date and Timers - <file>: Reading and Writing Text Files - <save>: Remembering Things Between Runs - <scenes>: Menus, Levels and Game Over - <ui>: Buttons, Checkboxes, Sliders and Text Boxes - <ECS>: Entities and Components - <tasks>: Tasks Without a Window - Low-Level Toolkits: OpenGL, DirectX and Vulkan - <OpenGL>: Drawing with OpenGL Yourself - <DirectX>: Drawing with Direct3D 11 Yourself - <Vulkan>: Drawing with Vulkan Yourself
 - **Part E: Guides**: The Game Loop - Sprites and Animation - Platformer Walkthrough
 - **Part F: Under the hood**: How Forge Works
 - **Part G: The cheat sheet (everything on one page)**: Forge Cheat Sheet (v0.6)
@@ -512,7 +512,7 @@ Library functions are reached through the library name (`window.open(...)`). Lib
 | `<save>` | `save.setInt(key, n)` / `getInt(key, backup)`, the same for `Float`, `String` and `Bool`, `has(key)`, `remove(key)`, `clear()`. Kept in `save.txt` in the game's folder |
 | `<file>` | `file.read(path)`, `write(path, text)`, `append(path, text)`, `exists(path)`, `remove(path)`, `readLines(path)`, `writeLines(path, list)`, `files(folder)` |
 | `<scenes>` | the `Scene` class, `scenes.change(scene)`, `update(dt)`, `draw()`, `current()` |
-| `<ui>` | `ui.button(rect, "text")` (true when clicked), `ui.checkbox(rect, "text", checked)` (new value), `ui.slider(rect, value, min, max)` (new value), `ui.label(text, x, y, size, color)`, `ui.panel(rect)`, `ui.setTheme(bg, accent, text)` |
+| `<ui>` | `ui.button(rect, "text")` (true when clicked), `ui.checkbox(rect, "text", checked)` (new value), `ui.slider(rect, value, min, max)` (new value), `ui.textBox(rect, text, maxLength = 0)` (a box to type in: `name = ui.textBox(rect(20, 20, 240, 40), name, 12);` gives the new text; click to type, Backspace deletes, Enter or a click elsewhere finishes), `ui.isTyping()` (true while typing, so the game can skip its key shortcuts), `ui.label(text, x, y, size, color)`, `ui.panel(rect)`, `ui.setTheme(bg, accent, text)` |
 | `<ECS>` | the `Entity` and `Component` classes, `ECS.create(name)`, `add(entity)`, `update(dt)`, `draw()`, `find(name)`, `all()`, `withComponent("Type")`, `clear()`, `count()` |
 | `<tasks>` | `tasks.update(dt)`, `runAll()`, `count()`, `stopAll()` (only needed without a window) |
 | `<OpenGL>` `<DirectX>` `<Vulkan>` | low-level toolkits for writing your own rendering, **instead of** the engine (see "Low-level toolkits" below) |
@@ -867,7 +867,7 @@ Runtime error in main.frg:10: position 5 is outside the list (it has 3 items, at
 - Two functions or methods with the same name (only constructors can share a name), operator overloading for your own types
 - Interfaces, abstract classes, `protected`, `static` fields or methods in your own types
 - Labeled breaks, exceptions (`try` / `catch`), `goto`
-- Networking, shaders in the engine, 3D lighting, text input boxes in `<ui>`
+- Networking, shaders in the engine, 3D lighting
 - `<network>` is planned but **doesn't exist yet**.
 
 ---
@@ -1467,7 +1467,7 @@ Hints:
 - `<save>` writes the file straight away, so saving after every purchase (and every few seconds for the helpers) is fine. Load with a backup value for the very first run: `save.getInt("helpers", 0)`.
 - "Reset save" is `save.clear()`, then set the variables back to their starting values.
 
-Make it yours: the cookie shrinks a little when clicked, then grows back. Achievements at 100, 1,000 and 10,000 cookies.
+Make it yours: the cookie shrinks a little when clicked, then grows back. Let the player name their bakery on the title screen with `ui.textBox`, and save the name with `save.setString`. Achievements at 100, 1,000 and 10,000 cookies.
 
 ##### 14. Dodge
 
@@ -1633,7 +1633,7 @@ Everything that isn't the core language lives in a library you `#include`. See t
 | `<save>` (see “`<save>`: Remembering Things Between Runs”) | Remembering values between runs: high scores, settings, progress |
 | `<file>` (see “`<file>`: Reading and Writing Text Files”) | Reading and writing text files |
 | `<scenes>` (see “`<scenes>`: Menus, Levels and Game Over”) | Switching between menu, levels and game over |
-| `<ui>` (see “`<ui>`: Buttons, Checkboxes and Sliders”) | Buttons, checkboxes, sliders |
+| `<ui>` (see “`<ui>`: Buttons, Checkboxes, Sliders and Text Boxes”) | Buttons, checkboxes, sliders, text boxes |
 | `<ECS>` (see “`<ECS>`: Entities and Components”) | Building game objects out of components |
 | `<tasks>` (see “`<tasks>`: Tasks Without a Window”) | Running tasks in programs without a window |
 
@@ -4514,7 +4514,7 @@ How libraries work:
 | `<save>` (see “`<save>`: Remembering Things Between Runs”) | Remembering values (high scores, settings) between runs | no |
 | `<file>` (see “`<file>`: Reading and Writing Text Files”) | Reading and writing text files | no |
 | `<scenes>` (see “`<scenes>`: Menus, Levels and Game Over”) | Splitting a game into scenes (menu, level...) | no |
-| `<ui>` (see “`<ui>`: Buttons, Checkboxes and Sliders”) | Buttons, checkboxes, sliders, labels, panels | yes |
+| `<ui>` (see “`<ui>`: Buttons, Checkboxes, Sliders and Text Boxes”) | Buttons, checkboxes, sliders, text boxes, labels, panels | yes |
 | `<ECS>` (see “`<ECS>`: Entities and Components”) | Entities built from components | no |
 | `<tasks>` (see “`<tasks>`: Tasks Without a Window”) | Running tasks (see “11. Tasks”) in programs without a window | no |
 
@@ -4991,7 +4991,7 @@ Both loops do the same things each frame:
 - Calling drawing functions before `window.open(...)` stops the game with "the window isn't open yet".
 - Escape closes the window by default.
 - If the game's folder has an `icon.png`, it becomes the window's icon (and the `.exe`'s icon). See The game's icon (see “Getting Started” › “The game's icon”).
-- `<input>` (see “`<input>`: Keyboard, Mouse and Controllers”), `<graphics2d>` (see “`<graphics2d>`: 2D Drawing”), `<graphics3d>` (see “`<graphics3d>`: 3D Drawing”) and `<ui>` (see “`<ui>`: Buttons, Checkboxes and Sliders”) all work with this window.
+- `<input>` (see “`<input>`: Keyboard, Mouse and Controllers”), `<graphics2d>` (see “`<graphics2d>`: 2D Drawing”), `<graphics3d>` (see “`<graphics3d>`: 3D Drawing”) and `<ui>` (see “`<ui>`: Buttons, Checkboxes, Sliders and Text Boxes”) all work with this window.
 
 ### Testing games automatically
 
@@ -6184,11 +6184,11 @@ if (scenes.current() is Level) {
 }
 ```
 
-See examples/menu (the file `examples/menu/main.frg` in the Forge folder) for a menu with buttons, using `<ui>` (see “`<ui>`: Buttons, Checkboxes and Sliders”).
+See examples/menu (the file `examples/menu/main.frg` in the Forge folder) for a menu with buttons, using `<ui>` (see “`<ui>`: Buttons, Checkboxes, Sliders and Text Boxes”).
 
 <!-- docs/libraries/ui.md -->
 
-## `<ui>`: Buttons, Checkboxes and Sliders
+## `<ui>`: Buttons, Checkboxes, Sliders and Text Boxes
 
 ```cpp
 #include <ui>
@@ -6211,6 +6211,8 @@ There are no objects to create or remember. Whatever the control controls lives 
 | `ui.button(rect area, string label)` | `bool` | draws a button; **true on the frame it's clicked** (the mouse button released over it) |
 | `ui.checkbox(rect area, string label, bool checked)` | `bool` | draws a box with a label to its right; gives back the **new** checked value |
 | `ui.slider(rect area, float value, float min, float max)` | `float` | draws a slider; gives back the **new** value (drag it with the mouse) |
+| `ui.textBox(rect area, string text, int maxLength = 0)` | `string` | draws a box to type in; gives back the **new** text. `maxLength` is the most letters it takes (0 means no limit) |
+| `ui.isTyping()` | `bool` | true while the player is typing in a text box |
 | `ui.label(string text, float x, float y, int size = 20, color c = color.WHITE)` | — | draws text |
 | `ui.panel(rect area)` | — | draws a rounded box to put other controls on |
 | `ui.setTheme(color background, color accent, color text)` | — | the colors of every control |
@@ -6232,6 +6234,34 @@ void draw(){
 
 For a checkbox, the `rect` is the clickable area; the box is a square as tall as the rect, with the label to its right.
 
+#### Typing text: textBox
+
+A text box works the same way: give it the text, and store what it gives back.
+
+```cpp
+string playerName = "Player";
+
+void draw(){
+    ui.label("Your name:", 360, 170);
+    playerName = ui.textBox(rect(360, 195, 240, 40), playerName, 12);    // at most 12 letters
+}
+```
+
+- **Click** the box to start typing in it. Its border lights up and a cursor blinks at the end.
+- Type to add letters. **Backspace** deletes the last one (hold it to keep deleting).
+- **Enter**, or a click anywhere else, finishes typing.
+- With a `maxLength`, extra letters are simply ignored.
+- Only one box takes the typing at a time. Each box is known by its `rect`, so two boxes need different rectangles.
+- Text that's too long for the box shows its end, where the typing happens.
+
+While the player types, the keys still reach the rest of the game. If the game uses keys for other things (like R to restart), check `ui.isTyping()` first:
+
+```cpp
+if (input.keyPressed(Key.R) and !ui.isTyping()) {
+    restart();
+}
+```
+
 ### Look
 
 - Buttons light up when the mouse is over them, and get darker while pressed.
@@ -6242,7 +6272,6 @@ For a checkbox, the `rect` is the clickable area; the box is a square as tall as
 
 - Controls need the window to be open, and must be drawn every frame to stay visible and clickable.
 - Draw controls after the game world, so they appear on top.
-- There's no text input box yet.
 
 See examples/menu (the file `examples/menu/main.frg` in the Forge folder) for a full menu screen.
 
@@ -8570,7 +8599,7 @@ Each file includes the libraries it uses. Functions are reached through the libr
 | `<save>` | `save.setInt(key, n)` and `save.getInt(key, backup)`, also `setFloat`/`getFloat`, `setString`/`getString`, `setBool`/`getBool`, and `has(key)` `remove(key)` `clear()`. Kept in `save.txt` in the game's folder, written straight away. |
 | `<file>` | `file.read(path)` `write(path, text)` `append(path, text)` `exists(path)` `remove(path)` `readLines(path)` `writeLines(path, lines)` `files(folder)`. Paths are relative to the game's folder. |
 | `<scenes>` | the `Scene` class and `scenes.change(scene)` `update(dt)` `draw()` `current()` (see below) |
-| `<ui>` | `ui.button(rect, "text")` (true when clicked), `ui.checkbox(rect, "text", checked)` (gives the new value), `ui.slider(rect, value, min, max)` (gives the new value), `ui.label(text, x, y, size, color)`, `ui.panel(rect)`, `ui.setTheme(background, accent, text)` |
+| `<ui>` | `ui.button(rect, "text")` (true when clicked), `ui.checkbox(rect, "text", checked)` (gives the new value), `ui.slider(rect, value, min, max)` (gives the new value), `ui.textBox(rect, text, maxLength = 0)` (a box to type in; gives the new text), `ui.isTyping()`, `ui.label(text, x, y, size, color)`, `ui.panel(rect)`, `ui.setTheme(background, accent, text)` |
 | `<ECS>` | the `Entity` and `Component` classes (see below) |
 | `<tasks>` | `tasks.update(dt)` `runAll()` `count()` `stopAll()` (see Tasks (see “Tasks: waiting without freezing the game”)) |
 

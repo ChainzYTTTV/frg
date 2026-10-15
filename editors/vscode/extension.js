@@ -169,6 +169,8 @@ const LIBRARIES = {
         ['button', 'bool button(rect area, string label)', 'Draws a button. True on the frame it gets clicked.'],
         ['checkbox', 'bool checkbox(rect area, string label, bool checked)', 'Draws a checkbox and gives back its new value: on = ui.checkbox(..., on);'],
         ['slider', 'float slider(rect area, float value, float min, float max)', 'Draws a slider and gives back its new value: v = ui.slider(..., v, 0, 1);'],
+        ['textBox', 'string textBox(rect area, string text, int maxLength = 0)', 'A box to type in. Gives back the new text: name = ui.textBox(..., name, 12); Click it to type; Enter or a click elsewhere finishes. maxLength 0 means no limit.'],
+        ['isTyping', 'bool isTyping()', 'True while the player is typing in a text box, so the game can ignore its own key shortcuts.'],
         ['label', 'void label(string text, float x, float y, int size = 20, color c = color.WHITE)', 'Text.'],
         ['panel', 'void panel(rect area)', 'A rounded box to put other UI on.'],
         ['setTheme', 'void setTheme(color background, color accent, color text)', 'The colors of all UI.'],

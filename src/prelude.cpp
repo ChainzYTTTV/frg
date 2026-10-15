@@ -357,6 +357,8 @@ bool button(rect area, string label);
 void label(string text, float x, float y, int size = 20, color c = color.WHITE);
 bool checkbox(rect area, string label, bool checked);
 float slider(rect area, float value, float min, float max);
+string textBox(rect area, string text, int maxLength = 0);
+bool isTyping();
 void panel(rect area);
 void setTheme(color background, color accent, color text);
 )FRG";

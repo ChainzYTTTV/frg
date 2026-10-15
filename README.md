@@ -1,5 +1,7 @@
 # Forge
 
+[![tests](https://github.com/ChainzYTTTV/frg/actions/workflows/tests.yml/badge.svg)](https://github.com/ChainzYTTTV/frg/actions/workflows/tests.yml) · Version 0.6.0 · [Changelog](CHANGELOG.md) · [Roadmap](ROADMAP.md) · [License: MIT](LICENSE)
+
 > **This project was made with AI.** I designed the language: what it looks like, how files and folders work, and which features it has. The compiler, runtime, tools and docs were written by an AI (Claude), not by me.
 >
 > I'm not trying to get anyone to use it. I thought a game language built around my own ideas would be cool to see as something real, and I'm using it to learn how programming languages, and programming in general, actually work. If AI-made projects aren't your thing, that's completely fair.
@@ -16,6 +18,15 @@ int main(){
 ```
 
 **Documentation:** start at [docs/README.md](docs/README.md), which has a getting-started guide, a chapter for each part of the language, a page for every library, and guides. [docs/LANGUAGE.md](docs/LANGUAGE.md) is a one-page cheat sheet. For VS Code support (colors, errors as you save, a Run button), see [editors/vscode](editors/vscode/README.md).
+
+## What it looks like
+
+| | |
+|---|---|
+| ![The example platformer, with a camera that follows the player](docs/images/platformer.png) | ![A 3D scene with a camera circling around it](docs/images/world3d.png) |
+| The example platformer (`examples/platformer`) | 3D shapes and a moving camera (`examples/world3d`) |
+| ![A main menu made with the ui library](docs/images/menu.png) | ![A spinning cube drawn with the Vulkan toolkit](docs/images/vulkan.png) |
+| A menu with buttons and sliders (`examples/menu`) | Drawing with Vulkan yourself (`examples/vulkan`) |
 
 ## How it works
 
@@ -84,3 +95,9 @@ This produces `bin/frg.exe`, with `bin/runtime/` next to it. Add `bin` to your P
 ```
 .\tests\run_tests.ps1
 ```
+
+## License and contributing
+
+Forge is under the [MIT license](LICENSE). Games you make with Forge are yours, and they don't need to include Forge's license. raylib, the Vulkan headers and glslang keep their own licenses (listed in [LICENSE](LICENSE)).
+
+Bug reports and ideas are welcome: see [CONTRIBUTING.md](CONTRIBUTING.md). What changed in each version is in the [changelog](CHANGELOG.md), and what's planned is in the [roadmap](ROADMAP.md).

@@ -6,6 +6,7 @@
 #include "codegen.hpp"
 #include "common.hpp"
 #include "project.hpp"
+#include "templates.hpp"
 
 #include <algorithm>
 #include <cctype>
@@ -485,17 +486,38 @@ static int cmdPackage(const fs::path& dir, const BuildOptions& opt) {
     return 0;
 }
 
-static int cmdNew(const std::string& name) {
+static int cmdNew(const std::string& name, const std::string& templateName) {
+    const std::vector<std::string>& names = templateNames();
+    if (std::find(names.begin(), names.end(), templateName) == names.end()) {
+        std::string guess = suggestName(templateName, names);
+        reportPlainError("there's no template called '" + templateName + "'",
+                         (guess.empty() ? std::string() : "did you mean " + guess + "? ") + "The templates are console, window, platformer and 3d");
+        return 1;
+    }
     fs::path dir = name;
+    std::string game = dir.filename().string();
+    bool validName = !game.empty() && !std::isdigit((unsigned char)game[0]);
+    for (char c : game) validName = validName && (std::isalnum((unsigned char)c) || c == '_');
+    if (!validName) {
+        reportPlainError("'" + game + "' can't be the name of a game",
+                         "use only letters, numbers and _, and don't start with a number - for example: frg new my_game");
+        return 1;
+    }
     if (fs::exists(dir)) {
         reportPlainError("'" + name + "' already exists", "pick a different name for the new game");
         return 1;
     }
-    fs::create_directories(dir);
-    std::ofstream f(dir / "main.frg", std::ios::binary);
-    f << "#include <stdio>\n\nint main(){\n    print(\"Hello, World!\");\n    return 0;\n}\n";
-    f.close();
-    printStatus("Created", name + "/main.frg");
+    std::error_code ec;
+    fs::create_directories(dir, ec);
+    if (ec) {
+        reportPlainError("couldn't make the folder '" + name + "'");
+        return 1;
+    }
+    for (const auto& [file, text] : templateFiles(templateName, game)) {
+        std::ofstream f(dir / file, std::ios::binary);
+        f << text;
+        printStatus("Created", name + "/" + file);
+    }
     std::fprintf(stderr, "\nTo run it:\n    cd %s\n    frg run\n", name.c_str());
     return 0;
 }
@@ -505,6 +527,8 @@ static void printHelp() {
         "Forge %s - a compiled language for making games\n\n"
         "Usage:\n"
         "  frg new <name>      make a new game folder with a main.frg\n"
+        "      --template window | platformer | 3d   start from a window game, a platformer or a 3D scene\n"
+        "                                            instead of the console hello world\n"
         "  frg build [folder]  compile the game into build/<name>.exe\n"
         "  frg run [folder]    compile the game, then run it\n"
         "  frg check [folder]  look for errors without building\n"
@@ -596,11 +620,30 @@ int main(int argc, char** argv) {
         return 0;
     }
     if (cmd == "new") {
-        if (args.size() != 2) {
-            reportPlainError("frg new needs a name", "for example: frg new platformer");
+        // frg new <name> [--template console|window|platformer|3d]
+        std::string name, templateName = "console";
+        for (size_t i = 1; i < args.size(); i++) {
+            if (args[i] == "--template") {
+                if (i + 1 >= args.size()) {
+                    reportPlainError("--template needs the name of a template", "for example: frg new mygame --template window");
+                    return 1;
+                }
+                templateName = args[++i];
+            } else if (args[i].starts_with("--")) {
+                reportPlainError("there's no option called " + args[i], "the only option for new is --template");
+                return 1;
+            } else if (name.empty()) {
+                name = args[i];
+            } else {
+                reportPlainError("too many names", "usage: frg new <name> [--template console|window|platformer|3d]");
+                return 1;
+            }
+        }
+        if (name.empty()) {
+            reportPlainError("frg new needs a name", "for example: frg new mygame, or frg new mygame --template platformer");
             return 1;
         }
-        return cmdNew(args[1]);
+        return cmdNew(name, templateName);
     }
     reportPlainError("unknown command '" + cmd + "'", "try frg build, frg run, or frg new <name>");
     return 1;

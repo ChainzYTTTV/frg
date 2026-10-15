@@ -71,7 +71,8 @@ Commands, typed in a terminal inside the game's folder:
 
 | Command | What it does |
 |---|---|
-| `frg new mygame` | makes a new folder `mygame/` with a starter `main.frg` |
+| `frg new mygame` | makes a new folder `mygame/` with a starter `main.frg` (a hello world) |
+| `frg new mygame --template window` | starts from a working game instead: `--template window` (a ball moved with the arrow keys), `platformer` (physics, jumping, a following camera) or `3d` (a cube and a turning camera). Good starting points once the learner reaches those lessons |
 | `frg run` | checks the code, compiles it, and runs the game |
 | `frg build` | compiles into `build/<folder name>.exe` without running it |
 | `frg check` | only looks for errors |

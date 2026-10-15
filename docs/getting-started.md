@@ -69,13 +69,26 @@ What each line of the program means:
 | `return 0;` | Finish `main` and report "everything went fine" (0). Returning 1 means "something went wrong". |
 | `}` | The end of `main` |
 
+### Starting from a template
+
+`frg new` can also start you off with a small working game. Add `--template` and one of these:
+
+| Command | You get |
+|---|---|
+| `frg new mygame` (or `--template console`) | the hello world above: a program that prints text, no window |
+| `frg new mygame --template window` | a window with a ball you move with the arrow keys, using `window.run()` with `update(dt)` and `draw()` |
+| `frg new mygame --template platformer` | a small platformer: a box that runs and jumps across platforms, with physics, a pit, and a camera that follows it through a level wider than the window |
+| `frg new mygame --template 3d` | a 3D scene: a cube and a ball on a grid, and a camera you turn with Left / Right |
+
+Each one is a single `main.frg` with comments, ready to `frg run` and then change into your own game. The game's name (`mygame`) becomes its window title and the name of its `.exe`, so it can only use letters, numbers and `_`, and can't start with a number.
+
 ## The `frg` command
 
 Run these in a terminal. `[folder]` is the game's top folder (the one with `main.frg`); leave it out to use the current folder.
 
 | Command | What it does |
 |---|---|
-| `frg new <name>` | Makes a folder `<name>/` containing a starter `main.frg` |
+| `frg new <name>` | Makes a folder `<name>/` containing a starter `main.frg`. Add `--template window`, `platformer` or `3d` to [start from a small game](#starting-from-a-template) |
 | `frg run [folder]` | Checks, compiles and runs the game |
 | `frg build [folder]` | Checks and compiles into `build/<folder name>.exe`, without running it |
 | `frg check [folder]` | Only looks for errors (fast, makes no `.exe`) |

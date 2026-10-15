@@ -19,7 +19,8 @@ int main(){
 
 | Command | What it does |
 |---|---|
-| `frg new mygame` | makes a folder `mygame/` with a starter `main.frg` |
+| `frg new mygame` | makes a folder `mygame/` with a starter `main.frg` (a hello world) |
+| `frg new mygame --template window` | starts from a small game instead: `window` (a ball to move), `platformer`, or `3d` |
 | `frg build` | compiles the game into `build/<folder name>.exe` |
 | `frg run` | builds, then runs the game |
 | `frg check` | only looks for errors |

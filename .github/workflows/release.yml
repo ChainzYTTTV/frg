@@ -1,0 +1,64 @@
+# Makes a tag and a GitHub release for every new Forge version, once the tests pass on master.
+#
+# The version comes from kVersion in src/main.cpp, and the release notes from that version's section of
+# CHANGELOG.md. A version that already has a release is skipped, so this is safe to run on every push.
+# It can also be run by hand (Actions > release > Run workflow) to make a release page for an older version
+# that's already tagged, like 0.6.0.
+name: release
+
+on:
+  workflow_run:
+    workflows: [tests]
+    types: [completed]
+    branches: [master]
+  workflow_dispatch:
+    inputs:
+      version:
+        description: "Version to make a release page for, like 0.6.0 (leave empty for the current one)"
+        required: false
+
+permissions:
+  contents: write
+
+jobs:
+  release:
+    runs-on: ubuntu-latest
+    # Only after a successful test run of a push to master (not a pull request), or when run by hand.
+    if: >-
+      github.event_name == 'workflow_dispatch' ||
+      (github.event.workflow_run.conclusion == 'success' && github.event.workflow_run.event == 'push')
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: ${{ github.event.workflow_run.head_sha || github.sha }}
+
+      - name: Make the tag and release, if this version doesn't have one yet
+        env:
+          GH_TOKEN: ${{ github.token }}
+          WANTED: ${{ github.event.inputs.version }}
+          SHA: ${{ github.event.workflow_run.head_sha || github.sha }}
+        run: |
+          version="${WANTED:-$(sed -n 's/.*kVersion = "\([^"]*\)".*/\1/p' src/main.cpp)}"
+          if [ -z "$version" ]; then echo "Couldn't find kVersion in src/main.cpp"; exit 1; fi
+          tag="v$version"
+
+          if gh release view "$tag" > /dev/null 2>&1; then
+            echo "$tag already has a release; nothing to do."
+            exit 0
+          fi
+
+          # The notes: everything under "## <version>" in CHANGELOG.md, up to the next "## ".
+          awk -v v="$version" '
+            /^## / { if (found) exit; if (index($0, "## " v " ") == 1 || $0 == "## " v) { found = 1; next } }
+            found { print }
+          ' CHANGELOG.md > notes.md
+          if [ ! -s notes.md ]; then echo "Forge $version." > notes.md; fi
+          echo "Full list of changes: [CHANGELOG.md](https://github.com/${GITHUB_REPOSITORY}/blob/$tag/CHANGELOG.md)" >> notes.md
+
+          if git ls-remote --exit-code --tags origin "refs/tags/$tag" > /dev/null; then
+            # Already tagged (by hand): make the release page for that tag.
+            gh release create "$tag" --verify-tag --title "Forge $version" --notes-file notes.md
+          else
+            gh release create "$tag" --target "$SHA" --title "Forge $version" --notes-file notes.md
+          fi
+          echo "Made release $tag."

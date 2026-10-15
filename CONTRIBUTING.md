@@ -53,3 +53,11 @@ pwsh -File tests\run_tests.ps1
   - `<OpenGL>`, `<DirectX>` and `<Vulkan>` are separate toolkits, not engine backends.
 
 All tests must pass before a pull request is merged. GitHub runs them automatically on every push.
+
+## Releases
+
+A release is one pull request that:
+- bumps `kVersion` in `src/main.cpp` (and the version everywhere else it appears);
+- adds a `## X.Y.Z (date)` section at the top of `CHANGELOG.md`.
+
+Once it's merged and the tests pass on `master`, GitHub makes the `vX.Y.Z` tag and the release page automatically (`.github/workflows/release.yml`), with the notes from the changelog. Nobody has to tag by hand.

@@ -23,6 +23,39 @@ private:
     size_t p = 0;
     // `>>` closing two generic types is split into two `>`s; this remembers how to undo it.
     std::vector<std::pair<size_t, Token>> splitLog;
+    bool hadError = false;  // set when a syntax error was skipped over, so more errors can be reported
+
+    // After a syntax error inside a block: skip to the end of that statement.
+    void syncStatement() {
+        int depth = 0;
+        while (!atEnd()) {
+            Tok k = cur().kind;
+            if (k == Tok::LBrace) {
+                depth++;
+            } else if (k == Tok::RBrace) {
+                if (depth == 0) return;
+                p++;
+                if (--depth == 0) return;
+                continue;
+            } else if (k == Tok::Semi && depth == 0) {
+                p++;
+                return;
+            }
+            p++;
+        }
+    }
+
+    // After a syntax error outside any function: skip to the next thing that starts at the left edge.
+    void syncTopLevel() {
+        if (!atEnd()) p++;
+        while (!atEnd()) {
+            Tok k = cur().kind;
+            bool starts = k == Tok::Ident || k == Tok::KwVoid || k == Tok::KwStruct || k == Tok::KwClass || k == Tok::KwEnum ||
+                          k == Tok::KwConst || k == Tok::Hash || k == Tok::KwPrivate || k == Tok::KwPublic;
+            if (starts && cur().loc.col == 1) return;
+            p++;
+        }
+    }
 
     const Token& peek(size_t n = 1) const { return t[std::min(p + n, t.size() - 1)]; }
     const Token& prev() const { return t[p ? p - 1 : 0]; }
@@ -159,8 +192,8 @@ bool Parser::declAhead(bool allowParen) {
 
 FileAST Parser::parseFile() {
     FileAST ast;
-    try {
-        while (!atEnd()) {
+    while (!atEnd()) {
+        try {
             if (at(Tok::Hash)) {
                 ast.includes.push_back(parseInclude());
                 continue;
@@ -196,10 +229,13 @@ FileAST Parser::parseFile() {
                      "put it inside main(){ ... } - or, if you're making a new function, give it a return type like 'void " +
                          cur().text + "()'");
             fail(cur().loc, "expected a function, a variable, a type or an #include, but found " + describe(cur()));
+        } catch (CompileAbort&) {
+            ast.ok = false;
+            if (atEnd()) break;
+            syncTopLevel();  // keep going, to find more errors
         }
-    } catch (CompileAbort&) {
-        ast.ok = false;
     }
+    if (hadError) ast.ok = false;
     return ast;
 }
 
@@ -348,7 +384,13 @@ StmtPtr Parser::parseBlock() {
     auto b = std::make_unique<Stmt>(SK::Block, open.loc);
     while (!at(Tok::RBrace)) {
         if (atEnd()) fail(open.loc, "this '{' is never closed", "add a matching '}'");
-        b->body.push_back(parseStmt());
+        try {
+            b->body.push_back(parseStmt());
+        } catch (CompileAbort&) {
+            if (atEnd()) throw;
+            hadError = true;
+            syncStatement();  // skip the broken statement and keep checking the rest
+        }
     }
     p++;
     return b;

@@ -1,0 +1,26 @@
+=== main.frg
+#include <stdio>
+
+int main(){
+    int a = 5
+    int b = 6;
+    print(a +);
+    if (a = b) {
+        print("same");
+    }
+    return 0;
+}
+
+void broken( {
+}
+
+void fine(){
+    int c = ;
+}
+=== error
+missing ';' at the end of this line
+expected a value, but found ')'
+'=' sets a variable - to compare two values, use '=='
+expected a type, but found '{'
+expected a value, but found ';'
+Build failed: 5 errors.

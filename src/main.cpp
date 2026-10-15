@@ -46,7 +46,7 @@ static int runProcess(const std::wstring& cmdline, const fs::path& workDir = {})
 // While the game runs, Ctrl+C should stop the game, not Forge.
 static BOOL WINAPI ignoreCtrlC(DWORD type) { return type == CTRL_C_EVENT || type == CTRL_BREAK_EVENT; }
 
-static bool build(const fs::path& dir, fs::path& exeOut) {
+static bool build(const fs::path& dir, fs::path& exeOut, bool release) {
     auto start = std::chrono::steady_clock::now();
     if (!fs::is_directory(dir)) {
         reportPlainError("the folder '" + dir.string() + "' doesn't exist");
@@ -95,6 +95,7 @@ static bool build(const fs::path& dir, fs::path& exeOut) {
 
     std::wstring cmd = L"g++ -std=gnu++20 -O2 -fwrapv -w -static -I" + quote(runtime) + L" " + quote(cppPath) +
                        L" -o " + quote(exe);
+    if (release) cmd += L" -mwindows -s";  // no console window, smaller .exe
     if (gen.needsRaylib) {
         fs::path raylib = runtime / "raylib";
         cmd += L" -I" + quote(raylib / "include") + L" -L" + quote(raylib / "lib") + L" -lraylib -lopengl32 -lgdi32 -lwinmm";
@@ -119,9 +120,9 @@ static bool build(const fs::path& dir, fs::path& exeOut) {
     return true;
 }
 
-static int cmdRun(const fs::path& dir) {
+static int cmdRun(const fs::path& dir, bool release) {
     fs::path exe;
-    if (!build(dir, exe)) return 1;
+    if (!build(dir, exe, release)) return 1;
     printStatus("Running", exe.filename().string());
     std::fflush(stderr);
     SetConsoleCtrlHandler(ignoreCtrlC, TRUE);
@@ -165,7 +166,8 @@ static void printHelp() {
         "  frg run [folder]    compile the game, then run it\n"
         "  frg check [folder]  look for errors without building\n"
         "  frg version         show the Forge version\n\n"
-        "[folder] is the game's top folder (the one with main.frg). It defaults to the current folder.\n",
+        "[folder] is the game's top folder (the one with main.frg). It defaults to the current folder.\n"
+        "Add --release to build or run to make a finished game: no console window, smaller .exe.\n",
         kVersion);
 }
 
@@ -182,14 +184,22 @@ int main(int argc, char** argv) {
         return 0;
     }
     if (cmd == "build" || cmd == "run") {
-        if (args.size() > 2) {
-            reportPlainError("too many arguments", "usage: frg " + cmd + " [folder]");
+        bool release = false;
+        std::vector<std::string> rest;
+        for (size_t i = 1; i < args.size(); i++) {
+            if (args[i] == "--release")
+                release = true;
+            else
+                rest.push_back(args[i]);
+        }
+        if (rest.size() > 1) {
+            reportPlainError("too many arguments", "usage: frg " + cmd + " [folder] [--release]");
             return 1;
         }
-        fs::path dir = args.size() > 1 ? fs::path(args[1]) : fs::current_path();
-        if (cmd == "run") return cmdRun(dir);
+        fs::path dir = rest.empty() ? fs::current_path() : fs::path(rest[0]);
+        if (cmd == "run") return cmdRun(dir, release);
         fs::path exe;
-        return build(dir, exe) ? 0 : 1;
+        return build(dir, exe, release) ? 0 : 1;
     }
     if (cmd == "check") {
         // frg check [folder] [--machine]: find errors without building anything.

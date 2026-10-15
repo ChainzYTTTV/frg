@@ -1,8 +1,8 @@
 // Forge runtime: <physics>, simple 2D box physics for platformers.
 //
 // Every Body is an axis-aligned box. Each step, moving bodies fall with gravity, move by their velocity,
-// and get pushed out of static bodies (floors, walls, platforms). Moving bodies don't collide with
-// each other - use body.overlaps(other) to check for that yourself.
+// and get pushed out of static bodies (floors, walls, platforms), then out of each other.
+// Bodies with solid = false (coins, triggers) never push or get pushed - check them with overlaps().
 #pragma once
 
 #include "forge.hpp"
@@ -14,6 +14,7 @@ struct Body_ : std::enable_shared_from_this<Body_> {
     core::vec2_ size_{};
     core::vec2_ velocity_{};
     bool isStatic_ = false;
+    bool solid_ = true;
     float gravityScale_ = 1;
     bool onGround_ = false;
     bool onCeiling_ = false;
@@ -62,6 +63,37 @@ inline bool touching(const Body_& a, const Body_& b) {
            a.position_.y_ < b.position_.y_ + b.size_.y_ && b.position_.y_ < a.position_.y_ + a.size_.y_;
 }
 
+// Pushes overlapping moving bodies apart along whichever direction they overlap least.
+// A body resting on the ground doesn't get pushed down; the one on top is pushed up instead.
+inline void separateMovingBodies(const std::vector<std::shared_ptr<Body_>>& bodies) {
+    for (size_t i = 0; i < bodies.size(); i++) {
+        Body_& a = *bodies[i];
+        if (a.isStatic_ || !a.solid_) continue;
+        for (size_t j = i + 1; j < bodies.size(); j++) {
+            Body_& b = *bodies[j];
+            if (b.isStatic_ || !b.solid_ || !touching(a, b)) continue;
+            float ox = std::min(a.position_.x_ + a.size_.x_, b.position_.x_ + b.size_.x_) - std::max(a.position_.x_, b.position_.x_);
+            float oy = std::min(a.position_.y_ + a.size_.y_, b.position_.y_ + b.size_.y_) - std::max(a.position_.y_, b.position_.y_);
+            if (oy <= ox) {
+                Body_& top = a.position_.y_ < b.position_.y_ ? a : b;
+                Body_& bottom = &top == &a ? b : a;
+                float topShare = bottom.onGround_ ? 1.0f : 0.5f;
+                top.position_.y_ -= oy * topShare;
+                bottom.position_.y_ += oy * (1 - topShare);
+                if (top.velocity_.y_ > bottom.velocity_.y_) top.velocity_.y_ = bottom.velocity_.y_;
+                top.onGround_ = true;
+                bottom.onCeiling_ = true;
+            } else {
+                Body_& left = a.position_.x_ < b.position_.x_ ? a : b;
+                Body_& right = &left == &a ? b : a;
+                left.position_.x_ -= ox / 2;
+                right.position_.x_ += ox / 2;
+                left.onWall_ = right.onWall_ = true;
+            }
+        }
+    }
+}
+
 inline void step_(float dt) {
     if (dt <= 0) return;
     if (dt > 0.05f) dt = 0.05f;  // after a long pause, don't jump everything forward at once
@@ -83,7 +115,7 @@ inline void step_(float dt) {
             b.position_.x_ += b.velocity_.x_ * part;
             for (auto& op : bodies) {
                 Body_& o = *op;
-                if (&o == &b || !o.isStatic_ || !touching(b, o)) continue;
+                if (&o == &b || !o.isStatic_ || !b.solid_ || !o.solid_ || !touching(b, o)) continue;
                 if (b.velocity_.x_ > 0)
                     b.position_.x_ = o.position_.x_ - b.size_.x_;
                 else if (b.velocity_.x_ < 0)
@@ -94,7 +126,7 @@ inline void step_(float dt) {
             b.position_.y_ += b.velocity_.y_ * part;
             for (auto& op : bodies) {
                 Body_& o = *op;
-                if (&o == &b || !o.isStatic_ || !touching(b, o)) continue;
+                if (&o == &b || !o.isStatic_ || !b.solid_ || !o.solid_ || !touching(b, o)) continue;
                 if (b.velocity_.y_ > 0) {
                     b.position_.y_ = o.position_.y_ - b.size_.y_;
                     b.onGround_ = true;
@@ -106,6 +138,7 @@ inline void step_(float dt) {
             }
         }
     }
+    separateMovingBodies(bodies);
 }
 
 inline std::string frg$str(const std::shared_ptr<Body_>& b) {

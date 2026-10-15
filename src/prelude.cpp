@@ -165,6 +165,7 @@ class Body {
     vec2 size;
     vec2 velocity;
     bool isStatic;
+    bool solid;
     float gravityScale;
     bool onGround;
     bool onCeiling;

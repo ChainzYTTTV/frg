@@ -1,0 +1,30 @@
+=== main.frg
+#include <stdio>
+#include <physics>
+#include <math>
+
+int main(){
+    Body ground = Body(0, 100, 500, 20);
+    ground.isStatic = true;
+    physics.add(ground);
+
+    Body bottom = Body(50, 70, 20, 30);    // already resting on the ground
+    Body top = Body(55, 0, 10, 10);        // falls onto the bottom crate
+    Body ghost = Body(52, -40, 10, 10);    // not solid: falls through everything except... nothing
+    ghost.solid = false;
+    physics.add(bottom);
+    physics.add(top);
+    physics.add(ghost);
+
+    for (int i = 0; i < 90; i++) {
+        physics.step(1.0 / 60);
+    }
+    print("bottom y = {bottom.position.y}, on ground: {bottom.onGround}");
+    print("top y = {int(math.round(top.position.y))}, on top of the crate: {top.onGround}");
+    print("ghost fell through: {ghost.position.y > 120}");
+    return 0;
+}
+=== output
+bottom y = 70.0, on ground: true
+top y = 60, on top of the crate: true
+ghost fell through: true

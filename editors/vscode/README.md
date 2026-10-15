@@ -2,10 +2,10 @@
 
 Support for the Forge (`.frg`) game language.
 
-- **Syntax colors**, including `{values}` inside text and ` ``` ` comments
+- **Syntax colors**, including `{values}` inside text, `"""raw text"""` and ` ``` ` comments
 - **Errors when you save**: problems are underlined in red, with Forge's hint attached
 - **Run button** (▶ in the editor's title bar, or **F5**) builds and runs the game. **Ctrl+Shift+B** only builds it.
-- **Autocomplete and hover help** for the libraries: type `window.`, `graphics2d.`, `color.` or `Key.`
+- **Autocomplete and hover help** for the libraries: type `window.`, `graphics2d.`, `color.` or `Key.` (and `OpenGL.`, `DirectX.`, `Vulkan.` for the low-level toolkits)
 - **Snippets**: `main`, `game`, `gameloop`, `class`, `struct`, `enum`, `foreach`, `switch`, `body`, and more
 
 ## Settings

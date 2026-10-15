@@ -7,6 +7,7 @@
         { "include": "#include-directive" },
         { "include": "#type-declaration" },
         { "include": "#keywords" },
+        { "include": "#raw-strings" },
         { "include": "#strings" },
         { "include": "#numbers" },
         { "include": "#builtin-types" },
@@ -73,6 +74,13 @@
                 { "name": "constant.language.forge", "match": "\\b(true|false|null)\\b" }
             ]
         },
+        "raw-strings": {
+            "name": "string.quoted.triple.forge",
+            "begin": "\"\"\"",
+            "end": "\"\"\"",
+            "beginCaptures": { "0": { "name": "punctuation.definition.string.begin.forge" } },
+            "endCaptures": { "0": { "name": "punctuation.definition.string.end.forge" } }
+        },
         "strings": {
             "name": "string.quoted.double.forge",
             "begin": "\"",
@@ -103,7 +111,7 @@
         },
         "libraries": {
             "name": "support.class.library.forge",
-            "match": "\\b(stdio|math|window|input|graphics2d|graphics3d|physics|random|assets|audio|time|file|scenes|ui|ECS|tasks)\\b(?=\\s*\\.)"
+            "match": "\\b(stdio|math|window|input|graphics2d|graphics3d|physics|random|assets|audio|time|file|scenes|ui|ECS|tasks|OpenGL|DirectX|Vulkan)\\b(?=\\s*\\.)"
         },
         "functions": {
             "match": "\\b([A-Za-z_][A-Za-z0-9_]*)\\s*(?=\\()",

@@ -173,6 +173,150 @@ const LIBRARIES = {
     ],
 };
 
+// The low-level toolkits (<OpenGL>, <DirectX>, <Vulkan>) all share these window, input and matrix functions.
+function toolkitCommon(lib) {
+    return [
+        ['openWindow', 'void openWindow(int width, int height, string title)', `Opens the window and starts ${lib}. Call it once, first.`],
+        ['shouldClose', 'bool shouldClose()', 'Call at the top of the game loop: shows the last frame, reads input, and is true when the window is closed (or Escape is pressed).'],
+        ['closeWindow', 'void closeWindow()', 'Frees everything and closes the window.'],
+        ['width', 'int width()', 'The window\'s width in pixels.'],
+        ['height', 'int height()', 'The window\'s height in pixels.'],
+        ['deltaTime', 'float deltaTime()', 'Seconds since the last frame.'],
+        ['time', 'double time()', 'Seconds since the window opened.'],
+        ['setTitle', 'void setTitle(string title)', 'Changes the window\'s title.'],
+        ['setVSync', 'void setVSync(bool on)', 'On (the start): wait for the screen before each frame. Off: draw as fast as possible.'],
+        ['keyDown', 'bool keyDown(Key key)', 'True while the key is held down.'],
+        ['keyPressed', 'bool keyPressed(Key key)', 'True only on the frame the key was pressed.'],
+        ['keyReleased', 'bool keyReleased(Key key)', 'True only on the frame the key was let go.'],
+        ['mouseDown', 'bool mouseDown(MouseButton button)', 'True while the mouse button is held down.'],
+        ['mousePressed', 'bool mousePressed(MouseButton button)', 'True only on the frame the button was pressed.'],
+        ['mouseReleased', 'bool mouseReleased(MouseButton button)', 'True only on the frame the button was let go.'],
+        ['mousePosition', 'vec2 mousePosition()', 'Where the mouse is, in pixels from the top-left corner.'],
+        ['mouseWheel', 'float mouseWheel()', 'How far the wheel turned this frame.'],
+        ['identity', 'list<float> identity()', 'A 4x4 matrix that does nothing (16 floats, column by column).'],
+        ['multiply', 'list<float> multiply(list<float> a, list<float> b)', 'Combines two matrices: b happens first, then a.'],
+        ['perspective', 'list<float> perspective(float fovDegrees, float aspect, float near, float far)', `A 3D projection matrix made for ${lib}. aspect is width / height.`],
+        ['orthographic', 'list<float> orthographic(float left, float right, float bottom, float top, float near, float far)', `A flat (2D) projection matrix made for ${lib}.`],
+        ['lookAt', 'list<float> lookAt(vec3 eye, vec3 target, vec3 up)', 'A camera (view) matrix: at eye, looking at target.'],
+        ['translate', 'list<float> translate(vec3 offset)', 'A matrix that moves things.'],
+        ['rotate', 'list<float> rotate(float degrees, vec3 axis)', 'A matrix that turns things around an axis.'],
+        ['scale', 'list<float> scale(vec3 amount)', 'A matrix that stretches things.'],
+    ];
+}
+
+function constants(names, doc) {
+    return names.map(n => [n, `const int ${n}`, doc]);
+}
+
+LIBRARIES.OpenGL = toolkitCommon('OpenGL').concat([
+    ['version', 'string version()', 'The OpenGL version and graphics card.'],
+    ['clearColor', 'void clearColor(float r, float g, float b, float a)', 'The color clear() fills the screen with (glClearColor).'],
+    ['clear', 'void clear(int mask)', 'Clears the screen: OpenGL.COLOR_BUFFER_BIT bitor OpenGL.DEPTH_BUFFER_BIT (glClear).'],
+    ['viewport', 'void viewport(int x, int y, int width, int height)', 'Which part of the window to draw into (glViewport).'],
+    ['enable', 'void enable(int capability)', 'Turns on DEPTH_TEST, BLEND or CULL_FACE (glEnable).'],
+    ['disable', 'void disable(int capability)', 'Turns off DEPTH_TEST, BLEND or CULL_FACE (glDisable).'],
+    ['blendFunc', 'void blendFunc(int source, int destination)', 'How see-through colors mix, usually SRC_ALPHA, ONE_MINUS_SRC_ALPHA (glBlendFunc).'],
+    ['depthFunc', 'void depthFunc(int function)', 'When a pixel passes the depth test: LESS, LEQUAL, ALWAYS (glDepthFunc).'],
+    ['cullFace', 'void cullFace(int face)', 'Which side CULL_FACE skips: BACK, FRONT, FRONT_AND_BACK (glCullFace).'],
+    ['lineWidth', 'void lineWidth(float width)', 'How thick lines are (glLineWidth).'],
+    ['getError', 'int getError()', 'The oldest error OpenGL noticed, or NO_ERROR (glGetError).'],
+    ['createShader', 'int createShader(int type)', 'A new VERTEX_SHADER or FRAGMENT_SHADER (glCreateShader).'],
+    ['shaderSource', 'void shaderSource(int shader, string source)', 'Gives a shader its GLSL code (glShaderSource).'],
+    ['compileShader', 'void compileShader(int shader)', 'Compiles a shader (glCompileShader).'],
+    ['shaderCompiled', 'bool shaderCompiled(int shader)', 'True if the shader compiled.'],
+    ['shaderLog', 'string shaderLog(int shader)', 'The shader compiler\'s messages.'],
+    ['deleteShader', 'void deleteShader(int shader)', 'Frees a shader (glDeleteShader).'],
+    ['createProgram', 'int createProgram()', 'A new, empty program (glCreateProgram).'],
+    ['attachShader', 'void attachShader(int program, int shader)', 'Adds a compiled shader to a program (glAttachShader).'],
+    ['linkProgram', 'void linkProgram(int program)', 'Links a program\'s shaders (glLinkProgram).'],
+    ['programLinked', 'bool programLinked(int program)', 'True if the program linked.'],
+    ['programLog', 'string programLog(int program)', 'The linker\'s messages.'],
+    ['useProgram', 'void useProgram(int program)', 'Draws with this program from now on (glUseProgram).'],
+    ['deleteProgram', 'void deleteProgram(int program)', 'Frees a program (glDeleteProgram).'],
+    ['buildProgram', 'int buildProgram(string vertexSource, string fragmentSource)', 'Compiles and links both shaders in one go. Stops the game with the error if one has a mistake.'],
+    ['getUniformLocation', 'int getUniformLocation(int program, string name)', 'Where a uniform is, or -1 (glGetUniformLocation).'],
+    ['getAttribLocation', 'int getAttribLocation(int program, string name)', 'The location of a vertex input (glGetAttribLocation).'],
+    ['uniform1f', 'void uniform1f(int location, float x)', 'Sets a float uniform.'],
+    ['uniform2f', 'void uniform2f(int location, float x, float y)', 'Sets a vec2 uniform.'],
+    ['uniform3f', 'void uniform3f(int location, float x, float y, float z)', 'Sets a vec3 uniform.'],
+    ['uniform4f', 'void uniform4f(int location, float x, float y, float z, float w)', 'Sets a vec4 uniform.'],
+    ['uniform1i', 'void uniform1i(int location, int x)', 'Sets an int, bool or sampler2D uniform.'],
+    ['uniformMatrix4', 'void uniformMatrix4(int location, list<float> matrix)', 'Sets a mat4 uniform from 16 floats.'],
+    ['genVertexArray', 'int genVertexArray()', 'A new vertex array (glGenVertexArrays).'],
+    ['bindVertexArray', 'void bindVertexArray(int vertexArray)', 'Uses this vertex array (glBindVertexArray).'],
+    ['deleteVertexArray', 'void deleteVertexArray(int vertexArray)', 'Frees a vertex array.'],
+    ['genBuffer', 'int genBuffer()', 'A new buffer (glGenBuffers).'],
+    ['bindBuffer', 'void bindBuffer(int target, int buffer)', 'Uses this buffer as ARRAY_BUFFER or ELEMENT_ARRAY_BUFFER (glBindBuffer).'],
+    ['deleteBuffer', 'void deleteBuffer(int buffer)', 'Frees a buffer.'],
+    ['bufferData', 'void bufferData(int target, list<float> data, int usage)', 'Copies floats into the bound buffer (glBufferData).'],
+    ['bufferDataInts', 'void bufferDataInts(int target, list<int> data, int usage)', 'Copies whole numbers into the bound buffer, for ELEMENT_ARRAY_BUFFER.'],
+    ['vertexAttribPointer', 'void vertexAttribPointer(int index, int size, int strideFloats, int offsetFloats)', 'Where vertex input `index` is in the buffer. Counted in floats, not bytes.'],
+    ['enableVertexAttribArray', 'void enableVertexAttribArray(int index)', 'Turns a vertex input on.'],
+    ['drawArrays', 'void drawArrays(int mode, int first, int count)', 'Draws corners from the bound vertex array (glDrawArrays).'],
+    ['drawElements', 'void drawElements(int mode, int count)', 'Draws using the corner numbers in the ELEMENT_ARRAY_BUFFER (glDrawElements).'],
+    ['genTexture', 'int genTexture()', 'A new, empty texture.'],
+    ['bindTexture', 'void bindTexture(int target, int texture)', 'Uses this texture (target TEXTURE_2D).'],
+    ['deleteTexture', 'void deleteTexture(int texture)', 'Frees a texture.'],
+    ['activeTexture', 'void activeTexture(int unit)', 'Which texture unit bindTexture sets: TEXTURE0 to TEXTURE3.'],
+    ['texParameteri', 'void texParameteri(int target, int name, int value)', 'A texture setting, like TEXTURE_MAG_FILTER, NEAREST.'],
+    ['generateMipmap', 'void generateMipmap(int target)', 'Makes the smaller copies used when the texture is drawn small.'],
+    ['loadTexture', 'int loadTexture(string path)', 'Loads an image from the game folder into a new texture. (0, 0) is the bottom-left.'],
+]).concat(constants(['COLOR_BUFFER_BIT', 'DEPTH_BUFFER_BIT', 'STENCIL_BUFFER_BIT', 'POINTS', 'LINES', 'LINE_LOOP', 'LINE_STRIP',
+    'TRIANGLES', 'TRIANGLE_STRIP', 'TRIANGLE_FAN', 'ARRAY_BUFFER', 'ELEMENT_ARRAY_BUFFER', 'STATIC_DRAW', 'DYNAMIC_DRAW', 'STREAM_DRAW',
+    'VERTEX_SHADER', 'FRAGMENT_SHADER', 'DEPTH_TEST', 'BLEND', 'CULL_FACE', 'ZERO', 'ONE', 'SRC_ALPHA', 'ONE_MINUS_SRC_ALPHA', 'LESS',
+    'LEQUAL', 'ALWAYS', 'FRONT', 'BACK', 'FRONT_AND_BACK', 'TEXTURE_2D', 'TEXTURE0', 'TEXTURE1', 'TEXTURE2', 'TEXTURE3',
+    'TEXTURE_MIN_FILTER', 'TEXTURE_MAG_FILTER', 'TEXTURE_WRAP_S', 'TEXTURE_WRAP_T', 'NEAREST', 'LINEAR', 'NEAREST_MIPMAP_NEAREST',
+    'LINEAR_MIPMAP_LINEAR', 'REPEAT', 'CLAMP_TO_EDGE', 'NO_ERROR', 'INVALID_ENUM', 'INVALID_VALUE', 'INVALID_OPERATION', 'OUT_OF_MEMORY'],
+    'An OpenGL constant, with the same number as GL_ in real OpenGL.'));
+
+LIBRARIES.DirectX = toolkitCommon('DirectX').concat([
+    ['adapterName', 'string adapterName()', 'The graphics card\'s name.'],
+    ['clear', 'void clear(float r, float g, float b, float a)', 'Fills the screen with a color and resets the depth buffer.'],
+    ['setDepthTest', 'void setDepthTest(bool on)', 'Whether near things hide far things (on to start with).'],
+    ['setBlending', 'void setBlending(bool on)', 'Whether see-through colors mix with what\'s behind them (off to start with).'],
+    ['setCulling', 'void setCulling(int mode)', 'CULL_NONE (the start), CULL_FRONT or CULL_BACK.'],
+    ['setTopology', 'void setTopology(int topology)', 'What corners make: TRIANGLES (the start), TRIANGLE_STRIP, LINES, LINE_STRIP, POINTS.'],
+    ['compileVertexShader', 'int compileVertexShader(string hlsl, string entry = "main")', 'Compiles an HLSL function as a vertex shader (vs_5_0).'],
+    ['compilePixelShader', 'int compilePixelShader(string hlsl, string entry = "main")', 'Compiles an HLSL function as a pixel shader (ps_5_0).'],
+    ['setShaders', 'void setShaders(int vertexShader, int pixelShader)', 'Draws with these shaders from now on.'],
+    ['createInputLayout', 'int createInputLayout(int vertexShader, list<string> names, list<int> sizes)', 'Describes one corner: each input\'s semantic name (POSITION, COLOR...) and size in floats.'],
+    ['setInputLayout', 'void setInputLayout(int layout)', 'Uses this input layout from now on.'],
+    ['createVertexBuffer', 'int createVertexBuffer(list<float> data)', 'A buffer of corners.'],
+    ['createIndexBuffer', 'int createIndexBuffer(list<int> indices)', 'A buffer of corner numbers, for drawIndexed.'],
+    ['createConstantBuffer', 'int createConstantBuffer(int floatCount)', 'A buffer of values for the shaders (a cbuffer), which can change every frame.'],
+    ['updateConstantBuffer', 'void updateConstantBuffer(int buffer, list<float> data)', 'Replaces a constant buffer\'s values.'],
+    ['setVertexBuffer', 'void setVertexBuffer(int buffer, int strideFloats)', 'Draws corners from this buffer, each strideFloats floats long.'],
+    ['setIndexBuffer', 'void setIndexBuffer(int buffer)', 'Uses these corner numbers for drawIndexed.'],
+    ['setConstantBuffer', 'void setConstantBuffer(int slot, int buffer)', 'Gives the buffer to both shaders as register(b<slot>).'],
+    ['draw', 'void draw(int vertexCount, int startVertex = 0)', 'Draws corners from the vertex buffer.'],
+    ['drawIndexed', 'void drawIndexed(int indexCount, int startIndex = 0)', 'Draws using the index buffer.'],
+    ['loadTexture', 'int loadTexture(string path)', 'Loads an image from the game folder. (0, 0) is the top-left.'],
+    ['setTexture', 'void setTexture(int slot, int texture)', 'Gives the texture to the pixel shader as register(t<slot>).'],
+    ['setTextureFilter', 'void setTextureFilter(bool smooth)', 'True (the start) blends stretched pixels; false keeps them sharp.'],
+]).concat(constants(['POINTS', 'LINES', 'LINE_STRIP', 'TRIANGLES', 'TRIANGLE_STRIP'], 'A topology, for setTopology.'),
+    constants(['CULL_NONE', 'CULL_FRONT', 'CULL_BACK'], 'A culling mode, for setCulling.'));
+
+LIBRARIES.Vulkan = toolkitCommon('Vulkan').concat([
+    ['deviceName', 'string deviceName()', 'The graphics card\'s name.'],
+    ['setTopology', 'void setTopology(int topology)', 'For pipelines made after this: TRIANGLES (the start), TRIANGLE_STRIP, TRIANGLE_FAN, LINES, LINE_STRIP, POINTS.'],
+    ['setDepthTest', 'void setDepthTest(bool on)', 'For pipelines made after this: whether near things hide far things (on to start with).'],
+    ['setCulling', 'void setCulling(int mode)', 'For pipelines made after this: CULL_NONE (the start), CULL_FRONT or CULL_BACK.'],
+    ['setBlending', 'void setBlending(bool on)', 'For pipelines made after this: whether see-through colors mix (off to start with).'],
+    ['loadShader', 'int loadShader(string spvPath)', 'Loads a compiled shader. frg build makes shape.vert.spv from shape.vert.'],
+    ['createPipeline', 'int createPipeline(int vertexShader, int fragmentShader, list<int> attributeSizes, int pushConstantFloats = 0)', 'A pipeline: the shaders, each vertex input\'s size in floats, and room for push constants.'],
+    ['createVertexBuffer', 'int createVertexBuffer(list<float> data)', 'A buffer of corners.'],
+    ['createIndexBuffer', 'int createIndexBuffer(list<int> indices)', 'A buffer of corner numbers, for drawIndexed.'],
+    ['beginFrame', 'bool beginFrame(float r, float g, float b, float a)', 'Starts a frame cleared to this color. False means skip drawing this time (don\'t call endFrame).'],
+    ['bindPipeline', 'void bindPipeline(int pipeline)', 'Draws with this pipeline.'],
+    ['bindVertexBuffer', 'void bindVertexBuffer(int buffer)', 'Draws corners from this buffer.'],
+    ['bindIndexBuffer', 'void bindIndexBuffer(int buffer)', 'Uses these corner numbers for drawIndexed.'],
+    ['pushConstants', 'void pushConstants(int pipeline, list<float> data)', 'Sends floats to the shaders\' push_constant block, for the draws after it.'],
+    ['draw', 'void draw(int vertexCount, int firstVertex = 0)', 'Draws corners from the vertex buffer.'],
+    ['drawIndexed', 'void drawIndexed(int indexCount, int firstIndex = 0)', 'Draws using the index buffer.'],
+    ['endFrame', 'void endFrame()', 'Finishes the frame. It appears at the next shouldClose().'],
+]).concat(constants(['POINTS', 'LINES', 'LINE_STRIP', 'TRIANGLES', 'TRIANGLE_STRIP', 'TRIANGLE_FAN'], 'A topology, for setTopology.'),
+    constants(['CULL_NONE', 'CULL_FRONT', 'CULL_BACK'], 'A culling mode, for setCulling.'));
+
 const COLORS = ['WHITE', 'BLACK', 'BLANK', 'LIGHTGRAY', 'GRAY', 'DARKGRAY', 'RED', 'MAROON', 'ORANGE', 'YELLOW', 'GOLD',
     'GREEN', 'LIME', 'DARKGREEN', 'SKYBLUE', 'BLUE', 'DARKBLUE', 'PURPLE', 'VIOLET', 'PINK', 'MAGENTA', 'BROWN', 'BEIGE'];
 const KEYS = [...'ABCDEFGHIJKLMNOPQRSTUVWXYZ'].concat([...'0123456789'].map(d => 'NUM' + d),
@@ -354,7 +498,7 @@ function libraryCompletions(document, position) {
     const owner = m[1];
     if (LIBRARIES[owner]) {
         return LIBRARIES[owner].map(([name, sig, doc]) => {
-            const isConst = /^[A-Z]+$/.test(name);
+            const isConst = /^[A-Z][A-Z0-9_]*$/.test(name);
             const item = new vscode.CompletionItem(name, isConst ? vscode.CompletionItemKind.Constant : vscode.CompletionItemKind.Function);
             item.detail = sig.split('\n')[0];
             item.documentation = new vscode.MarkdownString().appendCodeblock(sig, 'forge').appendMarkdown(doc);

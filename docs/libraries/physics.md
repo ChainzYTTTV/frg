@@ -132,6 +132,8 @@ A body only lands on it when it's **falling** and was **above** the platform's t
 
 ### Platforms and walls
 
+To build a whole level of walls and platforms, drawing it as text with [`<tilemap>`](tilemap.md) is usually easier: `level.addBodies("#")` makes the static bodies for you.
+
 ```cpp
 void addPlatform(float x, float y, float w, float h){
     Body b = Body(x, y, w, h);

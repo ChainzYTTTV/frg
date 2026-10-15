@@ -1,0 +1,27 @@
+=== main.frg
+#include <window>
+#include <assets>
+#include <tilemap>
+
+TileMap level = TileMap("""
+#####
+#..=#
+#####
+""", 32);
+Texture tiles = assets.loadTexture("tiles.png");
+
+void update(float dt) {
+}
+
+void draw() {
+    level.draw("#", color.GRAY);
+    level.drawTiles(tiles, 16, "#.=");
+}
+
+int main(){
+    window.open(320, 200, "Tiles");
+    window.run();
+    return 0;
+}
+=== build
+=== no warnings

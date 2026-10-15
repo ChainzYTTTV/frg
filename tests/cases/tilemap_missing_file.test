@@ -1,0 +1,9 @@
+=== main.frg
+#include <tilemap>
+
+int main(){
+    TileMap level = tilemap.load("nope.txt", 16);
+    return 0;
+}
+=== runtime error
+can't find the file 'nope.txt'

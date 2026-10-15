@@ -702,6 +702,29 @@ class Emitter {
 }
 )FRG";
 
+static const char* kTilemap = R"FRG(
+class TileMap {
+    float tileSize;
+    TileMap(string text, float tileSize);
+    int columns();
+    int rows();
+    float width();
+    float height();
+    string get(int column, int row);
+    void set(int column, int row, string tile);
+    int columnAt(float x);
+    int rowAt(float y);
+    rect tileRect(int column, int row);
+    list<vec2> find(string tiles);
+    list<rect> solidAreas(string tiles);
+    list<Body> addBodies(string tiles, bool oneWay = false);
+    void draw(string tiles, color c);
+    void drawTiles(Texture tileset, int sourceSize, string tiles);
+}
+
+TileMap load(string path, float tileSize);
+)FRG";
+
 const std::vector<PreludeLib>& preludeLibs() {
     using K = LibKind;
     static const std::vector<PreludeLib> libs = {
@@ -719,6 +742,7 @@ const std::vector<PreludeLib>& preludeLibs() {
         {"save", kSave, false, "forge_save.hpp"},
         {"tween", kTween, false, "forge_tween.hpp"},
         {"particles", kParticles, true, "forge_particles.hpp", K::Engine},
+        {"tilemap", kTilemap, true, "forge_tilemap.hpp", K::Engine, {}, {}, {"physics", "assets"}},
         {"scenes", kScenes, false, "forge_scenes.hpp"},
         {"ui", kUi, true, "forge_ui.hpp", K::Engine},
         {"graphics3d", kGraphics3d, true, "forge_graphics3d.hpp", K::Engine},

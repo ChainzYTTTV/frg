@@ -19,6 +19,7 @@ struct PreludeLib {
     LibKind kind = LibKind::Plain;
     std::vector<std::string> sources;    // extra runtime .cpp files compiled into the game
     std::vector<std::string> linkFlags;  // extra libraries to link
+    std::vector<std::string> uses;       // other libraries whose types its declarations use (tilemap uses Body)
 };
 
 const std::vector<PreludeLib>& preludeLibs();

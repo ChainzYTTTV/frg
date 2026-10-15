@@ -136,6 +136,9 @@ const LIBRARIES = {
         ['minute', 'int minute()', 'The minute.'],
         ['second', 'int second()', 'The second.'],
     ],
+    tilemap: [
+        ['load', 'TileMap load(string path, float tileSize)', 'A level from a text file, one character per tile. Or TileMap("""...""", 32). Then: level.addBodies("#"), level.find("C"), level.get(col, row), level.draw("#", color), level.drawTiles(tileset, 16, "#=").'],
+    ],
     tween: [
         ['ease', 'float ease(Ease ease, float t)', 'The eased amount for t from 0 to 1: tween.ease(Ease.OUT, 0.5) is 0.875. For a smooth change over time, use a Tween: Tween t = Tween(from, to, seconds, Ease.OUT); then t.update(dt) and t.value().'],
     ],

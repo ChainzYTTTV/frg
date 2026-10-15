@@ -1,0 +1,44 @@
+=== main.frg
+#include <stdio>
+#include <tilemap>
+#include <physics>
+
+int main(){
+    TileMap level = TileMap("""
+##########
+#P   C   #
+#   ===  #
+##########
+""", 10);
+    print(level);
+    print("{level.columns()} x {level.rows()}, {level.width()} x {level.height()}");
+    print(level.get(1, 1) + level.get(5, 1) + "[" + level.get(50, 50) + "]");
+    print(level.find("P"));
+    print(level.find("C="));
+
+    // Walls are merged into 4 boxes, not 24 single tiles.
+    list<rect> walls = level.solidAreas("#");
+    print(walls.length);
+    print(walls);
+
+    list<Body> bodies = level.addBodies("#");
+    list<Body> ledges = level.addBodies("=", true);
+    print("{bodies.length} {ledges.length} {physics.count()} {bodies[0].isStatic} {ledges[0].oneWay}");
+
+    level.set(5, 1, " ");
+    print(level.find("C").length);
+    print("{level.columnAt(25)} {level.rowAt(-1)} {level.tileRect(2, 3)}");
+    return 0;
+}
+=== output
+TileMap(10 x 4 tiles)
+10 x 4, 100.0 x 40.0
+PC[ ]
+[vec2(10.0, 10.0)]
+[vec2(50.0, 10.0), vec2(40.0, 20.0), vec2(50.0, 20.0), vec2(60.0, 20.0)]
+4
+[rect(0.0, 0.0, 100.0, 10.0), rect(0.0, 10.0, 10.0, 30.0), rect(90.0, 10.0, 10.0, 30.0), rect(10.0, 30.0, 80.0, 10.0)]
+4 1 5 true true
+0
+2 -1 rect(20.0, 30.0, 10.0, 10.0)
+=== no warnings

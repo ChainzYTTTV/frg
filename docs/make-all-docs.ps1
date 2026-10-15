@@ -25,7 +25,7 @@ $parts = [ordered]@{
         "libraries/README.md", "libraries/core-types.md", "libraries/stdio.md", "libraries/math.md", "libraries/random.md",
         "libraries/window.md", "libraries/input.md", "libraries/graphics2d.md", "libraries/graphics3d.md",
         "libraries/assets.md", "libraries/audio.md", "libraries/physics.md", "libraries/time.md", "libraries/file.md",
-        "libraries/save.md", "libraries/tween.md", "libraries/particles.md", "libraries/scenes.md", "libraries/ui.md", "libraries/ecs.md", "libraries/tasks.md",
+        "libraries/save.md", "libraries/tween.md", "libraries/particles.md", "libraries/tilemap.md", "libraries/scenes.md", "libraries/ui.md", "libraries/ecs.md", "libraries/tasks.md",
         "libraries/toolkits.md", "libraries/opengl.md", "libraries/directx.md", "libraries/vulkan.md")
     # The practice projects are left out here: they're already in Part A (Part 6 of the teaching brief).
     "Part E: Guides" = @("guides/game-loop.md", "guides/sprites-and-animation.md", "guides/platformer-walkthrough.md")

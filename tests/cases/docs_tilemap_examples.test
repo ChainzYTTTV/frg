@@ -1,0 +1,62 @@
+=== main.frg
+#include <window>
+#include <graphics2d>
+#include <assets>
+#include <physics>
+#include <math>
+#include <tilemap>
+
+// The examples from docs/libraries/tilemap.md.
+TileMap level = TileMap("""
+##################
+#                #
+#   C      ===   #
+#  ===           #
+# P       C      #
+##################
+""", 32);
+list<vec2> coins = [];
+Body hero = Body(0, 0, 24, 24);
+Texture tileset = assets.loadTexture("tiles.png");
+Camera2D camera = Camera2D(vec2(0, 0), vec2(480, 270));
+
+void build(){
+    level.addBodies("#");
+    level.addBodies("=", true);
+    for (vec2 corner in level.find("C")) {
+        coins.add(corner + vec2(16, 16));
+    }
+    hero.position = level.find("P")[0];
+}
+
+void update(float dt){
+    physics.step(dt);
+    float half = window.width() / 2.0;
+    camera.target.x = math.clamp(hero.center().x, half, level.width() - half);
+}
+
+void draw(){
+    graphics2d.setCamera(camera);
+    level.draw("#", color.DARKGRAY);
+    level.draw("=", color.BROWN);
+    level.drawTiles(tileset, 16, "#.=");
+    for (int row = 0; row < level.rows(); row++) {
+        for (int column = 0; column < level.columns(); column++) {
+            if (level.get(column, row) == "#" and level.get(column, row - 1) != "#") {
+                rect r = level.tileRect(column, row);
+                graphics2d.drawRect(r.x, r.y, r.width, 5, color.GREEN);
+            }
+        }
+    }
+    graphics2d.resetCamera();
+}
+
+int main(){
+    physics.add(hero);
+    build();
+    window.open(960, 540, "Tiles");
+    window.run();
+    return 0;
+}
+=== build
+=== no warnings

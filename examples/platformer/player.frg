@@ -6,7 +6,7 @@
 
 const float MOVE_SPEED = 320;
 const float JUMP_SPEED = 620;
-const vec2 START = vec2(80, 380);
+vec2 start = vec2(80, 380);    // main.frg moves it to the P in the level
 
 // A Player is a physics Body (it inherits position, size, velocity, onGround...)
 // with a few extra things of its own.
@@ -15,7 +15,7 @@ class Player : Body {
     int deaths = 0;
 
     void respawn() {
-        position = START;
+        position = start;
         velocity = vec2.ZERO;
         deaths++;
         flash();
@@ -54,7 +54,7 @@ Emitter makeDust(){
 }
 
 Player makeHero(){
-    Player p = Player(START.x, START.y, 36, 36);
+    Player p = Player(start.x, start.y, 36, 36);
     physics.add(p);
     return p;
 }

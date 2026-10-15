@@ -10,7 +10,7 @@ The game is split into three files:
 |---|---|
 | `main.frg` | opens the window and runs the loop, calling the other two files |
 | `player.frg` | the player: input, jumping, falling into a pit, drawing |
-| `level.frg` | the platforms and the coins |
+| `level.frg` | the level, drawn as text, and the coins |
 
 ## main.frg
 
@@ -34,13 +34,15 @@ int main(){
     window.open(960, 540, "Forge Platformer");
     window.setBackground(color(24, 26, 40));
     level.build();
+    player.start = level.start;     // the P in the level
+    player.hero.position = level.start;
     window.run();
     return 0;
 }
 ```
 
 - `window.open` makes a 960×540 window.
-- `level.build()` calls `build` in `level.frg`. The file-name prefix is required, because it's in another file.
+- `level.build()` calls `build` in `level.frg`, which turns the level's text into physics bodies and coins. The file-name prefix is required, because it's in another file. Then the player is moved to the `P` in the level.
 - `window.run()` starts the [engine loop](game-loop.md): from now on Forge calls `update(dt)` and `draw()` every frame, until the window closes.
 
 ```cpp
@@ -65,7 +67,7 @@ This order matters:
 ```cpp
 void followPlayer(float dt){
     float half = window.width() / 2.0;
-    float x = math.clamp(player.hero.center().x, half, level.WIDTH - half);
+    float x = math.clamp(player.hero.center().x, half, level.tiles.width() - half);
     camera.target = camera.target.lerp(vec2(x, window.height() / 2.0), 5 * dt);
 }
 ```
@@ -111,10 +113,10 @@ When the list of coins is empty, a centered win message is drawn: start half its
 ```cpp
 const float MOVE_SPEED = 320;
 const float JUMP_SPEED = 620;
-const vec2 START = vec2(80, 380);
+vec2 start = vec2(80, 380);
 ```
 
-Constants keep the "tuning numbers" in one place. Try changing them: a higher `JUMP_SPEED` means higher jumps.
+`start` is where the player starts, and where it goes back to after falling. It's a variable, not a constant, because `main.frg` moves it to the `P` in the level. Constants keep the "tuning numbers" in one place. Try changing them: a higher `JUMP_SPEED` means higher jumps.
 
 ```cpp
 class Player : Body {
@@ -128,7 +130,7 @@ class Player : Body {
 
 ```cpp
     void respawn() {
-        position = START;
+        position = start;
         velocity = vec2.ZERO;
         deaths++;
         flash();
@@ -154,7 +156,7 @@ A [task](../language/11-tasks.md): it switches the color, waits 0.08 seconds, sw
 Player hero = makeHero();
 
 Player makeHero(){
-    Player p = Player(START.x, START.y, 36, 36);
+    Player p = Player(start.x, start.y, 36, 36);
     physics.add(p);
     return p;
 }
@@ -219,43 +221,53 @@ The body is a colored rectangle. The eyes are two small black rectangles, shifte
 
 ## level.frg
 
-```cpp
-const float WIDTH = 2400;
+The level is **drawn as text**, with a [tile map](../libraries/tilemap.md): each character is one 36 × 36 square of the level.
 
-list<Body> platforms = [];
-list<vec2> coins = [];
-int totalCoins = 0;
-int collected = 0;
+```cpp
+TileMap tiles = TileMap("""
+#                                                          #
+#                                                          #
+#                                                          #
+#                                                          #
+#                                             C            #
+#                            C               ====          #
+#                      C    ####                           #
+#         C           ====                C                #
+#        ====                            ====              #
+#    C              C                  C             C     #
+#   ====          =====         C    =====          ====   #
+#                                                          #
+# P     C                                               C  #
+############    ##############     ###########    ##########
+############    ##############     ###########    ##########
+""", 36);
 ```
 
-The level is 2400 pixels wide (two and a half windows); `main.frg` uses `level.WIDTH` to stop the camera at the ends. Then the level's state: the platform bodies (kept for drawing), the coin positions still left, and the counts.
+| Character | Means |
+|---|---|
+| `#` | ground and walls |
+| `=` | a one-way platform: you can jump up through it and land on top |
+| `C` | a coin |
+| `P` | where the player starts |
+| (a space) | nothing |
+
+The meaning isn't built into Forge: it's what `build` and `draw` below do with each character. To change the level, change the text. The 60 columns × 36 pixels make it 2160 pixels wide, and the 15 rows make it exactly one window (540 pixels) tall.
 
 ```cpp
 void build(){
-    addPlatform(0, 500, 400, 40);
-    addPlatform(540, 500, 560, 40);
-    addPlatform(1250, 500, 500, 40);
-    addPlatform(1880, 500, 520, 40);
-    ...
-    addPlatform(-20, 0, 20, 540);
-    addPlatform(WIDTH, 0, 20, 540);
-    coins = [vec2(220, 370), vec2(460, 290), ...];
+    tiles.addBodies("#");
+    tiles.addBodies("=", true);
+    for (vec2 corner in tiles.find("C")) {
+        coins.add(corner + vec2(tiles.tileSize / 2, tiles.tileSize / 2));
+    }
     totalCoins = coins.length;
+    start = tiles.find("P")[0];
 }
 ```
 
-The ground is four pieces with gaps (the pits) between them. The two walls sit just outside the two ends of the level, so the player can't walk off the sides.
-
-```cpp
-void addPlatform(float x, float y, float width, float height){
-    Body b = Body(x, y, width, height);
-    b.isStatic = true;
-    physics.add(b);
-    platforms.add(b);
-}
-```
-
-`isStatic = true` means the platform never moves, but moving bodies collide with it. The same body is put in the physics world *and* in our list. Because `Body` is a class, both hold the very same object.
+- `addBodies("#")` makes static physics bodies for the `#` tiles. Neighbouring tiles are **merged**: a row of 12 ground tiles becomes one long body, not 12 small ones. `addBodies("=", true)` does the same for the planks, and `true` makes them [one-way](../libraries/physics.md#one-way-platforms).
+- `find("C")` gives the top-left corner of every `C` tile. Each coin is kept as the middle of its tile, half a tile further right and down.
+- `find("P")[0]` is the first (and only) `P`: the player's start.
 
 ```cpp
 void collectCoins(rect playerBox){
@@ -264,6 +276,7 @@ void collectCoins(rect playerBox){
         if (playerBox.overlaps(rect(c.x - 10, c.y - 10, 20, 20))) {
             coins.removeAt(i);
             collected++;
+            ...
         }
     }
 }
@@ -273,18 +286,28 @@ Each coin is checked as a 20×20 box around its center. The loop goes **backward
 
 ```cpp
 void draw(){
-    for (Body p in platforms) {
-        graphics2d.drawRect(p.bounds(), color(70, 86, 120));
-        graphics2d.drawRect(p.position.x, p.position.y, p.size.x, 5, color(110, 200, 130));
+    tiles.draw("#", color(70, 86, 120));
+    for (int row = 0; row < tiles.rows(); row++) {
+        for (int column = 0; column < tiles.columns(); column++) {
+            if (tiles.get(column, row) == "#" and tiles.get(column, row - 1) != "#") {
+                rect r = tiles.tileRect(column, row);
+                graphics2d.drawRect(r.x, r.y, r.width, 5, color(110, 200, 130));
+            }
+        }
     }
-    for (vec2 c in coins) {
-        graphics2d.drawCircle(c, 10, color.GOLD);
-        graphics2d.drawCircleOutline(c.x, c.y, 10, color.ORANGE);
+    for (vec2 p in tiles.find("=")) {
+        graphics2d.drawRect(p.x, p.y, tiles.tileSize, 10, color(170, 130, 90));
     }
+    ...
 }
 ```
 
-Each platform is a blue-gray rectangle with a thin green strip on top (grass). Each coin is a gold circle with an orange outline.
+- `tiles.draw("#", color)` fills every `#` tile with one color.
+- The two loops go through every tile and add a strip of green **grass** on top of each `#` that has nothing above it. `get(column, row - 1)` is the tile above; outside the map, `get` gives `" "`, so the top row works too.
+- The one-way platforms are drawn as thin wooden planks.
+- Then the coins: a gold circle with an orange outline each.
+
+With an image of tiles instead of colors, `tiles.drawTiles(tileset, 16, "#=")` draws each `#` as the tileset's first 16 × 16 picture and each `=` as the second.
 
 ## Particles: dust and sparkles
 
@@ -310,7 +333,7 @@ Both emitters are made by small functions (`makeDust`, `makeSparkles`) that set 
 ## Things to try
 
 1. Show the death count on screen (`player.hero.deaths`).
-2. Add another coin, and a platform to reach it. Then make the level longer: raise `WIDTH` and add more ground.
+2. Add another coin and a platform to reach it, by typing a `C` and some `=` into the level text. Then make the level longer: add more columns to every row.
 3. Make the jump higher, or gravity weaker (`physics.setGravity(vec2(0, 700))` in `main`).
 4. Add a timer: `window.time()` at the start, and show how long the run took when all coins are collected.
 5. A moving platform: keep a `Body` in a variable and change its `position.x` in `update` using `math.sin(window.time())`.

@@ -662,6 +662,12 @@ void Gen::emitTypeDef(TypeDecl* d) {
     for (auto& m : d->methods)
         line(std::string(d->kind == DK::Class ? "virtual " : "") + m->ret->cpp + " " + id(m->name) + "(" + params(m.get()) + ");");
     if (d->kind == DK::Struct) line("bool operator==(const " + name + "&) const = default;");
+    if (d->kind == DK::Class) {
+        // Lets the runtime ask an object "are you a <type name>?" (used by ECS's entity.get("Health")).
+        bool chain = d->base && (!d->base->builtin || (d->base->name == "Component" && d->base->module->name == "ECS"));
+        line("virtual bool frg$is(const ::std::string& n) { return n == " + cppString(d->name) +
+             (chain ? " || " + d->base->cpp + "::frg$is(n)" : "") + "; }");
+    }
     ind--;
     line("};");
     line("}");

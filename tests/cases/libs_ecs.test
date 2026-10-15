@@ -1,0 +1,74 @@
+=== main.frg
+#include <stdio>
+#include <ECS>
+
+class Health : Component {
+    int hp = 3;
+
+    void start() {
+        print("{entity().name} starts with {hp} HP");
+    }
+
+    void update(float dt) {
+        hp--;
+        if (hp <= 0) {
+            print("{entity().name} is gone");
+            entity().destroy();
+        }
+    }
+}
+
+class Mover : Component {
+    float x = 0;
+    float speed;
+    Mover(float speed) {
+        this.speed = speed;
+    }
+    void update(float dt) {
+        x += speed * dt;
+    }
+}
+
+class FastMover : Mover {
+    FastMover() {
+        super(100);
+    }
+}
+
+int main(){
+    Entity slime = ECS.create("slime");
+    slime.add(Health());
+    slime.add(Mover(10));
+
+    Entity bird = ECS.create("bird");
+    bird.add(FastMover());
+
+    print(ECS.count());
+    print(slime.has("Health"));
+    print(bird.has("Mover"));       // a FastMover is a kind of Mover
+    print(bird.has("Health"));
+
+    for (int i = 0; i < 4; i++) {
+        ECS.update(0.5);
+    }
+
+    print(ECS.count());
+    print(ECS.find("slime") == null);
+    Mover m = bird.get("Mover") as Mover;
+    print("bird moved {m.x}");
+    print(ECS.withComponent("Mover").length);
+    print(bird);
+    return 0;
+}
+=== output
+2
+true
+true
+false
+slime starts with 3 HP
+slime is gone
+1
+true
+bird moved 200.0
+1
+Entity(bird, 1 components)

@@ -316,6 +316,37 @@ vec2 toScreen(vec3 point);
 Model loadModel(string path);
 )FRG";
 
+static const char* kEcs = R"FRG(
+class Component {
+    void start();
+    void update(float dt);
+    void draw();
+    Entity? entity();
+}
+
+class Entity {
+    string name;
+    bool active;
+    list<Component> components;
+    Entity(string name);
+    void add(Component component);
+    Component? get(string type);
+    bool has(string type);
+    bool remove(string type);
+    void destroy();
+}
+
+Entity create(string name);
+void add(Entity entity);
+void update(float dt);
+void draw();
+Entity? find(string name);
+list<Entity> all();
+list<Entity> withComponent(string type);
+void clear();
+int count();
+)FRG";
+
 static const char* kTasks = R"FRG(
 void update(float dt);
 void runAll();
@@ -347,6 +378,7 @@ const std::vector<PreludeLib>& preludeLibs() {
         {"scenes", kScenes, false, "forge_scenes.hpp"},
         {"ui", kUi, true, "forge_ui.hpp"},
         {"graphics3d", kGraphics3d, true, "forge_graphics3d.hpp"},
+        {"ECS", kEcs, false, "forge_ecs.hpp"},
     };
     return libs;
 }

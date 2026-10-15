@@ -13,7 +13,7 @@ Where the parts disagree, the detailed pages (B to F) are more precise, and the 
 - **Part A: The teaching brief (for an AI tutor)**: Teaching Brief: the Forge Programming Language
 - **Part B: Start here**: Forge Documentation - Getting Started
 - **Part C: The language**: 1. The Basics - 2. Variables and Types - 3. Text - 4. Operators - 5. Making Decisions and Repeating - 6. Functions - 7. Files and Folders - 8. Lists and Maps - 9. Structs and Classes - 10. Enums, Optionals and Pointers - 11. Tasks - 12. Errors - 13. Reserved Words - 14. Coming From Other Languages
-- **Part D: The libraries**: Library Overview - Built-in Types: vec2, vec3, vec4, color, rect - <stdio>: Console Input and Output - <math>: Math Functions - <random>: Random Numbers - <window>: The Game Window - <input>: Keyboard, Mouse and Controllers - <graphics2d>: 2D Drawing - <graphics3d>: 3D Drawing - <assets>: Images, Animations and Fonts - <audio>: Sounds and Music - <physics>: Boxes, Gravity and Collisions - <time>: Clock, Date and Timers - <file>: Reading and Writing Text Files - <save>: Remembering Things Between Runs - <scenes>: Menus, Levels and Game Over - <ui>: Buttons, Checkboxes, Sliders and Text Boxes - <ECS>: Entities and Components - <tasks>: Tasks Without a Window - Low-Level Toolkits: OpenGL, DirectX and Vulkan - <OpenGL>: Drawing with OpenGL Yourself - <DirectX>: Drawing with Direct3D 11 Yourself - <Vulkan>: Drawing with Vulkan Yourself
+- **Part D: The libraries**: Library Overview - Built-in Types: vec2, vec3, vec4, color, rect - <stdio>: Console Input and Output - <math>: Math Functions - <random>: Random Numbers - <window>: The Game Window - <input>: Keyboard, Mouse and Controllers - <graphics2d>: 2D Drawing - <graphics3d>: 3D Drawing - <assets>: Images, Animations and Fonts - <audio>: Sounds and Music - <physics>: Boxes, Gravity and Collisions - <time>: Clock, Date and Timers - <file>: Reading and Writing Text Files - <save>: Remembering Things Between Runs - <tween>: Smooth Changes Over Time - <scenes>: Menus, Levels and Game Over - <ui>: Buttons, Checkboxes, Sliders and Text Boxes - <ECS>: Entities and Components - <tasks>: Tasks Without a Window - Low-Level Toolkits: OpenGL, DirectX and Vulkan - <OpenGL>: Drawing with OpenGL Yourself - <DirectX>: Drawing with Direct3D 11 Yourself - <Vulkan>: Drawing with Vulkan Yourself
 - **Part E: Guides**: The Game Loop - Sprites and Animation - Platformer Walkthrough
 - **Part F: Under the hood**: How Forge Works
 - **Part G: The cheat sheet (everything on one page)**: Forge Cheat Sheet (v0.6)
@@ -509,6 +509,7 @@ Library functions are reached through the library name (`window.open(...)`). Lib
 | `<audio>` | `audio.loadSound("x.wav")` gives a `Sound`, `audio.loadMusic("x.ogg")` gives a `Music`, `audio.setVolume(v)` |
 | `<graphics3d>` | the `Camera` struct and `Model` class, `graphics3d.setCamera(cam)`, `drawCube(pos, size, color)`, `drawCubeOutline`, `drawSphere(center, radius, color)`, `drawSphereOutline`, `drawCylinder(pos, radius, height, color)`, `drawPlane(center, vec2 size, color)`, `drawGrid(slices, spacing)`, `drawLine(from, to, color)`, `toScreen(vec3)`, `loadModel("x.glb")` |
 | `<time>` | `time.now()`, `time.sleep(s)`, `time.clock()`, `time.date()`, `year() month() day() hour() minute() second()`, the `Timer` class |
+| `<tween>` | smooth changes over time: `Tween slide = Tween(-300, 40, 0.5, Ease.OUT);` (from, to, seconds, easing), then `slide.update(dt);` and use `slide.value()`. Also `progress()` (0 to 1, with `lerp` for positions and colors: `a.lerp(b, t.progress())`), `isDone()`, `restart()`, `reverse()` (go back from where it is), fields `looping` and `pingPong`. `Ease.LINEAR` (steady), `IN` (slow start), `OUT` (slow end, the default), `IN_OUT`, `BOUNCE`. There are no callbacks: check `isDone()` |
 | `<save>` | `save.setInt(key, n)` / `getInt(key, backup)`, the same for `Float`, `String` and `Bool`, `has(key)`, `remove(key)`, `clear()`. Kept in `save.txt` in the game's folder |
 | `<file>` | `file.read(path)`, `write(path, text)`, `append(path, text)`, `exists(path)`, `remove(path)`, `readLines(path)`, `writeLines(path, list)`, `files(folder)` |
 | `<scenes>` | the `Scene` class, `scenes.change(scene)`, `update(dt)`, `draw()`, `current()` |
@@ -1500,7 +1501,7 @@ Hints:
 
   Start it with `flash();`. The game keeps running while it waits.
 
-Make it yours: "Wave 3!" text that appears for 2 seconds (another task). A shield pickup.
+Make it yours: "Wave 3!" text that appears for 2 seconds (another task), sliding in with a `Tween` from `<tween>`. A shield pickup.
 
 ##### 15. Platformer remix
 
@@ -1631,6 +1632,7 @@ Everything that isn't the core language lives in a library you `#include`. See t
 | `<physics>` (see “`<physics>`: Boxes, Gravity and Collisions”) | Gravity and collisions for boxes |
 | `<time>` (see “`<time>`: Clock, Date and Timers”) | The clock, the date, and timers |
 | `<save>` (see “`<save>`: Remembering Things Between Runs”) | Remembering values between runs: high scores, settings, progress |
+| `<tween>` (see “`<tween>`: Smooth Changes Over Time”) | Smooth changes over time: sliding, bouncing, fading |
 | `<file>` (see “`<file>`: Reading and Writing Text Files”) | Reading and writing text files |
 | `<scenes>` (see “`<scenes>`: Menus, Levels and Game Over”) | Switching between menu, levels and game over |
 | `<ui>` (see “`<ui>`: Buttons, Checkboxes, Sliders and Text Boxes”) | Buttons, checkboxes, sliders, text boxes |
@@ -4367,9 +4369,9 @@ These words have special meanings, so they can't be used as names for variables,
 
 ### Library names
 
-`stdio` `math` `random` `window` `input` `graphics2d` `graphics3d` `assets` `audio` `physics` `time` `file` `save` `scenes` `ui` `ECS` `tasks` `OpenGL` `DirectX` `Vulkan`, plus `network`, which is planned.
+`stdio` `math` `random` `window` `input` `graphics2d` `graphics3d` `assets` `audio` `physics` `time` `file` `save` `tween` `scenes` `ui` `ECS` `tasks` `OpenGL` `DirectX` `Vulkan`, plus `network`, which is planned.
 
-Types that come from a library (`Key`, `MouseButton`, `GamepadButton`, `Body`, `Texture`, `Animation`, `Font`, `Sound`, `Music`, `Camera`, `Camera2D`, `Model`, `Timer`, `Scene`, `Entity`, `Component`) can't be reused as names of your own types **in a file that includes that library**.
+Types that come from a library (`Key`, `MouseButton`, `GamepadButton`, `Body`, `Texture`, `Animation`, `Font`, `Sound`, `Music`, `Camera`, `Camera2D`, `Model`, `Timer`, `Tween`, `Ease`, `Scene`, `Entity`, `Component`) can't be reused as names of your own types **in a file that includes that library**.
 
 ### Your own top-level files and folders
 
@@ -4512,6 +4514,7 @@ How libraries work:
 | `<physics>` (see “`<physics>`: Boxes, Gravity and Collisions”) | Box bodies with gravity and collisions | no |
 | `<time>` (see “`<time>`: Clock, Date and Timers”) | The clock and date, `sleep`, and the `Timer` class | no |
 | `<save>` (see “`<save>`: Remembering Things Between Runs”) | Remembering values (high scores, settings) between runs | no |
+| `<tween>` (see “`<tween>`: Smooth Changes Over Time”) | Smooth changes over time: sliding, bouncing, fading, with easing | no |
 | `<file>` (see “`<file>`: Reading and Writing Text Files”) | Reading and writing text files | no |
 | `<scenes>` (see “`<scenes>`: Menus, Levels and Game Over”) | Splitting a game into scenes (menu, level...) | no |
 | `<ui>` (see “`<ui>`: Buttons, Checkboxes, Sliders and Text Boxes”) | Buttons, checkboxes, sliders, text boxes, labels, panels | yes |
@@ -6087,6 +6090,138 @@ void setVolume(float v){
 - Keys can be any text except `""`. Saving with an empty key stops the game with "the key can't be empty text".
 - `save` is a library name, so your own functions and variables can't be called `save`. Use something like `saveGame`.
 - For your own file formats (a level made of characters, a list of lines), use `<file>` (see “`<file>`: Reading and Writing Text Files”) instead.
+
+<!-- docs/libraries/tween.md -->
+
+## `<tween>`: Smooth Changes Over Time
+
+```cpp
+#include <tween>
+```
+
+A **tween** changes a number smoothly from one value to another over some time: a menu sliding in, a title dropping and bouncing, a coin fading out. ("Tween" comes from "in-between": it works out every value between the start and the end.)
+
+```cpp
+Tween slideIn = Tween(-300, 40, 0.5, Ease.OUT);   // from -300 to 40, in half a second
+
+void update(float dt){
+    slideIn.update(dt);
+}
+
+void draw(){
+    ui.panel(rect(slideIn.value(), 100, 280, 300));  // the panel slides in from the left
+}
+```
+
+Every frame: `update(dt)` moves it on, then `value()` is where it is now.
+
+### Tween
+
+| Making one | |
+|---|---|
+| `Tween(float from, float to, float seconds, Ease ease = Ease.OUT)` | goes from `from` to `to` in `seconds` |
+
+| Method or field | What it does |
+|---|---|
+| `update(float dt)` | moves it on by `dt` seconds. Call it once per frame |
+| `value()` | the number now: `from` at the start, `to` at the end |
+| `progress()` | how far along it is, from 0 to 1 (with the easing). Use it with `lerp`, below |
+| `isDone()` | `true` once it has reached the end |
+| `restart()` | back to the start |
+| `reverse()` | goes back from where it is now to where it started, like a menu sliding back out |
+| `bool looping` | `true`: when it reaches the end, it starts again (forever) |
+| `bool pingPong` | `true`: when it reaches the end, it goes back again. With `looping` too, it goes back and forth forever |
+
+A time of `0` jumps straight to the end. A negative time stops the game with an error.
+
+### Easing: the shape of the change
+
+`Ease` decides how the value moves between the start and the end:
+
+| `Ease.` | Movement | Good for |
+|---|---|---|
+| `LINEAR` | the same speed all the way | progress bars, steady movement |
+| `IN` | starts slowly, ends fast | things falling, leaving the screen |
+| `OUT` (the default) | starts fast, ends slowly | things arriving: menus, pop-ups |
+| `IN_OUT` | slow, fast, slow | moving something from one place to another |
+| `BOUNCE` | falls in and bounces at the end, like a dropped ball | titles, pickups landing |
+
+`tween.ease(Ease ease, float t)` gives the eased amount for `t` from 0 to 1, if you want the shape without a `Tween`: `tween.ease(Ease.OUT, 0.5)` is `0.875`.
+
+### Positions and colors
+
+A tween gives one number. To move a `vec2` or change a `color`, tween from 0 to 1 and use `progress()` with `lerp`:
+
+```cpp
+Tween fade = Tween(0, 1, 2, Ease.LINEAR);
+vec2 start = vec2(100, 100);
+vec2 end = vec2(500, 300);
+
+void update(float dt){
+    fade.update(dt);
+}
+
+void draw(){
+    vec2 p = start.lerp(end, fade.progress());
+    color c = color.WHITE.lerp(color.BLANK, fade.progress());    // fades out
+    graphics2d.drawCircle(p, 20, c);
+}
+```
+
+### Examples
+
+#### A title that drops in and bounces
+
+```cpp
+Tween titleDrop = Tween(-80, 70, 0.9, Ease.BOUNCE);
+
+void update(float dt){
+    titleDrop.update(dt);
+}
+
+void draw(){
+    graphics2d.drawText("FORGE", 380, titleDrop.value(), 64, color.ORANGE);
+}
+```
+
+examples/menu (the file `examples/menu/main.frg` in the Forge folder) does this.
+
+#### Something pulsing forever
+
+```cpp
+Tween pulse = Tween(1, 1.3, 0.4, Ease.IN_OUT);
+
+int main(){
+    pulse.looping = true;
+    pulse.pingPong = true;
+    ...
+}
+
+void draw(){
+    coin.drawScaled(x, y, 2 * pulse.value());
+}
+```
+
+#### In a task
+
+A task (see “11. Tasks”) can play a tween from start to end on its own:
+
+```cpp
+float menuX = -300;
+
+task showMenu() {
+    Tween t = Tween(-300, 40, 0.5);
+    while (!t.isDone()) {
+        t.update(window.deltaTime());
+        menuX = t.value();
+        wait();                      // the next frame
+    }
+}
+```
+
+### Why it works like this
+
+A tween is a value you update and read, like a `Timer` (see “`<time>`: Clock, Date and Timers”). Forge doesn't have functions as values yet, so a tween can't run code by itself when it ends: check `isDone()` instead. That also means it works the same way in every kind of game loop, and in tasks.
 
 <!-- docs/libraries/scenes.md -->
 
@@ -8100,7 +8235,7 @@ The **runtime** (`runtime/*.hpp`) is the C++ code every game is built with:
 | `forge.hpp` | printing, text conversion, lists and maps, optionals, tasks, the core types (`vec2`, `color`...), random |
 | `forge_window.hpp` | `<window>`, `<input>`, `<graphics2d>` on top of raylib |
 | `forge_graphics3d.hpp`, `forge_assets.hpp`, `forge_audio.hpp`, `forge_ui.hpp` | the other engine libraries |
-| `forge_physics.hpp`, `forge_scenes.hpp`, `forge_ecs.hpp`, `forge_time.hpp`, `forge_file.hpp`, `forge_save.hpp` | libraries that don't need raylib |
+| `forge_physics.hpp`, `forge_scenes.hpp`, `forge_ecs.hpp`, `forge_time.hpp`, `forge_file.hpp`, `forge_save.hpp`, `forge_tween.hpp` | libraries that don't need raylib |
 | `forge_physics_draw.hpp` | `physics.drawDebug()`, which draws with raylib. Forge adds it only to games that use both `<physics>` and `<graphics2d>`, so `<physics>` itself never needs raylib |
 | `raylib/` | raylib 5.5 (by Ramon Santamaria and contributors, zlib license) |
 
@@ -8596,6 +8731,7 @@ Each file includes the libraries it uses. Functions are reached through the libr
 | `<audio>` | `audio.loadSound("jump.wav")`, `audio.loadMusic("song.ogg")`, `audio.setVolume(0.5)` (see below) |
 | `<graphics3d>` | 3D drawing (see below) |
 | `<time>` | `time.now()` (seconds since the game started), `time.sleep(seconds)`, `time.clock()` ("14:05:09"), `time.date()` ("2026-10-14"), `time.year()` `month()` `day()` `hour()` `minute()` `second()`, and the `Timer` class |
+| `<tween>` | `Tween t = Tween(from, to, seconds, Ease.OUT);` then `t.update(dt)` and `t.value()` each frame; `progress()` (0 to 1, for `lerp`), `isDone()`, `restart()`, `reverse()`, fields `looping` `pingPong`. Easing: `Ease.LINEAR` `IN` `OUT` `IN_OUT` `BOUNCE`; `tween.ease(Ease.OUT, t)` |
 | `<save>` | `save.setInt(key, n)` and `save.getInt(key, backup)`, also `setFloat`/`getFloat`, `setString`/`getString`, `setBool`/`getBool`, and `has(key)` `remove(key)` `clear()`. Kept in `save.txt` in the game's folder, written straight away. |
 | `<file>` | `file.read(path)` `write(path, text)` `append(path, text)` `exists(path)` `remove(path)` `readLines(path)` `writeLines(path, lines)` `files(folder)`. Paths are relative to the game's folder. |
 | `<scenes>` | the `Scene` class and `scenes.change(scene)` `update(dt)` `draw()` `current()` (see below) |

@@ -1,0 +1,63 @@
+=== main.frg
+#include <stdio>
+#include <tween>
+
+int main(){
+    Tween slide = Tween(0, 100, 2, Ease.LINEAR);
+    print("{slide.value():.1} {slide.isDone()}");
+    slide.update(0.5);
+    print("{slide.value():.1} {slide.progress():.2}");
+    slide.update(2);
+    print("{slide.value():.1} {slide.isDone()}");
+
+    // The easings, half way through.
+    print("{tween.ease(Ease.LINEAR, 0.5):.3} {tween.ease(Ease.IN, 0.5):.3} {tween.ease(Ease.OUT, 0.5):.3} {tween.ease(Ease.IN_OUT, 0.5):.3} {tween.ease(Ease.BOUNCE, 0.5):.3}");
+    print("{tween.ease(Ease.OUT, 0):.1} {tween.ease(Ease.BOUNCE, 1):.1} {tween.ease(Ease.IN, 2):.1}");
+
+    // reverse() goes back from where it is now.
+    slide.reverse();
+    slide.update(1);
+    print("{slide.value():.1}");
+
+    // pingPong goes there and back.
+    Tween pulse = Tween(1, 2, 1, Ease.LINEAR);
+    pulse.pingPong = true;
+    pulse.update(1.5);
+    print("{pulse.value():.1} {pulse.isDone()}");
+    pulse.update(0.6);
+    print("{pulse.value():.1} {pulse.isDone()}");
+
+    // looping starts again.
+    Tween spin = Tween(0, 360, 1, Ease.LINEAR);
+    spin.looping = true;
+    spin.update(2.25);
+    print("{spin.value():.0} {spin.isDone()}");
+    spin.restart();
+    print("{spin.value():.0}");
+
+    // A position and a color, with lerp.
+    Tween move = Tween(0, 1, 1);
+    move.update(1);
+    print(vec2(0, 0).lerp(vec2(10, 20), move.progress()));
+    print(color.BLACK.lerp(color.WHITE, move.progress()));
+    print(Ease.BOUNCE);
+    Tween now = Tween(5, 9, 0);
+    print("{now.value():.0} {now.isDone()}");
+    return 0;
+}
+=== output
+0.0 false
+25.0 0.25
+100.0 true
+0.500 0.125 0.875 0.500 0.766
+0.0 1.0 1.0
+50.0
+1.5 false
+1.0 true
+90 false
+0
+vec2(10.0, 20.0)
+color(255, 255, 255, 255)
+BOUNCE
+9 true
+=== no warnings

@@ -29,6 +29,7 @@ How libraries work:
 | [`<physics>`](physics.md) | Box bodies with gravity and collisions | no |
 | [`<time>`](time.md) | The clock and date, `sleep`, and the `Timer` class | no |
 | [`<save>`](save.md) | Remembering values (high scores, settings) between runs | no |
+| [`<tween>`](tween.md) | Smooth changes over time: sliding, bouncing, fading, with easing | no |
 | [`<file>`](file.md) | Reading and writing text files | no |
 | [`<scenes>`](scenes.md) | Splitting a game into scenes (menu, level...) | no |
 | [`<ui>`](ui.md) | Buttons, checkboxes, sliders, text boxes, labels, panels | yes |

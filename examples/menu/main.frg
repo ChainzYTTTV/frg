@@ -4,10 +4,12 @@
 #include <scenes>
 #include <ui>
 #include <time>
+#include <tween>
 
 ```
   A main menu and a play screen, using <scenes> to switch between them
   and <ui> for the buttons, the name box, the checkbox and the slider.
+  The title drops in with a bounce, using <tween>.
 ```
 
 string playerName = "Player";
@@ -16,8 +18,19 @@ float volume = 0.7;
 bool quitting = false;
 
 class Menu : Scene {
+    // From above the window (y = -80) down to y = 70, in 0.9 seconds, bouncing at the end.
+    Tween titleDrop = Tween(-80, 70, 0.9, Ease.BOUNCE);
+
+    void enter() {
+        titleDrop.restart();
+    }
+
+    void update(float dt) {
+        titleDrop.update(dt);
+    }
+
     void draw() {
-        graphics2d.drawText("FORGE", 380, 70, 64, color.ORANGE);
+        graphics2d.drawText("FORGE", 380, titleDrop.value(), 64, color.ORANGE);
         ui.panel(rect(330, 150, 300, 370));
 
         ui.label("Your name:", 360, 170, 20, color.LIGHTGRAY);

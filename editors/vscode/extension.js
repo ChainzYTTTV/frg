@@ -136,6 +136,9 @@ const LIBRARIES = {
         ['minute', 'int minute()', 'The minute.'],
         ['second', 'int second()', 'The second.'],
     ],
+    tween: [
+        ['ease', 'float ease(Ease ease, float t)', 'The eased amount for t from 0 to 1: tween.ease(Ease.OUT, 0.5) is 0.875. For a smooth change over time, use a Tween: Tween t = Tween(from, to, seconds, Ease.OUT); then t.update(dt) and t.value().'],
+    ],
     save: [
         ['setInt', 'void setInt(string key, int value)', 'Saves a whole number under a name. The save file is written straight away.'],
         ['getInt', 'int getInt(string key, int backup = 0)', 'A saved whole number, or backup if it isn\'t saved.'],
@@ -362,6 +365,7 @@ const TYPE_STATICS = {
     vec4: ['ZERO', 'ONE'],
     Key: KEYS,
     MouseButton: ['LEFT', 'RIGHT', 'MIDDLE'],
+    Ease: ['LINEAR', 'IN', 'OUT', 'IN_OUT', 'BOUNCE'],
     GamepadButton: ['A', 'B', 'X', 'Y', 'LEFT_BUMPER', 'RIGHT_BUMPER', 'LEFT_TRIGGER', 'RIGHT_TRIGGER', 'BACK', 'START', 'LEFT_STICK', 'RIGHT_STICK', 'UP', 'DOWN', 'LEFT', 'RIGHT'],
 };
 

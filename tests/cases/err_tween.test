@@ -1,0 +1,13 @@
+=== main.frg
+#include <tween>
+
+int main(){
+    Tween a = Tween(0, 1);
+    Tween b = Tween(0, 1, 2, Ease.SMOOTH);
+    float x = tween.ease(0.5);
+    return 0;
+}
+=== error
+Tween() needs 3 to 4 values, but got 2
+the enum Ease has no value called 'SMOOTH'
+tween.ease() needs 2 values, but got 1

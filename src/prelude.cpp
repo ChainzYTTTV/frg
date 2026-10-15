@@ -662,6 +662,24 @@ void remove(string key);
 void clear();
 )FRG";
 
+static const char* kTween = R"FRG(
+enum Ease { LINEAR, IN, OUT, IN_OUT, BOUNCE }
+
+class Tween {
+    bool looping;
+    bool pingPong;
+    Tween(float from, float to, float seconds, Ease ease = Ease.OUT);
+    void update(float dt);
+    float value();
+    float progress();
+    bool isDone();
+    void restart();
+    void reverse();
+}
+
+float ease(Ease ease, float t);
+)FRG";
+
 const std::vector<PreludeLib>& preludeLibs() {
     using K = LibKind;
     static const std::vector<PreludeLib> libs = {
@@ -677,6 +695,7 @@ const std::vector<PreludeLib>& preludeLibs() {
         {"time", kTime, false, "forge_time.hpp"},
         {"file", kFile, false, "forge_file.hpp"},
         {"save", kSave, false, "forge_save.hpp"},
+        {"tween", kTween, false, "forge_tween.hpp"},
         {"scenes", kScenes, false, "forge_scenes.hpp"},
         {"ui", kUi, true, "forge_ui.hpp", K::Engine},
         {"graphics3d", kGraphics3d, true, "forge_graphics3d.hpp", K::Engine},

@@ -54,6 +54,7 @@ Everything that isn't the core language lives in a library you `#include`. See t
 | [`<physics>`](libraries/physics.md) | Gravity and collisions for boxes |
 | [`<time>`](libraries/time.md) | The clock, the date, and timers |
 | [`<save>`](libraries/save.md) | Remembering values between runs: high scores, settings, progress |
+| [`<tween>`](libraries/tween.md) | Smooth changes over time: sliding, bouncing, fading |
 | [`<file>`](libraries/file.md) | Reading and writing text files |
 | [`<scenes>`](libraries/scenes.md) | Switching between menu, levels and game over |
 | [`<ui>`](libraries/ui.md) | Buttons, checkboxes, sliders, text boxes |

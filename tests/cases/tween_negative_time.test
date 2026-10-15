@@ -1,0 +1,9 @@
+=== main.frg
+#include <tween>
+
+int main(){
+    Tween t = Tween(0, 1, -2);
+    return 0;
+}
+=== runtime error
+Tween(...): the time can't be negative, but it's -2.0 seconds

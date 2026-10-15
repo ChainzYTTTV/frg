@@ -161,9 +161,43 @@ print(c1.x);       // 99.0 - same object
 
 ### Things to know about structs
 
-- In `for (Point p in points)`, `p` is a copy. Change items with `points[i].x = ...`.
+- In `for (Point p in points)`, `p` is a copy. Change items with `points[i].x = ...`. (Forge gives a warning if you change `p` inside the loop.)
 - `getPoint().x = 5;` is an error, because `getPoint()` gives back a temporary copy that would be thrown away. Store it in a variable first.
 - A struct can't contain itself, directly or as `Node?`, because it would be infinitely big. A struct can contain a `list` of itself. If you need "a thing that points to another thing of the same kind", use a class.
+
+### When class objects go away
+
+You never delete objects yourself in Forge. A class object stays alive as long as **something still refers to it**: a variable, a field, or a list. When the last one lets go (the variable ends, the field is set to something else, the item is removed from the list), the object is freed straight away.
+
+There's one case where that never happens: **two objects that refer to each other**.
+
+```cpp
+class Enemy {
+    Enemy? partner = null;
+}
+
+void makePair(){
+    Enemy a = Enemy();
+    Enemy b = Enemy();
+    a.partner = b;
+    b.partner = a;
+}   // a and b end here, but each one is still referred to by the other's partner field
+```
+
+After `makePair` ends, nothing in your game can reach `a` or `b` any more, but they keep each other alive, so they're never freed while the game runs. (The same goes for a longer loop: A refers to B, B to C, C back to A.) All the memory is given back when the game closes.
+
+**When does it matter?** Rarely, in small games. A few objects left over use a tiny bit of memory and nothing else: they aren't drawn or updated unless they're still in one of your lists. It only adds up if a loop like this is made **over and over**, for example for every bullet, every frame, in a game that runs for a long time.
+
+**How to avoid it:** when you're done with one of the objects, set one side of the link to `null`:
+
+```cpp
+void removeEnemy(Enemy e){
+    e.partner = null;      // break the loop first
+    enemies.remove(e);
+}
+```
+
+A common example is a parent and its children, like a team and its players. Let the team hold a `list<Player>`, and give each `Player` a `Team? team` field. When a player leaves the team, set its `team = null` as well as removing it from the list.
 
 ## Inheritance
 

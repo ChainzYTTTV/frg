@@ -1,0 +1,13 @@
+=== main.frg
+#include <assets>
+
+int main(){
+    Texture sheet = assets.loadTexture("sheet.png");
+    Animation a = Animation(sheet, 16, 16, 4);
+    Animation b = Animation("sheet.png", 16, 16, 4, 10);
+    return 0;
+}
+=== error
+Animation() needs 5 to 6 values, but got 4
+hint: it's written as: Animation(Texture sheet, int frameWidth, int frameHeight, int frames, float fps, int row = ...)
+'sheet' in Animation() needs a Texture, but this is a string

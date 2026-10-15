@@ -233,6 +233,25 @@ class Texture {
     void drawPart(rect source, rect destination, color tint = color.WHITE);
 }
 
+class Animation {
+    float fps;
+    bool looping;
+    Animation(Texture sheet, int frameWidth, int frameHeight, int frames, float fps, int row = 0);
+    void update(float dt);
+    void draw(float x, float y, color tint = color.WHITE);
+    void drawScaled(float x, float y, float scale, color tint = color.WHITE);
+    void play();
+    void pause();
+    void reset();
+    bool isPlaying();
+    bool isDone();
+    void flip(bool flipped);
+    bool isFlipped();
+    int frame();
+    void setFrame(int frame);
+    int frameCount();
+}
+
 class Font {
     void drawText(string text, float x, float y, float size, color c);
     float measure(string text, float size);

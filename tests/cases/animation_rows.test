@@ -1,0 +1,18 @@
+=== main.frg
+#include <stdio>
+#include <assets>
+
+// sheet.png is 32 x 32: two rows of two 16 x 16 frames. The run animation is the second row.
+int main(){
+    Texture sheet = assets.loadTexture("sheet.png");
+    Animation idle = Animation(sheet, 16, 16, 2, 4);
+    Animation run = Animation(sheet, 16, 16, 2, 4, 1);
+    run.update(0.3);
+    print("{idle.frame()} {run.frame()}");
+    Animation tooLong = Animation(sheet, 16, 16, 3, 4, 1);
+    return 0;
+}
+=== sheet.png (base64)
+iVBORw0KGgoAAAANSUhEUgAAACAAAAAgCAYAAABzenr0AAAALklEQVR4nO3OIQEAAAgDsId9WFpBDMzE/NLOfoqAgICAgICAgICAgICAgMB34AA73DyXxVPbGAAAAABJRU5ErkJggg==
+=== runtime error
+doesn't have room for 3 frames of 16 x 16 starting at row 1

@@ -560,7 +560,7 @@ song.play();
 - `Sound`: `play()`, `stop()`, `isPlaying()`, `setVolume(v)`, `setPitch(p)`.
 - `Music`: `play()`, `stop()`, `pause()`, `resume()`, `isPlaying()`, `setVolume(v)`, `setLooping(b)`, `length()`, `position()`.
 - A missing file stops the game with "can't find the file 'x.png'".
-- **Sprite-sheet animation:** keep a frame number, and change it every 0.1 seconds or so with a timer variable. Draw `drawPart(rect(frame * 16, 0, 16, 16), rect(x, y, 64, 64))`.
+- **Sprite-sheet animation:** `Animation walk = Animation(sheet, 16, 16, 4, 8);` (the sheet, frame width and height, how many frames, frames per second, and optionally the row they start in, from 0). Then `walk.update(dt);` in `update` and `walk.drawScaled(x, y, 4);` (or `draw(x, y)`) in `draw`. Frames are read left to right. `flip(true)` mirrors it to face left, `play()` / `pause()` / `reset()`, `frame()`, `setFrame(i)`, `frameCount()`, `isPlaying()`, and fields `fps` and `looping` (set `looping = false` for a one-time animation, then check `isDone()`). It's a class, so `current = run;` shares the same animation. Learners can also do it by hand first to understand it: keep a frame number, change it every 0.1 seconds with a timer, and draw `drawPart(rect(frame * 16, 0, 16, 16), rect(x, y, 64, 64))`.
 
 **3D** (`<graphics3d>`). In 3D, **y goes up**.
 

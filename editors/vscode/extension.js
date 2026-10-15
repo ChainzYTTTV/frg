@@ -91,7 +91,7 @@ const LIBRARIES = {
         ['worldToScreen', 'vec2 worldToScreen(vec2 point)', 'Where a point in the world shows on the screen, with the camera.'],
     ],
     assets: [
-        ['loadTexture', 'Texture loadTexture(string path)', 'Loads an image (.png .jpg .bmp .tga .gif .qoi). Then: tex.draw(x, y), drawScaled, drawRotated, drawPart, width(), height().'],
+        ['loadTexture', 'Texture loadTexture(string path)', 'Loads an image (.png .jpg .bmp .tga .gif .qoi). Then: tex.draw(x, y), drawScaled, drawRotated, drawPart, width(), height(). For a sprite sheet: Animation(tex, frameWidth, frameHeight, frames, fps), then anim.update(dt) and anim.draw(x, y).'],
         ['loadFont', 'Font loadFont(string path, int quality = 64)', 'Loads a font (.ttf .otf). Then: font.drawText(text, x, y, size, color), font.measure(text, size).'],
         ['exists', 'bool exists(string path)', 'True if the file is in the game folder.'],
     ],

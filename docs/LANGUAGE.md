@@ -473,6 +473,9 @@ player.draw(x, y);                                     // also: draw(x, y, tint)
 player.drawScaled(x, y, 4);                            // 4 times as big
 player.drawRotated(vec2(x, y), 45, 1);                 // centered at (x, y), turned 45 degrees
 player.drawPart(rect(0, 0, 16, 16), rect(x, y, 64, 64));   // one frame of a sprite sheet, stretched
+Animation walk = Animation(sheet, 16, 16, 4, 8);       // a sprite sheet's frames: frame width, height, how many, per second
+walk.update(dt);                                       // in update
+walk.drawScaled(x, y, 4);                              // in draw; also draw(x, y), flip(true), play(), pause(), reset()
 big.drawText("Hello", 20, 20, 48, color.WHITE);
 jump.play();
 song.play();                                           // loops until song.stop()
@@ -481,6 +484,7 @@ song.play();                                           // loops until song.stop(
 | | Methods |
 |---|---|
 | `Texture` | `width()` `height()` `draw` `drawScaled` `drawRotated` `drawPart` |
+| `Animation` | `Animation(sheet, frameWidth, frameHeight, frames, fps, row = 0)`, `update(dt)` `draw(x, y)` `drawScaled(x, y, scale)` `flip(bool)` `play()` `pause()` `reset()` `isPlaying()` `isDone()` `frame()` `setFrame(i)` `frameCount()`, fields `fps` `looping` |
 | `Font` | `drawText(text, x, y, size, color)` `measure(text, size)` |
 | `Sound` | `play()` `stop()` `isPlaying()` `setVolume(v)` `setPitch(p)` |
 | `Music` | `play()` `stop()` `pause()` `resume()` `isPlaying()` `setVolume(v)` `setLooping(b)` `length()` `position()` |

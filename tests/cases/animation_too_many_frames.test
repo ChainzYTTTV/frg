@@ -1,0 +1,11 @@
+=== main.frg
+#include <assets>
+
+int main(){
+    Animation a = Animation(assets.loadTexture("sheet.png"), 16, 16, 5, 10);
+    return 0;
+}
+=== sheet.png (base64)
+iVBORw0KGgoAAAANSUhEUgAAAEAAAAAQCAYAAACm53kpAAAAOElEQVR4nO3QwQAAIAAEsAMLJ4jAgsiqIO7ZHhNYMs9tjNIq7VIECBAgQIAAAQIECBAgQICA/wIew7sUlxJp2dYAAAAASUVORK5CYII=
+=== runtime error
+the sheet sheet.png is 64 x 16 pixels, which doesn't have room for 5 frames of 16 x 16

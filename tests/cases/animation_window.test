@@ -1,0 +1,28 @@
+=== main.frg
+#include <window>
+#include <input>
+#include <assets>
+
+Texture sheet = assets.loadTexture("blob.png");
+Animation walk = Animation(sheet, 16, 16, 4, 8);
+float x = 100;
+
+void update(float dt) {
+    walk.update(dt);
+    if (input.keyDown(Key.LEFT)) {
+        walk.flip(true);
+        x -= 100 * dt;
+    }
+}
+
+void draw() {
+    walk.drawScaled(x, 100, 4);
+    walk.draw(10, 10, color.WHITE.fade(0.5));
+}
+
+int main(){
+    window.open(400, 300, "Animation");
+    window.run();
+    return 0;
+}
+=== build

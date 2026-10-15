@@ -142,7 +142,7 @@ std::string folderDisplay(const Folder* f) {
 }
 
 std::string kindWord(const TypeDecl* d) {
-    return d->kind == DK::Struct ? "struct" : d->kind == DK::Class ? "class" : "enum";
+    return d->kind == DK::Struct ? "struct" : d->kind == DK::Class ? "class" : d->kind == DK::Interface ? "interface" : "enum";
 }
 
 bool isVec(const Type* t) {
@@ -294,6 +294,7 @@ private:
     void resolveTypeDecl(TypeDecl* d);
     void resolveFunc(FuncDecl* f);
     void checkOverrides(TypeDecl* d);
+    void checkAbstract(TypeDecl* d);
     void checkStructCycles();
     Type* resolveType(const TypeRef& r, bool allowVoid);
     TypeDecl* findTypeDecl(const std::string& name);
@@ -579,17 +580,28 @@ void Checker::resolveFunc(FuncDecl* f) {
 
 void Checker::resolveTypeDecl(TypeDecl* d) {
     if (d->kind == DK::Enum) return;
-    if (!d->baseRef.empty()) {
-        Type* bt = resolveType(d->baseRef, false);
-        if (bt != tError()) {
-            if (bt->kind != TK::Class) {
-                reportError(d->baseRef.loc, "a class can only inherit from another class, but '" + bt->name + "' is " +
-                                                (bt->decl ? "a " + kindWord(bt->decl) : aType(bt)));
-            } else if (inheritsFrom(bt->decl, d)) {
-                reportError(d->baseRef.loc, "'" + d->name + "' can't inherit from itself");
-            } else {
-                d->base = bt->decl;
-            }
+    // class Goblin : Enemy, Attacker - at most one class to inherit from, and any number of interfaces.
+    std::vector<const TypeRef*> refs;
+    if (!d->baseRef.empty()) refs.push_back(&d->baseRef);
+    for (auto& r : d->moreBaseRefs) refs.push_back(&r);
+    for (const TypeRef* ref : refs) {
+        Type* bt = resolveType(*ref, false);
+        if (bt == tError()) continue;
+        if (bt->kind != TK::Class) {
+            reportError(ref->loc, "a class can only inherit from another class or have an interface, but '" + bt->name + "' is " +
+                                      (bt->decl ? "a " + kindWord(bt->decl) : aType(bt)));
+        } else if (bt->decl == d || inheritsFrom(bt->decl, d)) {
+            reportError(ref->loc, "'" + d->name + "' can't inherit from itself");
+        } else if (bt->decl->kind == DK::Interface) {
+            if (std::find(d->interfaces.begin(), d->interfaces.end(), bt->decl) != d->interfaces.end())
+                reportError(ref->loc, "'" + bt->name + "' is listed twice");
+            else
+                d->interfaces.push_back(bt->decl);
+        } else if (d->base) {
+            reportError(ref->loc, "a class can only inherit from one class, but " + d->name + " already inherits from " + d->base->name,
+                        "the others after the : must be interfaces");
+        } else {
+            d->base = bt->decl;
         }
     }
     for (auto& f : d->fields) {
@@ -625,7 +637,40 @@ void Checker::resolveTypeDecl(TypeDecl* d) {
     }
 }
 
+// Every method an interface (or an abstract parent) names must be written, with the same types, in a normal class.
+void Checker::checkAbstract(TypeDecl* d) {
+    std::vector<FuncDecl*> required;
+    std::function<void(TypeDecl*)> collect = [&](TypeDecl* t) {
+        for (auto& m : t->methods)
+            if (m->isAbstract) required.push_back(m.get());
+        for (TypeDecl* i : t->interfaces) collect(i);
+        if (t->base) collect(t->base);
+    };
+    collect(d);
+    for (FuncDecl* req : required) {
+        // The method that a call would run: the nearest one, starting at d, that has code.
+        FuncDecl* impl = nullptr;
+        for (TypeDecl* t = d; t && !impl; t = t->base) {
+            auto it = t->methodMap.find(req->name);
+            if (it != t->methodMap.end() && !it->second->isAbstract) impl = it->second;
+        }
+        if (!impl) {
+            if (!d->isAbstract)
+                reportError(d->loc, d->name + " has to have the method '" + req->name + "', because " + req->owner->name +
+                                        (req->owner->kind == DK::Interface ? " (an interface it has)" : " (an abstract class it inherits from)") + " says so",
+                            "add it to " + d->name + ": " + signatureOf(req) + " { ... }");
+            continue;
+        }
+        bool same = impl->ret == req->ret && impl->params.size() == req->params.size();
+        for (size_t i = 0; same && i < req->params.size(); i++) same = impl->params[i]->type == req->params[i]->type;
+        if (!same)
+            reportError(impl->loc, "'" + impl->name + "' has to match the one in " + req->owner->name, "write it as: " + signatureOf(req));
+        if (impl->isStatic) reportError(impl->loc, "'" + impl->name + "' can't be static, because " + req->owner->name + " needs it on each object");
+    }
+}
+
 void Checker::checkOverrides(TypeDecl* d) {
+    if (d->kind == DK::Class) checkAbstract(d);
     if (d->kind != DK::Class || !d->base) return;
     for (auto& f : d->fields)
         if (VarDecl* bf = findField(d->base, f->name))
@@ -955,7 +1000,8 @@ Type* Checker::isAsExpr(Expr* e) {
                                 (T->kind != TK::Class ? " and " + T->name + " isn't a class" : ""));
         return e->type = tError();
     }
-    if (!inheritsFrom(T->decl, sc->decl) && !inheritsFrom(sc->decl, T->decl)) {
+    bool anInterface = T->decl->kind == DK::Interface || sc->decl->kind == DK::Interface;  // any class might have it
+    if (!anInterface && !inheritsFrom(T->decl, sc->decl) && !inheritsFrom(sc->decl, T->decl)) {
         reportError(e->loc, aType(sc) + " can never be " + aType(T), T->name + " doesn't inherit from " + sc->name + ", or the other way around");
         return e->type = tError();
     }
@@ -1265,6 +1311,9 @@ Type* Checker::memberExpr(Expr* e, bool allowNonValue) {
         }
         o->type = tNamed(curType->base);
         if (FuncDecl* m = findMethod(curType->base, n)) {
+            if (m->isAbstract)
+                reportError(e->loc, "'" + n + "' is abstract in " + curType->base->name + ", so it has no code to call",
+                            "super." + n + "() only works when the parent class writes the method");
             r.kind = RK::Method;
             r.func = m;
         } else if (VarDecl* f = findField(curType->base, n)) {
@@ -1488,6 +1537,12 @@ FuncDecl* Checker::resolveCall(Expr* e, const std::vector<FuncDecl*>& candidates
 
 Type* Checker::construct(Expr* e, std::vector<ExprPtr>& args, TypeDecl* d) {
     e->builds = d;
+    if (d->kind == DK::Interface || d->isAbstract) {
+        for (auto& a : args) value(a.get());
+        reportError(e->loc, d->name + " is " + (d->kind == DK::Interface ? "an interface" : "an abstract class") + ", so it can't be made directly",
+                    "make one of the classes that " + std::string(d->kind == DK::Interface ? "have it" : "inherit from it") + " instead");
+        return e->type = tError();
+    }
     if (d->kind == DK::Enum) {
         if (args.size() == 1) {
             Type* t = value(args[0].get());

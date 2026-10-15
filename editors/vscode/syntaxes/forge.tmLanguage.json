@@ -48,7 +48,7 @@
             }
         },
         "type-declaration": {
-            "match": "\\b(struct|class|enum)\\s+([A-Za-z_][A-Za-z0-9_]*)(?:\\s*(:)\\s*([A-Za-z_][A-Za-z0-9_.]*))?",
+            "match": "\\b(struct|class|enum|interface)\\s+([A-Za-z_][A-Za-z0-9_]*)(?:\\s*(:)\\s*([A-Za-z_][A-Za-z0-9_.]*))?",
             "captures": {
                 "1": { "name": "storage.type.forge" },
                 "2": { "name": "entity.name.type.forge" },
@@ -68,8 +68,8 @@
                     "captures": { "1": { "name": "keyword.operator.word.forge" } }
                 },
                 { "name": "keyword.operator.word.forge", "match": "(?<=[\\w\\)\\]]\\s{1,8})\\b(to|by)\\b(?=\\s)" },
-                { "name": "storage.type.forge", "match": "\\b(struct|class|enum)\\b" },
-                { "name": "storage.modifier.forge", "match": "\\b(const|static|private|public)\\b" },
+                { "name": "storage.type.forge", "match": "\\b(struct|class|enum|interface)\\b" },
+                { "name": "storage.modifier.forge", "match": "\\b(const|static|abstract|private|public)\\b" },
                 { "name": "variable.language.forge", "match": "\\b(this|super)\\b" },
                 { "name": "constant.language.forge", "match": "\\b(true|false|null)\\b" }
             ]

@@ -1,0 +1,93 @@
+=== main.frg
+#include <stdio>
+
+interface Attacker {
+    int power();
+    void attack(string target);
+}
+
+interface Named {
+    string label();
+}
+
+abstract class Enemy {
+    string name;
+    int hp = 10;
+
+    Enemy(string name) {
+        this.name = name;
+    }
+
+    abstract int reward();
+
+    void hurt(int amount) {
+        hp -= amount;
+        print("{name} has {hp} hp, worth {reward()} gold");
+    }
+}
+
+class Goblin : Enemy, Attacker, Named {
+    Goblin(string name) {
+        super(name);
+    }
+
+    int reward() {
+        return 5;
+    }
+
+    int power() {
+        return 3;
+    }
+
+    void attack(string target) {
+        print("{name} pokes {target} for {power()}");
+    }
+
+    string label() {
+        return "goblin {name}";
+    }
+}
+
+class Trap : Attacker {
+    int power() {
+        return 7;
+    }
+
+    void attack(string target) {
+        print("the trap snaps at {target}");
+    }
+}
+
+int main(){
+    list<Attacker> attackers = [Goblin("Grub"), Trap()];
+    int total = 0;
+    for (Attacker a in attackers) {
+        a.attack("you");
+        total += a.power();
+    }
+    print(total);
+
+    Enemy e = Goblin("Zog");
+    e.hurt(4);
+
+    Attacker first = attackers[0];
+    if (first is Goblin) {
+        Goblin g = first as Goblin;
+        print(g.label());
+    }
+    if (first is Named) {
+        print((first as Named).label());
+    }
+    print(attackers[1] is Goblin);
+    print(attackers[1]);
+    return 0;
+}
+=== output
+Grub pokes you for 3
+the trap snaps at you
+10
+Zog has 6 hp, worth 5 gold
+goblin Grub
+goblin Grub
+false
+Trap()

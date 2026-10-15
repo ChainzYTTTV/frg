@@ -1,0 +1,49 @@
+=== main.frg
+interface Attacker {
+    int power();
+}
+
+interface Mover {
+    void move();
+}
+
+abstract class Enemy {
+    abstract int reward();
+}
+
+class Goblin : Enemy, Attacker {
+    string power() {
+        return "big";
+    }
+}
+
+class Rock {
+}
+
+class Orc : Enemy {
+    int reward() {
+        return super.reward() + 1;
+    }
+}
+
+class Bat : Rock, Enemy {
+}
+
+class Slime : Mover, Mover {
+    void move() {
+    }
+}
+
+int main(){
+    Attacker a = Attacker();
+    Enemy e = Enemy();
+    return 0;
+}
+=== error
+'reward' is abstract in Enemy, so it has no code to call
+a class can only inherit from one class, but Bat already inherits from Rock
+'Mover' is listed twice
+'power' has to match the one in Attacker
+Goblin has to have the method 'reward', because Enemy (an abstract class it inherits from) says so
+Attacker is an interface, so it can't be made directly
+Enemy is an abstract class, so it can't be made directly

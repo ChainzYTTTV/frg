@@ -124,9 +124,11 @@ Type* tFunction(Type* ret, const std::vector<Type*>& params) {
 Type* tNamed(TypeDecl* decl) {
     if (decl->type) return decl->type;
     Type t{};
-    t.kind = decl->kind == DK::Class ? TK::Class : decl->kind == DK::Enum ? TK::Enum : TK::Struct;
+    // An interface is used like a class: it's shared, can be null as Name?, and holds objects of the classes that have it.
+    bool shared = decl->kind == DK::Class || decl->kind == DK::Interface;
+    t.kind = shared ? TK::Class : decl->kind == DK::Enum ? TK::Enum : TK::Struct;
     t.name = decl->name;
-    t.cpp = decl->kind == DK::Class ? "::std::shared_ptr<" + decl->cpp + ">" : decl->cpp;
+    t.cpp = shared ? "::std::shared_ptr<" + decl->cpp + ">" : decl->cpp;
     t.decl = decl;
     decl->type = intern("decl:" + std::to_string(reinterpret_cast<uintptr_t>(decl)), t);
     return decl->type;
@@ -187,8 +189,11 @@ Type* standardCommon(Type* a, Type* b) {
 }
 
 bool inheritsFrom(const TypeDecl* derived, const TypeDecl* base) {
-    for (const TypeDecl* d = derived; d; d = d->base)
+    for (const TypeDecl* d = derived; d; d = d->base) {
         if (d == base) return true;
+        for (const TypeDecl* i : d->interfaces)
+            if (i == base) return true;
+    }
     return false;
 }
 

@@ -171,6 +171,7 @@ struct FuncDecl {
     bool isCtor = false;
     bool isPrivate = false;     // only usable inside its class (methods) or its file (functions)
     bool isStatic = false;      // a static method: belongs to the type, not to one object
+    bool isAbstract = false;    // an abstract method (or an interface's): no code, every class below must write it
     FuncDecl* overrides = nullptr;
 
     size_t requiredParams() const {
@@ -181,7 +182,7 @@ struct FuncDecl {
 };
 using FuncPtr = std::unique_ptr<FuncDecl>;
 
-enum class DK { Struct, Class, Enum };
+enum class DK { Struct, Class, Enum, Interface };
 
 struct TypeDecl {
     DK kind;
@@ -192,7 +193,10 @@ struct TypeDecl {
     bool isPrivate = false;  // only usable inside its own file
     std::string cpp;  // C++ name of the struct/class/enum itself, e.g. "::m_main::Player_"
     TypeRef baseRef;
-    TypeDecl* base = nullptr;
+    std::vector<TypeRef> moreBaseRefs;      // class Goblin : Enemy, Attacker - the names after the first
+    TypeDecl* base = nullptr;               // the class it inherits from
+    std::vector<TypeDecl*> interfaces;      // the interfaces it has
+    bool isAbstract = false;                // abstract class: can't be made directly
     std::vector<VarPtr> fields;     // includes `static` built-in constants
     std::vector<FuncPtr> methods;
     std::vector<FuncPtr> ctors;

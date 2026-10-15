@@ -8,8 +8,8 @@ These words have special meanings, so they can't be used as names for variables,
 |---|---|
 | Control flow | `if` `else` `while` `do` `for` `in` `switch` `case` `default` `return` `break` `continue` |
 | Values | `true` `false` `null` `this` `super` |
-| Declarations | `struct` `class` `enum` `const` `void` |
-| Modifiers | `private` `public` `static` |
+| Declarations | `struct` `class` `enum` `interface` `const` `void` |
+| Modifiers | `private` `public` `static` `abstract` |
 | Logic | `and` `or` `not` |
 | Classes | `is` `as` |
 | Word operators | `negative` `bitnot` |

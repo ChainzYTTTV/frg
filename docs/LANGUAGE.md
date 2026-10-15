@@ -354,6 +354,31 @@ Enemy b = Enemy.boss();
 
 A static method has no object, so it can't use normal fields, normal methods or `this`.
 
+### Interfaces and abstract classes
+
+An `interface` lists methods with no code; a class that has it must write them all. An `abstract class` is a class that can also have `abstract` methods (no code), which classes inheriting from it must write. Neither can be made directly.
+
+```cpp
+interface Attacker {
+    int power();
+}
+
+abstract class Enemy {
+    abstract int reward();
+}
+
+class Goblin : Enemy, Attacker {   // at most one class, then any number of interfaces
+    int reward() {
+        return 5;
+    }
+    int power() {
+        return 3;
+    }
+}
+
+list<Attacker> attackers = [Goblin()];
+```
+
 ### private
 
 `private` hides something so only certain code can use it:

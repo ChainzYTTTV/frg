@@ -51,6 +51,7 @@ private:
         while (!atEnd()) {
             Tok k = cur().kind;
             bool starts = k == Tok::Ident || k == Tok::KwVoid || k == Tok::KwStruct || k == Tok::KwClass || k == Tok::KwEnum ||
+                          k == Tok::KwInterface || k == Tok::KwAbstract ||
                           k == Tok::KwConst || k == Tok::Hash || k == Tok::KwPrivate || k == Tok::KwPublic;
             if (starts && cur().loc.col == 1) return;
             p++;
@@ -84,9 +85,10 @@ private:
     }
     bool declAhead(bool allowParen);
     bool lambdaAhead();
+    bool bodyless = false;  // parsing an interface's or an abstract method: it ends with ; instead of { code }
     ExprPtr parseLambda();
     Include parseInclude();
-    TypeDeclPtr parseTypeDecl();
+    TypeDeclPtr parseTypeDecl(bool isAbstract = false);
     FuncPtr parseFuncRest(const TypeRef& ret, const Token& name, bool isCtor);
     VarPtr finishVar(bool isConst, const TypeRef& type, const Token& name);
 
@@ -283,7 +285,15 @@ FileAST Parser::parseFile() {
             Loc modLoc = cur().loc;
             bool isPrivate = at(Tok::KwPrivate);
             bool hasModifier = accept(Tok::KwPrivate) || accept(Tok::KwPublic);
-            if (at(Tok::KwStruct) || at(Tok::KwClass) || at(Tok::KwEnum)) {
+            if (at(Tok::KwAbstract)) {
+                Loc l = cur().loc;
+                p++;
+                if (!at(Tok::KwClass)) fail(l, "only a class can be abstract", "write it as: abstract class Enemy { ... }");
+                ast.types.push_back(parseTypeDecl(true));
+                ast.types.back()->isPrivate = isPrivate;
+                continue;
+            }
+            if (at(Tok::KwStruct) || at(Tok::KwClass) || at(Tok::KwEnum) || at(Tok::KwInterface)) {
                 ast.types.push_back(parseTypeDecl());
                 ast.types.back()->isPrivate = isPrivate;
                 continue;
@@ -346,11 +356,12 @@ Include Parser::parseInclude() {
     return inc;
 }
 
-TypeDeclPtr Parser::parseTypeDecl() {
+TypeDeclPtr Parser::parseTypeDecl(bool isAbstract) {
     auto d = std::make_unique<TypeDecl>();
+    d->isAbstract = isAbstract;
     Tok kw = cur().kind;
     std::string kwName = cur().text;
-    d->kind = kw == Tok::KwStruct ? DK::Struct : kw == Tok::KwClass ? DK::Class : DK::Enum;
+    d->kind = kw == Tok::KwStruct ? DK::Struct : kw == Tok::KwClass ? DK::Class : kw == Tok::KwInterface ? DK::Interface : DK::Enum;
     p++;
     const Token& name = expect(Tok::Ident, "a name for the " + kwName);
     d->name = name.text;
@@ -374,9 +385,15 @@ TypeDeclPtr Parser::parseTypeDecl() {
     if (at(Tok::Colon)) {
         if (d->kind == DK::Struct)
             fail(cur().loc, "structs can't inherit from other types", "use a class if you need inheritance");
+        if (d->kind == DK::Interface)
+            fail(cur().loc, "an interface can't inherit from other types", "a class can have several interfaces: class Goblin : Enemy, Attacker, Flyer");
         p++;
         d->baseRef = parseType();
         if (d->baseRef.optional) fail(d->baseRef.loc, "a class can't inherit from an optional type");
+        while (accept(Tok::Comma)) {
+            d->moreBaseRefs.push_back(parseType());
+            if (d->moreBaseRefs.back().optional) fail(d->moreBaseRefs.back().loc, "a class can't inherit from an optional type");
+        }
     }
     const Token& open = expect(Tok::LBrace, "'{'");
     while (!at(Tok::RBrace)) {
@@ -385,6 +402,40 @@ TypeDeclPtr Parser::parseTypeDecl() {
         bool isPrivate = at(Tok::KwPrivate);
         if (accept(Tok::KwPrivate) || accept(Tok::KwPublic)) {
             if (at(Tok::KwPrivate) || at(Tok::KwPublic)) fail(cur().loc, "only one of private or public can be used");
+        }
+        if (d->kind == DK::Interface) {
+            // An interface only lists methods, without their code: void attack(Enemy target);
+            if (at(Tok::KwStatic) || at(Tok::KwAbstract) || isPrivate)
+                fail(cur().loc, "an interface only lists methods, like: void attack(Enemy target);", "everything in an interface is public, and nothing is static");
+            if (at(Tok::Ident) && cur().text == d->name && peek().kind == Tok::LParen)
+                fail(cur().loc, "an interface can't have a constructor", "interfaces are never made directly - classes that have them are");
+            TypeRef type = parseType();
+            const Token& mname = expect(Tok::Ident, "a method name");
+            if (!at(Tok::LParen)) fail(mname.loc, "an interface can't have fields, only methods", "for example: int power();");
+            bodyless = true;
+            d->methods.push_back(parseFuncRest(type, mname, false));
+            bodyless = false;
+            d->methods.back()->isAbstract = true;
+            if (d->methods.back()->body)
+                fail(mname.loc, "a method in an interface has no code - just end it with ;", "the classes that have the interface write the code");
+            continue;
+        }
+        if (at(Tok::KwAbstract)) {
+            // abstract void attack();  - only in an abstract class; the classes below write the code.
+            Loc l = cur().loc;
+            p++;
+            if (!d->isAbstract) fail(l, "only an abstract class can have abstract methods", "write it as: abstract class " + d->name);
+            TypeRef type = parseType();
+            const Token& mname = expect(Tok::Ident, "a method name");
+            if (!at(Tok::LParen)) fail(mname.loc, "only methods can be abstract, not fields");
+            bodyless = true;
+            d->methods.push_back(parseFuncRest(type, mname, false));
+            bodyless = false;
+            d->methods.back()->isAbstract = true;
+            d->methods.back()->isPrivate = isPrivate;
+            if (d->methods.back()->body)
+                fail(mname.loc, "an abstract method has no code - end it with ;", "the classes that inherit from " + d->name + " write the code");
+            continue;
         }
         if (at(Tok::KwStatic)) {
             // static: a field or method that belongs to the type itself (Enemy.count), not to each object.
@@ -449,7 +500,7 @@ FuncPtr Parser::parseFuncRest(const TypeRef& ret, const Token& name, bool isCtor
         } while (accept(Tok::Comma));
     }
     expect(Tok::RParen, "')'");
-    if (prelude && accept(Tok::Semi)) return f;
+    if ((prelude || bodyless) && accept(Tok::Semi)) return f;
     if (at(Tok::Semi))
         fail(cur().loc, "Forge doesn't need function declarations - just write the function with its { body }",
              "functions can be used before or after the place they're written");
@@ -562,6 +613,7 @@ StmtPtr Parser::parseStmt() {
         case Tok::KwStruct:
         case Tok::KwClass:
         case Tok::KwEnum:
+        case Tok::KwInterface:
             fail(l, cur().text + " types have to be made outside of functions", "move it to the top level of the file");
         default: break;
     }

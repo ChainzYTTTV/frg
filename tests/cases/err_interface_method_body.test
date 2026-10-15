@@ -1,0 +1,17 @@
+=== main.frg
+interface Attacker {
+    int hit() {
+        return 1;
+    }
+}
+
+interface Mover : Attacker {
+    void move();
+}
+
+int main(){
+    return 0;
+}
+=== error
+a method in an interface has no code - just end it with ;
+an interface can't inherit from other types

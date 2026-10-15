@@ -676,6 +676,7 @@ std::vector<TypeDecl*> Gen::typeOrder() {
         if (d->builtin || d->kind == DK::Enum || done.count(d) || active.count(d)) return;
         active.insert(d);
         if (d->base) visit(d->base);
+        for (TypeDecl* i : d->interfaces) visit(i);
         for (auto& f : d->fields) visitType(f->type);
         active.erase(d);
         done.insert(d);
@@ -695,9 +696,22 @@ std::string Gen::strFuncProto(TypeDecl* d) {
 void Gen::emitTypeDef(TypeDecl* d) {
     std::string name = id(d->name);
     line("namespace " + d->module->cppNs + " {");
+    if (d->kind == DK::Interface) {
+        // An interface is a C++ struct with only "= 0" (pure virtual) methods.
+        line("struct " + name + " {");
+        ind++;
+        line("virtual ~" + name + "() = default;");
+        for (auto& m : d->methods) line("virtual " + m->ret->cpp + " " + id(m->name) + "(" + params(m.get()) + ") = 0;");
+        ind--;
+        line("};");
+        line("}");
+        return;
+    }
     std::string head = "struct " + name;
-    if (d->kind == DK::Class)
+    if (d->kind == DK::Class) {
         head += d->base ? " : public " + d->base->cpp : " : public ::std::enable_shared_from_this<" + name + ">";
+        for (TypeDecl* i : d->interfaces) head += ", public " + i->cpp;
+    }
     line(head + " {");
     ind++;
     for (auto& f : d->fields) line((f->isStatic ? "static " : "") + f->type->cpp + " " + id(f->name) + (f->isStatic ? ";" : "{};"));
@@ -717,7 +731,7 @@ void Gen::emitTypeDef(TypeDecl* d) {
     }
     for (auto& m : d->methods)
         line(std::string(m->isStatic ? "static " : d->kind == DK::Class ? "virtual " : "") + m->ret->cpp + " " + id(m->name) + "(" +
-             params(m.get()) + ");");
+             params(m.get()) + ")" + (m->isAbstract ? " = 0" : "") + ";");
     if (d->kind == DK::Struct) line("bool operator==(const " + name + "&) const = default;");
     if (d->kind == DK::Class) {
         // Lets the runtime ask an object "are you a <type name>?" (used by ECS's entity.get("Health")).
@@ -761,6 +775,29 @@ void Gen::emitTypeFuncs(TypeDecl* d) {
         line("}");
         return;
     }
+    if (d->kind == DK::Interface) {
+        // Printing through an interface shows the real object: try each class that has it, most specific first.
+        std::vector<TypeDecl*> classes;
+        for (Module* m : P.allModules)
+            for (auto& c : m->ast.types)
+                if (c->kind == DK::Class && inheritsFrom(c.get(), d)) classes.push_back(c.get());
+        auto depth = [](TypeDecl* t) {
+            int n = 0;
+            for (; t; t = t->base) n++;
+            return n;
+        };
+        std::stable_sort(classes.begin(), classes.end(), [&](TypeDecl* a, TypeDecl* b) { return depth(a) > depth(b); });
+        line(strFuncProto(d) + " {");
+        ind++;
+        line("if (!v) return \"null\";");
+        for (TypeDecl* c : classes)
+            line("if (auto x = ::std::dynamic_pointer_cast<" + c->cpp + ">(v)) return frg$str(x);");
+        line("return " + cppString("<" + d->name + ">") + ";");
+        ind--;
+        line("}");
+        line("}");
+        return;
+    }
 
     // Default constructor: field starting values.
     line(name + "::" + name + "() {");
@@ -785,7 +822,9 @@ void Gen::emitTypeFuncs(TypeDecl* d) {
     std::string make = isClass ? "auto o = ::std::make_shared<" + full + ">();" : full + " o;";
     std::string dot = isClass ? "->" : ".";
     auto argNames = [&](const std::vector<std::string>& names) { return joinNames(names); };
-    if (!ctors.empty()) {
+    if (d->isAbstract) {
+        // An abstract class is never made by itself, so it has no frg$new (C++ couldn't make one anyway).
+    } else if (!ctors.empty()) {
         for (FuncDecl* c : ctors) {
             std::vector<std::string> names;
             for (auto& p : c->params) names.push_back(id(p->name));
@@ -800,7 +839,8 @@ void Gen::emitTypeFuncs(TypeDecl* d) {
         }
     }
 
-    for (auto& m : d->methods) emitBody(m.get(), d, m->ret->cpp + " " + name + "::" + id(m->name) + "(" + params(m.get()) + ")");
+    for (auto& m : d->methods)
+        if (!m->isAbstract) emitBody(m.get(), d, m->ret->cpp + " " + name + "::" + id(m->name) + "(" + params(m.get()) + ")");
 
     // Text form, used by print() and "{...}".
     line(strFuncProto(d) + " {");

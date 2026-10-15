@@ -45,6 +45,7 @@ If you already know C++, C#, Java, JavaScript or Python, Forge will feel familia
 | `static` members | `static int count = 0;` and `static Enemy boss() { ... }` | reached as `Enemy.count`, `Enemy.boss()` |
 | overloading `void f(int)` / `void f(float)` | the same: `void f(int)` and `void f(float)` | top-level functions and constructors can share a name; methods can't |
 | `class B extends A` / `class B : public A` | `class B : A` | |
+| `interface I` / `implements I` / abstract classes | `interface Attacker { int power(); }`, `class Goblin : Enemy, Attacker`, `abstract class Enemy { abstract int reward(); }` | at most one class after the `:`, then interfaces. See [Interfaces and abstract classes](09-structs-and-classes.md#interfaces-and-abstract-classes) |
 | `@Override` / `override` | nothing | a method with the same name and types replaces the parent's |
 | `base.method()` / `super.method()` | `super.method()` | |
 | `try` / `catch` | not available | runtime errors stop the game with a message |

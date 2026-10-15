@@ -395,6 +395,89 @@ Things to know:
 - `private static` works: only the type itself can use it.
 - A class that inherits gets its parent's static fields and methods (they're still the same, shared ones). Static methods can't be replaced.
 
+## Interfaces and abstract classes
+
+Sometimes you want to say "every enemy can be attacked" without writing *how* yet. Forge has two ways.
+
+An **interface** is a list of methods, with no code. A class that has the interface promises to write them all:
+
+```cpp
+interface Attacker {
+    int power();
+    void attack(string target);
+}
+
+class Trap : Attacker {
+    int power() {
+        return 7;
+    }
+
+    void attack(string target) {
+        print("the trap snaps at {target}");
+    }
+}
+```
+
+An **abstract class** is a normal class that can also have `abstract` methods: methods with no code, which every class that inherits from it must write. It can still have fields, constructors and normal methods:
+
+```cpp
+abstract class Enemy {
+    string name;
+    int hp = 10;
+
+    Enemy(string name) {
+        this.name = name;
+    }
+
+    abstract int reward();          // no code: each kind of enemy says how much it's worth
+
+    void hurt(int amount) {
+        hp -= amount;
+        print("{name} is worth {reward()} gold");
+    }
+}
+
+class Goblin : Enemy, Attacker {    // one class first, then any number of interfaces
+    Goblin(string name) {
+        super(name);
+    }
+
+    int reward() {
+        return 5;
+    }
+
+    int power() {
+        return 3;
+    }
+
+    void attack(string target) {
+        print("{name} pokes {target}");
+    }
+}
+```
+
+Interfaces and abstract classes are used like any class type: in variables, lists, parameters, `is` and `as`:
+
+```cpp
+list<Attacker> attackers = [Goblin("Grub"), Trap()];
+for (Attacker a in attackers) {
+    a.attack("you");                // each one does its own attack
+}
+if (attackers[0] is Goblin) {
+    Goblin g = attackers[0] as Goblin;
+}
+```
+
+Things to know:
+
+- After the `:` comes at most one class, then any number of interfaces, separated by commas: `class Goblin : Enemy, Attacker, Flyer`. A class can also have only interfaces: `class Trap : Attacker`.
+- An interface has only methods ending in `;`: no code, no fields, no constructors, nothing `static` or `private`. An interface can't inherit from anything.
+- Only an `abstract class` can have `abstract` methods. A class that inherits from it, or has an interface, must write every one of those methods with exactly the same parameter and return types. If one is missing, Forge tells you which, and what to add.
+- An interface or an abstract class can't be made directly: `Attacker()` and `Enemy()` are errors. Make one of the classes that have it.
+- `super.reward()` doesn't work when `reward` is abstract in the parent, because there's no code to call.
+- Structs can't have interfaces or be abstract, because they're copied rather than shared.
+- Printing something through an interface prints the real object, like `Goblin(name: "Grub", hp: 10)`.
+
 ## Types from other files
 
 Types follow the [file-name prefix rule](07-files-and-folders.md):
@@ -412,6 +495,7 @@ class Boss : enemies.goblin.Goblin { ... }
 - A field of class type needs a starting value or must be optional.
 - Methods can call each other by name, and can use fields by name or through `this`.
 - Methods can't have the same name as each other. Only constructors can share a name.
+- A class inherits from at most one class, plus any number of interfaces.
 - Class objects are cleaned up automatically once nothing uses them anymore. There's no need (and no way) to delete them.
 
 ## What's next

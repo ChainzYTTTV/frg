@@ -422,6 +422,8 @@ for (Entity e in all) {
 
 **`static`** fields and methods belong to the type, not to each object: `static int count = 0;` is one counter shared by every `Enemy`, and `static Enemy boss() { ... }` is called on the type. Outside the type write `Enemy.count` and `Enemy.boss()`; inside it, the plain name works. A static method has no object, so it can't use normal fields, normal methods or `this` (an error says so). Static fields aren't part of the constructor or of printing. Structs can have them too (`Point.origin`).
 
+**Interfaces and abstract classes.** `interface Attacker { int power(); void attack(string target); }` lists methods with no code (each ends in `;`, no fields/constructors/static/private, and an interface can't inherit). `abstract class Enemy { ... abstract int reward(); ... }` is a normal class that can also have `abstract` methods with no code; only abstract classes can have them. After the `:` comes at most one class, then any number of interfaces: `class Goblin : Enemy, Attacker, Flyer`. The class must write every method its interfaces and abstract parents list, with exactly the same types (the error names the missing one and what to add). `Attacker()` and `Enemy()` are errors: neither can be made directly. They work as types everywhere (`list<Attacker>`, `is`, `as`), and `super.reward()` is an error when `reward` is abstract. Structs can't have interfaces.
+
 **`private`** hides things. A private field or method can only be used inside its class (and classes that inherit from it). A private function, global variable or type at the top of a file can only be used inside that file. `public` is allowed too and means the same as writing nothing.
 
 ```cpp
@@ -885,7 +887,7 @@ Runtime error in main.frg:10: position 5 is outside the list (it has 3 items, at
 - `char` (single letters are one-letter strings), fixed-size arrays (use `list`), tuples
 - Generics you write yourself (`class Box<T>`)
 - Two methods with the same name (only constructors and top-level functions can share a name), operator overloading for your own types
-- Interfaces, abstract classes, `protected`
+- `protected` (`private` already includes classes that inherit)
 - Labeled breaks, exceptions (`try` / `catch`), `goto`
 - Networking, shaders in the engine, 3D lighting
 - `<network>` is planned but **doesn't exist yet**.
@@ -4023,6 +4025,89 @@ Things to know:
 - `private static` works: only the type itself can use it.
 - A class that inherits gets its parent's static fields and methods (they're still the same, shared ones). Static methods can't be replaced.
 
+### Interfaces and abstract classes
+
+Sometimes you want to say "every enemy can be attacked" without writing *how* yet. Forge has two ways.
+
+An **interface** is a list of methods, with no code. A class that has the interface promises to write them all:
+
+```cpp
+interface Attacker {
+    int power();
+    void attack(string target);
+}
+
+class Trap : Attacker {
+    int power() {
+        return 7;
+    }
+
+    void attack(string target) {
+        print("the trap snaps at {target}");
+    }
+}
+```
+
+An **abstract class** is a normal class that can also have `abstract` methods: methods with no code, which every class that inherits from it must write. It can still have fields, constructors and normal methods:
+
+```cpp
+abstract class Enemy {
+    string name;
+    int hp = 10;
+
+    Enemy(string name) {
+        this.name = name;
+    }
+
+    abstract int reward();          // no code: each kind of enemy says how much it's worth
+
+    void hurt(int amount) {
+        hp -= amount;
+        print("{name} is worth {reward()} gold");
+    }
+}
+
+class Goblin : Enemy, Attacker {    // one class first, then any number of interfaces
+    Goblin(string name) {
+        super(name);
+    }
+
+    int reward() {
+        return 5;
+    }
+
+    int power() {
+        return 3;
+    }
+
+    void attack(string target) {
+        print("{name} pokes {target}");
+    }
+}
+```
+
+Interfaces and abstract classes are used like any class type: in variables, lists, parameters, `is` and `as`:
+
+```cpp
+list<Attacker> attackers = [Goblin("Grub"), Trap()];
+for (Attacker a in attackers) {
+    a.attack("you");                // each one does its own attack
+}
+if (attackers[0] is Goblin) {
+    Goblin g = attackers[0] as Goblin;
+}
+```
+
+Things to know:
+
+- After the `:` comes at most one class, then any number of interfaces, separated by commas: `class Goblin : Enemy, Attacker, Flyer`. A class can also have only interfaces: `class Trap : Attacker`.
+- An interface has only methods ending in `;`: no code, no fields, no constructors, nothing `static` or `private`. An interface can't inherit from anything.
+- Only an `abstract class` can have `abstract` methods. A class that inherits from it, or has an interface, must write every one of those methods with exactly the same parameter and return types. If one is missing, Forge tells you which, and what to add.
+- An interface or an abstract class can't be made directly: `Attacker()` and `Enemy()` are errors. Make one of the classes that have it.
+- `super.reward()` doesn't work when `reward` is abstract in the parent, because there's no code to call.
+- Structs can't have interfaces or be abstract, because they're copied rather than shared.
+- Printing something through an interface prints the real object, like `Goblin(name: "Grub", hp: 10)`.
+
 ### Types from other files
 
 Types follow the file-name prefix rule (see “7. Files and Folders”):
@@ -4040,6 +4125,7 @@ class Boss : enemies.goblin.Goblin { ... }
 - A field of class type needs a starting value or must be optional.
 - Methods can call each other by name, and can use fields by name or through `this`.
 - Methods can't have the same name as each other. Only constructors can share a name.
+- A class inherits from at most one class, plus any number of interfaces.
 - Class objects are cleaned up automatically once nothing uses them anymore. There's no need (and no way) to delete them.
 
 ### What's next
@@ -4603,8 +4689,8 @@ These words have special meanings, so they can't be used as names for variables,
 |---|---|
 | Control flow | `if` `else` `while` `do` `for` `in` `switch` `case` `default` `return` `break` `continue` |
 | Values | `true` `false` `null` `this` `super` |
-| Declarations | `struct` `class` `enum` `const` `void` |
-| Modifiers | `private` `public` `static` |
+| Declarations | `struct` `class` `enum` `interface` `const` `void` |
+| Modifiers | `private` `public` `static` `abstract` |
 | Logic | `and` `or` `not` |
 | Classes | `is` `as` |
 | Word operators | `negative` `bitnot` |
@@ -4702,6 +4788,7 @@ If you already know C++, C#, Java, JavaScript or Python, Forge will feel familia
 | `static` members | `static int count = 0;` and `static Enemy boss() { ... }` | reached as `Enemy.count`, `Enemy.boss()` |
 | overloading `void f(int)` / `void f(float)` | the same: `void f(int)` and `void f(float)` | top-level functions and constructors can share a name; methods can't |
 | `class B extends A` / `class B : public A` | `class B : A` | |
+| `interface I` / `implements I` / abstract classes | `interface Attacker { int power(); }`, `class Goblin : Enemy, Attacker`, `abstract class Enemy { abstract int reward(); }` | at most one class after the `:`, then interfaces. See Interfaces and abstract classes (see “9. Structs and Classes” › “Interfaces and abstract classes”) |
 | `@Override` / `override` | nothing | a method with the same name and types replaces the parent's |
 | `base.method()` / `super.method()` | `super.method()` | |
 | `try` / `catch` | not available | runtime errors stop the game with a message |
@@ -9166,6 +9253,31 @@ Enemy b = Enemy.boss();
 ```
 
 A static method has no object, so it can't use normal fields, normal methods or `this`.
+
+#### Interfaces and abstract classes
+
+An `interface` lists methods with no code; a class that has it must write them all. An `abstract class` is a class that can also have `abstract` methods (no code), which classes inheriting from it must write. Neither can be made directly.
+
+```cpp
+interface Attacker {
+    int power();
+}
+
+abstract class Enemy {
+    abstract int reward();
+}
+
+class Goblin : Enemy, Attacker {   // at most one class, then any number of interfaces
+    int reward() {
+        return 5;
+    }
+    int power() {
+        return 3;
+    }
+}
+
+list<Attacker> attackers = [Goblin()];
+```
 
 #### private
 

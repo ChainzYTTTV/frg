@@ -76,10 +76,11 @@ Forge's own helper names contain `$`, which Forge names can't, so they never cla
 `frg` runs g++ on the generated file:
 
 ```
-g++ -std=gnu++20 -O2 -fwrapv -static -I<runtime> forge_generated.cpp -o game.exe
+g++ -std=gnu++20 -O1 -fwrapv -w -I<runtime> -I<cache> forge_generated.cpp -o game.exe -static
 ```
 
-- `-O2` optimizes for speed.
+- `-O1` optimizes a little, and compiles fast. `--release` builds use `-O2`, which optimizes more but takes longer.
+- **Precompiled headers.** Most of a build's time goes into reading Forge's runtime headers (and raylib's). So the generated file starts with `#include "forge_pch.hpp"`, and Forge compiles that header once into `forge_pch.hpp.gch` in a `cache` folder next to `frg.exe` (or in the game's `build/` folder if that one can't be written). There are two versions: one with the core and the libraries that don't use raylib, and one that adds every raylib library, so all games share them. The toolkits' own `.cpp` files are cached as `.o` files the same way. The cache folder's name comes from everything that affects the result (Forge's version, the runtime files' dates, which g++ is used, and the flags), so it's never stale. If a cached file is unusable anyway, g++ just reads the real headers, so the cache only changes speed, never behavior.
 - `-fwrapv` makes whole numbers wrap around predictably when they overflow.
 - `-static` puts everything into the `.exe`, so it runs anywhere without extra files.
 - Games that use the engine libraries also link **raylib** (`-lraylib -lopengl32 -lgdi32 -lwinmm`).

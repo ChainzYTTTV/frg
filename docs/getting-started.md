@@ -103,6 +103,18 @@ Without a console, `print` output isn't shown anywhere. **Runtime errors still a
 
 In VS Code, the **Forge: Turn the Console On/Off** command switches the console for the ▶ button, and **Forge: Build Release** builds the finished game.
 
+### Why the first build is slower
+
+The very first time you build a game (and the first time with `--release` or without a console), Forge shows:
+
+```
+   Preparing Forge's runtime for these libraries (only the first time, to make later builds faster)
+```
+
+It's getting Forge's own code ready once, so every build after that is quicker, for all your games. It's kept in a `cache` folder next to `frg.exe` (a few hundred MB at most). You can delete that folder whenever you like; Forge just makes it again.
+
+`--release` builds take a little longer, because they make the game run as fast as possible. Normal builds skip some of that work: they're quicker to make, and the game behaves exactly the same.
+
 When `frg run` starts your game, the game's **working folder** is the game's top folder. That matters for files your game loads or saves; see [Files](libraries/file.md) and [Assets](libraries/assets.md).
 
 If the game crashes or `main` returns something other than 0, `frg run` says so after the game ends, for example `[hello.exe exited with code 1]`.

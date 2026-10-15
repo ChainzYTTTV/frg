@@ -84,6 +84,8 @@ In **VS Code** (with the Forge extension): errors are underlined when you save, 
 
 Forge is **compiled**. The whole program is checked before it runs, so most mistakes are caught before the game starts.
 
+The first build (and the first `--release` build) shows "Preparing Forge's runtime ... (only the first time)" and takes longer: Forge is getting its own code ready once, so later builds of every game are faster. It's stored in a `cache` folder next to `frg.exe` that can be deleted at any time.
+
 ---
 
 ## Part 3: The language reference

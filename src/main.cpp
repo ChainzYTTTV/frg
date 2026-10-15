@@ -9,6 +9,7 @@
 
 #include <algorithm>
 #include <chrono>
+#include <cstdint>
 #include <cstdio>
 #include <filesystem>
 #include <fstream>
@@ -126,6 +127,72 @@ static bool compileShaders(const fs::path& root, const fs::path& runtime) {
     return ok;
 }
 
+// ---------------------------------------------------------------- build cache
+//
+// Most of a build's time goes into reading Forge's runtime headers (and raylib's). So they're compiled once into a
+// precompiled header, and the toolkits' runtime .cpp files into object files, and kept in a cache folder next to
+// frg.exe. Games that use the same libraries with the same settings share them. If a cached file is out of date or
+// broken, g++ simply reads the real headers instead, so the cache can only make builds faster, never different.
+
+// A short name for a piece of text (FNV-1a hash), used to name cache folders.
+static std::string hashName(const std::string& s) {
+    uint64_t h = 1469598103934665603ull;
+    for (unsigned char c : s) {
+        h ^= c;
+        h *= 1099511628211ull;
+    }
+    char buf[17];
+    std::snprintf(buf, sizeof buf, "%016llx", (unsigned long long)h);
+    return buf;
+}
+
+static std::string timeStamp(const fs::path& p) {
+    std::error_code ec;
+    auto t = fs::last_write_time(p, ec);
+    return ec ? "?" : std::to_string(t.time_since_epoch().count());
+}
+
+// Everything that makes cached compiler output out of date: Forge's version, the runtime files, and which g++ is used.
+static std::string toolStamp(const fs::path& runtime) {
+    std::string s = std::string(kVersion) + "|";
+    std::error_code ec;
+    for (const auto& entry : fs::directory_iterator(runtime, ec))
+        if (entry.is_regular_file()) s += entry.path().filename().string() + "@" + timeStamp(entry.path()) + ";";
+    wchar_t gpp[MAX_PATH];
+    if (SearchPathW(nullptr, L"g++.exe", nullptr, MAX_PATH, gpp, nullptr)) s += fs::path(gpp).string() + "@" + timeStamp(gpp);
+    return s;
+}
+
+// The folder for one cached thing: <frg.exe's folder>/cache/<hash>, or the game's build folder if that can't be written.
+static fs::path cacheFolder(const std::string& key, const fs::path& buildDir) {
+    fs::path dir = exeDir() / "cache" / hashName(key);
+    std::error_code ec;
+    fs::create_directories(dir, ec);
+    if (!ec) {
+        fs::path probe = dir / "write-test";
+        std::ofstream f(probe, std::ios::binary);
+        if (f << "ok") {
+            f.close();
+            fs::remove(probe, ec);
+            return dir;
+        }
+    }
+    dir = buildDir / "cache" / hashName(key);
+    fs::create_directories(dir, ec);
+    return dir;
+}
+
+// Runs one g++ command that makes `output`, writing to a temporary name first so a half-written file is never used.
+static int compileTo(const std::wstring& args, const fs::path& output) {
+    fs::path tmp = output;
+    tmp += L"." + std::to_wstring(GetCurrentProcessId()) + L".tmp";
+    int code = runProcess(L"g++ " + args + L" -o " + quote(tmp));
+    std::error_code ec;
+    if (code == 0) fs::rename(tmp, output, ec);
+    if (code != 0 || ec) fs::remove(tmp, ec);
+    return code;
+}
+
 // While the game runs, Ctrl+C should stop the game, not Forge.
 static BOOL WINAPI ignoreCtrlC(DWORD type) { return type == CTRL_C_EVENT || type == CTRL_BREAK_EVENT; }
 
@@ -190,16 +257,63 @@ static bool build(const fs::path& dir, fs::path& exeOut, const BuildOptions& opt
         return false;
     }
 
-    std::wstring cmd = L"g++ -std=gnu++20 -O2 -fwrapv -w -static -I" + quote(runtime) + L" " + quote(cppPath);
-    if (vulkan) cmd += L" -I" + quote(runtime / "vulkan" / "include");
-    for (const std::string& src : gen.sources) cmd += L" " + quote(runtime / src);  // a toolkit's own runtime code
-    cmd += L" -o " + quote(exe);
-    if (!opt.console) cmd += L" -mwindows -DFRG_NO_CONSOLE";  // no console window: runtime errors pop up in a box instead
-    if (opt.release) cmd += L" -s";                           // a smaller .exe
-    if (gen.needsRaylib) {
-        fs::path raylib = runtime / "raylib";
-        cmd += L" -I" + quote(raylib / "include") + L" -L" + quote(raylib / "lib") + L" -lraylib -lopengl32 -lgdi32 -lwinmm";
+    // Release builds are optimized more (-O2). Other builds use -O1, which compiles faster and still runs well.
+    // -fwrapv: whole numbers wrap around when they overflow, the same at every optimization level.
+    std::wstring flags = std::wstring(L"-std=gnu++20 ") + (opt.release ? L"-O2" : L"-O1") + L" -fwrapv -w -I" + quote(runtime);
+    if (!opt.console) flags += L" -DFRG_NO_CONSOLE";  // no console window: runtime errors pop up in a box instead
+    if (vulkan) flags += L" -I" + quote(runtime / "vulkan" / "include");
+    fs::path raylib = runtime / "raylib";
+    if (gen.needsRaylib) flags += L" -I" + quote(raylib / "include");
+    std::string stamp = toolStamp(runtime) + "|" + fs::path(flags).string();
+
+    // Forge's runtime headers, precompiled once (see "build cache" above). There are two sets, so that all games share
+    // them: the core and the libraries that don't use raylib, and for engine games, those plus every raylib library.
+    // (Including a header the game doesn't use changes nothing: they only hold declarations and inline functions.)
+    // Any other header the game uses (a toolkit, <time>) is read after it as usual.
+    std::vector<std::string> pchHeaders = {"forge.hpp", "forge_physics.hpp", "forge_scenes.hpp", "forge_ecs.hpp", "forge_file.hpp"};
+    const std::vector<std::string> engineHeaders = {"forge_window.hpp", "forge_assets.hpp", "forge_audio.hpp", "forge_ui.hpp", "forge_graphics3d.hpp"};
+    for (const std::string& h : gen.headers)
+        if (std::find(engineHeaders.begin(), engineHeaders.end(), h) != engineHeaders.end()) {
+            pchHeaders.insert(pchHeaders.end(), engineHeaders.begin(), engineHeaders.end());
+            break;
+        }
+    std::string pchText;
+    for (const std::string& h : pchHeaders) pchText += "#include \"" + h + "\"\n";
+    fs::path pchDir = cacheFolder("pch|" + stamp + "|" + pchText, buildDir);
+    fs::path pchHeader = pchDir / "forge_pch.hpp", pch = pchDir / "forge_pch.hpp.gch";
+    if (!fs::exists(pchHeader)) {
+        std::ofstream f(pchHeader, std::ios::binary);
+        f << pchText;
     }
+    if (!fs::exists(pch)) {
+        printStatus("Preparing", "Forge's runtime for these libraries (only the first time, to make later builds faster)");
+        if (compileTo(flags + L" -x c++-header " + quote(pchHeader), pch) == -1) {
+            reportPlainError("couldn't find g++, which Forge uses to make .exe files",
+                             "install w64devkit and make sure its bin folder is on your PATH");
+            return false;
+        }
+    }
+
+    // A toolkit's own runtime code, compiled once into an object file.
+    std::vector<fs::path> objects;
+    for (const std::string& src : gen.sources) {
+        fs::path obj = cacheFolder("obj|" + stamp + "|" + src, buildDir) / (fs::path(src).stem().string() + ".o");
+        if (!fs::exists(obj)) {
+            printStatus("Preparing", src + " (only the first time)");
+            if (compileTo(flags + L" -c " + quote(runtime / src), obj) != 0) {
+                reportPlainError("the C++ compiler rejected Forge's runtime file " + src + " - this is a bug in Forge, not in your code");
+                return false;
+            }
+        }
+        objects.push_back(obj);
+    }
+
+    std::wstring cmd = L"g++ " + flags + L" -I" + quote(pchDir) + L" " + quote(cppPath);
+    for (const fs::path& obj : objects) cmd += L" " + quote(obj);
+    cmd += L" -o " + quote(exe) + L" -static";
+    if (!opt.console) cmd += L" -mwindows";
+    if (opt.release) cmd += L" -s";  // a smaller .exe
+    if (gen.needsRaylib) cmd += L" -L" + quote(raylib / "lib") + L" -lraylib -lopengl32 -lgdi32 -lwinmm";
     for (const std::string& flag : gen.linkFlags) cmd += L" " + fs::path(flag).wstring();
     int code = runProcess(cmd);
     if (code == -1) {

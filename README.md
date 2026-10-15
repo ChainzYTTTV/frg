@@ -66,7 +66,7 @@ runtime/
   vulkan/               Vulkan-Headers 1.3.296 (Apache 2.0 / MIT license)
   tools/glslang.exe     glslang 16, compiles <Vulkan> shaders to SPIR-V (licenses in tools/glslang-LICENSE.txt)
 tests/             .\tests\run_tests.ps1
-examples/          hello, tour, shapes, platformer, sprites, menu, world3d, opengl, directx, vulkan
+examples/          hello, tour, shapes, platformer, sprites, menu, world3d, gamepad, opengl, directx, vulkan
 ```
 
 Games that use the window, graphics, input, assets, audio or UI libraries are linked with raylib. Everything is linked statically, so the `.exe` runs on any Windows PC.

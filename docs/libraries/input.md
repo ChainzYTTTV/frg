@@ -94,6 +94,7 @@ Things to know:
 
 - Sticks never rest exactly in the middle, so small movements (less than a fifth of the way) read as exactly `(0, 0)`. That's called a **dead zone**. Past it, the value still goes all the way to 1.
 - The stick's `y` points **down**, like the screen, so `position += input.leftStick() * speed * dt;` moves the right way.
+- A stick pushed all the way, in any direction, has a length of 1. The d-pad doesn't: up + right is `(1, -1)`, which is about 1.41 long, so diagonals would be faster. When a game mixes the stick with the d-pad (or keys), cap the length instead of always normalizing, so gentle stick pushes stay gentle: `if (move.length() > 1) { move = move.normalized(); }`. [`examples/gamepad`](../../examples/gamepad/main.frg) does this.
 - Without a controller, every function just says "not pressed" (`false`, `vec2(0, 0)`, `0`), so a game can always check the keyboard and the controller together:
 
 ```cpp

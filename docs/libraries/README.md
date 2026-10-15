@@ -24,7 +24,7 @@ How libraries work:
 | [`<input>`](input.md) | Keyboard, mouse and controllers (gamepads) | yes |
 | [`<graphics2d>`](graphics2d.md) | Rectangles, circles, lines, triangles, text | yes |
 | [`<graphics3d>`](graphics3d.md) | 3D camera, cubes, spheres, grids, 3D models | yes |
-| [`<assets>`](assets.md) | Loading images (`Texture`) and fonts (`Font`) | to draw them |
+| [`<assets>`](assets.md) | Loading images (`Texture`) and fonts (`Font`), and sprite-sheet animation (`Animation`) | to draw them |
 | [`<audio>`](audio.md) | Sound effects (`Sound`) and music (`Music`) | no |
 | [`<physics>`](physics.md) | Box bodies with gravity and collisions | no |
 | [`<time>`](time.md) | The clock and date, `sleep`, and the `Timer` class | no |

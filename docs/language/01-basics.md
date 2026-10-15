@@ -90,6 +90,8 @@ over as many lines as you like.
 **Functions, types and global variables can be used before or after the place they're written**, even in other files. Forge reads everything first, then checks it:
 
 ```cpp
+#include <stdio>
+
 int main(){
     greet("Ana");       // fine, even though greet is written below
     return 0;

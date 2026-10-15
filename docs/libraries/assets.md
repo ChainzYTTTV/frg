@@ -1,10 +1,10 @@
-# `<assets>`: Images and Fonts
+# `<assets>`: Images, Animations and Fonts
 
 ```cpp
 #include <assets>
 ```
 
-Loads pictures (`Texture`) and fonts (`Font`) from files, and draws them. See the [sprites guide](../guides/sprites-and-animation.md) for animation and sprite sheets.
+Loads pictures (`Texture`) and fonts (`Font`) from files, and draws them. `Animation` plays the frames of a sprite sheet. See the [sprites guide](../guides/sprites-and-animation.md) for a walk-through.
 
 ## Where files go
 
@@ -61,6 +61,44 @@ void draw(){
 ```
 
 Pixel art stays sharp when scaled up; there's no blurring.
+
+## Animation
+
+Plays the frames of a **sprite sheet** (one image holding every frame of an animation, side by side) one after the other. The [sprites and animation guide](../guides/sprites-and-animation.md#animation) explains it step by step.
+
+```cpp
+Texture sheet = assets.loadTexture("hero.png");
+Animation walk = Animation(sheet, 16, 16, 4, 8);     // 16x16 frames, 4 of them, 8 per second
+
+void update(float dt){
+    walk.update(dt);
+}
+
+void draw(){
+    walk.drawScaled(100, 100, 4);
+}
+```
+
+| Making one | |
+|---|---|
+| `Animation(Texture sheet, int frameWidth, int frameHeight, int frames, float fps)` | frames starting at the top-left of the sheet, read left to right (carrying on in the next row if needed) |
+| `Animation(sheet, frameWidth, frameHeight, frames, fps, int row)` | frames starting at the beginning of row `row` (0 is the top row), for sheets with one row per animation |
+
+| Method or field | What it does |
+|---|---|
+| `update(float dt)` | moves the animation on by `dt` seconds. Call it once per frame |
+| `draw(float x, float y, color tint = color.WHITE)` | draws the current frame at its real size, with its top-left corner at (x, y) |
+| `drawScaled(float x, float y, float scale, color tint = color.WHITE)` | the same, `scale` times bigger |
+| `play()` / `pause()` | starts and stops it. A paused animation stays on its frame |
+| `reset()` | back to the first frame, playing |
+| `flip(bool flipped)` | `flip(true)` draws it mirrored left-to-right, `flip(false)` normally |
+| `isFlipped()`, `isPlaying()` | what was chosen |
+| `frame()`, `setFrame(int frame)`, `frameCount()` | the frame being shown (from 0), jumping to one, and how many there are |
+| `float fps` | frames per second; change it any time (0 stops it) |
+| `bool looping` | `true` (the start): after the last frame it starts again. `false`: it stops on the last frame |
+| `isDone()` | `true` when an animation that doesn't loop has reached its last frame |
+
+If the sheet doesn't have room for the frames you asked for, the game stops with a message saying how big the sheet really is. `Animation` is a class, so `Animation current = walk;` makes `current` mean the very same animation, not a copy.
 
 ## Font
 

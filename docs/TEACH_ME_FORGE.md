@@ -454,8 +454,8 @@ A pointer must point at a variable, field or list item. Don't keep one pointing 
 
 | Type | Fields | Extras |
 |---|---|---|
-| `vec2` | `x y` | `length()` `normalized()` `dot(v)` `distance(v)` `angle()` `rotated(radians)` `lerp(v, t)`, `vec2.ZERO` `ONE` `UP` `DOWN` `LEFT` `RIGHT` |
-| `vec3` | `x y z` | `length()` `normalized()` `dot(v)` `cross(v)` `distance(v)` `lerp(v, t)`, `vec3.ZERO` `ONE` `UP` `FORWARD` `RIGHT` |
+| `vec2` | `x y` | `length()` `lengthSquared()` `normalized()` `dot(v)` `distance(v)` `angle()` `rotated(radians)` `lerp(v, t)`, `vec2.ZERO` `ONE` `UP` `DOWN` `LEFT` `RIGHT` |
+| `vec3` | `x y z` | `length()` `lengthSquared()` `normalized()` `dot(v)` `cross(v)` `distance(v)` `lerp(v, t)`, `vec3.ZERO` `ONE` `UP` `FORWARD` `RIGHT` |
 | `vec4` | `x y z w` | `length()` `normalized()` `dot(v)` |
 | `color` | `r g b a` (0–255) | `color(r, g, b)` or `color(r, g, b, a)` from ints (kept between 0 and 255, so `color(random.range(0, 255), ...)` just works), `fade(alpha)`, `lerp(c, t)`. Named colors: `color.WHITE BLACK BLANK LIGHTGRAY GRAY DARKGRAY RED MAROON ORANGE YELLOW GOLD GREEN LIME DARKGREEN SKYBLUE BLUE DARKBLUE PURPLE VIOLET PINK MAGENTA BROWN BEIGE` |
 | `rect` | `x y width height` | `overlaps(other)` `contains(point)` `center()` `position()` `size()` |
@@ -475,7 +475,7 @@ Library functions are reached through the library name (`window.open(...)`). Lib
 | `<input>` | `input.keyDown(Key.SPACE)` (held), `input.keyPressed(...)` (only the frame it was pressed), `input.keyReleased(...)`, `input.mouseDown(MouseButton.LEFT)`, `mousePressed`, `mouseReleased`, `mousePosition()` (a vec2), `mouseX()`, `mouseY()`, `mouseWheel()`. Controllers (gamepads): `input.gamepadDown(GamepadButton.A)`, `gamepadPressed`, `gamepadReleased` (Xbox-style names: `A B X Y LEFT_BUMPER RIGHT_BUMPER LEFT_TRIGGER RIGHT_TRIGGER BACK START LEFT_STICK RIGHT_STICK`, and the D-pad `UP DOWN LEFT RIGHT`), `input.leftStick()` / `rightStick()` (a vec2 from -1 to 1; y is down, like the screen; small wobbles read as 0), `leftTrigger()` / `rightTrigger()` (0 to 1), `gamepadConnected()`, `gamepadName()`. Each takes an optional controller number: 0 (the default) is the first one plugged in. Without a controller they all read "not pressed", so a game can check both: `if (input.keyDown(Key.SPACE) or input.gamepadDown(GamepadButton.A))` |
 | `<graphics2d>` | `graphics2d.drawRect(x, y, w, h, color)` or `drawRect(rect, color)`, `drawRectOutline(x, y, w, h, color, thickness)`, `drawCircle(x, y, radius, color)` or `drawCircle(vec2, radius, color)`, `drawCircleOutline(x, y, radius, color)`, `drawLine(from, to, color, thickness)`, `drawTriangle(a, b, c, color)`, `drawText(text, x, y, size, color)`, `textWidth(text, size)`, `drawFPS(x, y)`, `clear(color)`, and a 2D camera (below) |
 | `<physics>` | the `Body` class, plus `physics.add(body)`, `remove(body)`, `step(dt)`, `setGravity(vec2)`, `gravity()`, `clear()`, `count()` |
-| `<assets>` | `assets.loadTexture("x.png")` gives a `Texture`, `assets.loadFont("x.ttf")` gives a `Font`, `assets.exists(path)` |
+| `<assets>` | `assets.loadTexture("x.png")` gives a `Texture`, `assets.loadFont("x.ttf")` gives a `Font` (an optional second number is the size the letters are prepared at: use about the biggest size you draw it at, 64 to start with), `assets.exists(path)` |
 | `<audio>` | `audio.loadSound("x.wav")` gives a `Sound`, `audio.loadMusic("x.ogg")` gives a `Music`, `audio.setVolume(v)` |
 | `<graphics3d>` | the `Camera` struct and `Model` class, `graphics3d.setCamera(cam)`, `drawCube(pos, size, color)`, `drawCubeOutline`, `drawSphere(center, radius, color)`, `drawSphereOutline`, `drawCylinder(pos, radius, height, color)`, `drawPlane(center, vec2 size, color)`, `drawGrid(slices, spacing)`, `drawLine(from, to, color)`, `toScreen(vec3)`, `loadModel("x.glb")` |
 | `<time>` | `time.now()`, `time.sleep(s)`, `time.clock()`, `time.date()`, `year() month() day() hour() minute() second()`, the `Timer` class |
@@ -561,7 +561,7 @@ song.play();
 - `Sound`: `play()`, `stop()`, `isPlaying()`, `setVolume(v)`, `setPitch(p)`.
 - `Music`: `play()`, `stop()`, `pause()`, `resume()`, `isPlaying()`, `setVolume(v)`, `setLooping(b)`, `length()`, `position()`.
 - A missing file stops the game with "can't find the file 'x.png'".
-- **Sprite-sheet animation:** `Animation walk = Animation(sheet, 16, 16, 4, 8);` (the sheet, frame width and height, how many frames, frames per second, and optionally the row they start in, from 0). Then `walk.update(dt);` in `update` and `walk.drawScaled(x, y, 4);` (or `draw(x, y)`) in `draw`. Frames are read left to right. `flip(true)` mirrors it to face left, `play()` / `pause()` / `reset()`, `frame()`, `setFrame(i)`, `frameCount()`, `isPlaying()`, and fields `fps` and `looping` (set `looping = false` for a one-time animation, then check `isDone()`). It's a class, so `current = run;` shares the same animation. Learners can also do it by hand first to understand it: keep a frame number, change it every 0.1 seconds with a timer, and draw `drawPart(rect(frame * 16, 0, 16, 16), rect(x, y, 64, 64))`.
+- **Sprite-sheet animation:** `Animation walk = Animation(sheet, 16, 16, 4, 8);` (the sheet, frame width and height, how many frames, frames per second, and optionally the row they start in, from 0). Then `walk.update(dt);` in `update` and `walk.drawScaled(x, y, 4);` (or `draw(x, y)`) in `draw`. Frames are read left to right. `flip(true)` mirrors it to face left (`isFlipped()` tells which way it faces), `play()` / `pause()` / `reset()`, `frame()`, `setFrame(i)`, `frameCount()`, `isPlaying()`, and fields `fps` and `looping` (set `looping = false` for a one-time animation, then check `isDone()`). It's a class, so `current = run;` shares the same animation. Learners can also do it by hand first to understand it: keep a frame number, change it every 0.1 seconds with a timer, and draw `drawPart(rect(frame * 16, 0, 16, 16), rect(x, y, 64, 64))`.
 
 **3D** (`<graphics3d>`). In 3D, **y goes up**.
 
@@ -656,8 +656,13 @@ int main(){
     return 0;
 }
 
-void update(float dt){ /* move things */ }
-void draw(){ /* draw things */ }
+void update(float dt){
+    // move things: dt is the time since the last frame, in seconds
+}
+
+void draw(){
+    // draw things
+}
 ```
 
 The screen is cleared to the background color before every frame. **Escape** or the window's X closes the game. Multiply speeds by `dt` so movement is the same speed on every computer: `x += 200 * dt;` moves 200 pixels per second.

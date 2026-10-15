@@ -151,6 +151,17 @@ foreach ($file in Get-ChildItem (Join-Path $PSScriptRoot "cases") -Filter "$Filt
     }
 }
 
+# The combined docs file (docs/FORGE_ALL_DOCS.md) has to match the docs pages it's made from.
+$docsCheck = & pwsh -NoProfile -File (Join-Path $PSScriptRoot "..\docs\make-all-docs.ps1") -Check 2>&1
+if ($LASTEXITCODE -ne 0) {
+    Write-Host "FAIL  combined docs" -ForegroundColor Red
+    Write-Host ($docsCheck -join "`n" -replace '(?m)^', '      ')
+    $failed += "combined docs"
+} else {
+    Write-Host "pass  combined docs" -ForegroundColor Green
+    $pass++
+}
+
 Write-Host ""
 if ($failed.Count) {
     Write-Host "$pass passed, $($failed.Count) failed: $($failed -join ', ')" -ForegroundColor Red

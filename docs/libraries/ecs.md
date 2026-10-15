@@ -95,6 +95,8 @@ It's safe for a component to create or destroy entities (including its own) duri
 
 ## Putting it together
 
+This uses the `Mover` and `Health` components from above, written in the same file.
+
 ```cpp
 #include <window>
 #include <graphics2d>

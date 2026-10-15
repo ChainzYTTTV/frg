@@ -56,6 +56,8 @@ Scenes are ordinary classes, so they can have fields, constructors and helper me
 
 ## Wiring it up
 
+This uses the `Menu` and `Level` classes from above.
+
 ```cpp
 #include <window>
 #include <graphics2d>

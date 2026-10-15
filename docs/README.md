@@ -12,6 +12,7 @@ These docs are for **anyone using or learning Forge**, including people who have
 |---|---|
 | [Getting Started](getting-started.md) | Setup, the `frg` command, VS Code, your first program, and building a finished game |
 | [Cheat sheet](LANGUAGE.md) | The whole language on one page, for looking things up quickly |
+| [Everything in one file](FORGE_ALL_DOCS.md) | The teaching brief and every page below, combined into one file to upload to an AI chat. Rebuild it with `.\docs\make-all-docs.ps1` after changing the docs. |
 
 ## The language
 
@@ -48,7 +49,7 @@ Everything that isn't the core language lives in a library you `#include`. See t
 | [`<input>`](libraries/input.md) | Keyboard, mouse and controllers (gamepads) |
 | [`<graphics2d>`](libraries/graphics2d.md) | Drawing shapes and text |
 | [`<graphics3d>`](libraries/graphics3d.md) | Cameras, 3D shapes and 3D models |
-| [`<assets>`](libraries/assets.md) | Loading images and fonts |
+| [`<assets>`](libraries/assets.md) | Loading images and fonts, and sprite-sheet animation |
 | [`<audio>`](libraries/audio.md) | Sound effects and music |
 | [`<physics>`](libraries/physics.md) | Gravity and collisions for boxes |
 | [`<time>`](libraries/time.md) | The clock, the date, and timers |

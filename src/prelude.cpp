@@ -680,6 +680,28 @@ class Tween {
 float ease(Ease ease, float t);
 )FRG";
 
+static const char* kParticles = R"FRG(
+class Emitter {
+    vec2 position;
+    float rate;
+    float lifetime;
+    float speed;
+    float direction;
+    float spread;
+    color startColor;
+    color endColor;
+    float startSize;
+    float endSize;
+    vec2 gravity;
+    Emitter(vec2 position);
+    void update(float dt);
+    void draw();
+    void burst(int count);
+    int count();
+    void clear();
+}
+)FRG";
+
 const std::vector<PreludeLib>& preludeLibs() {
     using K = LibKind;
     static const std::vector<PreludeLib> libs = {
@@ -696,6 +718,7 @@ const std::vector<PreludeLib>& preludeLibs() {
         {"file", kFile, false, "forge_file.hpp"},
         {"save", kSave, false, "forge_save.hpp"},
         {"tween", kTween, false, "forge_tween.hpp"},
+        {"particles", kParticles, true, "forge_particles.hpp", K::Engine},
         {"scenes", kScenes, false, "forge_scenes.hpp"},
         {"ui", kUi, true, "forge_ui.hpp", K::Engine},
         {"graphics3d", kGraphics3d, true, "forge_graphics3d.hpp", K::Engine},

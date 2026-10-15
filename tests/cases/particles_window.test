@@ -1,0 +1,31 @@
+=== main.frg
+#include <window>
+#include <input>
+#include <particles>
+
+Emitter fire = Emitter(vec2(200, 300));
+
+void update(float dt) {
+    fire.position = input.mousePosition();
+    if (input.mousePressed(MouseButton.LEFT)) {
+        fire.burst(40);
+    }
+    fire.update(dt);
+}
+
+void draw() {
+    fire.draw();
+}
+
+int main(){
+    fire.rate = 60;
+    fire.direction = -90;
+    fire.spread = 30;
+    fire.startColor = color.ORANGE;
+    fire.endColor = color.RED.fade(0);
+    window.open(400, 400, "Particles");
+    window.run();
+    return 0;
+}
+=== build
+=== no warnings

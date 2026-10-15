@@ -13,7 +13,7 @@ Where the parts disagree, the detailed pages (B to F) are more precise, and the 
 - **Part A: The teaching brief (for an AI tutor)**: Teaching Brief: the Forge Programming Language
 - **Part B: Start here**: Forge Documentation - Getting Started
 - **Part C: The language**: 1. The Basics - 2. Variables and Types - 3. Text - 4. Operators - 5. Making Decisions and Repeating - 6. Functions - 7. Files and Folders - 8. Lists and Maps - 9. Structs and Classes - 10. Enums, Optionals and Pointers - 11. Tasks - 12. Errors - 13. Reserved Words - 14. Coming From Other Languages
-- **Part D: The libraries**: Library Overview - Built-in Types: vec2, vec3, vec4, color, rect - <stdio>: Console Input and Output - <math>: Math Functions - <random>: Random Numbers - <window>: The Game Window - <input>: Keyboard, Mouse and Controllers - <graphics2d>: 2D Drawing - <graphics3d>: 3D Drawing - <assets>: Images, Animations and Fonts - <audio>: Sounds and Music - <physics>: Boxes, Gravity and Collisions - <time>: Clock, Date and Timers - <file>: Reading and Writing Text Files - <save>: Remembering Things Between Runs - <tween>: Smooth Changes Over Time - <scenes>: Menus, Levels and Game Over - <ui>: Buttons, Checkboxes, Sliders and Text Boxes - <ECS>: Entities and Components - <tasks>: Tasks Without a Window - Low-Level Toolkits: OpenGL, DirectX and Vulkan - <OpenGL>: Drawing with OpenGL Yourself - <DirectX>: Drawing with Direct3D 11 Yourself - <Vulkan>: Drawing with Vulkan Yourself
+- **Part D: The libraries**: Library Overview - Built-in Types: vec2, vec3, vec4, color, rect - <stdio>: Console Input and Output - <math>: Math Functions - <random>: Random Numbers - <window>: The Game Window - <input>: Keyboard, Mouse and Controllers - <graphics2d>: 2D Drawing - <graphics3d>: 3D Drawing - <assets>: Images, Animations and Fonts - <audio>: Sounds and Music - <physics>: Boxes, Gravity and Collisions - <time>: Clock, Date and Timers - <file>: Reading and Writing Text Files - <save>: Remembering Things Between Runs - <tween>: Smooth Changes Over Time - <particles>: Dust, Sparks and Explosions - <scenes>: Menus, Levels and Game Over - <ui>: Buttons, Checkboxes, Sliders and Text Boxes - <ECS>: Entities and Components - <tasks>: Tasks Without a Window - Low-Level Toolkits: OpenGL, DirectX and Vulkan - <OpenGL>: Drawing with OpenGL Yourself - <DirectX>: Drawing with Direct3D 11 Yourself - <Vulkan>: Drawing with Vulkan Yourself
 - **Part E: Guides**: The Game Loop - Sprites and Animation - Platformer Walkthrough
 - **Part F: Under the hood**: How Forge Works
 - **Part G: The cheat sheet (everything on one page)**: Forge Cheat Sheet (v0.6)
@@ -509,6 +509,7 @@ Library functions are reached through the library name (`window.open(...)`). Lib
 | `<audio>` | `audio.loadSound("x.wav")` gives a `Sound`, `audio.loadMusic("x.ogg")` gives a `Music`, `audio.setVolume(v)` |
 | `<graphics3d>` | the `Camera` struct and `Model` class, `graphics3d.setCamera(cam)`, `drawCube(pos, size, color)`, `drawCubeOutline`, `drawSphere(center, radius, color)`, `drawSphereOutline`, `drawCylinder(pos, radius, height, color)`, `drawPlane(center, vec2 size, color)`, `drawGrid(slices, spacing)`, `drawLine(from, to, color)`, `toScreen(vec3)`, `loadModel("x.glb")` |
 | `<time>` | `time.now()`, `time.sleep(s)`, `time.clock()`, `time.date()`, `year() month() day() hour() minute() second()`, the `Timer` class |
+| `<particles>` | dust, sparks, smoke, explosions: `Emitter sparks = Emitter(vec2(x, y));`, then `sparks.burst(30);` (all at once) or `sparks.rate = 50;` (a steady stream per second), and each frame `sparks.update(dt);` and `sparks.draw();`. Fields to set: `position`, `lifetime` (seconds), `speed`, `direction` (degrees: 0 right, -90 up), `spread` (degrees around it: 360 every way), `startColor`/`endColor` (an end color with alpha 0 fades them out), `startSize`/`endSize`, `gravity` (a vec2). Also `count()` and `clear()`. It draws in 2D, through the 2D camera |
 | `<tween>` | smooth changes over time: `Tween slide = Tween(-300, 40, 0.5, Ease.OUT);` (from, to, seconds, easing), then `slide.update(dt);` and use `slide.value()`. Also `progress()` (0 to 1, with `lerp` for positions and colors: `a.lerp(b, t.progress())`), `isDone()`, `restart()`, `reverse()` (go back from where it is), fields `looping` and `pingPong`. `Ease.LINEAR` (steady), `IN` (slow start), `OUT` (slow end, the default), `IN_OUT`, `BOUNCE`. There are no callbacks: check `isDone()` |
 | `<save>` | `save.setInt(key, n)` / `getInt(key, backup)`, the same for `Float`, `String` and `Bool`, `has(key)`, `remove(key)`, `clear()`. Kept in `save.txt` in the game's folder |
 | `<file>` | `file.read(path)`, `write(path, text)`, `append(path, text)`, `exists(path)`, `remove(path)`, `readLines(path)`, `writeLines(path, list)`, `files(folder)` |
@@ -907,8 +908,10 @@ int main(){
 void update(float dt){
     player.handleInput();
     physics.step(dt);
+    player.checkLanding(dt);
     player.checkFall();
     level.collectCoins(player.hero.bounds());
+    level.updateEffects(dt);
     followPlayer(dt);
 }
 
@@ -943,6 +946,7 @@ void draw(){
 #include <graphics2d>
 #include <input>
 #include <physics>
+#include <particles>
 
 const float MOVE_SPEED = 320;
 const float JUMP_SPEED = 620;
@@ -974,6 +978,25 @@ class Player : Body {
 
 Player hero = makeHero();
 
+// A puff of dust when the player lands.
+Emitter dust = makeDust();
+bool wasOnGround = false;
+float fallSpeed = 0;
+
+Emitter makeDust(){
+    Emitter e = Emitter(vec2(0, 0));
+    e.lifetime = 0.4;
+    e.speed = 90;
+    e.direction = -90;          // up...
+    e.spread = 160;             // ...and out to both sides
+    e.gravity = vec2(0, 300);
+    e.startColor = color(200, 200, 210);
+    e.endColor = color(200, 200, 210, 0);   // fades out
+    e.startSize = 9;
+    e.endSize = 3;
+    return e;
+}
+
 Player makeHero(){
     Player p = Player(START.x, START.y, 36, 36);
     physics.add(p);
@@ -981,6 +1004,7 @@ Player makeHero(){
 }
 
 void handleInput(){
+    fallSpeed = hero.velocity.y;    // remembered before physics.step stops the fall
     float direction = 0;
     if (input.keyDown(Key.LEFT) or input.keyDown(Key.A)) {
         direction -= 1;
@@ -1002,6 +1026,16 @@ void handleInput(){
     }
 }
 
+// Called after physics.step: a hard landing makes a puff of dust at the player's feet.
+void checkLanding(float dt){
+    if (hero.onGround and !wasOnGround and fallSpeed > 250) {
+        dust.position = vec2(hero.center().x, hero.position.y + hero.size.y);
+        dust.burst(14);
+    }
+    wasOnGround = hero.onGround;
+    dust.update(dt);
+}
+
 void checkFall(){
     if (hero.position.y > window.height() + 100) {
         hero.respawn();
@@ -1009,6 +1043,7 @@ void checkFall(){
 }
 
 void draw(){
+    dust.draw();
     graphics2d.drawRect(hero.bounds(), hero.tint);
     // Two eyes that look the way the player is moving.
     float look = hero.velocity.x > 0 ? 4 : hero.velocity.x < 0 ? -4 : 0;
@@ -1023,6 +1058,7 @@ void draw(){
 ```cpp
 #include <graphics2d>
 #include <physics>
+#include <particles>
 
 const float WIDTH = 2400;    // the level is wider than the 960-pixel window
 
@@ -1030,6 +1066,21 @@ list<Body> platforms = [];
 list<vec2> coins = [];
 int totalCoins = 0;
 int collected = 0;
+
+// Golden sparkles where a coin was picked up.
+Emitter sparkles = makeSparkles();
+
+Emitter makeSparkles(){
+    Emitter e = Emitter(vec2(0, 0));
+    e.lifetime = 0.6;
+    e.speed = 140;
+    e.gravity = vec2(0, 250);
+    e.startColor = color.GOLD;
+    e.endColor = color(255, 255, 160, 0);
+    e.startSize = 7;
+    e.endSize = 1;
+    return e;
+}
 
 void build(){
     // The ground, with three pits.
@@ -1074,8 +1125,14 @@ void collectCoins(rect playerBox){
         if (playerBox.overlaps(rect(c.x - 10, c.y - 10, 20, 20))) {
             coins.removeAt(i);
             collected++;
+            sparkles.position = c;
+            sparkles.burst(24);
         }
     }
+}
+
+void updateEffects(float dt){
+    sparkles.update(dt);
 }
 
 void draw(){
@@ -1087,6 +1144,7 @@ void draw(){
         graphics2d.drawCircle(c, 10, color.GOLD);
         graphics2d.drawCircleOutline(c.x, c.y, 10, color.ORANGE);
     }
+    sparkles.draw();
 }
 ```
 
@@ -1445,7 +1503,7 @@ Hints:
 
 - Only break **one** brick per frame (`break` out of the loop after a hit), or the ball can flip twice and carry on through.
 
-Make it yours: a different color and score for each row. Where the ball hits the paddle changes its angle. Power-ups that fall from broken bricks.
+Make it yours: a different color and score for each row. Where the ball hits the paddle changes its angle. Bricks that burst into particles (`<particles>`) when broken. Power-ups that fall from broken bricks.
 
 ##### 13. Clicker game
 
@@ -1632,6 +1690,7 @@ Everything that isn't the core language lives in a library you `#include`. See t
 | `<physics>` (see “`<physics>`: Boxes, Gravity and Collisions”) | Gravity and collisions for boxes |
 | `<time>` (see “`<time>`: Clock, Date and Timers”) | The clock, the date, and timers |
 | `<save>` (see “`<save>`: Remembering Things Between Runs”) | Remembering values between runs: high scores, settings, progress |
+| `<particles>` (see “`<particles>`: Dust, Sparks and Explosions”) | Dust, sparks, smoke and explosions |
 | `<tween>` (see “`<tween>`: Smooth Changes Over Time”) | Smooth changes over time: sliding, bouncing, fading |
 | `<file>` (see “`<file>`: Reading and Writing Text Files”) | Reading and writing text files |
 | `<scenes>` (see “`<scenes>`: Menus, Levels and Game Over”) | Switching between menu, levels and game over |
@@ -4369,9 +4428,9 @@ These words have special meanings, so they can't be used as names for variables,
 
 ### Library names
 
-`stdio` `math` `random` `window` `input` `graphics2d` `graphics3d` `assets` `audio` `physics` `time` `file` `save` `tween` `scenes` `ui` `ECS` `tasks` `OpenGL` `DirectX` `Vulkan`, plus `network`, which is planned.
+`stdio` `math` `random` `window` `input` `graphics2d` `graphics3d` `assets` `audio` `physics` `time` `file` `save` `tween` `particles` `scenes` `ui` `ECS` `tasks` `OpenGL` `DirectX` `Vulkan`, plus `network`, which is planned.
 
-Types that come from a library (`Key`, `MouseButton`, `GamepadButton`, `Body`, `Texture`, `Animation`, `Font`, `Sound`, `Music`, `Camera`, `Camera2D`, `Model`, `Timer`, `Tween`, `Ease`, `Scene`, `Entity`, `Component`) can't be reused as names of your own types **in a file that includes that library**.
+Types that come from a library (`Key`, `MouseButton`, `GamepadButton`, `Body`, `Texture`, `Animation`, `Font`, `Sound`, `Music`, `Camera`, `Camera2D`, `Model`, `Timer`, `Tween`, `Ease`, `Emitter`, `Scene`, `Entity`, `Component`) can't be reused as names of your own types **in a file that includes that library**.
 
 ### Your own top-level files and folders
 
@@ -4514,6 +4573,7 @@ How libraries work:
 | `<physics>` (see “`<physics>`: Boxes, Gravity and Collisions”) | Box bodies with gravity and collisions | no |
 | `<time>` (see “`<time>`: Clock, Date and Timers”) | The clock and date, `sleep`, and the `Timer` class | no |
 | `<save>` (see “`<save>`: Remembering Things Between Runs”) | Remembering values (high scores, settings) between runs | no |
+| `<particles>` (see “`<particles>`: Dust, Sparks and Explosions”) | Dust, sparks, smoke and explosions (`Emitter`) | yes |
 | `<tween>` (see “`<tween>`: Smooth Changes Over Time”) | Smooth changes over time: sliding, bouncing, fading, with easing | no |
 | `<file>` (see “`<file>`: Reading and Writing Text Files”) | Reading and writing text files | no |
 | `<scenes>` (see “`<scenes>`: Menus, Levels and Game Over”) | Splitting a game into scenes (menu, level...) | no |
@@ -6222,6 +6282,104 @@ task showMenu() {
 ### Why it works like this
 
 A tween is a value you update and read, like a `Timer` (see “`<time>`: Clock, Date and Timers”). Forge doesn't have functions as values yet, so a tween can't run code by itself when it ends: check `isDone()` instead. That also means it works the same way in every kind of game loop, and in tasks.
+
+<!-- docs/libraries/particles.md -->
+
+## `<particles>`: Dust, Sparks and Explosions
+
+```cpp
+#include <particles>
+```
+
+**Particles** are lots of tiny dots that fly out, fade and disappear: dust when a player lands, sparks when something is hit, smoke, fire, explosions. A few lines make a game feel much more alive.
+
+An `Emitter` makes them. Give it a position, then each frame `update(dt)` it and `draw()` it:
+
+```cpp
+Emitter sparks = Emitter(vec2(400, 300));
+
+void update(float dt){
+    if (input.mousePressed(MouseButton.LEFT)) {
+        sparks.position = input.mousePosition();
+        sparks.burst(30);              // 30 particles at once
+    }
+    sparks.update(dt);
+}
+
+void draw(){
+    sparks.draw();
+}
+```
+
+### Emitter
+
+| Making one | |
+|---|---|
+| `Emitter(vec2 position)` | an emitter at that point. It makes nothing until you `burst` or give it a `rate` |
+
+| Method | What it does |
+|---|---|
+| `burst(int count)` | makes `count` particles right now (an explosion, a puff of dust) |
+| `update(float dt)` | moves every particle, makes new ones if `rate` is more than 0, and removes the ones that are too old. Call it once per frame |
+| `draw()` | draws every particle. It's 2D drawing, so it goes through the 2D camera (see “`<graphics2d>`: 2D Drawing” › “Camera: scrolling and zooming”) like everything else |
+| `count()` | how many particles are alive now |
+| `clear()` | removes every particle |
+
+These fields can be changed at any time; the new values are used for the particles made after that:
+
+| Field | Type | Start value | Meaning |
+|---|---|---|---|
+| `position` | `vec2` | (given) | where new particles start |
+| `rate` | `float` | `0` | particles per second, for a steady stream (smoke, fire). `0`: only `burst` makes them |
+| `lifetime` | `float` | `1` | how many seconds each particle lives |
+| `speed` | `float` | `100` | how fast they fly out, in pixels per second |
+| `direction` | `float` | `-90` | which way they fly, in degrees: `0` is right, `-90` up, `90` down, `180` left |
+| `spread` | `float` | `360` | how wide the spray is, in degrees around `direction`: `360` is every way, `30` a narrow jet |
+| `startColor` | `color` | white | the color when a particle is new... |
+| `endColor` | `color` | see-through white | ...and when it disappears. Particles blend between the two, so an `endColor` with alpha 0 fades them out |
+| `startSize` | `float` | `8` | the size (across, in pixels) when new... |
+| `endSize` | `float` | `2` | ...and at the end |
+| `gravity` | `vec2` | `vec2(0, 0)` | pulls the particles, in pixels per second per second: `vec2(0, 400)` makes them fall |
+
+To look natural, each particle's speed and lifetime are a little different (speed from 70% to 130%, lifetime from 80% to 120%).
+
+An emitter keeps at most 5000 particles alive; past that, new ones are skipped.
+
+### Recipes
+
+```cpp
+// Dust when landing: a small puff that goes up and out, then settles.
+dust.lifetime = 0.4;
+dust.speed = 90;
+dust.direction = -90;
+dust.spread = 160;
+dust.gravity = vec2(0, 300);
+dust.startColor = color(200, 200, 210);
+dust.endColor = color(200, 200, 210, 0);
+dust.burst(14);
+
+// Fire: a steady stream going up, from yellow to see-through red.
+fire.rate = 80;
+fire.direction = -90;
+fire.spread = 25;
+fire.speed = 60;
+fire.startColor = color.YELLOW;
+fire.endColor = color.RED.fade(0);
+fire.startSize = 14;
+fire.endSize = 4;
+
+// An explosion: everything at once, in every direction.
+boom.speed = 300;
+boom.lifetime = 0.7;
+boom.startColor = color.ORANGE;
+boom.endColor = color.DARKGRAY.fade(0);
+boom.startSize = 12;
+boom.burst(80);
+```
+
+One emitter can be moved around and reused: set its `position`, then `burst`. Particles already flying stay where they are.
+
+examples/platformer (the file `examples/platformer/` in the Forge folder) uses an emitter for dust when the player lands (in `player.frg`) and one for sparkles when a coin is collected (in `level.frg`).
 
 <!-- docs/libraries/scenes.md -->
 
@@ -8120,6 +8278,27 @@ void draw(){
 
 Each platform is a blue-gray rectangle with a thin green strip on top (grass). Each coin is a gold circle with an orange outline.
 
+### Particles: dust and sparkles
+
+Two particle emitters (see “`<particles>`: Dust, Sparks and Explosions”) make the game feel more alive:
+
+- **Dust when landing** (`player.frg`). `handleInput` remembers `fallSpeed = hero.velocity.y` *before* `physics.step`, because landing sets the velocity to 0. After the step, `checkLanding(dt)` sees that the player is on the ground now but wasn't last frame, and if it was falling fast enough, puts the `dust` emitter at the player's feet and calls `dust.burst(14)`.
+
+```cpp
+void checkLanding(float dt){
+    if (hero.onGround and !wasOnGround and fallSpeed > 250) {
+        dust.position = vec2(hero.center().x, hero.position.y + hero.size.y);
+        dust.burst(14);
+    }
+    wasOnGround = hero.onGround;
+    dust.update(dt);
+}
+```
+
+- **Sparkles when collecting a coin** (`level.frg`). `collectCoins` moves the `sparkles` emitter to the coin and bursts 24 golden particles that fall and fade. `updateEffects(dt)` updates them, and `draw` draws them.
+
+Both emitters are made by small functions (`makeDust`, `makeSparkles`) that set their colors, sizes, speed and gravity. They're drawn between `setCamera` and `resetCamera`, so they stay in the right place in the level.
+
 ### Things to try
 
 1. Show the death count on screen (`player.hero.deaths`).
@@ -8234,7 +8413,7 @@ The **runtime** (`runtime/*.hpp`) is the C++ code every game is built with:
 |---|---|
 | `forge.hpp` | printing, text conversion, lists and maps, optionals, tasks, the core types (`vec2`, `color`...), random |
 | `forge_window.hpp` | `<window>`, `<input>`, `<graphics2d>` on top of raylib |
-| `forge_graphics3d.hpp`, `forge_assets.hpp`, `forge_audio.hpp`, `forge_ui.hpp` | the other engine libraries |
+| `forge_graphics3d.hpp`, `forge_assets.hpp`, `forge_audio.hpp`, `forge_ui.hpp`, `forge_particles.hpp` | the other engine libraries |
 | `forge_physics.hpp`, `forge_scenes.hpp`, `forge_ecs.hpp`, `forge_time.hpp`, `forge_file.hpp`, `forge_save.hpp`, `forge_tween.hpp` | libraries that don't need raylib |
 | `forge_physics_draw.hpp` | `physics.drawDebug()`, which draws with raylib. Forge adds it only to games that use both `<physics>` and `<graphics2d>`, so `<physics>` itself never needs raylib |
 | `raylib/` | raylib 5.5 (by Ramon Santamaria and contributors, zlib license) |
@@ -8731,6 +8910,7 @@ Each file includes the libraries it uses. Functions are reached through the libr
 | `<audio>` | `audio.loadSound("jump.wav")`, `audio.loadMusic("song.ogg")`, `audio.setVolume(0.5)` (see below) |
 | `<graphics3d>` | 3D drawing (see below) |
 | `<time>` | `time.now()` (seconds since the game started), `time.sleep(seconds)`, `time.clock()` ("14:05:09"), `time.date()` ("2026-10-14"), `time.year()` `month()` `day()` `hour()` `minute()` `second()`, and the `Timer` class |
+| `<particles>` | `Emitter e = Emitter(vec2(x, y));`, then `e.burst(30)` (all at once) or `e.rate = 50` (per second); `e.update(dt)` and `e.draw()` each frame. Fields: `position` `rate` `lifetime` `speed` `direction` (degrees, -90 is up) `spread` (degrees, 360 is every way) `startColor` `endColor` `startSize` `endSize` `gravity`; `count()` `clear()` |
 | `<tween>` | `Tween t = Tween(from, to, seconds, Ease.OUT);` then `t.update(dt)` and `t.value()` each frame; `progress()` (0 to 1, for `lerp`), `isDone()`, `restart()`, `reverse()`, fields `looping` `pingPong`. Easing: `Ease.LINEAR` `IN` `OUT` `IN_OUT` `BOUNCE`; `tween.ease(Ease.OUT, t)` |
 | `<save>` | `save.setInt(key, n)` and `save.getInt(key, backup)`, also `setFloat`/`getFloat`, `setString`/`getString`, `setBool`/`getBool`, and `has(key)` `remove(key)` `clear()`. Kept in `save.txt` in the game's folder, written straight away. |
 | `<file>` | `file.read(path)` `write(path, text)` `append(path, text)` `exists(path)` `remove(path)` `readLines(path)` `writeLines(path, lines)` `files(folder)`. Paths are relative to the game's folder. |

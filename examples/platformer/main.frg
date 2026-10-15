@@ -25,8 +25,10 @@ int main(){
 void update(float dt){
     player.handleInput();
     physics.step(dt);
+    player.checkLanding(dt);
     player.checkFall();
     level.collectCoins(player.hero.bounds());
+    level.updateEffects(dt);
     followPlayer(dt);
 }
 

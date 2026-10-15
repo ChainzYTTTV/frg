@@ -1,5 +1,6 @@
 #include <graphics2d>
 #include <physics>
+#include <particles>
 
 const float WIDTH = 2400;    // the level is wider than the 960-pixel window
 
@@ -7,6 +8,21 @@ list<Body> platforms = [];
 list<vec2> coins = [];
 int totalCoins = 0;
 int collected = 0;
+
+// Golden sparkles where a coin was picked up.
+Emitter sparkles = makeSparkles();
+
+Emitter makeSparkles(){
+    Emitter e = Emitter(vec2(0, 0));
+    e.lifetime = 0.6;
+    e.speed = 140;
+    e.gravity = vec2(0, 250);
+    e.startColor = color.GOLD;
+    e.endColor = color(255, 255, 160, 0);
+    e.startSize = 7;
+    e.endSize = 1;
+    return e;
+}
 
 void build(){
     // The ground, with three pits.
@@ -51,8 +67,14 @@ void collectCoins(rect playerBox){
         if (playerBox.overlaps(rect(c.x - 10, c.y - 10, 20, 20))) {
             coins.removeAt(i);
             collected++;
+            sparkles.position = c;
+            sparkles.burst(24);
         }
     }
+}
+
+void updateEffects(float dt){
+    sparkles.update(dt);
 }
 
 void draw(){
@@ -64,4 +86,5 @@ void draw(){
         graphics2d.drawCircle(c, 10, color.GOLD);
         graphics2d.drawCircleOutline(c.x, c.y, 10, color.ORANGE);
     }
+    sparkles.draw();
 }

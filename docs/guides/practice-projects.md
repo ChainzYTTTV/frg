@@ -349,7 +349,7 @@ Hints:
 
 - Only break **one** brick per frame (`break` out of the loop after a hit), or the ball can flip twice and carry on through.
 
-Make it yours: a different color and score for each row. Where the ball hits the paddle changes its angle. Power-ups that fall from broken bricks.
+Make it yours: a different color and score for each row. Where the ball hits the paddle changes its angle. Bricks that burst into particles (`<particles>`) when broken. Power-ups that fall from broken bricks.
 
 ### 13. Clicker game
 

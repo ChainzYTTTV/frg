@@ -286,6 +286,27 @@ void draw(){
 
 Each platform is a blue-gray rectangle with a thin green strip on top (grass). Each coin is a gold circle with an orange outline.
 
+## Particles: dust and sparkles
+
+Two [particle emitters](../libraries/particles.md) make the game feel more alive:
+
+- **Dust when landing** (`player.frg`). `handleInput` remembers `fallSpeed = hero.velocity.y` *before* `physics.step`, because landing sets the velocity to 0. After the step, `checkLanding(dt)` sees that the player is on the ground now but wasn't last frame, and if it was falling fast enough, puts the `dust` emitter at the player's feet and calls `dust.burst(14)`.
+
+```cpp
+void checkLanding(float dt){
+    if (hero.onGround and !wasOnGround and fallSpeed > 250) {
+        dust.position = vec2(hero.center().x, hero.position.y + hero.size.y);
+        dust.burst(14);
+    }
+    wasOnGround = hero.onGround;
+    dust.update(dt);
+}
+```
+
+- **Sparkles when collecting a coin** (`level.frg`). `collectCoins` moves the `sparkles` emitter to the coin and bursts 24 golden particles that fall and fade. `updateEffects(dt)` updates them, and `draw` draws them.
+
+Both emitters are made by small functions (`makeDust`, `makeSparkles`) that set their colors, sizes, speed and gravity. They're drawn between `setCamera` and `resetCamera`, so they stay in the right place in the level.
+
 ## Things to try
 
 1. Show the death count on screen (`player.hero.deaths`).

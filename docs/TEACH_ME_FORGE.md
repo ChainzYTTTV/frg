@@ -483,6 +483,7 @@ Library functions are reached through the library name (`window.open(...)`). Lib
 | `<audio>` | `audio.loadSound("x.wav")` gives a `Sound`, `audio.loadMusic("x.ogg")` gives a `Music`, `audio.setVolume(v)` |
 | `<graphics3d>` | the `Camera` struct and `Model` class, `graphics3d.setCamera(cam)`, `drawCube(pos, size, color)`, `drawCubeOutline`, `drawSphere(center, radius, color)`, `drawSphereOutline`, `drawCylinder(pos, radius, height, color)`, `drawPlane(center, vec2 size, color)`, `drawGrid(slices, spacing)`, `drawLine(from, to, color)`, `toScreen(vec3)`, `loadModel("x.glb")` |
 | `<time>` | `time.now()`, `time.sleep(s)`, `time.clock()`, `time.date()`, `year() month() day() hour() minute() second()`, the `Timer` class |
+| `<particles>` | dust, sparks, smoke, explosions: `Emitter sparks = Emitter(vec2(x, y));`, then `sparks.burst(30);` (all at once) or `sparks.rate = 50;` (a steady stream per second), and each frame `sparks.update(dt);` and `sparks.draw();`. Fields to set: `position`, `lifetime` (seconds), `speed`, `direction` (degrees: 0 right, -90 up), `spread` (degrees around it: 360 every way), `startColor`/`endColor` (an end color with alpha 0 fades them out), `startSize`/`endSize`, `gravity` (a vec2). Also `count()` and `clear()`. It draws in 2D, through the 2D camera |
 | `<tween>` | smooth changes over time: `Tween slide = Tween(-300, 40, 0.5, Ease.OUT);` (from, to, seconds, easing), then `slide.update(dt);` and use `slide.value()`. Also `progress()` (0 to 1, with `lerp` for positions and colors: `a.lerp(b, t.progress())`), `isDone()`, `restart()`, `reverse()` (go back from where it is), fields `looping` and `pingPong`. `Ease.LINEAR` (steady), `IN` (slow start), `OUT` (slow end, the default), `IN_OUT`, `BOUNCE`. There are no callbacks: check `isDone()` |
 | `<save>` | `save.setInt(key, n)` / `getInt(key, backup)`, the same for `Float`, `String` and `Bool`, `has(key)`, `remove(key)`, `clear()`. Kept in `save.txt` in the game's folder |
 | `<file>` | `file.read(path)`, `write(path, text)`, `append(path, text)`, `exists(path)`, `remove(path)`, `readLines(path)`, `writeLines(path, list)`, `files(folder)` |
@@ -881,8 +882,10 @@ int main(){
 void update(float dt){
     player.handleInput();
     physics.step(dt);
+    player.checkLanding(dt);
     player.checkFall();
     level.collectCoins(player.hero.bounds());
+    level.updateEffects(dt);
     followPlayer(dt);
 }
 
@@ -917,6 +920,7 @@ void draw(){
 #include <graphics2d>
 #include <input>
 #include <physics>
+#include <particles>
 
 const float MOVE_SPEED = 320;
 const float JUMP_SPEED = 620;
@@ -948,6 +952,25 @@ class Player : Body {
 
 Player hero = makeHero();
 
+// A puff of dust when the player lands.
+Emitter dust = makeDust();
+bool wasOnGround = false;
+float fallSpeed = 0;
+
+Emitter makeDust(){
+    Emitter e = Emitter(vec2(0, 0));
+    e.lifetime = 0.4;
+    e.speed = 90;
+    e.direction = -90;          // up...
+    e.spread = 160;             // ...and out to both sides
+    e.gravity = vec2(0, 300);
+    e.startColor = color(200, 200, 210);
+    e.endColor = color(200, 200, 210, 0);   // fades out
+    e.startSize = 9;
+    e.endSize = 3;
+    return e;
+}
+
 Player makeHero(){
     Player p = Player(START.x, START.y, 36, 36);
     physics.add(p);
@@ -955,6 +978,7 @@ Player makeHero(){
 }
 
 void handleInput(){
+    fallSpeed = hero.velocity.y;    // remembered before physics.step stops the fall
     float direction = 0;
     if (input.keyDown(Key.LEFT) or input.keyDown(Key.A)) {
         direction -= 1;
@@ -976,6 +1000,16 @@ void handleInput(){
     }
 }
 
+// Called after physics.step: a hard landing makes a puff of dust at the player's feet.
+void checkLanding(float dt){
+    if (hero.onGround and !wasOnGround and fallSpeed > 250) {
+        dust.position = vec2(hero.center().x, hero.position.y + hero.size.y);
+        dust.burst(14);
+    }
+    wasOnGround = hero.onGround;
+    dust.update(dt);
+}
+
 void checkFall(){
     if (hero.position.y > window.height() + 100) {
         hero.respawn();
@@ -983,6 +1017,7 @@ void checkFall(){
 }
 
 void draw(){
+    dust.draw();
     graphics2d.drawRect(hero.bounds(), hero.tint);
     // Two eyes that look the way the player is moving.
     float look = hero.velocity.x > 0 ? 4 : hero.velocity.x < 0 ? -4 : 0;
@@ -997,6 +1032,7 @@ void draw(){
 ```cpp
 #include <graphics2d>
 #include <physics>
+#include <particles>
 
 const float WIDTH = 2400;    // the level is wider than the 960-pixel window
 
@@ -1004,6 +1040,21 @@ list<Body> platforms = [];
 list<vec2> coins = [];
 int totalCoins = 0;
 int collected = 0;
+
+// Golden sparkles where a coin was picked up.
+Emitter sparkles = makeSparkles();
+
+Emitter makeSparkles(){
+    Emitter e = Emitter(vec2(0, 0));
+    e.lifetime = 0.6;
+    e.speed = 140;
+    e.gravity = vec2(0, 250);
+    e.startColor = color.GOLD;
+    e.endColor = color(255, 255, 160, 0);
+    e.startSize = 7;
+    e.endSize = 1;
+    return e;
+}
 
 void build(){
     // The ground, with three pits.
@@ -1048,8 +1099,14 @@ void collectCoins(rect playerBox){
         if (playerBox.overlaps(rect(c.x - 10, c.y - 10, 20, 20))) {
             coins.removeAt(i);
             collected++;
+            sparkles.position = c;
+            sparkles.burst(24);
         }
     }
+}
+
+void updateEffects(float dt){
+    sparkles.update(dt);
 }
 
 void draw(){
@@ -1061,6 +1118,7 @@ void draw(){
         graphics2d.drawCircle(c, 10, color.GOLD);
         graphics2d.drawCircleOutline(c.x, c.y, 10, color.ORANGE);
     }
+    sparkles.draw();
 }
 ```
 
@@ -1419,7 +1477,7 @@ Hints:
 
 - Only break **one** brick per frame (`break` out of the loop after a hit), or the ball can flip twice and carry on through.
 
-Make it yours: a different color and score for each row. Where the ball hits the paddle changes its angle. Power-ups that fall from broken bricks.
+Make it yours: a different color and score for each row. Where the ball hits the paddle changes its angle. Bricks that burst into particles (`<particles>`) when broken. Power-ups that fall from broken bricks.
 
 #### 13. Clicker game
 

@@ -154,6 +154,22 @@ float mouseWheel();
 )FRG"
 
 static const char* kInput = FRG_KEY_ENUMS R"FRG(
+enum GamepadButton {
+    A, B, X, Y,
+    LEFT_BUMPER, RIGHT_BUMPER, LEFT_TRIGGER, RIGHT_TRIGGER,
+    BACK, START, LEFT_STICK, RIGHT_STICK,
+    UP, DOWN, LEFT, RIGHT
+}
+
+bool gamepadConnected(int gamepad = 0);
+string gamepadName(int gamepad = 0);
+bool gamepadDown(GamepadButton button, int gamepad = 0);
+bool gamepadPressed(GamepadButton button, int gamepad = 0);
+bool gamepadReleased(GamepadButton button, int gamepad = 0);
+vec2 leftStick(int gamepad = 0);
+vec2 rightStick(int gamepad = 0);
+float leftTrigger(int gamepad = 0);
+float rightTrigger(int gamepad = 0);
 bool keyDown(Key key);
 bool keyPressed(Key key);
 bool keyReleased(Key key);

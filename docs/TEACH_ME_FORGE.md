@@ -472,7 +472,7 @@ Library functions are reached through the library name (`window.open(...)`). Lib
 | `<math>` | `math.sqrt pow sin cos tan asin acos atan atan2 exp log floor ceil round abs sign min max clamp lerp`, and `math.PI TAU E`. Angles are in radians. |
 | `<random>` | `random.range(1, 6)` (whole numbers, both ends included), `random.range(0.5, 2.0)` (decimals), `random.value()` (0 to 1), `random.chance(0.25)`, `random.seed(n)`, `random.color()` (a random solid color) |
 | `<window>` | `window.open(width, height, "title")`, `shouldClose()`, `run()`, `close()`, `deltaTime()` (seconds since the last frame), `time()`, `width()`, `height()`, `fps()`, `setFPS(n)`, `setTitle(t)`, `setBackground(color)`, `toggleFullscreen()`, `screenshot("file.png")` |
-| `<input>` | `input.keyDown(Key.SPACE)` (held), `input.keyPressed(...)` (only the frame it was pressed), `input.keyReleased(...)`, `input.mouseDown(MouseButton.LEFT)`, `mousePressed`, `mouseReleased`, `mousePosition()` (a vec2), `mouseX()`, `mouseY()`, `mouseWheel()` |
+| `<input>` | `input.keyDown(Key.SPACE)` (held), `input.keyPressed(...)` (only the frame it was pressed), `input.keyReleased(...)`, `input.mouseDown(MouseButton.LEFT)`, `mousePressed`, `mouseReleased`, `mousePosition()` (a vec2), `mouseX()`, `mouseY()`, `mouseWheel()`. Controllers (gamepads): `input.gamepadDown(GamepadButton.A)`, `gamepadPressed`, `gamepadReleased` (Xbox-style names: `A B X Y LEFT_BUMPER RIGHT_BUMPER LEFT_TRIGGER RIGHT_TRIGGER BACK START LEFT_STICK RIGHT_STICK`, and the D-pad `UP DOWN LEFT RIGHT`), `input.leftStick()` / `rightStick()` (a vec2 from -1 to 1; y is down, like the screen; small wobbles read as 0), `leftTrigger()` / `rightTrigger()` (0 to 1), `gamepadConnected()`, `gamepadName()`. Each takes an optional controller number: 0 (the default) is the first one plugged in. Without a controller they all read "not pressed", so a game can check both: `if (input.keyDown(Key.SPACE) or input.gamepadDown(GamepadButton.A))` |
 | `<graphics2d>` | `graphics2d.drawRect(x, y, w, h, color)` or `drawRect(rect, color)`, `drawRectOutline(x, y, w, h, color, thickness)`, `drawCircle(x, y, radius, color)` or `drawCircle(vec2, radius, color)`, `drawCircleOutline(x, y, radius, color)`, `drawLine(from, to, color, thickness)`, `drawTriangle(a, b, c, color)`, `drawText(text, x, y, size, color)`, `textWidth(text, size)`, `drawFPS(x, y)`, `clear(color)`, and a 2D camera (below) |
 | `<physics>` | the `Body` class, plus `physics.add(body)`, `remove(body)`, `step(dt)`, `setGravity(vec2)`, `gravity()`, `clear()`, `count()` |
 | `<assets>` | `assets.loadTexture("x.png")` gives a `Texture`, `assets.loadFont("x.ttf")` gives a `Font`, `assets.exists(path)` |
@@ -832,7 +832,7 @@ Runtime error in main.frg:10: position 5 is outside the list (it has 3 items, at
 - Two functions or methods with the same name (only constructors can share a name), operator overloading for your own types
 - Interfaces, abstract classes, `protected`, `static` fields or methods in your own types
 - `do ... while`, labeled breaks, exceptions (`try` / `catch`), `goto`
-- Networking, gamepads/controllers, shaders in the engine, 3D lighting, text input boxes in `<ui>`
+- Networking, shaders in the engine, 3D lighting, text input boxes in `<ui>`
 - `<network>` is planned but **doesn't exist yet**.
 
 ---

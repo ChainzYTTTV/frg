@@ -21,7 +21,7 @@ How libraries work:
 | [`<math>`](math.md) | `sqrt`, `sin`, `cos`, `pow`, `floor`, `abs`, `min`, `max`, `clamp`, `lerp`, `PI` | no |
 | [`<random>`](random.md) | Random whole and decimal numbers, chances | no |
 | [`<window>`](window.md) | Opens the game window, runs the game loop, frame timing | **is** the window |
-| [`<input>`](input.md) | Keyboard and mouse | yes |
+| [`<input>`](input.md) | Keyboard, mouse and controllers (gamepads) | yes |
 | [`<graphics2d>`](graphics2d.md) | Rectangles, circles, lines, triangles, text | yes |
 | [`<graphics3d>`](graphics3d.md) | 3D camera, cubes, spheres, grids, 3D models | yes |
 | [`<assets>`](assets.md) | Loading images (`Texture`) and fonts (`Font`) | to draw them |

@@ -1,0 +1,13 @@
+=== main.frg
+#include <input>
+
+int main(){
+    bool a = input.gamepadDown(Key.A);
+    bool b = input.gamepadDown(GamepadButton.JUMP);
+    float x = input.leftStick();
+    return 0;
+}
+=== error
+'button' in input.gamepadDown() needs a GamepadButton, but this is a Key
+the enum GamepadButton has no value called 'JUMP'
+'x' needs a float, but this is a vec2

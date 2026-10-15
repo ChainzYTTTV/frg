@@ -233,6 +233,11 @@ enum class Key_ : int32_t {
     F1_, F2_, F3_, F4_, F5_, F6_, F7_, F8_, F9_, F10_, F11_, F12_,
 };
 enum class MouseButton_ : int32_t { LEFT_, RIGHT_, MIDDLE_ };
+// Named like an Xbox controller. Keep the order in sync with GamepadButton in src/prelude.cpp.
+enum class GamepadButton_ : int32_t {
+    A_, B_, X_, Y_, LEFT_BUMPER_, RIGHT_BUMPER_, LEFT_TRIGGER_, RIGHT_TRIGGER_,
+    BACK_, START_, LEFT_STICK_, RIGHT_STICK_, UP_, DOWN_, LEFT_, RIGHT_,
+};
 
 inline const char* const* keyNames() {
     static const char* names[] = {
@@ -294,6 +299,54 @@ inline core::vec2_ mousePosition_() {
 inline float mouseX_() { return GetMousePosition().x; }
 inline float mouseY_() { return GetMousePosition().y; }
 inline float mouseWheel_() { return GetMouseWheelMove(); }
+
+// ---- gamepads (controllers). gamepad is 0 for the first one plugged in, 1 for the second...
+
+inline int rlGamepadButton(GamepadButton_ b) {
+    static const int map[] = {
+        GAMEPAD_BUTTON_RIGHT_FACE_DOWN, GAMEPAD_BUTTON_RIGHT_FACE_RIGHT, GAMEPAD_BUTTON_RIGHT_FACE_LEFT, GAMEPAD_BUTTON_RIGHT_FACE_UP,
+        GAMEPAD_BUTTON_LEFT_TRIGGER_1, GAMEPAD_BUTTON_RIGHT_TRIGGER_1, GAMEPAD_BUTTON_LEFT_TRIGGER_2, GAMEPAD_BUTTON_RIGHT_TRIGGER_2,
+        GAMEPAD_BUTTON_MIDDLE_LEFT, GAMEPAD_BUTTON_MIDDLE_RIGHT, GAMEPAD_BUTTON_LEFT_THUMB, GAMEPAD_BUTTON_RIGHT_THUMB,
+        GAMEPAD_BUTTON_LEFT_FACE_UP, GAMEPAD_BUTTON_LEFT_FACE_DOWN, GAMEPAD_BUTTON_LEFT_FACE_LEFT, GAMEPAD_BUTTON_LEFT_FACE_RIGHT,
+    };
+    return map[(int)b];
+}
+inline bool gamepadConnected_(int32_t pad) { return IsGamepadAvailable(pad); }
+inline std::string gamepadName_(int32_t pad) {
+    const char* n = IsGamepadAvailable(pad) ? GetGamepadName(pad) : nullptr;
+    return n ? n : "";
+}
+inline bool gamepadDown_(GamepadButton_ b, int32_t pad) { return IsGamepadAvailable(pad) && IsGamepadButtonDown(pad, rlGamepadButton(b)); }
+inline bool gamepadPressed_(GamepadButton_ b, int32_t pad) { return IsGamepadAvailable(pad) && IsGamepadButtonPressed(pad, rlGamepadButton(b)); }
+inline bool gamepadReleased_(GamepadButton_ b, int32_t pad) { return IsGamepadAvailable(pad) && IsGamepadButtonReleased(pad, rlGamepadButton(b)); }
+
+// A stick, from (-1, -1) (up and left) to (1, 1) (down and right). Sticks never rest exactly in the middle, so small
+// movements (the "dead zone") count as (0, 0), and the rest is stretched to still reach 1.
+inline core::vec2_ stick(int32_t pad, int axisX, int axisY) {
+    if (!IsGamepadAvailable(pad)) return {0, 0};
+    float x = GetGamepadAxisMovement(pad, axisX), y = GetGamepadAxisMovement(pad, axisY);
+    float len = std::sqrt(x * x + y * y);
+    const float dead = 0.2f;
+    if (len < dead) return {0, 0};
+    float scale = std::min(1.0f, (len - dead) / (1 - dead)) / len;
+    return {x * scale, y * scale};
+}
+inline core::vec2_ leftStick_(int32_t pad) { return stick(pad, GAMEPAD_AXIS_LEFT_X, GAMEPAD_AXIS_LEFT_Y); }
+inline core::vec2_ rightStick_(int32_t pad) { return stick(pad, GAMEPAD_AXIS_RIGHT_X, GAMEPAD_AXIS_RIGHT_Y); }
+// A trigger, from 0 (let go) to 1 (pressed all the way). raylib gives -1 to 1.
+inline float trigger(int32_t pad, int axis) {
+    if (!IsGamepadAvailable(pad)) return 0;
+    float v = (GetGamepadAxisMovement(pad, axis) + 1) / 2;
+    return v < 0.05f ? 0 : std::min(1.0f, v);
+}
+inline float leftTrigger_(int32_t pad) { return trigger(pad, GAMEPAD_AXIS_LEFT_TRIGGER); }
+inline float rightTrigger_(int32_t pad) { return trigger(pad, GAMEPAD_AXIS_RIGHT_TRIGGER); }
+
+inline std::string frg$str(GamepadButton_ b) {
+    static const char* names[] = {"A", "B", "X", "Y", "LEFT_BUMPER", "RIGHT_BUMPER", "LEFT_TRIGGER", "RIGHT_TRIGGER",
+                                  "BACK", "START", "LEFT_STICK", "RIGHT_STICK", "UP", "DOWN", "LEFT", "RIGHT"};
+    return names[(int)b];
+}
 
 inline std::string frg$str(Key_ k) { return keyNames()[(int)k]; }
 inline std::string frg$str(MouseButton_ b) {

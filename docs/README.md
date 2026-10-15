@@ -45,7 +45,7 @@ Everything that isn't the core language lives in a library you `#include`. See t
 | [`<math>`](libraries/math.md) | Square roots, trigonometry, rounding, min/max/clamp |
 | [`<random>`](libraries/random.md) | Random numbers |
 | [`<window>`](libraries/window.md) | Opening the game window and running the game loop |
-| [`<input>`](libraries/input.md) | Keyboard and mouse |
+| [`<input>`](libraries/input.md) | Keyboard, mouse and controllers (gamepads) |
 | [`<graphics2d>`](libraries/graphics2d.md) | Drawing shapes and text |
 | [`<graphics3d>`](libraries/graphics3d.md) | Cameras, 3D shapes and 3D models |
 | [`<assets>`](libraries/assets.md) | Loading images and fonts |

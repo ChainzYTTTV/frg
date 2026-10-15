@@ -1,0 +1,33 @@
+=== main.frg
+#include <window>
+#include <graphics2d>
+#include <input>
+
+vec2 position = vec2(200, 200);
+
+void update(float dt) {
+    // The stick and the keyboard both move the player.
+    vec2 move = input.leftStick();
+    if (input.keyDown(Key.LEFT) or input.gamepadDown(GamepadButton.LEFT)) {
+        move.x = -1;
+    }
+    position += move * 200 * dt;
+    if (input.gamepadPressed(GamepadButton.A) or input.keyPressed(Key.SPACE)) {
+        position.y -= 50;
+    }
+}
+
+void draw() {
+    graphics2d.drawCircle(position, 20, color.ORANGE);
+    if (input.gamepadConnected()) {
+        graphics2d.drawText(input.gamepadName(), 10, 10, 20, color.WHITE);
+    }
+}
+
+int main(){
+    window.open(400, 400, "Gamepad");
+    window.run();
+    return 0;
+}
+=== build
+=== no warnings

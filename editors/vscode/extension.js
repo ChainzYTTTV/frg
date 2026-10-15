@@ -72,6 +72,15 @@ const LIBRARIES = {
         ['mouseX', 'float mouseX()', 'Mouse x position.'],
         ['mouseY', 'float mouseY()', 'Mouse y position.'],
         ['mouseWheel', 'float mouseWheel()', 'How far the mouse wheel moved this frame.'],
+        ['gamepadConnected', 'bool gamepadConnected(int gamepad = 0)', 'True if a controller is plugged in. gamepad is 0 for the first one, 1 for the second...'],
+        ['gamepadName', 'string gamepadName(int gamepad = 0)', 'The controller\'s name, or "" if there isn\'t one.'],
+        ['gamepadDown', 'bool gamepadDown(GamepadButton button, int gamepad = 0)', 'True while a controller button is held, like GamepadButton.A.'],
+        ['gamepadPressed', 'bool gamepadPressed(GamepadButton button, int gamepad = 0)', 'True only in the frame the button was pressed.'],
+        ['gamepadReleased', 'bool gamepadReleased(GamepadButton button, int gamepad = 0)', 'True only in the frame the button was let go.'],
+        ['leftStick', 'vec2 leftStick(int gamepad = 0)', 'The left stick, from (-1, -1) (up-left) to (1, 1) (down-right). Small wobbles count as (0, 0).'],
+        ['rightStick', 'vec2 rightStick(int gamepad = 0)', 'The right stick, like leftStick.'],
+        ['leftTrigger', 'float leftTrigger(int gamepad = 0)', 'How far the left trigger is pressed: 0 to 1.'],
+        ['rightTrigger', 'float rightTrigger(int gamepad = 0)', 'How far the right trigger is pressed: 0 to 1.'],
     ],
     graphics2d: [
         ['drawRect', 'void drawRect(float x, float y, float width, float height, color c)\nvoid drawRect(rect r, color c)', 'A filled rectangle.'],
@@ -351,6 +360,7 @@ const TYPE_STATICS = {
     vec4: ['ZERO', 'ONE'],
     Key: KEYS,
     MouseButton: ['LEFT', 'RIGHT', 'MIDDLE'],
+    GamepadButton: ['A', 'B', 'X', 'Y', 'LEFT_BUMPER', 'RIGHT_BUMPER', 'LEFT_TRIGGER', 'RIGHT_TRIGGER', 'BACK', 'START', 'LEFT_STICK', 'RIGHT_STICK', 'UP', 'DOWN', 'LEFT', 'RIGHT'],
 };
 
 // ---------------------------------------------------------------- finding frg.exe and the game folder

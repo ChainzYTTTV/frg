@@ -1,21 +1,21 @@
 # Roadmap
 
-What's planned for Forge between now (0.6.0) and 1.0.0. The order and the version numbers can change. What's already done is in the [changelog](CHANGELOG.md).
+What's planned for Forge between now (0.7.0) and 1.0.0. The order and the version numbers can change. What's already done is in the [changelog](CHANGELOG.md).
 
 Sizes are rough: **S** is small, **M** medium, **L** large.
 
 ## 0.7.0: Polish and game-making helpers
 
-| Feature | Why | Size |
-|---|---|---|
-| Levels from text or tile maps (`#` is a wall, `C` a coin, `P` the player) | build levels by drawing them instead of placing every platform in code | M |
-| Particles (dust, sparks, explosions) | makes games feel alive with a few lines | M |
-| Tweens: smooth movement over time | menus sliding in, things bouncing and fading | S |
-| A text input box in `<ui>` | typing a name for the high score | M |
-| `Pointer.remove()` | throw a pointer away; using it afterwards gives a clear error | S |
-| `do ... while` loops | some tutorials use them | S |
-| A size limit for the build cache | it can grow to hundreds of MB | S |
-| Check gamepads and the `.exe` icon on real hardware | the two 0.6 features nobody could test | S |
+| Feature | Why | Size | Status |
+|---|---|---|---|
+| Levels from text or tile maps (`#` is a wall, `C` a coin, `P` the player) | build levels by drawing them instead of placing every platform in code | M | done (`<tilemap>`) |
+| Particles (dust, sparks, explosions) | makes games feel alive with a few lines | M | done (`<particles>`) |
+| Tweens: smooth movement over time | menus sliding in, things bouncing and fading | S | done (`<tween>`) |
+| A text input box in `<ui>` | typing a name for the high score | M | done (`ui.textBox`) |
+| `Pointer.remove()` | throw a pointer away; using it afterwards gives a clear error | S | done |
+| `do ... while` loops | some tutorials use them | S | done |
+| A size limit for the build cache | it can grow to hundreds of MB | S | done (`frg cache`) |
+| Check gamepads and the `.exe` icon on real hardware | the two 0.6 features nobody could test | S | still to do: needs a person with a controller |
 
 ## 0.8.0: More power in the language
 

@@ -1,4 +1,4 @@
-# Forge 0.6.0: the complete documentation
+# Forge 0.7.0: the complete documentation
 
 This one file holds everything written about the Forge programming language, so it can be uploaded in one go:
 
@@ -16,7 +16,7 @@ Where the parts disagree, the detailed pages (B to F) are more precise, and the 
 - **Part D: The libraries**: Library Overview - Built-in Types: vec2, vec3, vec4, color, rect - <stdio>: Console Input and Output - <math>: Math Functions - <random>: Random Numbers - <window>: The Game Window - <input>: Keyboard, Mouse and Controllers - <graphics2d>: 2D Drawing - <graphics3d>: 3D Drawing - <assets>: Images, Animations and Fonts - <audio>: Sounds and Music - <physics>: Boxes, Gravity and Collisions - <time>: Clock, Date and Timers - <file>: Reading and Writing Text Files - <save>: Remembering Things Between Runs - <tween>: Smooth Changes Over Time - <particles>: Dust, Sparks and Explosions - <tilemap>: Levels Drawn as Text - <scenes>: Menus, Levels and Game Over - <ui>: Buttons, Checkboxes, Sliders and Text Boxes - <ECS>: Entities and Components - <tasks>: Tasks Without a Window - Low-Level Toolkits: OpenGL, DirectX and Vulkan - <OpenGL>: Drawing with OpenGL Yourself - <DirectX>: Drawing with Direct3D 11 Yourself - <Vulkan>: Drawing with Vulkan Yourself
 - **Part E: Guides**: The Game Loop - Sprites and Animation - Platformer Walkthrough
 - **Part F: Under the hood**: How Forge Works
-- **Part G: The cheat sheet (everything on one page)**: Forge Cheat Sheet (v0.6)
+- **Part G: The cheat sheet (everything on one page)**: Forge Cheat Sheet (v0.7)
 
 ---
 
@@ -1637,7 +1637,7 @@ Then build version 1, play it, and only then add more.
 
 ---
 
-*Forge v0.6. If the learner reports that something in this file doesn't work, believe the compiler over this file and tell them to report it to whoever maintains Forge.*
+*Forge v0.7. If the learner reports that something in this file doesn't work, believe the compiler over this file and tell them to report it to whoever maintains Forge.*
 
 ---
 
@@ -1651,14 +1651,14 @@ Forge (`.frg`) is a compiled programming language for making 2D and 3D games. It
 
 These docs are for **anyone using or learning Forge**, including people who have never programmed before. If you're new, read them in order. If you already know another language, skim Getting Started (see “Getting Started”), then read Things that surprise people from other languages (see “14. Coming From Other Languages”).
 
-> Forge was designed by a person and written by an AI (see the main README (the file `README.md` in the Forge folder)). These docs describe **Forge 0.6**. If something here disagrees with what the compiler does, the compiler is right; please report the mismatch.
+> Forge was designed by a person and written by an AI (see the main README (the file `README.md` in the Forge folder)). These docs describe **Forge 0.7**. If something here disagrees with what the compiler does, the compiler is right; please report the mismatch.
 
 ### Start here
 
 | | |
 |---|---|
 | Getting Started (see “Getting Started”) | Setup, the `frg` command, VS Code, your first program, and building a finished game |
-| Cheat sheet (see “Forge Cheat Sheet (v0.6)”) | The whole language on one page, for looking things up quickly |
+| Cheat sheet (see “Forge Cheat Sheet (v0.7)”) | The whole language on one page, for looking things up quickly |
 | Everything in one file (the file `FORGE_ALL_DOCS.md` in the Forge folder) | The teaching brief and every page below, combined into one file to upload to an AI chat. Rebuild it with `.\docs\make-all-docs.ps1` after changing the docs. |
 
 ### The language
@@ -1757,7 +1757,7 @@ frg version
 g++ --version
 ```
 
-The first should print `Forge 0.6.0` and the second should print a GCC version. If `frg` isn't found, add Forge's `bin` folder to your PATH and restart the terminal.
+The first should print `Forge 0.7.0` and the second should print a GCC version. If `frg` isn't found, add Forge's `bin` folder to your PATH and restart the terminal.
 
 #### Building Forge from source
 
@@ -8630,7 +8630,7 @@ When you save, the extension runs `frg check <game folder> --machine`. In machin
 
 <!-- docs/LANGUAGE.md -->
 
-## Forge Cheat Sheet (v0.6)
+## Forge Cheat Sheet (v0.7)
 
 The whole language on one page, for looking things up quickly. For full explanations, examples and every detail, see the complete documentation (see “Forge Documentation”). Planned features are listed at the end.
 

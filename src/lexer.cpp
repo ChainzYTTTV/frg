@@ -14,7 +14,7 @@ static const std::unordered_map<std::string, Tok>& keywords() {
         {"switch", Tok::KwSwitch}, {"case", Tok::KwCase},         {"default", Tok::KwDefault},
         {"this", Tok::KwThis},     {"super", Tok::KwSuper},       {"in", Tok::KwIn},
         {"static", Tok::KwStatic}, {"new", Tok::KwReserved},      {"delete", Tok::KwReserved},
-        {"public", Tok::KwReserved}, {"private", Tok::KwReserved},
+        {"public", Tok::KwPublic},   {"private", Tok::KwPrivate},  {"is", Tok::KwIs},  {"as", Tok::KwAs},
     };
     return table;
 }

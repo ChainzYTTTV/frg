@@ -166,8 +166,12 @@ FileAST Parser::parseFile() {
                 continue;
             }
             if (accept(Tok::Semi)) continue;
+            Loc modLoc = cur().loc;
+            bool isPrivate = at(Tok::KwPrivate);
+            bool hasModifier = accept(Tok::KwPrivate) || accept(Tok::KwPublic);
             if (at(Tok::KwStruct) || at(Tok::KwClass) || at(Tok::KwEnum)) {
                 ast.types.push_back(parseTypeDecl());
+                ast.types.back()->isPrivate = isPrivate;
                 continue;
             }
             if (at(Tok::KwConst) || declAhead(true)) {
@@ -178,12 +182,15 @@ FileAST Parser::parseFile() {
                 if (at(Tok::LParen)) {
                     if (isConst) fail(constLoc, "functions can't be const");
                     ast.funcs.push_back(parseFuncRest(type, name, false));
+                    ast.funcs.back()->isPrivate = isPrivate;
                 } else {
                     ast.globals.push_back(finishVar(isConst, type, name));
+                    ast.globals.back()->isPrivate = isPrivate;
                     expect(Tok::Semi, "';'");
                 }
                 continue;
             }
+            if (hasModifier) fail(modLoc, "'" + std::string(isPrivate ? "private" : "public") + "' has to come right before a function, a variable or a type");
             if (at(Tok::Ident) && peek().kind == Tok::LParen)
                 fail(cur().loc, "this code has to go inside a function",
                      "put it inside main(){ ... } - or, if you're making a new function, give it a return type like 'void " +
@@ -258,6 +265,10 @@ TypeDeclPtr Parser::parseTypeDecl() {
     while (!at(Tok::RBrace)) {
         if (atEnd()) fail(open.loc, "this '{' is never closed", "add a matching '}'");
         if (accept(Tok::Semi)) continue;
+        bool isPrivate = at(Tok::KwPrivate);
+        if (accept(Tok::KwPrivate) || accept(Tok::KwPublic)) {
+            if (at(Tok::KwPrivate) || at(Tok::KwPublic)) fail(cur().loc, "only one of private or public can be used");
+        }
         if (at(Tok::KwStatic)) {
             if (!prelude) fail(cur().loc, "'static' isn't available yet");
             p++;
@@ -271,9 +282,9 @@ TypeDeclPtr Parser::parseTypeDecl() {
         }
         if (at(Tok::Ident) && cur().text == d->name && peek().kind == Tok::LParen) {
             const Token& ctorName = t[p++];
-            if (d->ctor) fail(ctorName.loc, d->name + " already has a constructor", "a type can only have one constructor");
             TypeRef none;
-            d->ctor = parseFuncRest(none, ctorName, true);
+            d->ctors.push_back(parseFuncRest(none, ctorName, true));
+            d->ctors.back()->isPrivate = isPrivate;
             continue;
         }
         if (at(Tok::KwConst)) fail(cur().loc, "fields can't be const yet", "use a const global variable instead");
@@ -281,8 +292,10 @@ TypeDeclPtr Parser::parseTypeDecl() {
         const Token& mname = expect(Tok::Ident, "a field or method name");
         if (at(Tok::LParen)) {
             d->methods.push_back(parseFuncRest(type, mname, false));
+            d->methods.back()->isPrivate = isPrivate;
         } else {
             d->fields.push_back(finishVar(false, type, mname));
+            d->fields.back()->isPrivate = isPrivate;
             expect(Tok::Semi, "';'");
         }
     }
@@ -639,8 +652,21 @@ ExprPtr Parser::parseEquality() {
 
 ExprPtr Parser::parseCompare() {
     ExprPtr l = parseShift();
-    while (at(Tok::Lt) || at(Tok::Gt) || at(Tok::LtEq) || at(Tok::GtEq)) {
+    while (at(Tok::Lt) || at(Tok::Gt) || at(Tok::LtEq) || at(Tok::GtEq) || at(Tok::KwIs) || at(Tok::KwAs)) {
         const Token& op = t[p++];
+        if (op.kind == Tok::KwIs || op.kind == Tok::KwAs) {
+            auto e = std::make_unique<Expr>(op.kind == Tok::KwIs ? EK::Is : EK::As, op.loc);
+            e->a = std::move(l);
+            e->typeRef = parseType();
+            // In `x is Goblin ? a : b` the ? belongs to the ternary, not to the type.
+            if (e->typeRef.optional && !at(Tok::RParen) && !at(Tok::Semi) && !at(Tok::Comma) && !at(Tok::RBracket) &&
+                !at(Tok::RBrace) && !atEnd()) {
+                p--;
+                e->typeRef.optional = false;
+            }
+            l = std::move(e);
+            continue;
+        }
         l = binary(std::move(l), op, parseShift(), op.text);
     }
     return l;

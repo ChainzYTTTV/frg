@@ -23,14 +23,15 @@ inline FuncDecl* findMethod(TypeDecl* d, const std::string& n) {
     return nullptr;
 }
 
-// The constructor used to build `d`: its own, or (for classes) the nearest one it inherits.
-// nullptr means "no constructor": the type is built field by field.
-inline FuncDecl* findCtor(TypeDecl* d) {
+// The constructors used to build `d`: its own, or (for classes) the nearest ones it inherits.
+// None means the type is built field by field.
+inline std::vector<FuncDecl*> findCtors(TypeDecl* d) {
+    std::vector<FuncDecl*> out;
     for (; d; d = d->base) {
-        if (d->ctor) return d->ctor.get();
-        if (d->kind != DK::Class) break;
+        for (auto& c : d->ctors) out.push_back(c.get());
+        if (!out.empty() || d->kind != DK::Class) break;
     }
-    return nullptr;
+    return out;
 }
 
 // Every field, inherited ones first.

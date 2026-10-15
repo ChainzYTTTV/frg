@@ -415,6 +415,11 @@ std::string Gen::ex(const Expr* e) {
             if (curType->kind == DK::Struct) return "(*this)";
             return "::std::static_pointer_cast<" + curType->cpp + ">(this->shared_from_this())";
         case EK::Super: return "this";
+        case EK::Is: {
+            std::string cast = "::std::dynamic_pointer_cast<" + e->opType->decl->cpp + ">(" + ex(e->a.get()) + ")";
+            return "(" + cast + " != nullptr)";
+        }
+        case EK::As: return "::std::dynamic_pointer_cast<" + e->opType->decl->cpp + ">(" + ex(e->a.get()) + ")";
     }
     return "/*?*/";
 }
@@ -591,7 +596,7 @@ std::string Gen::fieldParams(TypeDecl* d) {
 }
 
 // A type with no constructor anywhere gets one that sets every field, in order.
-bool Gen::hasAutoInit(TypeDecl* d) { return !findCtor(d) && !allFields(d).empty(); }
+bool Gen::hasAutoInit(TypeDecl* d) { return findCtors(d).empty() && !allFields(d).empty(); }
 
 // Structs are stored inside whatever holds them, so they must be defined before it. Base classes too.
 std::vector<TypeDecl*> Gen::typeOrder() {
@@ -642,14 +647,14 @@ void Gen::emitTypeDef(TypeDecl* d) {
     for (auto& f : d->fields) line(f->type->cpp + " " + id(f->name) + "{};");
     line(name + "();");
     if (d->kind == DK::Class && !d->base) line("virtual ~" + name + "() = default;");
-    if (d->ctor) line("void frg$init(" + params(d->ctor.get()) + ");");
-    else if (hasAutoInit(d)) line("void frg$init(" + fieldParams(d) + ");");
+    for (auto& c : d->ctors) line("void frg$init(" + params(c.get()) + ");");
+    if (hasAutoInit(d)) line("void frg$init(" + fieldParams(d) + ");");
 
-    FuncDecl* ctor = findCtor(d);
+    std::vector<FuncDecl*> ctors = findCtors(d);
     std::string self = d->kind == DK::Class ? "::std::shared_ptr<" + name + ">" : name;
     std::string maker = d->kind == DK::Class ? "frg$new" : "frg$make";
-    if (ctor) {
-        line("static " + self + " " + maker + "(" + params(ctor) + ");");
+    if (!ctors.empty()) {
+        for (FuncDecl* c : ctors) line("static " + self + " " + maker + "(" + params(c) + ");");
     } else {
         line("static " + self + " " + maker + "();");
         if (hasAutoInit(d)) line("static " + self + " " + maker + "(" + fieldParams(d) + ");");
@@ -703,25 +708,26 @@ void Gen::emitTypeFuncs(TypeDecl* d) {
     ind--;
     line("}");
 
-    if (d->ctor) {
-        emitBody(d->ctor.get(), d, "void " + name + "::frg$init(" + params(d->ctor.get()) + ")");
-    } else if (hasAutoInit(d)) {
+    for (auto& c : d->ctors) emitBody(c.get(), d, "void " + name + "::frg$init(" + params(c.get()) + ")");
+    if (hasAutoInit(d)) {
         line("void " + name + "::frg$init(" + fieldParams(d) + ") {");
         for (VarDecl* f : allFields(d)) line("    this->" + id(f->name) + " = " + id(f->name) + ";");
         line("}");
     }
 
-    FuncDecl* ctor = findCtor(d);
+    std::vector<FuncDecl*> ctors = findCtors(d);
     bool isClass = d->kind == DK::Class;
     std::string self = isClass ? "::std::shared_ptr<" + full + ">" : full;
     std::string maker = isClass ? "frg$new" : "frg$make";
     std::string make = isClass ? "auto o = ::std::make_shared<" + full + ">();" : full + " o;";
     std::string dot = isClass ? "->" : ".";
     auto argNames = [&](const std::vector<std::string>& names) { return joinNames(names); };
-    if (ctor) {
-        std::vector<std::string> names;
-        for (auto& p : ctor->params) names.push_back(id(p->name));
-        line(self + " " + name + "::" + maker + "(" + params(ctor) + ") { " + make + " o" + dot + "frg$init(" + argNames(names) + "); return o; }");
+    if (!ctors.empty()) {
+        for (FuncDecl* c : ctors) {
+            std::vector<std::string> names;
+            for (auto& p : c->params) names.push_back(id(p->name));
+            line(self + " " + name + "::" + maker + "(" + params(c) + ") { " + make + " o" + dot + "frg$init(" + argNames(names) + "); return o; }");
+        }
     } else {
         line(self + " " + name + "::" + maker + "() { " + make + " return o; }");
         if (hasAutoInit(d)) {

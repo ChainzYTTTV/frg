@@ -1,0 +1,90 @@
+=== main.frg
+#include <stdio>
+
+class Enemy {
+    string name;
+    private int secretHp = 10;
+
+    Enemy(string name) {
+        this.name = name;
+    }
+
+    Enemy(string name, int hp) {
+        this.name = name;
+        secretHp = hp;
+    }
+
+    int hp() {
+        return secretHp;
+    }
+
+    private void heal() {
+        secretHp += 1;
+    }
+}
+
+class Goblin : Enemy {
+    void cackle() {
+        heal();              // private things can be used by classes that inherit
+        print("{name} cackles ({secretHp} HP)");
+    }
+}
+
+class Dragon : Enemy {
+    Dragon() {
+        super("Dragon", 500);
+    }
+    void roar() {
+        print("{name} roars");
+    }
+}
+
+struct Size {
+    float w;
+    float h;
+    Size(float side) {
+        w = side;
+        h = side;
+    }
+    Size(float w, float h) {
+        this.w = w;
+        this.h = h;
+    }
+}
+
+int main(){
+    list<Enemy> enemies = [Goblin("Grok"), Dragon(), Enemy("Blob", 3)];
+    for (Enemy e in enemies) {
+        if (e is Goblin) {
+            Goblin g = e as Goblin;
+            g.cackle();
+        } else if (e is Dragon) {
+            (e as Dragon).roar();
+        } else {
+            print("{e.name} has {e.hp()} HP");
+        }
+    }
+    Goblin? notGoblin = enemies[1] as Goblin;
+    print(notGoblin == null);
+    print(enemies[0] is Goblin ? "first is a goblin" : "first isn't a goblin");
+    print(Size(3));
+    print(Size(2, 5));
+    print(helper.publicCount());
+    return 0;
+}
+=== helper.frg
+private int count = 41;
+
+int publicCount() {
+    count++;
+    return count;
+}
+=== output
+Grok cackles (11 HP)
+Dragon roars
+Blob has 3 HP
+true
+first is a goblin
+Size(w: 3.0, h: 3.0)
+Size(w: 2.0, h: 5.0)
+42

@@ -1,0 +1,13 @@
+=== main.frg
+class A {
+    A(int x) {
+    }
+    A(int y) {
+    }
+}
+
+int main(){
+    return 0;
+}
+=== error
+A already has a constructor that takes these same types

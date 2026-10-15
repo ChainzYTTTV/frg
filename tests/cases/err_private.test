@@ -1,0 +1,16 @@
+=== main.frg
+class Safe {
+    private int code = 1234;
+}
+
+int main(){
+    Safe s = Safe();
+    int c = s.code;
+    int n = helper.hidden;
+    return 0;
+}
+=== helper.frg
+private int hidden = 5;
+=== error
+'code' is private to Safe
+'hidden' is private to helper.frg

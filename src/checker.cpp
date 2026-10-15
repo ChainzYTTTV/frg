@@ -284,6 +284,8 @@ private:
     Type* equalityOp(Expr* e);
     Type* castExpr(Expr* e);
     Type* strExpr(Expr* e);
+    Type* isAsExpr(Expr* e);
+    bool privateBlocked(bool isPrivate, TypeDecl* owner, Module* module, const Loc& loc, const std::string& name);
     std::string unknownHint(const std::string& n);
     void checkRunCallbacks(const Loc& loc);
 
@@ -474,6 +476,7 @@ Type* Checker::resolveType(const TypeRef& r, bool allowVoid) {
             reportError(r.loc, "unknown type '" + r.display() + "'");
             return tError();
         }
+        if (privateBlocked(d->isPrivate, nullptr, m, r.loc, d->name)) return tError();
         if (!r.args.empty()) reportError(r.loc, "'" + d->name + "' doesn't take types inside < >");
         base = tNamed(d);
     }
@@ -532,10 +535,19 @@ void Checker::resolveTypeDecl(TypeDecl* d) {
                         "fields and methods each need their own name");
         d->methodMap[m->name] = m.get();
     }
-    if (d->ctor) {
-        d->ctor->owner = d;
-        d->ctor->module = d->module;
-        resolveFunc(d->ctor.get());
+    for (size_t i = 0; i < d->ctors.size(); i++) {
+        FuncDecl* c = d->ctors[i].get();
+        c->owner = d;
+        c->module = d->module;
+        resolveFunc(c);
+        for (size_t j = 0; j < i; j++) {
+            FuncDecl* o = d->ctors[j].get();
+            bool same = o->params.size() == c->params.size();
+            for (size_t k = 0; same && k < c->params.size(); k++) same = o->params[k]->type == c->params[k]->type;
+            if (same)
+                reportError(c->loc, d->name + " already has a constructor that takes these same types",
+                            "each constructor needs different types of values, so Forge can tell which one you mean");
+        }
     }
 }
 
@@ -768,8 +780,44 @@ Type* Checker::expr(Expr* e, Type* expected, bool allowNonValue) {
         case EK::Super:
             reportError(e->loc, "super is used like super.method()");
             return e->type = tError();
+        case EK::Is:
+        case EK::As: return isAsExpr(e);
     }
     return e->type = tError();
+}
+
+// `enemy is Goblin` and `enemy as Goblin`: checking what kind of class an object really is.
+Type* Checker::isAsExpr(Expr* e) {
+    const char* word = e->kind == EK::Is ? "is" : "as";
+    Type* S = value(e->a.get());
+    Type* T = resolveType(e->typeRef, false);
+    if (S == tError() || T == tError()) return e->type = tError();
+    if (T->kind == TK::Optional) T = T->elem;
+    Type* sc = S->kind == TK::Optional ? S->elem : S;
+    if (sc->kind != TK::Class || T->kind != TK::Class) {
+        reportError(e->loc, std::string("'") + word + "' checks what kind of class an object is, but this is " + aType(S) +
+                                (T->kind != TK::Class ? " and " + T->name + " isn't a class" : ""));
+        return e->type = tError();
+    }
+    if (!inheritsFrom(T->decl, sc->decl) && !inheritsFrom(sc->decl, T->decl)) {
+        reportError(e->loc, aType(sc) + " can never be " + aType(T), T->name + " doesn't inherit from " + sc->name + ", or the other way around");
+        return e->type = tError();
+    }
+    e->opType = T;
+    return e->type = e->kind == EK::Is ? tBool() : tOptional(T);
+}
+
+bool Checker::privateBlocked(bool isPrivate, TypeDecl* owner, Module* module, const Loc& loc, const std::string& name) {
+    if (!isPrivate) return false;
+    if (owner) {
+        if (curType && inheritsFrom(curType, owner)) return false;
+        reportError(loc, "'" + name + "' is private to " + owner->name,
+                    "only " + owner->name + "'s own methods (and classes that inherit from it) can use it");
+        return true;
+    }
+    if (module == cur) return false;
+    reportError(loc, "'" + name + "' is private to " + module->src->displayPath, "only code in that file can use it");
+    return true;
 }
 
 Type* Checker::intLit(Expr* e) {
@@ -956,9 +1004,11 @@ void Checker::valueMember(Expr* e, Expr* o) {
         if (VarDecl* f = findField(d->decl, n)) {
             r.kind = RK::Field;
             r.var = f;
+            privateBlocked(f->isPrivate, f->owner, nullptr, e->loc, n);
         } else if (FuncDecl* m = findMethod(d->decl, n)) {
             r.kind = RK::Method;
             r.func = m;
+            privateBlocked(m->isPrivate, m->owner, nullptr, e->loc, n);
         } else {
             std::vector<std::string> names;
             for (TypeDecl* x = d->decl; x; x = x->base) {
@@ -1036,12 +1086,15 @@ Type* Checker::memberExpr(Expr* e, bool allowNonValue) {
                 r.kind = RK::Func;
                 r.func = f->second;
                 r.module = m;
+                privateBlocked(f->second->isPrivate, nullptr, m, e->loc, n);
             } else if (auto g = m->globals.find(n); g != m->globals.end()) {
                 r.kind = RK::Global;
                 r.var = g->second;
+                privateBlocked(g->second->isPrivate, nullptr, m, e->loc, n);
             } else if (auto t = m->types.find(n); t != m->types.end()) {
                 r.kind = RK::Type;
                 r.tdecl = t->second;
+                privateBlocked(t->second->isPrivate, nullptr, m, e->loc, n);
             } else {
                 std::vector<std::string> names;
                 for (auto& [k, _] : m->funcs) names.push_back(k);
@@ -1208,10 +1261,14 @@ Type* Checker::construct(Expr* e, std::vector<ExprPtr>& args, TypeDecl* d) {
                     "to turn a number into a " + d->name + ", use " + d->name + "(number)");
         return e->type = tError();
     }
-    FuncDecl* ctor = findCtor(d);
-    e->ctor = ctor;
-    if (ctor) {
-        checkArgs(e, args, ctor, d->name);
+    std::vector<FuncDecl*> ctors = findCtors(d);
+    if (!ctors.empty()) {
+        FuncDecl* ctor = resolveCall(e, ctors, d->name);
+        if (!ctor) return e->type = tError();
+        e->ctor = ctor;
+        if (ctor->isPrivate && !(curType && inheritsFrom(curType, ctor->owner)))
+            reportError(e->loc, "this constructor of " + ctor->owner->name + " is private",
+                        "only " + ctor->owner->name + "'s own methods can use it");
     } else {
         std::vector<VarDecl*> fields = allFields(d);
         if (!args.empty() && args.size() != fields.size()) {
@@ -1760,11 +1817,13 @@ void Checker::superCall(Stmt* s) {
         return;
     }
     TypeDecl* base = curType->base;
-    Expr tmp(EK::Call, s->loc);
-    FuncDecl* ctor = findCtor(base);
-    s->target = ctor;
-    if (ctor) {
-        checkArgs(&tmp, s->args, ctor, "super");  // the code generator fills in default values itself
+    std::vector<FuncDecl*> ctors = findCtors(base);
+    if (!ctors.empty()) {
+        // The code generator fills in default values for missing arguments itself.
+        Expr tmp(EK::Call, s->loc);
+        tmp.args = std::move(s->args);
+        s->target = resolveCall(&tmp, ctors, "super");
+        s->args = std::move(tmp.args);
     } else {
         std::vector<VarDecl*> fields = allFields(base);
         if (!s->args.empty() && s->args.size() != fields.size()) {
@@ -1956,7 +2015,7 @@ bool Checker::run() {
         for (auto& f : m->ast.funcs) checkDefaults(f.get());
         for (auto& d : m->ast.types) {
             for (auto& meth : d->methods) checkDefaults(meth.get());
-            if (d->ctor) checkDefaults(d->ctor.get());
+            for (auto& c : d->ctors) checkDefaults(c.get());
             for (auto& f : d->fields) {
                 if (f->isStatic) continue;
                 if (f->init) {
@@ -1982,7 +2041,7 @@ bool Checker::run() {
     for (Module* m : P.allModules) {
         for (auto& f : m->ast.funcs) checkBody(f.get(), nullptr);
         for (auto& d : m->ast.types) {
-            if (d->ctor) checkBody(d->ctor.get(), d.get());
+            for (auto& c : d->ctors) checkBody(c.get(), d.get());
             for (auto& meth : d->methods) checkBody(meth.get(), d.get());
         }
     }

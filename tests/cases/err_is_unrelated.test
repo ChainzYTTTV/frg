@@ -1,0 +1,15 @@
+=== main.frg
+class Cat {
+    int lives = 9;
+}
+class Car {
+    int wheels = 4;
+}
+
+int main(){
+    Cat c = Cat();
+    bool b = c is Car;
+    return 0;
+}
+=== error
+a Cat can never be a Car

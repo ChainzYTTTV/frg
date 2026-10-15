@@ -45,6 +45,8 @@ enum class EK {
     Ternary,   // cond ? a : b
     This,
     Super,
+    Is,        // obj is Type
+    As,        // obj as Type (null if it isn't one)
 };
 
 // What a name (or a.b.c path) refers to. Filled in by the checker.
@@ -85,6 +87,7 @@ struct Expr {
     std::vector<ExprPtr> args;       // Str interpolations, Call arguments, list items, map values, brace items
     std::vector<ExprPtr> keys;       // MapLit keys
     ExprPtr a, b, c;                 // operands / object / callee / index (b) / ternary branches (b, c)
+    TypeRef typeRef;                 // Is / As: the type checked for
 
     // Filled in by the checker.
     Type* type = nullptr;
@@ -111,6 +114,7 @@ struct VarDecl {
     bool isParam = false;
     bool isField = false;
     bool isStatic = false;   // built-in constants like color.RED
+    bool isPrivate = false;  // only usable inside its class (fields) or its file (globals)
     Type* type = nullptr;
     Module* module = nullptr;
     TypeDecl* owner = nullptr;  // fields
@@ -156,6 +160,7 @@ struct FuncDecl {
     Module* module = nullptr;
     TypeDecl* owner = nullptr;  // methods and constructors
     bool isCtor = false;
+    bool isPrivate = false;     // only usable inside its class (methods) or its file (functions)
     FuncDecl* overrides = nullptr;
 
     size_t requiredParams() const {
@@ -174,12 +179,13 @@ struct TypeDecl {
     Loc loc;
     Module* module = nullptr;
     bool builtin = false;
+    bool isPrivate = false;  // only usable inside its own file
     std::string cpp;  // C++ name of the struct/class/enum itself, e.g. "::m_main::Player_"
     TypeRef baseRef;
     TypeDecl* base = nullptr;
     std::vector<VarPtr> fields;     // includes `static` built-in constants
     std::vector<FuncPtr> methods;
-    FuncPtr ctor;
+    std::vector<FuncPtr> ctors;
     std::vector<std::string> enumValues;
     std::vector<Loc> enumLocs;
     Type* type = nullptr;

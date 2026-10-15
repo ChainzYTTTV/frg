@@ -231,6 +231,61 @@ void setVolume(float volume);
 void update();
 )FRG";
 
+static const char* kTime = R"FRG(
+class Timer {
+    Timer(float seconds);
+    bool isDone();
+    float left();
+    float elapsed();
+    void restart();
+}
+
+double now();
+void sleep(float seconds);
+string clock();
+string date();
+int year();
+int month();
+int day();
+int hour();
+int minute();
+int second();
+)FRG";
+
+static const char* kFile = R"FRG(
+string read(string path);
+bool write(string path, string text);
+bool append(string path, string text);
+bool exists(string path);
+bool remove(string path);
+list<string> readLines(string path);
+bool writeLines(string path, list<string> lines);
+list<string> files(string folder);
+)FRG";
+
+static const char* kScenes = R"FRG(
+class Scene {
+    void enter();
+    void update(float dt);
+    void draw();
+    void exit();
+}
+
+void change(Scene next);
+void update(float dt);
+void draw();
+Scene? current();
+)FRG";
+
+static const char* kUi = R"FRG(
+bool button(rect area, string label);
+void label(string text, float x, float y, int size = 20, color c = color.WHITE);
+bool checkbox(rect area, string label, bool checked);
+float slider(rect area, float value, float min, float max);
+void panel(rect area);
+void setTheme(color background, color accent, color text);
+)FRG";
+
 static const char* kTasks = R"FRG(
 void update(float dt);
 void runAll();
@@ -257,6 +312,10 @@ const std::vector<PreludeLib>& preludeLibs() {
         {"audio", kAudio, true, "forge_audio.hpp"},
         {"random", kRandom, false, ""},
         {"tasks", kTasks, false, ""},
+        {"time", kTime, false, "forge_time.hpp"},
+        {"file", kFile, false, "forge_file.hpp"},
+        {"scenes", kScenes, false, "forge_scenes.hpp"},
+        {"ui", kUi, true, "forge_ui.hpp"},
     };
     return libs;
 }

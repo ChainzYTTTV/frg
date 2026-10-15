@@ -1,0 +1,65 @@
+#include <window>
+#include <graphics2d>
+#include <input>
+#include <scenes>
+#include <ui>
+#include <time>
+
+```
+  A main menu and a play screen, using <scenes> to switch between them
+  and <ui> for the buttons, checkbox and slider.
+```
+
+bool showFps = true;
+float volume = 0.7;
+bool quitting = false;
+
+class Menu : Scene {
+    void draw() {
+        graphics2d.drawText("FORGE", 380, 70, 64, color.ORANGE);
+        ui.panel(rect(330, 160, 300, 300));
+
+        if (ui.button(rect(360, 190, 240, 50), "Play")) {
+            scenes.change(Playing());
+        }
+        showFps = ui.checkbox(rect(360, 265, 30, 30), "Show FPS", showFps);
+        ui.label("Volume: {int(volume * 100)}%", 360, 315, 20, color.LIGHTGRAY);
+        volume = ui.slider(rect(360, 340, 240, 24), volume, 0, 1);
+        if (ui.button(rect(360, 390, 240, 50), "Quit")) {
+            quitting = true;
+        }
+    }
+}
+
+class Playing : Scene {
+    Timer clock = Timer(0);
+
+    void enter() {
+        clock.restart();
+    }
+
+    void update(float dt) {
+        if (input.keyPressed(Key.BACKSPACE)) {
+            scenes.change(Menu());
+        }
+    }
+
+    void draw() {
+        graphics2d.drawText("Playing for {int(clock.elapsed())} seconds", 300, 200, 30, color.WHITE);
+        graphics2d.drawText("Press Backspace to go back to the menu", 270, 260, 20, color.LIGHTGRAY);
+    }
+}
+
+int main(){
+    window.open(960, 540, "Forge menu");
+    scenes.change(Menu());
+    while (!window.shouldClose() and !quitting) {
+        scenes.update(window.deltaTime());
+        scenes.draw();
+        if (showFps) {
+            graphics2d.drawFPS(10, 10);
+        }
+    }
+    window.close();
+    return 0;
+}

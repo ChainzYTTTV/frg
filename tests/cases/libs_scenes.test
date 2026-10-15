@@ -1,0 +1,48 @@
+=== main.frg
+#include <stdio>
+#include <scenes>
+
+class Menu : Scene {
+    void enter() {
+        print("menu: enter");
+    }
+    void update(float dt) {
+        print("menu: update");
+        scenes.change(Level(1));
+    }
+    void exit() {
+        print("menu: exit");
+    }
+}
+
+class Level : Scene {
+    int number;
+    Level(int number) {
+        this.number = number;
+    }
+    void enter() {
+        print("level {number}: enter");
+    }
+    void draw() {
+        print("level {number}: draw");
+    }
+}
+
+int main(){
+    print(scenes.current() == null);
+    scenes.change(Menu());
+    scenes.update(0.016);
+    scenes.draw();
+    scenes.update(0.016);
+    scenes.draw();
+    print(scenes.current() is Level);
+    return 0;
+}
+=== output
+true
+menu: enter
+menu: update
+menu: exit
+level 1: enter
+level 1: draw
+true

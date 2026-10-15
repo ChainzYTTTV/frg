@@ -1,0 +1,50 @@
+=== main.frg
+#include <stdio>
+#include <time>
+#include <file>
+
+int main(){
+    Timer t = Timer(0.05);
+    print(t.isDone());
+    time.sleep(0.08);
+    print(t.isDone());
+    print(t.left());
+    t.restart();
+    print(t.isDone());
+    print(time.now() > 0.05);
+    print(time.date().length == 10 and time.clock().length == 8);
+    print(time.year() >= 2024 and time.month() >= 1 and time.month() <= 12);
+
+    print(file.exists("save/game.txt"));
+    print(file.write("save/game.txt", "level=3\n"));
+    file.append("save/game.txt", "coins=12\n");
+    print(file.read("save/game.txt").trim());
+    for (string line in file.readLines("save/game.txt")) {
+        list<string> parts = line.split("=");
+        print("{parts[0]} is {parts[1]}");
+    }
+    file.writeLines("save/names.txt", ["Ana", "Bo"]);
+    print(file.files("save"));
+    print(file.remove("save/game.txt"));
+    print(file.remove("save/game.txt"));
+    print(file.exists("save/game.txt"));
+    return 0;
+}
+=== output
+false
+true
+0.0
+false
+true
+true
+true
+false
+true
+level=3
+coins=12
+level is 3
+coins is 12
+[game.txt, names.txt]
+true
+false
+false

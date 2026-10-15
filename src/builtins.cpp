@@ -41,7 +41,7 @@ static const BuiltinConst kConsts[] = {
 };
 
 static const char* kPlannedLibs[] = {
-    "graphics3d", "ECS", "time", "file", "scenes", "ui", "OpenGL", "Vulkan", "DirectX",
+    "graphics3d", "ECS", "OpenGL", "Vulkan", "DirectX",
 };
 
 const Builtin* findBuiltin(const std::string& lib, const std::string& name) {

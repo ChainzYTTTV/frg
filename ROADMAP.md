@@ -15,7 +15,7 @@ Sizes are rough: **S** is small, **M** medium, **L** large.
 | `Pointer.remove()` | throw a pointer away; using it afterwards gives a clear error | S | done |
 | `do ... while` loops | some tutorials use them | S | done |
 | A size limit for the build cache | it can grow to hundreds of MB | S | done (`frg cache`) |
-| Check gamepads and the `.exe` icon on real hardware | the two 0.6 features nobody could test | S | gamepads: done (tested with an Xbox controller, `examples/gamepad`); the icon: still to do |
+| Check gamepads and the `.exe` icon on real hardware | the two 0.6 features nobody could test | S | done: both tested on real hardware (an Xbox controller, and `examples/gamepad`'s icon.png) |
 
 ## 0.8.0: More power in the language
 

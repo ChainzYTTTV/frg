@@ -11,6 +11,7 @@
 | `random.value()` | `float` | a random decimal from 0 up to (just under) 1 |
 | `random.chance(float probability)` | `bool` | true with that probability: `random.chance(0.25)` is true about 1 time in 4 |
 | `random.seed(int value)` | — | restarts the random numbers from a fixed starting point |
+| `random.color()` | `color` | a random solid color (each of red, green and blue from 0 to 255) |
 
 `random.range` picks the whole-number version when both values are whole numbers, and the decimal version otherwise:
 

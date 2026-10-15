@@ -240,6 +240,8 @@ float each = float(coins) / players;    // 2.3333333
 float wrong = coins / players;          // 2.0: the division happened first, with whole numbers
 ```
 
+Forge gives a **warning** for the `wrong` line (see [Warnings](12-errors.md#warnings)): the game still builds, but the hint shows the fix, `float(coins) / players`.
+
 **One special case: numbers written straight into the code** (like `70`, as opposed to a variable) take on the type of wherever the result goes. So this gives a decimal answer:
 
 ```cpp

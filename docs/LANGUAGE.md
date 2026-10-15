@@ -89,6 +89,7 @@ Put any value inside `{ }` in a string to show it. This works for numbers, lists
 ```cpp
 print("HP: {hp}/{MAX_HP}");
 print("Is it there? {name.contains("ero")}");
+print("Speed: {speed:.2}");      // a float or double with 2 decimals: 3.14
 ```
 
 | Write this | To get |
@@ -106,7 +107,7 @@ void main() { }
 """;
 ```
 
-Text has `.length` plus these methods: `contains(t)` `indexOf(t)` `startsWith(t)` `endsWith(t)` `upper()` `lower()` `trim()` `replace(a, b)` `split(sep)` `substring(start, count)` `charAt(i)` `repeat(n)` `isEmpty()`.
+Text has `.length` plus these methods: `contains(t)` `indexOf(t)` `startsWith(t)` `endsWith(t)` `upper()` `lower()` `trim()` `replace(a, b)` `split(sep)` `substring(start, count)` `charAt(i)` `repeat(n)` `isEmpty()` `isInt()` `isFloat()` (true if `int(...)` / `float(...)` would work on it).
 
 ## Operators
 
@@ -405,7 +406,7 @@ These are always available:
 | `vec2` | `x` `y` | `length()` `normalized()` `dot(v)` `distance(v)` `angle()` `rotated(r)` `lerp(v, t)`, `vec2.ZERO` `ONE` `UP` `DOWN` `LEFT` `RIGHT` |
 | `vec3` | `x` `y` `z` | `length()` `normalized()` `dot(v)` `cross(v)` `distance(v)` `lerp(v, t)`, `vec3.ZERO` `ONE` `UP` `FORWARD` `RIGHT` |
 | `vec4` | `x` `y` `z` `w` | `length()` `normalized()` `dot(v)` |
-| `color` | `r` `g` `b` `a` (0 to 255) | `color(r, g, b)` or `color(r, g, b, a)`, `fade(alpha)` `lerp(c, t)`, and `color.WHITE` `BLACK` `RED` `GREEN` `BLUE` `YELLOW` `ORANGE` `PURPLE` `PINK` `GOLD` `SKYBLUE` `GRAY` `LIGHTGRAY` `DARKGRAY` `BROWN` `MAGENTA` `LIME` `MAROON` `VIOLET` `BEIGE` `DARKGREEN` `DARKBLUE` `BLANK` |
+| `color` | `r` `g` `b` `a` (0 to 255) | `color(r, g, b)` or `color(r, g, b, a)` (ints; below 0 becomes 0, above 255 becomes 255), `fade(alpha)` `lerp(c, t)`, and `color.WHITE` `BLACK` `RED` `GREEN` `BLUE` `YELLOW` `ORANGE` `PURPLE` `PINK` `GOLD` `SKYBLUE` `GRAY` `LIGHTGRAY` `DARKGRAY` `BROWN` `MAGENTA` `LIME` `MAROON` `VIOLET` `BEIGE` `DARKGREEN` `DARKBLUE` `BLANK` |
 | `rect` | `x` `y` `width` `height` | `overlaps(r)` `contains(point)` `center()` `position()` `size()` |
 
 Vectors work with math: `pos += velocity * dt;`
@@ -418,7 +419,7 @@ Each file includes the libraries it uses. Functions are reached through the libr
 |---|---|
 | `<stdio>` | `print(x)` (adds a new line), `print()`, `write(x)` (no new line), `input()` / `input("prompt")` |
 | `<math>` | `math.sqrt` `pow` `sin` `cos` `tan` `asin` `acos` `atan` `atan2` `exp` `log` `floor` `ceil` `round` `abs` `sign` `min` `max` `clamp` `lerp`, plus `math.PI` `TAU` `E` |
-| `<random>` | `random.range(1, 6)` (whole numbers, both ends included), `random.range(0.5, 2.0)`, `random.value()` (0 to 1), `random.chance(0.25)`, `random.seed(n)` |
+| `<random>` | `random.range(1, 6)` (whole numbers, both ends included), `random.range(0.5, 2.0)`, `random.value()` (0 to 1), `random.chance(0.25)`, `random.seed(n)`, `random.color()` |
 | `<window>` | `window.open(width, height, "title")` `shouldClose()` `run()` `close()` `deltaTime()` `time()` `width()` `height()` `fps()` `setFPS(n)` `setTitle(t)` `setBackground(color)` `toggleFullscreen()` `screenshot("file.png")` |
 | `<input>` | `input.keyDown(Key.SPACE)` (held), `keyPressed` (just pressed this frame), `keyReleased`, `mouseDown(MouseButton.LEFT)` `mousePressed` `mouseReleased` `mousePosition()` `mouseX()` `mouseY()` `mouseWheel()`. Keys: `Key.A`…`Key.Z`, `Key.NUM0`…`Key.NUM9`, `SPACE` `ENTER` `ESCAPE` `BACKSPACE` `TAB` `LEFT` `RIGHT` `UP` `DOWN` `LEFT_SHIFT` `RIGHT_SHIFT` `LEFT_CONTROL` `RIGHT_CONTROL` `LEFT_ALT` `RIGHT_ALT` `F1`…`F12` |
 | `<graphics2d>` | `graphics2d.drawRect(x, y, w, h, color)` or `drawRect(rect, color)`, `drawRectOutline(..., color, thickness)`, `drawCircle(x, y, radius, color)` or `drawCircle(vec2, radius, color)`, `drawCircleOutline`, `drawLine(from, to, color, thickness)`, `drawTriangle(a, b, c, color)`, `drawText(text, x, y, size, color)`, `textWidth(text, size)`, `drawFPS(x, y)`, `clear(color)` |

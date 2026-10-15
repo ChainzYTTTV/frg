@@ -60,7 +60,7 @@ struct color {
     uint8 g;
     uint8 b;
     uint8 a;
-    color(uint8 r, uint8 g, uint8 b, uint8 a = 255);
+    color(int r, int g, int b, int a = 255);
     color fade(float alpha);
     color lerp(color target, float t);
     static color WHITE;
@@ -384,6 +384,7 @@ int range(int min, int max);
 float range(float min, float max);
 float value();
 bool chance(float probability);
+color color();
 )FRG";
 
 static const char* kOpenGL = FRG_KEY_ENUMS FRG_TOOLKIT_WINDOW R"FRG(

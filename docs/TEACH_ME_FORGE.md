@@ -136,13 +136,16 @@ const int MAX_HP = 100;     // const: can never be set to a new value
 print("HP: {hp}/{MAX_HP}");             // anything inside { } is shown as text
 print("Half: {speed / 2}");
 print("Has it? {name.contains("er")}");
+print("Speed: {speed:.2}");             // :.2 shows a float or double with 2 decimals (3.14)
 string full = "Game" + " Over";         // + joins two pieces of text
 ```
+
+- `{value:.N}` (N from 0 to 9) shows a `float` or `double` with exactly N decimals, rounded. For an int, convert it first: `{float(score):.1}`. It doesn't clash with the ternary: in `{a ? 1 : 2}` the `:` is the ternary's, because numbers never start with a dot.
 
 - Escapes: `\n` new line, `\t` tab, `\"` quote, `\\` backslash, `{{` or `\{` for a literal `{`, and `}}` or `\}` for a literal `}`.
 - **Raw text** goes between three quotes, `"""like this"""`, and can cover many lines. It's used exactly as written: escapes and `{ }` don't work inside it, and it can contain `"` and `\`. A line break straight after the opening `"""` is left out. It's mainly for shader code, maps made of characters, and Windows paths.
 - `"Score: " + 5` is an **error**. Write `"Score: {5}"` instead.
-- Text has `.length` (no parentheses) and these methods: `contains(t)`, `indexOf(t)` (-1 if not found), `startsWith(t)`, `endsWith(t)`, `upper()`, `lower()`, `trim()`, `replace(old, new)`, `split(separator)` (gives a list), `substring(start, count)`, `charAt(i)` (gives a one-letter string), `repeat(n)`, `isEmpty()`.
+- Text has `.length` (no parentheses) and these methods: `contains(t)`, `indexOf(t)` (-1 if not found), `startsWith(t)`, `endsWith(t)`, `upper()`, `lower()`, `trim()`, `replace(old, new)`, `split(separator)` (gives a list), `substring(start, count)`, `charAt(i)` (gives a one-letter string), `repeat(n)`, `isEmpty()`, `isInt()` and `isFloat()` (true if `int(...)` / `float(...)` would work on the text, so input can be checked before converting it: `if (typed.isInt()) { int n = int(typed); }`).
 - Text **can't** be indexed with `[ ]`. Use `charAt(i)`.
 
 ### Printing and reading (`#include <stdio>`)
@@ -447,7 +450,7 @@ A pointer must point at a variable, field or list item. Don't keep one pointing 
 | `vec2` | `x y` | `length()` `normalized()` `dot(v)` `distance(v)` `angle()` `rotated(radians)` `lerp(v, t)`, `vec2.ZERO` `ONE` `UP` `DOWN` `LEFT` `RIGHT` |
 | `vec3` | `x y z` | `length()` `normalized()` `dot(v)` `cross(v)` `distance(v)` `lerp(v, t)`, `vec3.ZERO` `ONE` `UP` `FORWARD` `RIGHT` |
 | `vec4` | `x y z w` | `length()` `normalized()` `dot(v)` |
-| `color` | `r g b a` (0–255) | `color(r, g, b)` or `color(r, g, b, a)`, `fade(alpha)`, `lerp(c, t)`. Named colors: `color.WHITE BLACK BLANK LIGHTGRAY GRAY DARKGRAY RED MAROON ORANGE YELLOW GOLD GREEN LIME DARKGREEN SKYBLUE BLUE DARKBLUE PURPLE VIOLET PINK MAGENTA BROWN BEIGE` |
+| `color` | `r g b a` (0–255) | `color(r, g, b)` or `color(r, g, b, a)` from ints (kept between 0 and 255, so `color(random.range(0, 255), ...)` just works), `fade(alpha)`, `lerp(c, t)`. Named colors: `color.WHITE BLACK BLANK LIGHTGRAY GRAY DARKGRAY RED MAROON ORANGE YELLOW GOLD GREEN LIME DARKGREEN SKYBLUE BLUE DARKBLUE PURPLE VIOLET PINK MAGENTA BROWN BEIGE` |
 | `rect` | `x y width height` | `overlaps(other)` `contains(point)` `center()` `position()` `size()` |
 
 Vectors work with math: `pos += velocity * dt;`. Vectors add and subtract with vectors, and multiply or divide by numbers.
@@ -460,7 +463,7 @@ Library functions are reached through the library name (`window.open(...)`). Lib
 |---|---|
 | `<stdio>` | `print`, `write`, `input` |
 | `<math>` | `math.sqrt pow sin cos tan asin acos atan atan2 exp log floor ceil round abs sign min max clamp lerp`, and `math.PI TAU E`. Angles are in radians. |
-| `<random>` | `random.range(1, 6)` (whole numbers, both ends included), `random.range(0.5, 2.0)` (decimals), `random.value()` (0 to 1), `random.chance(0.25)`, `random.seed(n)` |
+| `<random>` | `random.range(1, 6)` (whole numbers, both ends included), `random.range(0.5, 2.0)` (decimals), `random.value()` (0 to 1), `random.chance(0.25)`, `random.seed(n)`, `random.color()` (a random solid color) |
 | `<window>` | `window.open(width, height, "title")`, `shouldClose()`, `run()`, `close()`, `deltaTime()` (seconds since the last frame), `time()`, `width()`, `height()`, `fps()`, `setFPS(n)`, `setTitle(t)`, `setBackground(color)`, `toggleFullscreen()`, `screenshot("file.png")` |
 | `<input>` | `input.keyDown(Key.SPACE)` (held), `input.keyPressed(...)` (only the frame it was pressed), `input.keyReleased(...)`, `input.mouseDown(MouseButton.LEFT)`, `mousePressed`, `mouseReleased`, `mousePosition()` (a vec2), `mouseX()`, `mouseY()`, `mouseWheel()` |
 | `<graphics2d>` | `graphics2d.drawRect(x, y, w, h, color)` or `drawRect(rect, color)`, `drawRectOutline(x, y, w, h, color, thickness)`, `drawCircle(x, y, radius, color)` or `drawCircle(vec2, radius, color)`, `drawCircleOutline(x, y, radius, color)`, `drawLine(from, to, color, thickness)`, `drawTriangle(a, b, c, color)`, `drawText(text, x, y, size, color)`, `textWidth(text, size)`, `drawFPS(x, y)`, `clear(color)` |
@@ -1030,7 +1033,7 @@ Steps:
 Hints:
 
 - `#include <random>`, then `int secret = random.range(1, 100);`. Both 1 and 100 can come up.
-- `input` gives back text. Turn it into a number with `int(...)`: `int guess = int(input("Your guess: "));`. Typing something that isn't a number stops the program with an error. That's fine for now.
+- `input` gives back text. Turn it into a number with `int(...)`: `int guess = int(input("Your guess: "));`. Typing something that isn't a number stops the program with an error. To ask again instead, check the text first with `isInt()`: `string typed = input("Your guess: ");`, then `if (typed.isInt()) { int guess = int(typed); ... } else { print("Please type a number"); }`.
 - A `bool found = false;` and `while (!found) { ... }` is one way to loop until the guess is right.
 
 Make it yours: allow only 7 guesses. Ask "Play again? (y/n)" at the end. Let the player choose easy (1-50) or hard (1-500).
@@ -1050,7 +1053,7 @@ Steps:
 
 Hints:
 
-- The percentage is the classic division trap. `score / 10 * 100` uses whole numbers, so 7 right gives `0`. Use `float(score) / 10 * 100`.
+- The percentage is the classic division trap. `score / 10 * 100` uses whole numbers, so 7 right gives `0`. Use `float(score) / 10 * 100`. (Forge warns about the whole-number version when it goes into a `float`.) Show it with one decimal: `print("{percent:.1}%");`.
 - `random.range(1, 3)` picks which operation, and `switch` on that number chooses what to ask.
 
 Make it yours: time the whole quiz with `<time>` (`time.now()` at the start and end). Make the numbers bigger as the score goes up.
@@ -1210,7 +1213,7 @@ void draw(){
 ```
 
 - A ball in a list is a struct, which is a copy. To change it, change `balls[i].position`, not a copy taken out of the list with `for (Ball b in balls)`.
-- A random color: `color(uint8(random.range(50, 255)), uint8(random.range(50, 255)), uint8(random.range(50, 255)))`. Colors are made of `uint8`s (0 to 255), so each `int` has to be converted.
+- A random color: `random.color()`. For brighter colors, pick each part yourself: `color(random.range(50, 255), random.range(50, 255), random.range(50, 255))`.
 
 Make it yours: balls bounce off each other (`a.position.distance(b.position) < 2 * RADIUS`). Gravity pulls them down.
 
@@ -1353,7 +1356,7 @@ Steps:
 Hints:
 
 - Clicked inside the circle: `input.mousePressed(MouseButton.LEFT) and input.mousePosition().distance(center) < radius`.
-- Helpers earn fractions of a cookie, so keep `float cookies`, and show `int(cookies)`.
+- Helpers earn fractions of a cookie, so keep `float cookies`, and show `int(cookies)` (or `"{cookies:.1}"` for one decimal).
 - Save several numbers as several lines with `file.writeLines`, and read them back in the same order.
 
 Make it yours: the cookie shrinks a little when clicked, then grows back. Achievements at 100, 1,000 and 10,000 cookies.

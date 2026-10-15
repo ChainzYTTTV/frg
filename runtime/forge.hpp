@@ -131,34 +131,46 @@ inline std::string trim(const std::string& s) {
     return s.substr(a, b - a + 1);
 }
 
+// Reads a number from text. Returns 0 if it worked, 1 if the text isn't a number, 2 if the number is too big.
 template <class T>
-T parse(const std::string& text, const char* typeName, const char* where) {
+int parseInto(const std::string& text, T& out) {
     std::string s = trim(text);
-    std::string err = "couldn't turn \"" + text + "\" into " + (typeName[0] == 'i' ? "an " : "a ") + typeName;
     if constexpr (std::is_floating_point_v<T>) {
-        T v{};
-        auto r = std::from_chars(s.data(), s.data() + s.size(), v);
-        if (s.empty() || r.ec != std::errc() || r.ptr != s.data() + s.size()) panic(where, err);
-        return v;
+        auto r = std::from_chars(s.data(), s.data() + s.size(), out);
+        return s.empty() || r.ec != std::errc() || r.ptr != s.data() + s.size() ? 1 : 0;
     } else {
         size_t i = 0;
         bool neg = false;
         if (i < s.size() && (s[i] == '-' || s[i] == '+')) neg = s[i++] == '-';
-        if (i >= s.size()) panic(where, err);
+        if (i >= s.size()) return 1;
         u128 limit;
         if constexpr (std::is_signed_v<T>)
             limit = neg ? u128(std::numeric_limits<T>::max()) + 1 : u128(std::numeric_limits<T>::max());
         else
             limit = neg ? 0 : u128(std::numeric_limits<T>::max());
         u128 mag = 0;
+        bool tooBig = false;
         for (; i < s.size(); i++) {
-            if (s[i] < '0' || s[i] > '9') panic(where, err);
+            if (s[i] < '0' || s[i] > '9') return 1;
             unsigned d = unsigned(s[i] - '0');
-            if (mag > limit / 10 || (mag == limit / 10 && d > limit % 10)) panic(where, err + " (it's too big)");
-            mag = mag * 10 + d;
+            if (mag > limit / 10 || (mag == limit / 10 && d > limit % 10)) tooBig = true;
+            if (!tooBig) mag = mag * 10 + d;
         }
-        return neg ? T(u128(0) - mag) : T(mag);
+        if (tooBig) return 2;
+        out = neg ? T(u128(0) - mag) : T(mag);
+        return 0;
     }
+}
+
+template <class T>
+T parse(const std::string& text, const char* typeName, const char* where) {
+    T v{};
+    int r = parseInto(text, v);
+    if (r != 0) {
+        std::string err = "couldn't turn \"" + text + "\" into " + (typeName[0] == 'i' ? "an " : "a ") + typeName;
+        panic(where, r == 2 ? err + " (it's too big)" : err);
+    }
+    return v;
 }
 
 // ---------------------------------------------------------------- math
@@ -584,6 +596,21 @@ inline std::string str_repeat(const std::string& s, int64_t n, const char*) {
     return r;
 }
 inline bool str_isEmpty(const std::string& s, const char*) { return s.empty(); }
+// True when int(s) / float(s) would work.
+inline bool str_isInt(const std::string& s, const char*) {
+    int32_t v;
+    return parseInto(s, v) == 0;
+}
+inline bool str_isFloat(const std::string& s, const char*) {
+    float v;
+    return parseInto(s, v) == 0;
+}
+// "{value:.2}": a decimal number shown with a fixed number of decimals.
+inline std::string fixed(double v, int decimals) {
+    char buf[512];
+    std::snprintf(buf, sizeof buf, "%.*f", decimals, v);
+    return buf;
+}
 
 // ---------------------------------------------------------------- core types: vec2, vec3, vec4, color, rect
 
@@ -679,7 +706,11 @@ inline const vec4_ vec4_::ZERO_{0, 0, 0, 0}, vec4_::ONE_{1, 1, 1, 1};
 struct color_ {
     uint8_t r_ = 0, g_ = 0, b_ = 0, a_ = 255;
     static color_ frg$make() { return {}; }
-    static color_ frg$make(uint8_t r, uint8_t g, uint8_t b, uint8_t a) { return {r, g, b, a}; }
+    // Each part is kept between 0 and 255: color(300, -5, 0) is the same as color(255, 0, 0).
+    static color_ frg$make(int32_t r, int32_t g, int32_t b, int32_t a) {
+        auto part = [](int32_t v) { return uint8_t(std::clamp(v, 0, 255)); };
+        return {part(r), part(g), part(b), part(a)};
+    }
     color_ fade_(float alpha) const { return {r_, g_, b_, uint8_t(std::clamp(alpha, 0.0f, 1.0f) * 255)}; }
     color_ lerp_(color_ t, float k) const {
         auto mix = [&](uint8_t a, uint8_t b) { return uint8_t(std::clamp(a + (b - a) * k, 0.0f, 255.0f)); };
@@ -738,6 +769,8 @@ inline float range_(float lo, float hi) {
 }
 inline float value_() { return std::uniform_real_distribution<float>(0.0f, 1.0f)(engine()); }
 inline bool chance_(float p) { return value_() < p; }
+// A random solid color.
+inline core::color_ color_() { return core::color_::frg$make(range_(0, 255), range_(0, 255), range_(0, 255), 255); }
 }  // namespace random
 
 }  // namespace frg

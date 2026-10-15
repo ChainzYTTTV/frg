@@ -44,7 +44,7 @@ Steps:
 Hints:
 
 - `#include <random>`, then `int secret = random.range(1, 100);`. Both 1 and 100 can come up.
-- `input` gives back text. Turn it into a number with `int(...)`: `int guess = int(input("Your guess: "));`. Typing something that isn't a number stops the program with an error. That's fine for now.
+- `input` gives back text. Turn it into a number with `int(...)`: `int guess = int(input("Your guess: "));`. Typing something that isn't a number stops the program with an error. To ask again instead, check the text first with `isInt()`: `string typed = input("Your guess: ");`, then `if (typed.isInt()) { int guess = int(typed); ... } else { print("Please type a number"); }`.
 - A `bool found = false;` and `while (!found) { ... }` is one way to loop until the guess is right.
 
 Make it yours: allow only 7 guesses. Ask "Play again? (y/n)" at the end. Let the player choose easy (1-50) or hard (1-500).
@@ -64,7 +64,7 @@ Steps:
 
 Hints:
 
-- The percentage is the classic division trap. `score / 10 * 100` uses whole numbers, so 7 right gives `0`. Use `float(score) / 10 * 100`.
+- The percentage is the classic division trap. `score / 10 * 100` uses whole numbers, so 7 right gives `0`. Use `float(score) / 10 * 100`. (Forge warns about the whole-number version when it goes into a `float`.) Show it with one decimal: `print("{percent:.1}%");`.
 - `random.range(1, 3)` picks which operation, and `switch` on that number chooses what to ask.
 
 Make it yours: time the whole quiz with `<time>` (`time.now()` at the start and end). Make the numbers bigger as the score goes up.
@@ -224,7 +224,7 @@ void draw(){
 ```
 
 - A ball in a list is a struct, which is a copy. To change it, change `balls[i].position`, not a copy taken out of the list with `for (Ball b in balls)`.
-- A random color: `color(uint8(random.range(50, 255)), uint8(random.range(50, 255)), uint8(random.range(50, 255)))`. Colors are made of `uint8`s (0 to 255), so each `int` has to be converted.
+- A random color: `random.color()`. For brighter colors, pick each part yourself: `color(random.range(50, 255), random.range(50, 255), random.range(50, 255))`.
 
 Make it yours: balls bounce off each other (`a.position.distance(b.position) < 2 * RADIUS`). Gravity pulls them down.
 
@@ -367,7 +367,7 @@ Steps:
 Hints:
 
 - Clicked inside the circle: `input.mousePressed(MouseButton.LEFT) and input.mousePosition().distance(center) < radius`.
-- Helpers earn fractions of a cookie, so keep `float cookies`, and show `int(cookies)`.
+- Helpers earn fractions of a cookie, so keep `float cookies`, and show `int(cookies)` (or `"{cookies:.1}"` for one decimal).
 - Save several numbers as several lines with `file.writeLines`, and read them back in the same order.
 
 Make it yours: the cookie shrinks a little when clicked, then grows back. Achievements at 100, 1,000 and 10,000 cookies.

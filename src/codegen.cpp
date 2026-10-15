@@ -370,7 +370,10 @@ std::string Gen::ex(const Expr* e) {
             if (e->args.empty()) return "::std::string(" + cppString(e->parts[0]) + ")";
             std::string s = "(::std::string(" + cppString(e->parts[0]) + ")";
             for (size_t i = 0; i < e->args.size(); i++) {
-                s += " + " + strCode(ex(e->args[i].get()), e->args[i]->type);
+                if (i < e->decimals.size() && e->decimals[i] >= 0)
+                    s += " + ::frg::fixed(static_cast<double>(" + ex(e->args[i].get()) + "), " + std::to_string(e->decimals[i]) + ")";
+                else
+                    s += " + " + strCode(ex(e->args[i].get()), e->args[i]->type);
                 if (!e->parts[i + 1].empty()) s += " + " + cppString(e->parts[i + 1]);
             }
             return s + ")";

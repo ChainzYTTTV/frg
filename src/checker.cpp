@@ -203,6 +203,8 @@ const std::vector<BMethod>& bmethods() {
         {TK::String, "charAt", {"int"}, "string"},
         {TK::String, "repeat", {"int"}, "string"},
         {TK::String, "isEmpty", {}, "bool"},
+        {TK::String, "isInt", {}, "bool"},
+        {TK::String, "isFloat", {}, "bool"},
         {TK::Task, "isDone", {}, "bool"},
         {TK::Task, "stop", {}, "void"},
     };
@@ -878,9 +880,19 @@ Type* Checker::intLit(Expr* e) {
 }
 
 Type* Checker::strExpr(Expr* e) {
-    for (auto& a : e->args) {
-        Type* t = value(a.get());
+    for (size_t i = 0; i < e->args.size(); i++) {
+        Expr* a = e->args[i].get();
+        Type* t = value(a);
         if (t->kind == TK::Void) reportError(a->loc, "this doesn't give back a value to show");
+        if (i < e->decimals.size() && e->decimals[i] >= 0 && t != tError() && t->kind != TK::Void) {
+            if (isLit(a) && isNumeric(t)) {
+                coerce(a, tFloat(64));
+            } else if (t->kind != TK::Float) {
+                reportError(a->loc, "{...:." + std::to_string(e->decimals[i]) + "} shows decimals, so it needs a float or a double, but this is " + aType(t),
+                            isNumeric(t) ? "turn it into a decimal number first, like {float(" + (a->kind == EK::Name ? a->text : std::string("...")) + "):." + std::to_string(e->decimals[i]) + "}"
+                                         : "remove the :." + std::to_string(e->decimals[i]));
+            }
+        }
     }
     return e->type = tString();
 }

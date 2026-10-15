@@ -1,0 +1,13 @@
+=== main.frg
+#include <stdio>
+
+int main(){
+    int score = 5;
+    print("{score:.2}");
+    print("{true:.1}");
+    return 0;
+}
+=== error
+{...:.2} shows decimals, so it needs a float or a double, but this is an int
+hint: turn it into a decimal number first, like {float(score):.2}
+{...:.1} shows decimals, so it needs a float or a double, but this is a bool

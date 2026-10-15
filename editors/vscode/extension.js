@@ -43,6 +43,7 @@ const LIBRARIES = {
         ['value', 'float value()', 'A random number from 0 to 1.'],
         ['chance', 'bool chance(float probability)', 'True with the given probability: chance(0.25) is true 1 time in 4.'],
         ['seed', 'void seed(int value)', 'Makes the random numbers repeat the same way every run.'],
+        ['color', 'color color()', 'A random solid color.'],
     ],
     window: [
         ['open', 'void open(int width, int height, string title)', 'Opens the game window.'],

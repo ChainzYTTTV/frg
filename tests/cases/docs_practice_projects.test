@@ -32,7 +32,7 @@ list<list<int>> LINES = [[0, 1, 2], [3, 4, 5], [6, 7, 8], [0, 3, 6], [1, 4, 7], 
 list<string> board = [" ", " ", " ", " ", " ", " ", " ", " ", " "];
 
 int main(){
-    balls.add(Ball(vec2(10, 10), vec2(1, 1), color(uint8(random.range(50, 255)), uint8(random.range(50, 255)), uint8(random.range(50, 255)))));
+    balls.add(Ball(vec2(10, 10), vec2(1, 1), color(random.range(50, 255), random.range(50, 255), random.range(50, 255))));
     balls[0].position = vec2(50, 60);
     for (Ball b in balls) {
         b.position = vec2(0, 0);
@@ -79,6 +79,18 @@ int main(){
     print(lines);
     print(vec2(math.cos(0), math.sin(0)));
     print(window.width() >= 0);
+    string typed = "42";
+    if (typed.isInt()) {
+        int guess = int(typed);
+        print(guess);
+    } else {
+        print("Please type a number");
+    }
+    float percent = float(7) / 10 * 100;
+    print("{percent:.1}%");
+    print("{cookies:.1}");
+    color any = random.color();
+    print(any.a);
     return 0;
 }
 
@@ -143,3 +155,7 @@ north
 [12.7, 2]
 vec2(1.0, 0.0)
 true
+42
+70.0%
+12.7
+255

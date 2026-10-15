@@ -1036,6 +1036,38 @@ ExprPtr Parser::parseString(const Token& tok) {
             std::string inner = raw.substr(i + 1, close - i - 1);
             // Text inside the interpolation, like {int(\"42\")}, keeps its quotes escaped in the source.
             for (size_t q; (q = inner.find("\\\"")) != std::string::npos;) inner.erase(q, 1);
+            // {value:.2} shows a decimal number with 2 decimals. Forge numbers never start with a dot, so ": ." can't be
+            // the end of a ternary (a ? b : c), or anything else.
+            int decimals = -1;
+            {
+                int depth = 0;
+                size_t colon = std::string::npos;
+                for (size_t k = 0; k < inner.size(); k++) {
+                    char ch = inner[k];
+                    if (ch == '"') {
+                        for (k++; k < inner.size() && inner[k] != '"'; k++)
+                            if (inner[k] == '\\') k++;
+                    } else if (ch == '(' || ch == '[' || ch == '{') {
+                        depth++;
+                    } else if (ch == ')' || ch == ']' || ch == '}') {
+                        depth--;
+                    } else if (ch == ':' && depth == 0) {
+                        colon = k;
+                    }
+                }
+                if (colon != std::string::npos) {
+                    std::string fmt = inner.substr(colon + 1);
+                    size_t a = fmt.find_first_not_of(" \t"), b = fmt.find_last_not_of(" \t");
+                    fmt = a == std::string::npos ? "" : fmt.substr(a, b - a + 1);
+                    if (!fmt.empty() && fmt[0] == '.') {
+                        if (fmt.size() != 2 || fmt[1] < '0' || fmt[1] > '9')
+                            fail(locAt(i + 1 + colon, (int)(inner.size() - colon)), "':" + fmt + "' isn't a way to show a number",
+                                 "write :. and how many decimals to show, from 0 to 9, like {speed:.2}");
+                        decimals = fmt[1] - '0';
+                        inner = inner.substr(0, colon);
+                    }
+                }
+            }
             if (inner.find_first_not_of(" \t") == std::string::npos)
                 fail(locAt(i, (int)(close - i + 1)), "nothing inside { }", "put a value inside, like {score}");
             Parser sub(file, lexFragment(file, inner, tok.loc.line, baseCol + (int)i + 1), prelude);
@@ -1044,6 +1076,7 @@ ExprPtr Parser::parseString(const Token& tok) {
             e->parts.push_back(part);
             part.clear();
             e->args.push_back(std::move(ex));
+            e->decimals.push_back(decimals);
             i = close + 1;
         } else if (c == '}') {
             if (i + 1 < raw.size() && raw[i + 1] == '}') {

@@ -1,0 +1,13 @@
+=== main.frg
+#include <stdio>
+
+int main(){
+    float x = 1.5;
+    print("{x:.10}");
+    print("{x:.}");
+    return 0;
+}
+=== error
+':.10' isn't a way to show a number
+':.' isn't a way to show a number
+hint: write :. and how many decimals to show, from 0 to 9, like {speed:.2}

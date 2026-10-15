@@ -5,6 +5,7 @@
 #   === output          the exact text the program must print
 #   === error           text that must appear in the compile errors (one check per line)
 #   === build           (empty) the program must compile; it isn't run (for games that open a window)
+#   === runtime error   text that must appear when the program stops with a runtime error (one check per line)
 #   === warning         text that must appear in the warnings (one check per line); add it to any of the others
 #   === no warnings     (empty) there must be no warnings at all
 #
@@ -60,14 +61,20 @@ foreach ($file in Get-ChildItem (Join-Path $PSScriptRoot "cases") -Filter "$Filt
     foreach ($key in @($sections.Keys)) {
         $lines = $sections[$key]
         while ($lines.Count -gt 0 -and $lines[$lines.Count - 1] -eq '') { $lines.RemoveAt($lines.Count - 1) }
-        if ($key -in 'output', 'error', 'build', 'warning', 'no warnings') { continue }
+        if ($key -in 'output', 'error', 'build', 'warning', 'no warnings', 'runtime error') { continue }
         $path = Join-Path $dir $key
         New-Item -ItemType Directory -Force (Split-Path $path) | Out-Null
         [IO.File]::WriteAllText($path, ($lines -join "`n") + "`n")
     }
 
     $problem = $null
-    if ($sections.Contains('build') -or (-not $sections.Contains('error') -and -not $sections.Contains('output'))) {
+    if ($sections.Contains('runtime error')) {
+        $r = Invoke-Frg run $dir
+        if ($r.Code -eq 0) { $problem = "expected a runtime error, but it ran without one`n$($r.Out)" }
+        foreach ($want in $sections['runtime error']) {
+            if ($want -and -not $r.Err.Contains($want)) { $problem = "the runtime error doesn't contain: $want`n--- it printed:`n$($r.Err)" }
+        }
+    } elseif ($sections.Contains('build') -or (-not $sections.Contains('error') -and -not $sections.Contains('output'))) {
         $r = Invoke-Frg build $dir
         if ($r.Code -ne 0) { $problem = "expected it to build, but:`n$($r.Err)" }
     } elseif ($sections.Contains('error')) {

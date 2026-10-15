@@ -59,6 +59,27 @@ inline State& st() {
 }
 }  // namespace autotest
 
+// ---------------------------------------------------------------- 2D camera (the type; the functions are in graphics2d below)
+
+namespace graphics2d {
+struct Camera2D_ {
+    core::vec2_ target_{0, 0};  // the point in the world the camera looks at
+    core::vec2_ offset_{0, 0};  // where on the screen that point is shown (usually the middle of the window)
+    float zoom_ = 1;
+    float rotation_ = 0;        // in degrees
+    static Camera2D_ frg$make() { return {}; }
+    static Camera2D_ frg$make(core::vec2_ target, core::vec2_ offset, float zoom, float rotation) {
+        return {target, offset, zoom, rotation};
+    }
+    bool operator==(const Camera2D_&) const = default;
+};
+inline std::string frg$str(const Camera2D_& c) {
+    return "Camera2D(target: " + core::frg$str(c.target_) + ", offset: " + core::frg$str(c.offset_) + ", zoom: " + str(c.zoom_) +
+           ", rotation: " + str(c.rotation_) + ")";
+}
+inline ::Camera2D rlCamera(const Camera2D_& c) { return ::Camera2D{rl(c.offset_), rl(c.target_), c.rotation_, c.zoom_}; }
+}  // namespace graphics2d
+
 // ---------------------------------------------------------------- window
 
 namespace window {
@@ -68,6 +89,11 @@ struct State {
     core::color_ background{24, 24, 32, 255};
     long frame = 0;
     void (*leave3D)() = nullptr;  // set while 3D drawing is active; 2D drawing calls it first
+    // The 2D camera set with graphics2d.setCamera. It stays set until resetCamera, but raylib's camera mode is only
+    // switched on at the first 2D drawing of each frame, and always switched off before the frame is shown.
+    graphics2d::Camera2D_ camera2d;
+    bool camera2dSet = false;
+    bool camera2dOn = false;
 };
 inline State& st() {
     static State s;
@@ -85,10 +111,18 @@ inline std::vector<void (*)()>& beforeEndFrameHooks() {
     return hooks;
 }
 
+inline void leaveCamera2D() {
+    State& s = st();
+    if (!s.camera2dOn) return;
+    EndMode2D();
+    s.camera2dOn = false;
+}
+
 inline void close_() {
     State& s = st();
     if (!s.open) return;
     if (s.inFrame) {
+        leaveCamera2D();
         for (auto fn : beforeEndFrameHooks()) fn();
         EndDrawing();
     }
@@ -107,6 +141,7 @@ inline void beginFrame() {
 
 inline void endFrame() {
     State& s = st();
+    leaveCamera2D();
     for (auto fn : beforeEndFrameHooks()) fn();
     EndDrawing();
     for (auto fn : frameHooks()) fn();
@@ -121,6 +156,11 @@ inline void ensureFrame(const char* what) {
     if (!st().open) panic(what, "the window isn't open yet - call window.open(width, height, \"title\") first");
     if (!st().inFrame) beginFrame();
     if (st().leave3D) st().leave3D();  // 2D drawing goes on top of any 3D drawn so far
+    State& s = st();
+    if (s.camera2dSet && !s.camera2dOn) {
+        BeginMode2D(graphics2d::rlCamera(s.camera2d));
+        s.camera2dOn = true;
+    }
 }
 
 inline void parseAutotestInput(const char* spec);
@@ -316,6 +356,29 @@ inline void drawText_(const std::string& text, float x, float y, int32_t size, c
     DrawText(text.c_str(), (int)x, (int)y, size, rl(c));
 }
 inline int32_t textWidth_(const std::string& text, int32_t size) { return MeasureText(text.c_str(), size); }
+// The 2D camera: drawing after setCamera is moved, zoomed and turned by it; resetCamera goes back to the screen.
+inline void setCamera_(Camera2D_ c) {
+    if (!(c.zoom_ > 0)) panic("graphics2d.setCamera()", "the camera's zoom must be more than 0 (1 is normal size, 2 is twice as big), but it's " + str(c.zoom_));
+    window::leaveCamera2D();  // the next 2D drawing starts again with the new camera
+    window::st().camera2d = c;
+    window::st().camera2dSet = true;
+}
+inline void resetCamera_() {
+    window::leaveCamera2D();
+    window::st().camera2dSet = false;
+}
+inline Camera2D_ camera_() { return window::st().camera2d; }
+inline core::vec2_ screenToWorld_(core::vec2_ p) {
+    if (!window::st().camera2dSet) return p;
+    ::Vector2 v = GetScreenToWorld2D(rl(p), rlCamera(window::st().camera2d));
+    return {v.x, v.y};
+}
+inline core::vec2_ worldToScreen_(core::vec2_ p) {
+    if (!window::st().camera2dSet) return p;
+    ::Vector2 v = GetWorldToScreen2D(rl(p), rlCamera(window::st().camera2d));
+    return {v.x, v.y};
+}
+
 inline void drawFPS_(float x, float y) {
     window::ensureFrame("graphics2d.drawFPS()");
     DrawFPS((int)x, (int)y);

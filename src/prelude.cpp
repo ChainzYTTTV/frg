@@ -167,6 +167,19 @@ float mouseWheel();
 )FRG";
 
 static const char* kGraphics2d = R"FRG(
+struct Camera2D {
+    vec2 target;
+    vec2 offset;
+    float zoom;
+    float rotation;
+    Camera2D(vec2 target, vec2 offset, float zoom = 1, float rotation = 0);
+}
+
+void setCamera(Camera2D camera);
+void resetCamera();
+Camera2D camera();
+vec2 screenToWorld(vec2 point);
+vec2 worldToScreen(vec2 point);
 void clear(color c);
 void drawRect(float x, float y, float width, float height, color c);
 void drawRect(rect r, color c);

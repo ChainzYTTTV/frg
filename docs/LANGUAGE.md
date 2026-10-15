@@ -422,7 +422,7 @@ Each file includes the libraries it uses. Functions are reached through the libr
 | `<random>` | `random.range(1, 6)` (whole numbers, both ends included), `random.range(0.5, 2.0)`, `random.value()` (0 to 1), `random.chance(0.25)`, `random.seed(n)`, `random.color()` |
 | `<window>` | `window.open(width, height, "title")` `shouldClose()` `run()` `close()` `deltaTime()` `time()` `width()` `height()` `fps()` `setFPS(n)` `setTitle(t)` `setBackground(color)` `toggleFullscreen()` `screenshot("file.png")` |
 | `<input>` | `input.keyDown(Key.SPACE)` (held), `keyPressed` (just pressed this frame), `keyReleased`, `mouseDown(MouseButton.LEFT)` `mousePressed` `mouseReleased` `mousePosition()` `mouseX()` `mouseY()` `mouseWheel()`. Keys: `Key.A`…`Key.Z`, `Key.NUM0`…`Key.NUM9`, `SPACE` `ENTER` `ESCAPE` `BACKSPACE` `TAB` `LEFT` `RIGHT` `UP` `DOWN` `LEFT_SHIFT` `RIGHT_SHIFT` `LEFT_CONTROL` `RIGHT_CONTROL` `LEFT_ALT` `RIGHT_ALT` `F1`…`F12` |
-| `<graphics2d>` | `graphics2d.drawRect(x, y, w, h, color)` or `drawRect(rect, color)`, `drawRectOutline(..., color, thickness)`, `drawCircle(x, y, radius, color)` or `drawCircle(vec2, radius, color)`, `drawCircleOutline`, `drawLine(from, to, color, thickness)`, `drawTriangle(a, b, c, color)`, `drawText(text, x, y, size, color)`, `textWidth(text, size)`, `drawFPS(x, y)`, `clear(color)` |
+| `<graphics2d>` | `graphics2d.drawRect(x, y, w, h, color)` or `drawRect(rect, color)`, `drawRectOutline(..., color, thickness)`, `drawCircle(x, y, radius, color)` or `drawCircle(vec2, radius, color)`, `drawCircleOutline`, `drawLine(from, to, color, thickness)`, `drawTriangle(a, b, c, color)`, `drawText(text, x, y, size, color)`, `textWidth(text, size)`, `drawFPS(x, y)`, `clear(color)`, and a 2D camera: `setCamera(Camera2D(target, offset, zoom, rotation))`, `resetCamera()`, `screenToWorld(p)`, `worldToScreen(p)` |
 | `<physics>` | the `Body` class and `physics.add(body)` `remove(body)` `step(dt)` `setGravity(vec2)` `gravity()` `clear()` `count()` (see below) |
 | `<assets>` | images and fonts: `assets.loadTexture("player.png")`, `assets.loadFont("font.ttf")`, `assets.exists(path)` (see below) |
 | `<audio>` | `audio.loadSound("jump.wav")`, `audio.loadMusic("song.ogg")`, `audio.setVolume(0.5)` (see below) |
@@ -554,6 +554,20 @@ if (cooldown.isDone()) {
 ```
 
 `Timer` also has `left()` and `elapsed()`.
+
+### 2D camera
+
+For a level bigger than the window. Draw the world through the camera, then reset it for the text:
+
+```cpp
+Camera2D camera = Camera2D(vec2(480, 270), vec2(480, 270));   // target (a world point), offset (where it shows)
+camera.target = camera.target.lerp(hero.center(), 5 * dt);   // in update: glide toward the player
+graphics2d.setCamera(camera);                                 // in draw: the world...
+level.draw();
+graphics2d.resetCamera();                                     // ...then the score, which stays put
+```
+
+`Camera2D` also has `zoom` (1 = normal) and `rotation` (degrees). `graphics2d.screenToWorld(input.mousePosition())` gives the mouse's position in the world; `worldToScreen` goes the other way. See [graphics2d](libraries/graphics2d.md#camera-scrolling-and-zooming).
 
 ### Physics
 

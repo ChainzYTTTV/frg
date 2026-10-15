@@ -84,6 +84,11 @@ const LIBRARIES = {
         ['textWidth', 'int textWidth(string text, int size)', 'How wide some text would be, in pixels.'],
         ['drawFPS', 'void drawFPS(float x, float y)', 'Shows the frames per second.'],
         ['clear', 'void clear(color c)', 'Fills the whole screen with a color.'],
+        ['setCamera', 'void setCamera(Camera2D camera)', 'Drawing after this is moved, zoomed and turned by the camera. Camera2D(target, offset, zoom = 1, rotation = 0): target is the world point to look at, offset is where it shows on the screen.'],
+        ['resetCamera', 'void resetCamera()', 'Stops using the camera, so the next drawing is on the screen again (for scores and menus).'],
+        ['camera', 'Camera2D camera()', 'The camera set with setCamera.'],
+        ['screenToWorld', 'vec2 screenToWorld(vec2 point)', 'Where a point on the screen (like the mouse) is in the world, with the camera.'],
+        ['worldToScreen', 'vec2 worldToScreen(vec2 point)', 'Where a point in the world shows on the screen, with the camera.'],
     ],
     assets: [
         ['loadTexture', 'Texture loadTexture(string path)', 'Loads an image (.png .jpg .bmp .tga .gif .qoi). Then: tex.draw(x, y), drawScaled, drawRotated, drawPart, width(), height().'],

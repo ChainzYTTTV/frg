@@ -468,7 +468,7 @@ Library functions are reached through the library name (`window.open(...)`). Lib
 | `<random>` | `random.range(1, 6)` (whole numbers, both ends included), `random.range(0.5, 2.0)` (decimals), `random.value()` (0 to 1), `random.chance(0.25)`, `random.seed(n)`, `random.color()` (a random solid color) |
 | `<window>` | `window.open(width, height, "title")`, `shouldClose()`, `run()`, `close()`, `deltaTime()` (seconds since the last frame), `time()`, `width()`, `height()`, `fps()`, `setFPS(n)`, `setTitle(t)`, `setBackground(color)`, `toggleFullscreen()`, `screenshot("file.png")` |
 | `<input>` | `input.keyDown(Key.SPACE)` (held), `input.keyPressed(...)` (only the frame it was pressed), `input.keyReleased(...)`, `input.mouseDown(MouseButton.LEFT)`, `mousePressed`, `mouseReleased`, `mousePosition()` (a vec2), `mouseX()`, `mouseY()`, `mouseWheel()` |
-| `<graphics2d>` | `graphics2d.drawRect(x, y, w, h, color)` or `drawRect(rect, color)`, `drawRectOutline(x, y, w, h, color, thickness)`, `drawCircle(x, y, radius, color)` or `drawCircle(vec2, radius, color)`, `drawCircleOutline(x, y, radius, color)`, `drawLine(from, to, color, thickness)`, `drawTriangle(a, b, c, color)`, `drawText(text, x, y, size, color)`, `textWidth(text, size)`, `drawFPS(x, y)`, `clear(color)` |
+| `<graphics2d>` | `graphics2d.drawRect(x, y, w, h, color)` or `drawRect(rect, color)`, `drawRectOutline(x, y, w, h, color, thickness)`, `drawCircle(x, y, radius, color)` or `drawCircle(vec2, radius, color)`, `drawCircleOutline(x, y, radius, color)`, `drawLine(from, to, color, thickness)`, `drawTriangle(a, b, c, color)`, `drawText(text, x, y, size, color)`, `textWidth(text, size)`, `drawFPS(x, y)`, `clear(color)`, and a 2D camera (below) |
 | `<physics>` | the `Body` class, plus `physics.add(body)`, `remove(body)`, `step(dt)`, `setGravity(vec2)`, `gravity()`, `clear()`, `count()` |
 | `<assets>` | `assets.loadTexture("x.png")` gives a `Texture`, `assets.loadFont("x.ttf")` gives a `Font`, `assets.exists(path)` |
 | `<audio>` | `audio.loadSound("x.wav")` gives a `Sound`, `audio.loadMusic("x.ogg")` gives a `Music`, `audio.setVolume(v)` |
@@ -486,6 +486,25 @@ The details of the newer libraries are in "More libraries" after the Physics sec
 **Keys:** `Key.A` through `Key.Z`, `Key.NUM0` through `Key.NUM9`, `SPACE ENTER ESCAPE BACKSPACE TAB LEFT RIGHT UP DOWN LEFT_SHIFT RIGHT_SHIFT LEFT_CONTROL RIGHT_CONTROL LEFT_ALT RIGHT_ALT`, and `F1` through `F12`. **Mouse buttons:** `MouseButton.LEFT RIGHT MIDDLE`.
 
 **Screen coordinates:** (0, 0) is the **top-left** corner. x goes right, and **y goes down**, so jumping means a *negative* y velocity.
+
+**2D camera** (`<graphics2d>`), for levels bigger than the window. `Camera2D` has `vec2 target` (the point in the world to look at), `vec2 offset` (where on the screen it shows, usually the middle of the window), `float zoom` (1 = normal, must be above 0) and `float rotation` (degrees). Everything drawn after `graphics2d.setCamera(camera)` goes through it, until `graphics2d.resetCamera()`, so draw the world first, then reset, then the score and menus:
+
+```cpp
+Camera2D camera = Camera2D(vec2(480, 270), vec2(480, 270));     // target, offset (zoom = 1, rotation = 0)
+
+void update(float dt){
+    camera.target = camera.target.lerp(hero.center(), 5 * dt);  // glide toward the player
+}
+
+void draw(){
+    graphics2d.setCamera(camera);   // the world moves with the camera
+    level.draw();
+    graphics2d.resetCamera();       // the text stays on the screen
+    graphics2d.drawText("Coins: {coins}", 20, 20, 24, color.GOLD);
+}
+```
+
+`graphics2d.screenToWorld(input.mousePosition())` turns the mouse position into a world position (and `worldToScreen` goes the other way). `Camera2D` is a struct, so call `setCamera` again after changing it (each frame, in `draw`). Physics doesn't know about the camera; only drawing moves. The 3D `Camera` from `<graphics3d>` is separate.
 
 ### Physics
 
@@ -790,14 +809,14 @@ Runtime error in main.frg:10: position 5 is outside the list (it has 3 items, at
 - Two functions or methods with the same name (only constructors can share a name), operator overloading for your own types
 - Interfaces, abstract classes, `protected`, `static` fields or methods in your own types
 - `do ... while`, labeled breaks, exceptions (`try` / `catch`), `goto`
-- Networking, gamepads/controllers, shaders in the engine, 3D lighting, cameras that scroll or zoom in 2D, text input boxes in `<ui>`
+- Networking, gamepads/controllers, shaders in the engine, 3D lighting, text input boxes in `<ui>`
 - `<network>` is planned but **doesn't exist yet**.
 
 ---
 
 ## Part 5: The example platformer
 
-This game is in `examples/platformer/`. It's the learner's first goal: they should eventually understand every line. Arrows or A/D move, Space/W/Up jumps, you collect 5 coins, and falling into the pit sends you back to the start.
+This game is in `examples/platformer/`. It's the learner's first goal: they should eventually understand every line. Arrows or A/D move, Space/W/Up jumps, you collect 12 coins, and falling into a pit sends you back to the start. The level is 2400 pixels wide, so a `Camera2D` follows the player smoothly (`followPlayer` in main.frg), and the text is drawn after `resetCamera()` so it stays on the screen.
 
 ### main.frg
 
@@ -805,13 +824,18 @@ This game is in `examples/platformer/`. It's the learner's first goal: they shou
 #include <window>
 #include <graphics2d>
 #include <physics>
+#include <math>
 
 ```
   A tiny platformer: move with the arrow keys (or A / D), jump with Space (or W / Up).
-  Collect all the coins. Don't fall in the pit!
+  Collect all the coins. Don't fall in the pits!
 
   This game uses the engine loop: window.run() calls update(dt) and draw() every frame.
+  The level is wider than the window, so a camera follows the player.
 ```
+
+// The camera looks at `target` (a point in the level) and shows it at `offset` (the middle of the window).
+Camera2D camera = Camera2D(vec2(480, 270), vec2(480, 270));
 
 int main(){
     window.open(960, 540, "Forge Platformer");
@@ -826,11 +850,21 @@ void update(float dt){
     physics.step(dt);
     player.checkFall();
     level.collectCoins(player.hero.bounds());
+    followPlayer(dt);
+}
+
+// The camera glides toward the player, but stops at the ends of the level so it never shows past them.
+void followPlayer(float dt){
+    float half = window.width() / 2.0;
+    float x = math.clamp(player.hero.center().x, half, level.WIDTH - half);
+    camera.target = camera.target.lerp(vec2(x, window.height() / 2.0), 5 * dt);
 }
 
 void draw(){
+    graphics2d.setCamera(camera);    // the level and the player are drawn where the camera looks...
     level.draw();
     player.draw();
+    graphics2d.resetCamera();        // ...and the text stays in the same place on the screen
 
     graphics2d.drawText("Arrows / A D to move, Space to jump", 20, 16, 20, color.LIGHTGRAY);
     string coins = "Coins: {level.collected}/{level.totalCoins}";
@@ -931,27 +965,39 @@ void draw(){
 #include <graphics2d>
 #include <physics>
 
+const float WIDTH = 2400;    // the level is wider than the 960-pixel window
+
 list<Body> platforms = [];
 list<vec2> coins = [];
 int totalCoins = 0;
 int collected = 0;
 
 void build(){
-    // The ground has a pit in the middle.
+    // The ground, with three pits.
     addPlatform(0, 500, 400, 40);
-    addPlatform(540, 500, 420, 40);
+    addPlatform(540, 500, 560, 40);
+    addPlatform(1250, 500, 500, 40);
+    addPlatform(1880, 500, 520, 40);
 
     // Platforms to jump between.
     addPlatform(140, 400, 160, 20);
     addPlatform(380, 320, 160, 20);
     addPlatform(620, 240, 160, 20);
     addPlatform(410, 150, 100, 20);
+    addPlatform(900, 380, 140, 20);
+    addPlatform(1120, 330, 120, 20);
+    addPlatform(1400, 380, 160, 20);
+    addPlatform(1600, 280, 140, 20);
+    addPlatform(1780, 200, 120, 20);
+    addPlatform(2050, 380, 160, 20);
+    addPlatform(2250, 280, 120, 20);
 
-    // Walls at the edges of the screen.
+    // Walls at the two ends of the level.
     addPlatform(-20, 0, 20, 540);
-    addPlatform(960, 0, 20, 540);
+    addPlatform(WIDTH, 0, 20, 540);
 
-    coins = [vec2(220, 370), vec2(460, 290), vec2(700, 210), vec2(460, 120), vec2(880, 470)];
+    coins = [vec2(220, 370), vec2(460, 290), vec2(700, 210), vec2(460, 120), vec2(970, 350), vec2(1180, 300),
+             vec2(1480, 350), vec2(1670, 250), vec2(1840, 170), vec2(2130, 350), vec2(2310, 250), vec2(2350, 470)];
     totalCoins = coins.length;
 }
 

@@ -75,6 +75,7 @@ For advanced users who want to write their own rendering with a real graphics AP
 | [The game loop](guides/game-loop.md) | How a game runs frame by frame, and `dt` |
 | [Sprites and animation](guides/sprites-and-animation.md) | Drawing images, sprite sheets, flipping, animation timing |
 | [Platformer walkthrough](guides/platformer-walkthrough.md) | The example platformer, explained line by line |
+| [Practice projects](guides/practice-projects.md) | 18 projects with steps and hints, from a guessing game to a 3D solar system |
 
 ## Under the hood
 

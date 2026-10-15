@@ -1,0 +1,99 @@
+=== main.frg
+#include <stdio>
+#include <file>
+#include <time>
+#include <ECS>
+#include <tasks>
+
+class Safe {
+    private int code = 1234;
+    bool tryOpen(int guess) { return guess == code; }
+}
+private int attempts = 0;
+
+class Entity2 {
+    string name = "e";
+}
+class Goblin : Entity2 {
+    void cackle() { print("hehe"); }
+}
+
+class Health : Component {
+    int hp = 3;
+    void start() { print("{entity().name} is ready"); }
+    void update(float dt) {
+        hp--;
+        if (hp <= 0) { entity().destroy(); }
+    }
+}
+
+struct Size {
+    float w;
+    float h;
+    Size(float side) {
+        w = side;
+        h = side;
+    }
+    Size(float w, float h) {
+        this.w = w;
+        this.h = h;
+    }
+}
+
+task countdown() {
+    for (int i = 3; i > 0; i--) {
+        print(i);
+        wait(0.01);
+    }
+    print("go");
+}
+
+int main(){
+    print(Safe().tryOpen(1234));
+    list<Entity2> all = [Goblin(), Entity2()];
+    for (Entity2 e in all) {
+        if (e is Goblin) {
+            Goblin g = e as Goblin;
+            g.cackle();
+        }
+    }
+    print(Size(2).h + Size(1, 3).h);
+
+    int score = 77;
+    file.write("save.txt", "{score}");
+    int loaded = int(file.read("save.txt").trim());
+    print(loaded);
+    file.remove("save.txt");
+
+    Timer cooldown = Timer(0.0);
+    if (cooldown.isDone()) {
+        cooldown.restart();
+        print("cooldown ok");
+    }
+
+    Entity slime = ECS.create("slime");
+    slime.add(Health());
+    Health h = slime.get("Health") as Health;
+    print(h.hp);
+    ECS.update(0.1);
+    ECS.update(0.1);
+    ECS.update(0.1);
+    print(ECS.count());
+
+    countdown();
+    tasks.runAll();
+    return 0;
+}
+=== output
+true
+hehe
+5.0
+77
+cooldown ok
+3
+slime is ready
+0
+3
+2
+1
+go

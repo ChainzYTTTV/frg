@@ -32,15 +32,23 @@ src/
   codegen.cpp      syntax tree  -> C++
   diagnostics.cpp  error printing
 runtime/
-  forge.hpp          core runtime: text, lists, maps, optionals, vec2/color/rect, random
-  forge_window.hpp   <window>, <input>, <graphics2d> on top of raylib
-  forge_physics.hpp  <physics>
-  raylib/            raylib 5.5 (zlib license)
+  forge.hpp             core runtime: text, lists, maps, optionals, tasks (coroutines), vec2/color/rect, random
+  forge_window.hpp      <window>, <input>, <graphics2d> on top of raylib
+  forge_graphics3d.hpp  <graphics3d>
+  forge_assets.hpp      <assets>: textures and fonts
+  forge_audio.hpp       <audio>: sounds and music
+  forge_physics.hpp     <physics>
+  forge_ui.hpp          <ui>
+  forge_scenes.hpp      <scenes>
+  forge_ecs.hpp         <ECS>
+  forge_time.hpp        <time>
+  forge_file.hpp        <file>
+  raylib/               raylib 5.5 (zlib license)
 tests/             .\tests\run_tests.ps1
-examples/          hello, tour, shapes, platformer
+examples/          hello, tour, shapes, platformer, sprites, menu, world3d
 ```
 
-Games that include `<window>`, `<input>` or `<graphics2d>` are linked with raylib. Everything is linked statically, so the `.exe` runs on any Windows PC.
+Games that use the window, graphics, input, assets, audio or UI libraries are linked with raylib. Everything is linked statically, so the `.exe` runs on any Windows PC.
 
 ### Testing games automatically
 

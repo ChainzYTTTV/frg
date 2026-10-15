@@ -44,6 +44,12 @@ Go in this order. Each stage ends with a small project. Move at the learner's pa
 | 12. Input and movement | `input`, `deltaTime`, `vec2` | Move a square with the arrow keys |
 | 13. Physics | `Body`, `physics.step`, `onGround`, jumping | A cube that jumps on a platform |
 | 14. The platformer | read Part 5 together and change it | Add a coin, a level, or a moving hazard |
+| 15. Tasks | `task` functions, `wait()` | Make the player flash, or a 3-2-1 countdown |
+| 16. Images and sound | `<assets>`, `<audio>`, sprite sheets | Give the platformer a sprite and a jump sound |
+| 17. Menus | `<scenes>`, `<ui>`, `<file>` | A main menu, and a best score saved to a file |
+| 18. Checking kinds, hiding things | `is` / `as`, `private`, several constructors | Different enemy types in one list |
+| 19. Components | `<ECS>` | Rebuild a small game out of components |
+| 20. 3D | `<graphics3d>` | A spinning cube scene |
 
 ---
 
@@ -320,14 +326,58 @@ list<Entity> all = [Player("Hero"), Goblin("Grok")];
 ```
 
 Rules:
-- A type has **at most one** constructor.
-- A class with no constructor uses the one it inherits. If it has none at all, it's made with `Type()` or `Type(every field, in order)`, where inherited fields come first.
+- A type can have **several constructors** if each takes different types: `Size(float side)` and `Size(float w, float h)`. Forge picks the one matching the values given.
+- A class with no constructors uses the ones it inherits. If there are none at all, it's made with `Type()` or `Type(every field, in order)`, where inherited fields come first.
 - **Structs can't inherit.** Only classes can.
 - A variable or field whose type is a class must start with a value: `Enemy e = Enemy(...);`. To start empty, make it optional: `Enemy? e = null;`.
 - A struct can't contain itself (a list of itself is fine).
 - `print(obj)` shows something like `Point(x: 3.0, y: 4.0)`. Adding a method `string toString()` changes what's shown.
 - `==` on structs compares every field, and `==` on classes checks whether both are **the same object**.
 - In `for (Point p in points)`, `p` is a **copy** of a struct, so changing it doesn't change the list. Use `points[i].x = ...` instead. With classes, the loop variable is the real object.
+
+**Checking the real kind of an object** (classes only):
+
+```cpp
+for (Entity e in all) {
+    if (e is Goblin) {              // true for a Goblin, or a class that inherits from Goblin
+        Goblin g = e as Goblin;     // `as` gives Goblin?, which is null if e isn't a Goblin
+        g.cackle();
+    }
+}
+```
+
+**`private`** hides things. A private field or method can only be used inside its class (and classes that inherit from it). A private function, global variable or type at the top of a file can only be used inside that file. `public` is allowed too and means the same as writing nothing.
+
+```cpp
+class Safe {
+    private int code = 1234;
+    bool tryOpen(int guess) { return guess == code; }
+}
+private int attempts = 0;           // only this file can see it
+```
+
+### Tasks: waiting without freezing the game
+
+A function whose return type is **`task`** can call **`wait(seconds)`**. Only that task pauses; the game keeps running.
+
+```cpp
+task flash() {
+    for (int i = 0; i < 5; i++) {
+        tint = color.WHITE;
+        wait(0.1);
+        tint = color.ORANGE;
+        wait(0.1);
+    }
+}
+
+flash();                 // starts it; it runs until the first wait(), then carries on by itself
+task t = flash();        // keep it to use t.isDone() or t.stop()
+```
+
+- `wait()` alone waits one frame. `wait(otherTask)` waits until that task finishes. `return;` stops a task early.
+- `wait` only works inside a `task` function, or you get a compile error.
+- With a window, tasks carry on by themselves every frame. In a program without a window, `#include <tasks>` and call `tasks.update(dt)`, or `tasks.runAll()` to wait for every task. `tasks.count()` and `tasks.stopAll()` are also there.
+- Class methods can be tasks; struct methods can't.
 
 ### Enums
 
@@ -396,6 +446,17 @@ Library functions are reached through the library name (`window.open(...)`). Lib
 | `<input>` | `input.keyDown(Key.SPACE)` (held), `input.keyPressed(...)` (only the frame it was pressed), `input.keyReleased(...)`, `input.mouseDown(MouseButton.LEFT)`, `mousePressed`, `mouseReleased`, `mousePosition()` (a vec2), `mouseX()`, `mouseY()`, `mouseWheel()` |
 | `<graphics2d>` | `graphics2d.drawRect(x, y, w, h, color)` or `drawRect(rect, color)`, `drawRectOutline(x, y, w, h, color, thickness)`, `drawCircle(x, y, radius, color)` or `drawCircle(vec2, radius, color)`, `drawCircleOutline(x, y, radius, color)`, `drawLine(from, to, color, thickness)`, `drawTriangle(a, b, c, color)`, `drawText(text, x, y, size, color)`, `textWidth(text, size)`, `drawFPS(x, y)`, `clear(color)` |
 | `<physics>` | the `Body` class, plus `physics.add(body)`, `remove(body)`, `step(dt)`, `setGravity(vec2)`, `gravity()`, `clear()`, `count()` |
+| `<assets>` | `assets.loadTexture("x.png")` gives a `Texture`, `assets.loadFont("x.ttf")` gives a `Font`, `assets.exists(path)` |
+| `<audio>` | `audio.loadSound("x.wav")` gives a `Sound`, `audio.loadMusic("x.ogg")` gives a `Music`, `audio.setVolume(v)` |
+| `<graphics3d>` | the `Camera` struct and `Model` class, `graphics3d.setCamera(cam)`, `drawCube(pos, size, color)`, `drawCubeOutline`, `drawSphere(center, radius, color)`, `drawSphereOutline`, `drawCylinder(pos, radius, height, color)`, `drawPlane(center, vec2 size, color)`, `drawGrid(slices, spacing)`, `drawLine(from, to, color)`, `toScreen(vec3)`, `loadModel("x.glb")` |
+| `<time>` | `time.now()`, `time.sleep(s)`, `time.clock()`, `time.date()`, `year() month() day() hour() minute() second()`, the `Timer` class |
+| `<file>` | `file.read(path)`, `write(path, text)`, `append(path, text)`, `exists(path)`, `remove(path)`, `readLines(path)`, `writeLines(path, list)`, `files(folder)` |
+| `<scenes>` | the `Scene` class, `scenes.change(scene)`, `update(dt)`, `draw()`, `current()` |
+| `<ui>` | `ui.button(rect, "text")` (true when clicked), `ui.checkbox(rect, "text", checked)` (new value), `ui.slider(rect, value, min, max)` (new value), `ui.label(text, x, y, size, color)`, `ui.panel(rect)`, `ui.setTheme(bg, accent, text)` |
+| `<ECS>` | the `Entity` and `Component` classes, `ECS.create(name)`, `add(entity)`, `update(dt)`, `draw()`, `find(name)`, `all()`, `withComponent("Type")`, `clear()`, `count()` |
+| `<tasks>` | `tasks.update(dt)`, `runAll()`, `count()`, `stopAll()` (only needed without a window) |
+
+The details of the newer libraries are in "More libraries" after the Physics section.
 
 **Keys:** `Key.A` through `Key.Z`, `Key.NUM0` through `Key.NUM9`, `SPACE ENTER ESCAPE BACKSPACE TAB LEFT RIGHT UP DOWN LEFT_SHIFT RIGHT_SHIFT LEFT_CONTROL RIGHT_CONTROL LEFT_ALT RIGHT_ALT`, and `F1` through `F12`. **Mouse buttons:** `MouseButton.LEFT RIGHT MIDDLE`.
 
@@ -408,7 +469,7 @@ A `Body` is a box: `Body(x, y, width, height)`.
 - Fields Forge sets during each `physics.step(dt)`: `onGround`, `onCeiling` and `onWall`.
 - Methods: `bounds()` (a rect), `center()`, `overlaps(otherBody)`.
 - Gravity starts at `vec2(0, 980)`, in pixels per second per second, pointing down.
-- Moving bodies stop when they hit static bodies. Moving bodies **don't** collide with each other; check with `a.overlaps(b)`.
+- Moving bodies stop when they hit static bodies, and push each other apart (so crates stack). A body with `solid = false` passes through everything, which is useful for coins and trigger zones; check those with `a.overlaps(b)`.
 - Your own classes can inherit from `Body`: `class Player : Body { ... }`. With no constructor of its own, it uses `Body(x, y, width, height)`.
 
 ```cpp
@@ -425,6 +486,77 @@ if (box.onGround and input.keyPressed(Key.SPACE)) {
     box.velocity.y = -600;      // up is negative y
 }
 ```
+
+### More libraries
+
+**Images, fonts and sounds** (`<assets>`, `<audio>`). Files go in the game's folder next to `main.frg`. Loading works anywhere, even as a global variable before the window opens.
+
+```cpp
+Texture player = assets.loadTexture("player.png");   // .png .jpg .bmp .tga .gif .qoi
+Font big = assets.loadFont("title.ttf");             // .ttf .otf
+Sound jump = audio.loadSound("jump.wav");            // short sounds: .wav .ogg .mp3 .flac
+Music song = audio.loadMusic("song.ogg");            // long music, streamed and looping
+
+player.draw(x, y);                                    // draw(x, y, tint) tints it
+player.drawScaled(x, y, 4);
+player.drawRotated(vec2(x, y), 45, 1);                // centered at (x, y), turned 45 DEGREES, scale 1
+player.drawPart(rect(0, 0, 16, 16), rect(x, y, 64, 64));   // one frame of a sprite sheet, stretched to 64x64
+big.drawText("Hello", 20, 20, 48, color.WHITE);       // big.measure(text, size) gives the width
+jump.play();
+song.play();
+```
+
+- `Texture`: `width()`, `height()`, `draw`, `drawScaled`, `drawRotated`, `drawPart`.
+- `Sound`: `play()`, `stop()`, `isPlaying()`, `setVolume(v)`, `setPitch(p)`.
+- `Music`: `play()`, `stop()`, `pause()`, `resume()`, `isPlaying()`, `setVolume(v)`, `setLooping(b)`, `length()`, `position()`.
+- A missing file stops the game with "can't find the file 'x.png'".
+- **Sprite-sheet animation:** keep a frame number, and change it every 0.1 seconds or so with a timer variable. Draw `drawPart(rect(frame * 16, 0, 16, 16), rect(x, y, 64, 64))`.
+
+**3D** (`<graphics3d>`). In 3D, **y goes up**.
+
+```cpp
+Camera cam = Camera(vec3(8, 6, 8), vec3(0, 0, 0));    // camera position, and the point it looks at
+Model ship = graphics3d.loadModel("ship.glb");        // .obj .gltf .glb .iqm .vox .m3d
+
+void draw(){
+    cam.orbit(1);                                     // circle around the target by 1 degree
+    graphics3d.setCamera(cam);
+    graphics3d.drawGrid(20, 1);
+    graphics3d.drawCube(vec3(0, 0.5, 0), vec3(1, 1, 1), color.RED);
+    ship.draw(vec3(2, 0, 0));                         // also draw(pos, scale, tint), drawRotated(pos, axis, degrees, scale, tint)
+    vec2 p = graphics3d.toScreen(vec3(0, 2, 0));
+    graphics2d.drawText("label", p.x, p.y, 20, color.WHITE);   // 2D drawing goes on top of the 3D
+}
+```
+
+`Camera` is a struct with `position`, `target`, `up`, `fov` (45 to start with) and `orbit(degrees)`. There's no lighting yet: shapes are drawn in flat colors.
+
+**Scenes** (`<scenes>`). Each part of a game is a class inheriting from `Scene` that fills in any of `enter()`, `update(float dt)`, `draw()` and `exit()`. `scenes.change(Level())` switches at the start of the next `scenes.update(dt)`. The game calls `scenes.update(dt)` and `scenes.draw()` every frame.
+
+**UI** (`<ui>`). UI is drawn every frame like everything else: `if (ui.button(rect(380, 200, 200, 50), "Play")) { ... }` draws the button and is true on the frame it's clicked. `volume = ui.slider(rect(...), volume, 0, 1);` and `showFps = ui.checkbox(rect(...), "Show FPS", showFps);` give back the new value.
+
+**ECS** (`<ECS>`): entities made of components.
+
+```cpp
+class Health : Component {
+    int hp = 3;
+    void start() { print("{entity().name} is ready"); }   // runs once, before the first update
+    void update(float dt) {
+        if (hp <= 0) { entity().destroy(); }
+    }
+}
+
+Entity slime = ECS.create("slime");
+slime.add(Health());
+Health h = slime.get("Health") as Health;    // find a component by its class name
+// every frame: ECS.update(dt); ECS.draw();
+```
+
+An `Entity` has `name`, `active`, `components`, `add`, `get("Type")`, `has("Type")`, `remove("Type")` and `destroy()`.
+
+**Timer** (`<time>`): `Timer cooldown = Timer(0.5);`, then `if (cooldown.isDone()) { ...; cooldown.restart(); }`. It also has `left()` and `elapsed()`.
+
+**Files** (`<file>`), useful for save games: `file.write("save.txt", "{score}");` and later `int score = int(file.read("save.txt").trim());`. Check `file.exists(path)` first.
 
 ### Making a game: two kinds of game loop
 
@@ -512,11 +644,11 @@ Runtime error in main.frg:10: position 5 is outside the list (it has 3 items, at
 
 - `char` (single letters are one-letter strings), fixed-size arrays (use `list`), tuples
 - Generics you write yourself (`class Box<T>`), function values, lambdas, callbacks
-- More than one constructor per type, two functions with the same name in one file, operator overloading for your own types
-- `is` / `as` checks on classes, interfaces, abstract classes, `private` / `public`, `static` fields or methods in your own types
+- Two functions or methods with the same name (only constructors can share a name), operator overloading for your own types
+- Interfaces, abstract classes, `protected`, `static` fields or methods in your own types
 - `do ... while`, labeled breaks, exceptions (`try` / `catch`), `goto`
-- Files, saving and loading, images and sprites, sound, fonts, 3D, cameras, scenes, coroutines or `wait()`, networking
-- Libraries with these names are planned but **don't exist yet**: `<graphics3d>` `<audio>` `<assets>` `<ECS>` `<time>` `<file>` `<scenes>` `<ui>` `<OpenGL>` `<Vulkan>` `<DirectX>`
+- Networking, gamepads/controllers, shaders, 3D lighting, cameras that scroll or zoom in 2D, text input boxes in `<ui>`
+- Libraries with these names are planned but **don't exist yet**: `<OpenGL>` `<Vulkan>` `<DirectX>`
 
 ---
 
@@ -590,6 +722,17 @@ class Player : Body {
         position = START;
         velocity = vec2.ZERO;
         deaths++;
+        flash();
+    }
+
+    // A task: it runs alongside the game, and wait() pauses just this task, not the game.
+    task flash() {
+        for (int i = 0; i < 5; i++) {
+            tint = color.WHITE;
+            wait(0.08);
+            tint = color.ORANGE;
+            wait(0.08);
+        }
     }
 }
 
@@ -703,4 +846,4 @@ void draw(){
 
 ---
 
-*Forge v0.4. If the learner reports that something in this file doesn't work, believe the compiler over this file and tell them to report it to whoever maintains Forge.*
+*Forge v0.5. If the learner reports that something in this file doesn't work, believe the compiler over this file and tell them to report it to whoever maintains Forge.*

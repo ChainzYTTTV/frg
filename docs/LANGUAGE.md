@@ -1,8 +1,8 @@
-# The Forge Language (v0.4)
+# The Forge Language (v0.5)
 
 This guide covers everything Forge can do **right now**. Planned features are listed at the end.
 
-**Contents:** [A Forge game](#a-forge-game) · [Variables](#variables-and-types) · [Text](#text) · [Operators](#operators) · [If and loops](#if-loops-and-switch) · [Functions](#functions) · [Files and folders](#multiple-files) · [Lists and maps](#lists-and-maps) · [Structs and classes](#structs-and-classes) · [Enums](#enums) · [Optional values and null](#optional-values-and-null) · [Pointers](#pointers) · [Built-in types](#built-in-types-vec2-color-rect) · [Libraries](#libraries) · [Making a game](#making-a-game) · [Errors](#errors)
+**Contents:** [A Forge game](#a-forge-game) · [Variables](#variables-and-types) · [Text](#text) · [Operators](#operators) · [If and loops](#if-loops-and-switch) · [Functions](#functions) · [Files and folders](#multiple-files) · [Lists and maps](#lists-and-maps) · [Structs and classes](#structs-and-classes) · [Enums](#enums) · [Optional values and null](#optional-values-and-null) · [Pointers](#pointers) · [Tasks](#tasks-waiting-without-freezing-the-game) · [Built-in types](#built-in-types-vec2-color-rect) · [Libraries](#libraries) · [Making a game](#making-a-game) · [Errors](#errors)
 
 ## A Forge game
 
@@ -271,9 +271,38 @@ Entity e = Goblin("Grok");       // a Goblin can go anywhere an Entity can
 print(e.describe());             // "a goblin, not just an entity"
 ```
 
+- A type can have **several constructors**, as long as each takes different types of values: `Size(float side)` and `Size(float w, float h)`. Forge picks the one that matches what you give it.
 - A type with no constructor is made with `Type()` or `Type(every field, in order)`.
-- A class without its own constructor uses the one it inherits. In a constructor, `super(...)` runs the parent class's constructor.
+- A class without its own constructors uses the ones it inherits. In a constructor, `super(...)` runs the parent class's constructor.
 - `print` shows a struct or class as `Point(x: 3.0, y: 4.0)`. To show it differently, add a method `string toString()`.
+
+### Checking what kind of object something is: `is` and `as`
+
+```cpp
+for (Entity e in enemies) {
+    if (e is Goblin) {               // true if e is a Goblin (or something that inherits from Goblin)
+        Goblin g = e as Goblin;      // as gives a Goblin?, which is null if e isn't a Goblin
+        g.cackle();
+    }
+}
+```
+
+### private
+
+`private` hides something so only certain code can use it:
+
+```cpp
+class Safe {
+    private int code = 1234;          // only Safe's own methods (and classes that inherit from Safe) can use it
+    bool tryOpen(int guess) {
+        return guess == code;
+    }
+}
+
+private int attempts = 0;             // at the top of a file: only this file can use it
+```
+
+`public` is also allowed, and means the same as writing nothing.
 
 ## Enums
 
@@ -319,6 +348,29 @@ addOne(score);        // score is now 11
 
 Don't keep a pointer to a function's local variable after that function ends.
 
+## Tasks: waiting without freezing the game
+
+A function whose return type is **`task`** can call **`wait(seconds)`**. Only that task pauses; the rest of the game keeps running.
+
+```cpp
+task flash() {
+    for (int i = 0; i < 5; i++) {
+        tint = color.WHITE;
+        wait(0.1);                    // this task pauses for 0.1 seconds
+        tint = color.ORANGE;
+        wait(0.1);
+    }
+}
+
+flash();                              // starts it: it runs until its first wait, then carries on by itself
+task t = flash();                     // keep it to check t.isDone() or call t.stop()
+```
+
+- `wait()` with nothing waits until the next frame. `wait(otherTask)` waits until another task finishes.
+- `return;` ends a task early.
+- With a window, waiting tasks wake up by themselves every frame. Without a window, `#include <tasks>` and call `tasks.update(dt)` yourself, or `tasks.runAll()` to wait until every task is done. `tasks.count()` and `tasks.stopAll()` are also there.
+- Struct methods can't be tasks, but class methods can.
+
 ## Built-in types: vec2, color, rect
 
 These are always available:
@@ -346,8 +398,116 @@ Each file includes the libraries it uses. Functions are reached through the libr
 | `<input>` | `input.keyDown(Key.SPACE)` (held), `keyPressed` (just pressed this frame), `keyReleased`, `mouseDown(MouseButton.LEFT)` `mousePressed` `mouseReleased` `mousePosition()` `mouseX()` `mouseY()` `mouseWheel()`. Keys: `Key.A`…`Key.Z`, `Key.NUM0`…`Key.NUM9`, `SPACE` `ENTER` `ESCAPE` `BACKSPACE` `TAB` `LEFT` `RIGHT` `UP` `DOWN` `LEFT_SHIFT` `RIGHT_SHIFT` `LEFT_CONTROL` `RIGHT_CONTROL` `LEFT_ALT` `RIGHT_ALT` `F1`…`F12` |
 | `<graphics2d>` | `graphics2d.drawRect(x, y, w, h, color)` or `drawRect(rect, color)`, `drawRectOutline(..., color, thickness)`, `drawCircle(x, y, radius, color)` or `drawCircle(vec2, radius, color)`, `drawCircleOutline`, `drawLine(from, to, color, thickness)`, `drawTriangle(a, b, c, color)`, `drawText(text, x, y, size, color)`, `textWidth(text, size)`, `drawFPS(x, y)`, `clear(color)` |
 | `<physics>` | the `Body` class and `physics.add(body)` `remove(body)` `step(dt)` `setGravity(vec2)` `gravity()` `clear()` `count()` (see below) |
+| `<assets>` | images and fonts: `assets.loadTexture("player.png")`, `assets.loadFont("font.ttf")`, `assets.exists(path)` (see below) |
+| `<audio>` | `audio.loadSound("jump.wav")`, `audio.loadMusic("song.ogg")`, `audio.setVolume(0.5)` (see below) |
+| `<graphics3d>` | 3D drawing (see below) |
+| `<time>` | `time.now()` (seconds since the game started), `time.sleep(seconds)`, `time.clock()` ("14:05:09"), `time.date()` ("2026-10-14"), `time.year()` `month()` `day()` `hour()` `minute()` `second()`, and the `Timer` class |
+| `<file>` | `file.read(path)` `write(path, text)` `append(path, text)` `exists(path)` `remove(path)` `readLines(path)` `writeLines(path, lines)` `files(folder)`. Paths are relative to the game's folder. |
+| `<scenes>` | the `Scene` class and `scenes.change(scene)` `update(dt)` `draw()` `current()` (see below) |
+| `<ui>` | `ui.button(rect, "text")` (true when clicked), `ui.checkbox(rect, "text", checked)` (gives the new value), `ui.slider(rect, value, min, max)` (gives the new value), `ui.label(text, x, y, size, color)`, `ui.panel(rect)`, `ui.setTheme(background, accent, text)` |
+| `<ECS>` | the `Entity` and `Component` classes (see below) |
+| `<tasks>` | `tasks.update(dt)` `runAll()` `count()` `stopAll()` (see [Tasks](#tasks-waiting-without-freezing-the-game)) |
 
 Screen coordinates start at the **top-left** corner, and **y goes down**.
+
+### Images, fonts and sounds
+
+Put the files in your game's folder (next to `main.frg`). Loading works anywhere, even before the window opens.
+
+```cpp
+Texture player = assets.loadTexture("player.png");    // .png .jpg .bmp .tga .gif .qoi
+Font big = assets.loadFont("title.ttf");              // .ttf .otf
+Sound jump = audio.loadSound("jump.wav");             // short sounds: .wav .ogg .mp3 .flac
+Music song = audio.loadMusic("song.ogg");             // long music, streamed while it plays
+
+player.draw(x, y);                                     // also: draw(x, y, tint)
+player.drawScaled(x, y, 4);                            // 4 times as big
+player.drawRotated(vec2(x, y), 45, 1);                 // centered at (x, y), turned 45 degrees
+player.drawPart(rect(0, 0, 16, 16), rect(x, y, 64, 64));   // one frame of a sprite sheet, stretched
+big.drawText("Hello", 20, 20, 48, color.WHITE);
+jump.play();
+song.play();                                           // loops until song.stop()
+```
+
+| | Methods |
+|---|---|
+| `Texture` | `width()` `height()` `draw` `drawScaled` `drawRotated` `drawPart` |
+| `Font` | `drawText(text, x, y, size, color)` `measure(text, size)` |
+| `Sound` | `play()` `stop()` `isPlaying()` `setVolume(v)` `setPitch(p)` |
+| `Music` | `play()` `stop()` `pause()` `resume()` `isPlaying()` `setVolume(v)` `setLooping(b)` `length()` `position()` |
+
+### 3D
+
+```cpp
+#include <graphics3d>
+
+Camera cam = Camera(vec3(8, 6, 8), vec3(0, 0, 0));     // where it is, what it looks at
+Model ship = graphics3d.loadModel("ship.glb");         // .obj .gltf .glb .iqm .vox .m3d
+
+void draw(){
+    cam.orbit(1);                                      // circle around the target, 1 degree
+    graphics3d.setCamera(cam);
+    graphics3d.drawGrid(20, 1);
+    graphics3d.drawCube(vec3(0, 0.5, 0), vec3(1, 1, 1), color.RED);
+    ship.draw(vec3(2, 0, 0));
+    vec2 p = graphics3d.toScreen(vec3(0, 2, 0));       // where a 3D point is on screen
+    graphics2d.drawText("hi", p.x, p.y, 20, color.WHITE);   // 2D draws on top of 3D
+}
+```
+
+Shapes: `drawCube` `drawCubeOutline` `drawSphere(center, radius, color)` `drawSphereOutline` `drawCylinder(position, radius, height, color)` `drawPlane(center, vec2 size, color)` `drawGrid(slices, spacing)` `drawLine(from, to, color)`. `Camera` has `position`, `target`, `up`, `fov` and `orbit(degrees)`. `Model` has `draw(position, scale, tint)` and `drawRotated(position, axis, degrees, scale, tint)`. In 3D, **y goes up**.
+
+### Scenes
+
+Each part of the game (menu, level, game over) is a class that inherits from `Scene` and fills in any of `enter()`, `update(float dt)`, `draw()` and `exit()`:
+
+```cpp
+class Menu : Scene {
+    void draw() {
+        if (ui.button(rect(380, 200, 200, 50), "Play")) {
+            scenes.change(Level());
+        }
+    }
+}
+
+// in main:  scenes.change(Menu());
+// every frame:  scenes.update(dt);  scenes.draw();
+```
+
+The switch happens at the start of the next `scenes.update`, so the old scene's `exit()` and the new one's `enter()` run then.
+
+### Entities and components (ECS)
+
+```cpp
+class Health : Component {
+    int hp = 3;
+    void update(float dt) {
+        if (hp <= 0) {
+            entity().destroy();
+        }
+    }
+}
+
+Entity slime = ECS.create("slime");
+slime.add(Health());
+Health h = slime.get("Health") as Health;    // find a component by its class name
+
+// every frame:  ECS.update(dt);  ECS.draw();
+```
+
+A `Component` has `start()` (runs once, before its first update), `update(dt)`, `draw()` and `entity()`. An `Entity` has `name`, `active`, `components`, `add(c)`, `get("Type")`, `has("Type")`, `remove("Type")` and `destroy()`. The world has `ECS.create(name)` `add(entity)` `update(dt)` `draw()` `find(name)` `all()` `withComponent("Type")` `clear()` `count()`.
+
+### Timer
+
+```cpp
+Timer cooldown = Timer(0.5);           // half a second
+if (cooldown.isDone()) {
+    shoot();
+    cooldown.restart();
+}
+```
+
+`Timer` also has `left()` and `elapsed()`.
 
 ### Physics
 
@@ -366,7 +526,7 @@ physics.step(dt);                // falls with gravity, stops on static bodies
 if (box.onGround) { ... }
 ```
 
-Your own classes can inherit from `Body`: `class Player : Body { ... }`. Moving bodies don't collide with each other, so use `a.overlaps(b)` to check for that yourself.
+Your own classes can inherit from `Body`: `class Player : Body { ... }`. Moving bodies push each other apart, so crates stack. Set `solid = false` on things that should pass through everything, like coins and trigger zones, and check those with `a.overlaps(b)`.
 
 ## Making a game
 
@@ -412,7 +572,9 @@ void draw(){
 
 The screen is cleared to the background color before each frame (`window.setBackground(color)` changes it). The window closes when you press Escape or click the X.
 
-See `examples/platformer` for a complete game.
+See `examples/platformer` for a complete game. The other examples are `shapes` (2D drawing), `sprites` (images and sound), `menu` (scenes and UI) and `world3d` (3D).
+
+When the game is finished, `frg build --release` makes an `.exe` without the console window. `print` output isn't shown in a release build.
 
 ## Errors
 
@@ -433,10 +595,10 @@ Problems that can only be found while the game runs stop it with the file and li
 Runtime error in main.frg:10: position 5 is outside the list (it has 3 items, at positions 0 to 2)
 ```
 
+If a file has several syntax mistakes, Forge reports all of them in one go.
+
 ## Coming next
 
-- **3D:** `<graphics3d>` with cameras and models (the `vec3` type is already here)
-- **More libraries:** `<audio>`, `<assets>` (images, sounds, fonts), `<ECS>`, `<time>`, `<file>`, `<scenes>`, `<ui>`
-- **Coroutines:** `wait(2.0)` inside game logic
-- **Graphics backends:** `#include <OpenGL>`, `<Vulkan>`, `<DirectX>`
-- **Language:** user-made generic types, `is` checks for classes, `private` fields
+- **Graphics backends:** `#include <OpenGL>`, `<Vulkan>`, `<DirectX>` (everything currently draws through raylib, which uses OpenGL)
+- **Language:** generic types you write yourself (`class Box<T>`), functions as values
+- **Editor:** autocomplete for your own code (a language server)

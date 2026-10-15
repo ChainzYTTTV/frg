@@ -109,6 +109,42 @@
         "body": ["switch (${1:value}) {", "\tcase ${2:1}:", "\t\t$0", "\tdefault:", "\t\t", "}"],
         "description": "Pick a case by value (cases never need break)"
     },
+    "task": {
+        "prefix": "task",
+        "body": ["task ${1:name}(){", "\t$0", "\twait(${2:1.0});", "}"],
+        "description": "A task: a function that can wait() without freezing the game"
+    },
+    "scene": {
+        "prefix": "scene",
+        "body": [
+            "class ${1:Level} : Scene {",
+            "\tvoid enter() {",
+            "\t\t$0",
+            "\t}",
+            "",
+            "\tvoid update(float dt) {",
+            "\t}",
+            "",
+            "\tvoid draw() {",
+            "\t}",
+            "}"
+        ],
+        "description": "A scene (needs #include <scenes>)"
+    },
+    "component": {
+        "prefix": "component",
+        "body": [
+            "class ${1:Name} : Component {",
+            "\tvoid start() {",
+            "\t\t$0",
+            "\t}",
+            "",
+            "\tvoid update(float dt) {",
+            "\t}",
+            "}"
+        ],
+        "description": "An ECS component (needs #include <ECS>)"
+    },
     "physics body": {
         "prefix": "body",
         "body": ["Body ${1:box} = Body(${2:x}, ${3:y}, ${4:32}, ${5:32});", "physics.add(${1:box});"],

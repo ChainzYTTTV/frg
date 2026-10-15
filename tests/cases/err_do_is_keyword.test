@@ -1,0 +1,7 @@
+=== main.frg
+int main(){
+    int do = 5;
+    return 0;
+}
+=== error
+'do' is a reserved word in Forge, so it can't be the name of a variable

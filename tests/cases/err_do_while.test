@@ -1,0 +1,11 @@
+=== main.frg
+int main(){
+    int x = 0;
+    do {
+        x++;
+    } while (x);
+    return 0;
+}
+=== error
+the condition of 'do ... while' must be true or false, but this is an int
+hint: compare it, like (x > 0)

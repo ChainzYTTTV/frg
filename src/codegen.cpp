@@ -500,6 +500,11 @@ void Gen::stmt(const Stmt* s) {
             children(s->then.get());
             line("}");
             break;
+        case SK::DoWhile:
+            line("do {");
+            children(s->then.get());
+            line("} while (" + ex(s->expr.get()) + ");");
+            break;
         case SK::For:
             line("for (" + (s->init ? simple(s->init.get()) : "") + "; " + (s->expr ? ex(s->expr.get()) : "") + "; " +
                  (s->step ? simple(s->step.get()) : "") + ") {");

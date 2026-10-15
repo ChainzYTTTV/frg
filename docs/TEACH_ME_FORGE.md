@@ -211,6 +211,10 @@ for (string name in names) {     // goes through each item of a list
 while (lives > 0) {
     lives--;
 }
+
+do {                             // like while, but runs at least once: the check comes after
+    guess = int(input("Guess: "));
+} while (guess != secret);       // note the ; at the end
 ```
 
 `break` leaves a loop and `continue` skips to the next time around.
@@ -836,7 +840,7 @@ Runtime error in main.frg:10: position 5 is outside the list (it has 3 items, at
 - Generics you write yourself (`class Box<T>`), function values, lambdas, callbacks
 - Two functions or methods with the same name (only constructors can share a name), operator overloading for your own types
 - Interfaces, abstract classes, `protected`, `static` fields or methods in your own types
-- `do ... while`, labeled breaks, exceptions (`try` / `catch`), `goto`
+- Labeled breaks, exceptions (`try` / `catch`), `goto`
 - Networking, shaders in the engine, 3D lighting, text input boxes in `<ui>`
 - `<network>` is planned but **doesn't exist yet**.
 
@@ -1110,7 +1114,7 @@ Hints:
 
 - `#include <random>`, then `int secret = random.range(1, 100);`. Both 1 and 100 can come up.
 - `input` gives back text. Turn it into a number with `int(...)`: `int guess = int(input("Your guess: "));`. Typing something that isn't a number stops the program with an error. To ask again instead, check the text first with `isInt()`: `string typed = input("Your guess: ");`, then `if (typed.isInt()) { int guess = int(typed); ... } else { print("Please type a number"); }`.
-- A `bool found = false;` and `while (!found) { ... }` is one way to loop until the guess is right.
+- A `bool found = false;` and `while (!found) { ... }` is one way to loop until the guess is right. Another is `do { ... } while (guess != secret);`, which always asks at least once (make `int guess = 0;` before the `do`, so the condition can see it).
 
 Make it yours: allow only 7 guesses. Ask "Play again? (y/n)" at the end. Let the player choose easy (1-50) or hard (1-500).
 

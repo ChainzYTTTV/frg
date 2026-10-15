@@ -165,6 +165,10 @@ for (Enemy e in enemies) {      // goes through every item in a list
 while (lives > 0) {
     lives--;
 }
+
+do {                             // like while, but runs at least once: the check comes after
+    guess = int(input("Guess: "));
+} while (guess != secret);       // note the ; at the end
 ```
 
 `break` leaves a loop early. `continue` skips to the next time around.

@@ -1,0 +1,10 @@
+=== main.frg
+int main(){
+    int x = 0;
+    do {
+        x++;
+    } while (x < 3)
+    return 0;
+}
+=== error
+missing ';' at the end of this line

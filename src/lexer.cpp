@@ -6,6 +6,7 @@
 static const std::unordered_map<std::string, Tok>& keywords() {
     static const std::unordered_map<std::string, Tok> table = {
         {"if", Tok::KwIf},         {"else", Tok::KwElse},         {"while", Tok::KwWhile},
+        {"do", Tok::KwDo},
         {"for", Tok::KwFor},       {"return", Tok::KwReturn},     {"break", Tok::KwBreak},
         {"continue", Tok::KwContinue}, {"true", Tok::KwTrue},     {"false", Tok::KwFalse},
         {"null", Tok::KwNull},     {"and", Tok::KwAnd},           {"or", Tok::KwOr},

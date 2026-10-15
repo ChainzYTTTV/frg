@@ -6,7 +6,7 @@ These words have special meanings, so they can't be used as names for variables,
 
 | Group | Words |
 |---|---|
-| Control flow | `if` `else` `while` `for` `in` `switch` `case` `default` `return` `break` `continue` |
+| Control flow | `if` `else` `while` `do` `for` `in` `switch` `case` `default` `return` `break` `continue` |
 | Values | `true` `false` `null` `this` `super` |
 | Declarations | `struct` `class` `enum` `const` `void` |
 | Modifiers | `private` `public` `static` (built-in libraries only) |

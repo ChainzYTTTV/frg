@@ -116,6 +116,11 @@ bool alwaysReturns(const Stmt* s) {
             bool forever = s->expr->kind == EK::Bool && s->expr->boolVal;
             return forever && !containsBreak(s->then.get());
         }
+        case SK::DoWhile: {
+            // The body always runs once, so it returns if the body does (and nothing breaks out first).
+            bool forever = s->expr->kind == EK::Bool && s->expr->boolVal;
+            return !containsBreak(s->then.get()) && (forever || alwaysReturns(s->then.get()));
+        }
         case SK::For: return !s->expr && !containsBreak(s->then.get());
         case SK::Switch: {
             bool hasDefault = false;
@@ -1969,6 +1974,12 @@ void Checker::stmt(Stmt* s) {
             breakables.push_back('l');
             stmt(s->then.get());
             breakables.pop_back();
+            break;
+        case SK::DoWhile:
+            breakables.push_back('l');
+            stmt(s->then.get());
+            breakables.pop_back();
+            requireBool(s->expr.get(), "do ... while");  // variables made inside the { } are gone by now, as in C++
             break;
         case SK::For:
             scopes.emplace_back();

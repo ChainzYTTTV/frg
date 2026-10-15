@@ -45,7 +45,7 @@ Hints:
 
 - `#include <random>`, then `int secret = random.range(1, 100);`. Both 1 and 100 can come up.
 - `input` gives back text. Turn it into a number with `int(...)`: `int guess = int(input("Your guess: "));`. Typing something that isn't a number stops the program with an error. To ask again instead, check the text first with `isInt()`: `string typed = input("Your guess: ");`, then `if (typed.isInt()) { int guess = int(typed); ... } else { print("Please type a number"); }`.
-- A `bool found = false;` and `while (!found) { ... }` is one way to loop until the guess is right.
+- A `bool found = false;` and `while (!found) { ... }` is one way to loop until the guess is right. Another is `do { ... } while (guess != secret);`, which always asks at least once (make `int guess = 0;` before the `do`, so the condition can see it).
 
 Make it yours: allow only 7 guesses. Ask "Play again? (y/n)" at the end. Let the player choose easy (1-50) or hard (1-500).
 

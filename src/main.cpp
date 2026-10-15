@@ -8,6 +8,7 @@
 #include "project.hpp"
 
 #include <algorithm>
+#include <cctype>
 #include <chrono>
 #include <cstdint>
 #include <cstdio>
@@ -413,6 +414,77 @@ static int cmdRun(const fs::path& dir, const BuildOptions& opt) {
     return code;
 }
 
+// frg package: a --release build, then dist/<name>/ with the .exe and every file the game needs, zipped.
+static int cmdPackage(const fs::path& dir, const BuildOptions& opt) {
+    fs::path exe;
+    if (!build(dir, exe, opt)) return 1;
+    fs::path root = fs::absolute(dir).lexically_normal();
+    if (root.filename().empty()) root = root.parent_path();  // "C:\game\" -> "C:\game"
+    std::string name = exe.stem().string();
+    fs::path dist = root / "dist", out = dist / name, zip = dist / (name + ".zip");
+    std::error_code ec;
+    fs::remove_all(out, ec);
+    fs::remove(zip, ec);
+    fs::create_directories(out, ec);
+    if (ec) {
+        reportPlainError("couldn't make the folder " + out.string(), "is a file in it still open in another program?");
+        return 1;
+    }
+
+    // Everything the game might load comes along, except Forge's own source files and things only used while
+    // making the game: .frg files, build/ and dist/, hidden files and folders (.git), shader sources (their
+    // compiled .spv files do come along), and save.txt, so players don't start with your saved game.
+    static const char* kSkip[] = {".frg", ".vert", ".frag", ".comp", ".geom", ".tesc", ".tese"};
+    int copied = 0;
+    for (auto it = fs::recursive_directory_iterator(root, ec); it != fs::recursive_directory_iterator(); it.increment(ec)) {
+        if (ec) break;
+        const fs::path& p = it->path();
+        std::string fname = p.filename().string();
+        fs::path rel = fs::relative(p, root, ec);
+        bool top = rel.has_parent_path() == false;
+        if (it->is_directory()) {
+            if (fname.starts_with(".") || (top && (fname == "build" || fname == "dist"))) it.disable_recursion_pending();
+            continue;
+        }
+        std::string ext = p.extension().string();
+        for (char& c : ext) c = (char)std::tolower((unsigned char)c);
+        if (fname.starts_with(".") || (top && fname == "save.txt") ||
+            std::find_if(std::begin(kSkip), std::end(kSkip), [&](const char* s) { return ext == s; }) != std::end(kSkip))
+            continue;
+        fs::create_directories((out / rel).parent_path(), ec);
+        fs::copy_file(p, out / rel, fs::copy_options::overwrite_existing, ec);
+        if (ec) {
+            reportPlainError("couldn't copy " + rel.generic_string() + " into " + out.string());
+            return 1;
+        }
+        copied++;
+    }
+    fs::copy_file(exe, out / exe.filename(), fs::copy_options::overwrite_existing, ec);
+    if (ec) {
+        reportPlainError("couldn't copy " + exe.filename().string() + " into " + out.string());
+        return 1;
+    }
+    printStatus("Copied", exe.filename().string() + (copied ? " and " + std::to_string(copied) + " file" + (copied == 1 ? "" : "s") : "") +
+                              " into dist/" + name + "/");
+
+    // Windows 10 and newer come with tar.exe, which can make .zip files. It's called by its full path, because
+    // w64devkit has a different tar that can't.
+    wchar_t sys[MAX_PATH];
+    UINT n = GetSystemDirectoryW(sys, MAX_PATH);
+    fs::path tar = fs::path(std::wstring(sys, n)) / "tar.exe";
+    int code = runProcess(quote(tar) + L" -a -c -f " + quote(zip.filename()) + L" " + quote(fs::path(name)), dist);
+    if (code != 0 || !fs::exists(zip)) {
+        reportPlainError("couldn't make the .zip file", code == -1 ? "Windows' tar.exe wasn't found (it comes with Windows 10 and newer). "
+                                                                    "The game is ready in " + out.string() + " - you can zip that folder yourself"
+                                                                  : "the game is ready in " + out.string() + " - you can zip that folder yourself");
+        return 1;
+    }
+    printStatus("Packaged", "dist/" + name + ".zip");
+    std::fprintf(stderr, "\nYour game is ready to share:\n    %s\nPlayers unzip it and double-click %s.\n", zip.string().c_str(),
+                 exe.filename().string().c_str());
+    return 0;
+}
+
 static int cmdNew(const std::string& name) {
     fs::path dir = name;
     if (fs::exists(dir)) {
@@ -436,6 +508,7 @@ static void printHelp() {
         "  frg build [folder]  compile the game into build/<name>.exe\n"
         "  frg run [folder]    compile the game, then run it\n"
         "  frg check [folder]  look for errors without building\n"
+        "  frg package [folder]  make a finished build and zip it, ready to share: dist/<name>.zip\n"
         "  frg version         show the Forge version\n\n"
         "[folder] is the game's top folder (the one with main.frg). It defaults to the current folder.\n"
         "Options for build and run:\n"
@@ -458,7 +531,7 @@ int main(int argc, char** argv) {
         std::printf("Forge %s\n", kVersion);
         return 0;
     }
-    if (cmd == "build" || cmd == "run") {
+    if (cmd == "build" || cmd == "run" || cmd == "package") {
         BuildOptions opt;
         int consoleChoice = -1;  // -1: not chosen, 0: --no-console, 1: --console
         std::vector<std::string> rest;
@@ -486,6 +559,13 @@ int main(int argc, char** argv) {
         opt.console = consoleChoice == -1 ? !opt.release : consoleChoice == 1;
         fs::path dir = rest.empty() ? fs::current_path() : fs::path(rest[0]);
         if (cmd == "run") return cmdRun(dir, opt);
+        if (cmd == "package") {
+            if (!opt.release) {
+                opt.release = true;  // a package is always a finished build
+                if (consoleChoice == -1) opt.console = false;
+            }
+            return cmdPackage(dir, opt);
+        }
         fs::path exe;
         return build(dir, exe, opt) ? 0 : 1;
     }

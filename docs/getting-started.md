@@ -79,6 +79,7 @@ Run these in a terminal. `[folder]` is the game's top folder (the one with `main
 | `frg run [folder]` | Checks, compiles and runs the game |
 | `frg build [folder]` | Checks and compiles into `build/<folder name>.exe`, without running it |
 | `frg check [folder]` | Only looks for errors (fast, makes no `.exe`) |
+| `frg package [folder]` | Makes the finished game and zips it, ready to share: `dist/<name>.zip` (see [Sharing your game](#sharing-your-game)) |
 | `frg version` | Shows the Forge version |
 | `frg help` | Shows this list |
 
@@ -130,11 +131,21 @@ mygame/
   player.png        <- images, sounds, fonts and models your game loads
   icon.png          <- optional: the game's icon (see below)
   build/            <- made by frg: mygame.exe, plus the C++ Forge generated (you can ignore it)
+  dist/             <- made by frg package: the finished game, ready to share
 ```
 
 - `main.frg` must be in the **top** folder, not in a subfolder, and it must contain `int main()`.
 - File and folder names may only use letters, numbers and `_`, and can't start with a number. They also can't be a Forge keyword or library name, so no `map.frg` or `math.frg`.
 - See [Files and folders](language/07-files-and-folders.md) for how files use each other.
+- If you keep your game in **git**, don't save the folders Forge makes. Put a file called `.gitignore` in the game's folder with these lines:
+
+  ```
+  build/
+  dist/
+  save.txt
+  ```
+
+  (`save.txt` is where [`<save>`](libraries/save.md) keeps your own test saves.)
 
 ### The game's icon
 
@@ -143,6 +154,22 @@ Put a picture called **`icon.png`** in the game's top folder (next to `main.frg`
 If `icon.png` isn't really a PNG picture, Forge gives a warning and builds the game without an icon.
 
 ## Sharing your game
+
+The easy way is one command:
+
+```
+frg package
+```
+
+It makes a finished (`--release`) build, then puts the `.exe` and every file the game needs into `dist/<name>/`, and zips that folder into **`dist/<name>.zip`**. Send that zip to people: they unzip it and double-click the `.exe`.
+
+What goes into the package: everything in the game's folder (images, sounds, fonts, models, level files, `icon.png`, sub-folders...), **except** your `.frg` files, the `build/` and `dist/` folders, hidden files and folders (names starting with `.`, like `.git`), shader sources (`.vert`, `.frag` and the others; their compiled `.spv` files are included), and `save.txt`, so players don't start with your test save.
+
+`frg package --console` keeps the console window in the packaged game, for testers who should see errors.
+
+The zip is made with `tar.exe`, which comes with Windows 10 and newer. If it can't be made, the `dist/<name>/` folder is still there, and you can zip it yourself (right-click it, then **Send to → Compressed (zipped) folder**).
+
+### Doing it by hand
 
 The `.exe` in `build/` runs on any Windows PC, with nothing else installed. Everything is built into it.
 

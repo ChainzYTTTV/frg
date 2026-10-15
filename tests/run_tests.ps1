@@ -6,6 +6,8 @@
 #   === output          the exact text the program must print
 #   === error           text that must appear in the compile errors (one check per line)
 #   === build           (empty) the program must compile; it isn't run (for games that open a window)
+#   === package         runs frg package; each line is a path (from the game's folder) that must exist afterwards,
+#                       or, starting with !, must not
 #   === runtime error   text that must appear when the program stops with a runtime error (one check per line)
 #   === warning         text that must appear in the warnings (one check per line); add it to any of the others
 #   === no warnings     (empty) there must be no warnings at all
@@ -62,7 +64,7 @@ foreach ($file in Get-ChildItem (Join-Path $PSScriptRoot "cases") -Filter "$Filt
     foreach ($key in @($sections.Keys)) {
         $lines = $sections[$key]
         while ($lines.Count -gt 0 -and $lines[$lines.Count - 1] -eq '') { $lines.RemoveAt($lines.Count - 1) }
-        if ($key -in 'output', 'error', 'build', 'warning', 'no warnings', 'runtime error') { continue }
+        if ($key -in 'output', 'error', 'build', 'warning', 'no warnings', 'runtime error', 'package') { continue }
         if ($key -match '^(.+) \(base64\)$') {
             $path = Join-Path $dir $Matches[1]
             New-Item -ItemType Directory -Force (Split-Path $path) | Out-Null
@@ -75,7 +77,19 @@ foreach ($file in Get-ChildItem (Join-Path $PSScriptRoot "cases") -Filter "$Filt
     }
 
     $problem = $null
-    if ($sections.Contains('runtime error')) {
+    if ($sections.Contains('package')) {
+        $r = Invoke-Frg package $dir
+        if ($r.Code -ne 0) { $problem = "expected it to package, but:`n$($r.Err)" }
+        else {
+            foreach ($want in $sections['package']) {
+                if (-not $want) { continue }
+                $absent = $want.StartsWith('!')
+                $path = Join-Path $dir $want.TrimStart('!')
+                if ($absent -and (Test-Path $path)) { $problem = "$($want.TrimStart('!')) shouldn't be there after frg package" }
+                if (-not $absent -and -not (Test-Path $path)) { $problem = "$want is missing after frg package`n$($r.Err)" }
+            }
+        }
+    } elseif ($sections.Contains('runtime error')) {
         $r = Invoke-Frg run $dir
         if ($r.Code -eq 0) { $problem = "expected a runtime error, but it ran without one`n$($r.Out)" }
         foreach ($want in $sections['runtime error']) {

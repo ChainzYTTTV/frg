@@ -67,6 +67,10 @@
                 "title": "Forge: Build Release (finished game, no console)"
             },
             {
+                "command": "forge.package",
+                "title": "Forge: Package Game (zip it, ready to share)"
+            },
+            {
                 "command": "forge.toggleConsole",
                 "title": "Forge: Turn the Console On/Off"
             }

@@ -136,7 +136,7 @@ int main(){ print(1 + 1); return 0; }
 2
 ```
 
-The other kinds are `=== error` (the build must fail with these messages) and `=== build` (it must compile; it isn't run, for games with windows). `=== runtime error` runs the program and expects it to stop with these messages. `=== warning` can be added to any test: each of its lines must appear in the warnings. `=== no warnings` (empty) means there must be none. Run them all with `.\tests\run_tests.ps1` (in PowerShell 7).
+The other kinds are `=== error` (the build must fail with these messages) and `=== build` (it must compile; it isn't run, for games with windows). `=== package` runs `frg package` and lists files that must (or, with `!`, must not) be there afterwards. `=== runtime error` runs the program and expects it to stop with these messages. `=== warning` can be added to any test: each of its lines must appear in the warnings. `=== no warnings` (empty) means there must be none. Run them all with `.\tests\run_tests.ps1` (in PowerShell 7).
 
 ## How the VS Code extension finds errors
 

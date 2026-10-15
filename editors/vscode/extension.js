@@ -497,7 +497,7 @@ function check(doc, announce = false) {
 
 let gameTerminal = null;
 
-// command is 'run' or 'build'. Unless extraArgs says otherwise, the forge.console setting decides the console.
+// command is 'run', 'build' or 'package'. Unless extraArgs says otherwise, the forge.console setting decides the console.
 async function runCommand(command, extraArgs) {
     const editor = vscode.window.activeTextEditor;
     const file = editor ? editor.document.fileName : null;
@@ -566,6 +566,7 @@ function activate(context) {
         vscode.commands.registerCommand('forge.run', () => runCommand('run')),
         vscode.commands.registerCommand('forge.build', () => runCommand('build')),
         vscode.commands.registerCommand('forge.buildRelease', () => runCommand('build', ['--release'])),
+        vscode.commands.registerCommand('forge.package', () => runCommand('package', [])),
         vscode.commands.registerCommand('forge.toggleConsole', async () => {
             const on = !settings().get('console', true);
             await settings().update('console', on, vscode.ConfigurationTarget.Global);

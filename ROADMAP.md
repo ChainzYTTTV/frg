@@ -31,6 +31,10 @@ These belong before 1.0, because they're harder to add once people rely on how F
 | Weak references | objects that point at each other get freed | M |
 | `try` / `catch` | handling errors like a missing file without the game stopping | M |
 | Maybe a short counting loop like `for (i in 0..10)`, alongside the C-style one | still to be decided | S |
+| Built-in info on every struct and class, with nothing to write (like Python's `__name__`, `__class__` and `vars()`): the type's name, its field names, each field's value as text, and the type it inherits from | look inside any object while debugging or printing, for free | M |
+| Operators for your own types, using Forge's operator words as method names (Forge's version of Python's dunder methods): a method `plus(Money other)` makes both `a + b` and `a plus b` work; `less(...)` makes `<` work and lets `list.sort()` sort your own structs; `equals(...)` replaces the automatic `==`; `toText()` chooses what `print` and `"{x}"` show | your types work with the same symbols and words as numbers | M |
+
+The exact names for the built-in info (for example `x.typeName()` and `x.fields()`) are still to be decided, so that they can't clash with names people already use in their own classes.
 
 ## 0.9.0: Better tools
 

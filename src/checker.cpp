@@ -1346,6 +1346,10 @@ Type* Checker::callExpr(Expr* e, Type* expected) {
             if (!f) return e->type = tError();
             callee->res.func = f;
             if (m->isPrelude && m->name == "window" && f->name == "run") checkRunCallbacks(e->loc);
+            // <physics> never draws by itself; its debug view draws with <graphics2d>.
+            if (m->isPrelude && m->name == "physics" && f->name == "drawDebug" && !cur->libs.count("graphics2d"))
+                reportError(e->loc, "physics.drawDebug() draws with the graphics2d library, which this file doesn't include",
+                            "add #include <graphics2d> at the top of " + cur->src->displayPath);
             return e->type = f->ret ? f->ret : tError();
         }
         case RK::Method: {

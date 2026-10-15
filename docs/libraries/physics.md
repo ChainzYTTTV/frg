@@ -53,6 +53,34 @@ physics.add(crate);
 
 Bodies only move during `physics.step`, and only if they've been added.
 
+## Seeing the bodies: the debug view
+
+When something collides in a way you don't expect, draw what physics sees:
+
+```cpp
+#include <graphics2d>    // physics.drawDebug() draws with graphics2d, so the file needs both
+#include <physics>
+
+void draw(){
+    level.draw();
+    player.draw();
+    physics.drawDebug();     // on top of everything else
+}
+```
+
+`physics.drawDebug()` draws the outline of every body in the world:
+
+| Outline | Body |
+|---|---|
+| blue | static (`isStatic = true`): floors, walls, platforms |
+| green | moving |
+| purple | not solid (`solid = false`): coins, triggers |
+| a yellow bar along the bottom | a moving body that's standing on something (`onGround` is true) |
+
+It's drawn like anything else in `<graphics2d>`, so with a [2D camera](graphics2d.md#camera-scrolling-and-zooming), call it before `resetCamera()` so the outlines line up with the level. Take the line out (or put it behind a key, like `if (showDebug) { ... }`) when you're done.
+
+The physics library itself never draws (it doesn't use raylib), which is why the file calling `drawDebug` needs `#include <graphics2d>`. Without it, Forge says so.
+
 ## What happens in a step
 
 For each moving (not static) body:

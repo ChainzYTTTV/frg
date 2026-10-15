@@ -38,6 +38,7 @@ runtime/
   forge_assets.hpp      <assets>: textures and fonts
   forge_audio.hpp       <audio>: sounds and music
   forge_physics.hpp     <physics>
+  forge_physics_draw.hpp  physics.drawDebug() (added only when a game uses <physics> and <graphics2d>)
   forge_ui.hpp          <ui>
   forge_scenes.hpp      <scenes>
   forge_ecs.hpp         <ECS>

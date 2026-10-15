@@ -1,0 +1,21 @@
+=== main.frg
+#include <window>
+#include <physics>
+
+``` main.frg doesn't draw, but debug.frg does, with its own #include <graphics2d>. ```
+int main(){
+    physics.add(Body(0, 0, 10, 10));
+    window.open(960, 540, "Debug view");
+    while (!window.shouldClose()) {
+        debug.show();
+    }
+    return 0;
+}
+=== debug.frg
+#include <graphics2d>
+#include <physics>
+
+void show() {
+    physics.drawDebug();
+}
+=== build

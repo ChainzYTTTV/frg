@@ -515,6 +515,7 @@ A `Body` is a box: `Body(x, y, width, height)`.
 - Gravity starts at `vec2(0, 980)`, in pixels per second per second, pointing down.
 - Moving bodies stop when they hit static bodies, and push each other apart (so crates stack). A body with `solid = false` passes through everything, which is useful for coins and trigger zones; check those with `a.overlaps(b)`.
 - Your own classes can inherit from `Body`: `class Player : Body { ... }`. With no constructor of its own, it uses `Body(x, y, width, height)`.
+- **Debug view:** `physics.drawDebug()` (in `draw`) outlines every body: static ones blue, moving ones green, `solid = false` ones purple, and a yellow bar under a moving body that's `onGround`. Great for "why does my player fall through?" moments. The file that calls it needs `#include <graphics2d>` as well (physics itself never draws). With a 2D camera, call it before `resetCamera()`.
 
 ```cpp
 Body ground = Body(0, 500, 960, 40);

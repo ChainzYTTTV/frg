@@ -220,6 +220,7 @@ void setGravity(vec2 gravity);
 vec2 gravity();
 void step(float dt);
 int count();
+void drawDebug();
 )FRG";
 
 static const char* kAssets = R"FRG(

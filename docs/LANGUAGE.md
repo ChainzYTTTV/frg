@@ -588,6 +588,8 @@ if (box.onGround) { ... }
 
 Your own classes can inherit from `Body`: `class Player : Body { ... }`. Moving bodies push each other apart, so crates stack. Set `solid = false` on things that should pass through everything, like coins and trigger zones, and check those with `a.overlaps(b)`.
 
+`physics.drawDebug()` draws every body's outline (static blue, moving green, not solid purple, and a yellow bar under a body that's `onGround`), to see what physics sees. It draws with `<graphics2d>`, so that file needs `#include <graphics2d>` too.
+
 ## Making a game
 
 There are two ways to write the game loop.

@@ -176,6 +176,7 @@ const LIBRARIES = {
         ['gravity', 'vec2 gravity()', 'The current gravity.'],
         ['clear', 'void clear()', 'Removes every body.'],
         ['count', 'int count()', 'How many bodies are in the world.'],
+        ['drawDebug', 'void drawDebug()', 'Draws the outline of every body: static blue, moving green, not solid purple, and a yellow bar under bodies that are onGround. Needs #include <graphics2d> too.'],
     ],
 };
 

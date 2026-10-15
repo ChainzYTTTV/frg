@@ -2,7 +2,7 @@
     "name": "forge",
     "displayName": "Forge",
     "description": "Forge (.frg) game language: syntax colors, errors as you save, autocomplete for the built-in libraries, and a Run button.",
-    "version": "0.3.0",
+    "version": "0.4.0",
     "publisher": "forge-lang",
     "license": "MIT",
     "engines": {
@@ -61,6 +61,14 @@
             {
                 "command": "forge.check",
                 "title": "Forge: Check for Errors"
+            },
+            {
+                "command": "forge.buildRelease",
+                "title": "Forge: Build Release (finished game, no console)"
+            },
+            {
+                "command": "forge.toggleConsole",
+                "title": "Forge: Turn the Console On/Off"
             }
         ],
         "menus": {
@@ -91,6 +99,11 @@
                     "type": "string",
                     "default": "",
                     "description": "Full path to frg.exe. Leave empty to use the one Forge was installed with, or the one on your PATH."
+                },
+                "forge.console": {
+                    "type": "boolean",
+                    "default": true,
+                    "description": "Show a console window next to the game when it's run or built from VS Code, so print() output and errors can be seen. Turn it off to try the game the way players will see it. Forge: Build Release never has a console."
                 },
                 "forge.checkOnSave": {
                     "type": "boolean",

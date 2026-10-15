@@ -83,7 +83,7 @@ g++ -std=gnu++20 -O2 -fwrapv -static -I<runtime> forge_generated.cpp -o game.exe
 - `-fwrapv` makes whole numbers wrap around predictably when they overflow.
 - `-static` puts everything into the `.exe`, so it runs anywhere without extra files.
 - Games that use the engine libraries also link **raylib** (`-lraylib -lopengl32 -lgdi32 -lwinmm`).
-- `--release` adds `-mwindows` (no console window) and `-s` (smaller file).
+- Without a console (`--release` or `--no-console`), it adds `-mwindows` and defines `FRG_NO_CONSOLE`, which makes runtime errors show in a message box. `--release` also adds `-s` (a smaller file).
 
 ## The runtime
 

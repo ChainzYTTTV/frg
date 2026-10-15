@@ -470,7 +470,8 @@ function check(doc, announce = false) {
 
 let gameTerminal = null;
 
-async function runCommand(command) {
+// command is 'run' or 'build'. Unless extraArgs says otherwise, the forge.console setting decides the console.
+async function runCommand(command, extraArgs) {
     const editor = vscode.window.activeTextEditor;
     const file = editor ? editor.document.fileName : null;
     const root = file ? projectRoot(file) : null;
@@ -484,7 +485,7 @@ async function runCommand(command) {
         name: `Forge: ${path.basename(root)}`,
         cwd: root,
         shellPath: frgPath(),
-        shellArgs: [command, root],
+        shellArgs: [command, root].concat(extraArgs || (settings().get('console', true) ? [] : ['--no-console'])),
     });
     gameTerminal.show(true);
 }
@@ -537,6 +538,14 @@ function activate(context) {
         diagnostics,
         vscode.commands.registerCommand('forge.run', () => runCommand('run')),
         vscode.commands.registerCommand('forge.build', () => runCommand('build')),
+        vscode.commands.registerCommand('forge.buildRelease', () => runCommand('build', ['--release'])),
+        vscode.commands.registerCommand('forge.toggleConsole', async () => {
+            const on = !settings().get('console', true);
+            await settings().update('console', on, vscode.ConfigurationTarget.Global);
+            vscode.window.showInformationMessage(on
+                ? 'Forge: the console is on. Running a game shows print() output and errors next to it.'
+                : 'Forge: the console is off. Games run the way players will see them; runtime errors pop up in a box.');
+        }),
         vscode.commands.registerCommand('forge.check', () => {
             const editor = vscode.window.activeTextEditor;
             if (editor && editor.document.languageId === 'forge') check(editor.document, true);

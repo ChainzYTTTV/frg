@@ -82,7 +82,26 @@ Run these in a terminal. `[folder]` is the game's top folder (the one with `main
 | `frg version` | Shows the Forge version |
 | `frg help` | Shows this list |
 
-Add **`--release`** to `build` or `run` when the game is finished. That makes an `.exe` without the black console window, and a bit smaller. In a release build, `print` output isn't shown anywhere.
+### The console window: on for testing, off for players
+
+A game built with `frg build` or `frg run` opens with a black **console window** next to it. That's where `print` output and error messages appear, which is what you want while you're making the game. Players don't want it, though, so it can be turned off:
+
+| Add this to `build` or `run` | Console | Use it for |
+|---|---|---|
+| (nothing) | on | testing and debugging |
+| `--no-console` | off | trying the game the way players will see it |
+| `--release` | off, and the `.exe` is a bit smaller | the finished game you give to people |
+| `--release --console` | on | a finished build that still shows what's going on |
+
+```
+frg run                  // console on: see print() output and errors
+frg run --no-console     // no console
+frg build --release      // the finished game, no console
+```
+
+Without a console, `print` output isn't shown anywhere. **Runtime errors still are**: they pop up in a small box titled "The game stopped" that says what went wrong, instead of the game just disappearing. A program that never opens a window (a text game) needs its console: build it without one and nothing shows at all. Forge prints a note if you try.
+
+In VS Code, the **Forge: Turn the Console On/Off** command switches the console for the ▶ button, and **Forge: Build Release** builds the finished game.
 
 When `frg run` starts your game, the game's **working folder** is the game's top folder. That matters for files your game loads or saves; see [Files](libraries/file.md) and [Assets](libraries/assets.md).
 

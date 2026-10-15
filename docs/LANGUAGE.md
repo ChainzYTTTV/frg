@@ -23,7 +23,8 @@ int main(){
 | `frg build` | compiles the game into `build/<folder name>.exe` |
 | `frg run` | builds, then runs the game |
 | `frg check` | only looks for errors |
-| `--release` (after build or run) | no console window, smaller `.exe` |
+| `--release` (after build or run) | the finished game: no console window, smaller `.exe` |
+| `--no-console` / `--console` | turn the console window off or on, whatever else is chosen |
 
 ## Comments
 
@@ -618,7 +619,7 @@ The screen is cleared to the background color before each frame (`window.setBack
 
 See `examples/platformer` for a complete game. The other examples are `shapes` (2D drawing), `sprites` (images and sound), `menu` (scenes and UI) and `world3d` (3D).
 
-When the game is finished, `frg build --release` makes an `.exe` without the console window. `print` output isn't shown in a release build.
+When the game is finished, `frg build --release` makes an `.exe` without the console window. Without a console, `print` output isn't shown, and runtime errors pop up in a box instead. `--no-console` turns the console off without making a release build, and `--console` keeps it on even in one. ([Details](getting-started.md#the-console-window-on-for-testing-off-for-players).)
 
 ## Errors
 

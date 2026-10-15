@@ -129,7 +129,14 @@ static bool compileShaders(const fs::path& root, const fs::path& runtime) {
 // While the game runs, Ctrl+C should stop the game, not Forge.
 static BOOL WINAPI ignoreCtrlC(DWORD type) { return type == CTRL_C_EVENT || type == CTRL_BREAK_EVENT; }
 
-static bool build(const fs::path& dir, fs::path& exeOut, bool release) {
+// How a game is built. The console is on for normal builds (to see print() and errors while testing) and off
+// for --release builds; --console and --no-console choose it either way.
+struct BuildOptions {
+    bool release = false;
+    bool console = true;
+};
+
+static bool build(const fs::path& dir, fs::path& exeOut, const BuildOptions& opt) {
     auto start = std::chrono::steady_clock::now();
     if (!fs::is_directory(dir)) {
         reportPlainError("the folder '" + dir.string() + "' doesn't exist");
@@ -186,7 +193,8 @@ static bool build(const fs::path& dir, fs::path& exeOut, bool release) {
     if (vulkan) cmd += L" -I" + quote(runtime / "vulkan" / "include");
     for (const std::string& src : gen.sources) cmd += L" " + quote(runtime / src);  // a toolkit's own runtime code
     cmd += L" -o " + quote(exe);
-    if (release) cmd += L" -mwindows -s";  // no console window, smaller .exe
+    if (!opt.console) cmd += L" -mwindows -DFRG_NO_CONSOLE";  // no console window: runtime errors pop up in a box instead
+    if (opt.release) cmd += L" -s";                           // a smaller .exe
     if (gen.needsRaylib) {
         fs::path raylib = runtime / "raylib";
         cmd += L" -I" + quote(raylib / "include") + L" -L" + quote(raylib / "lib") + L" -lraylib -lopengl32 -lgdi32 -lwinmm";
@@ -207,14 +215,16 @@ static bool build(const fs::path& dir, fs::path& exeOut, bool release) {
     double secs = std::chrono::duration<double>(std::chrono::steady_clock::now() - start).count();
     char timeBuf[32];
     std::snprintf(timeBuf, sizeof timeBuf, "%.2fs", secs);
-    printStatus("Finished", "build/" + exe.filename().string() + " in " + timeBuf);
+    printStatus("Finished", "build/" + exe.filename().string() + (opt.console ? "" : " (no console)") + " in " + timeBuf);
+    if (!opt.console && !gen.needsRaylib)
+        std::fprintf(stderr, "    note: this game doesn't open a window, so without a console nothing will show when it runs\n");
     exeOut = exe;
     return true;
 }
 
-static int cmdRun(const fs::path& dir, bool release) {
+static int cmdRun(const fs::path& dir, const BuildOptions& opt) {
     fs::path exe;
-    if (!build(dir, exe, release)) return 1;
+    if (!build(dir, exe, opt)) return 1;
     printStatus("Running", exe.filename().string());
     std::fflush(stderr);
     SetConsoleCtrlHandler(ignoreCtrlC, TRUE);
@@ -259,7 +269,11 @@ static void printHelp() {
         "  frg check [folder]  look for errors without building\n"
         "  frg version         show the Forge version\n\n"
         "[folder] is the game's top folder (the one with main.frg). It defaults to the current folder.\n"
-        "Add --release to build or run to make a finished game: no console window, smaller .exe.\n",
+        "Options for build and run:\n"
+        "  --release           make a finished game: no console window, and a smaller .exe\n"
+        "  --no-console        no console window (print() output isn't shown; runtime errors pop up in a box)\n"
+        "  --console           keep the console window, even with --release\n"
+        "Without options the console is on, so print() and errors show while you test the game.\n",
         kVersion);
 }
 
@@ -276,22 +290,35 @@ int main(int argc, char** argv) {
         return 0;
     }
     if (cmd == "build" || cmd == "run") {
-        bool release = false;
+        BuildOptions opt;
+        int consoleChoice = -1;  // -1: not chosen, 0: --no-console, 1: --console
         std::vector<std::string> rest;
         for (size_t i = 1; i < args.size(); i++) {
-            if (args[i] == "--release")
-                release = true;
-            else
+            if (args[i] == "--release") {
+                opt.release = true;
+            } else if (args[i] == "--console" || args[i] == "--no-console") {
+                int choice = args[i] == "--console" ? 1 : 0;
+                if (consoleChoice != -1 && consoleChoice != choice) {
+                    reportPlainError("--console and --no-console can't both be used", "pick one of them");
+                    return 1;
+                }
+                consoleChoice = choice;
+            } else if (args[i].starts_with("--")) {
+                reportPlainError("there's no option called " + args[i], "the options are --release, --console and --no-console");
+                return 1;
+            } else {
                 rest.push_back(args[i]);
+            }
         }
         if (rest.size() > 1) {
-            reportPlainError("too many arguments", "usage: frg " + cmd + " [folder] [--release]");
+            reportPlainError("too many arguments", "usage: frg " + cmd + " [folder] [--release] [--console | --no-console]");
             return 1;
         }
+        opt.console = consoleChoice == -1 ? !opt.release : consoleChoice == 1;
         fs::path dir = rest.empty() ? fs::current_path() : fs::path(rest[0]);
-        if (cmd == "run") return cmdRun(dir, release);
+        if (cmd == "run") return cmdRun(dir, opt);
         fs::path exe;
-        return build(dir, exe, release) ? 0 : 1;
+        return build(dir, exe, opt) ? 0 : 1;
     }
     if (cmd == "check") {
         // frg check [folder] [--machine]: find errors without building anything.

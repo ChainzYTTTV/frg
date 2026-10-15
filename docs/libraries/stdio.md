@@ -6,7 +6,7 @@
 
 "stdio" stands for **st**an**d**ard **i**nput and **o**utput: the text console. Unlike other libraries, its functions are used without a prefix: `print(...)`, not `stdio.print(...)`.
 
-With a window open, `print` output still goes to the console window behind the game. That's handy for debugging. In a `--release` build there's no console, so the output isn't visible.
+With a window open, `print` output still goes to the console window behind the game. That's handy for debugging. In a `--release` or `--no-console` build there's no console, so the output isn't visible. Runtime errors still are: they pop up in a box.
 
 ## print
 

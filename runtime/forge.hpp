@@ -27,9 +27,22 @@ namespace frg {
 
 using u128 = unsigned __int128;
 
+#ifdef FRG_NO_CONSOLE
+}  // namespace frg
+// Built without a console (--release or --no-console): there's nowhere to print errors, so they're shown in a box.
+// Declared by hand, exactly as windows.h does, because windows.h can't be mixed with raylib.h.
+struct HWND__;
+extern "C" __declspec(dllimport) int __stdcall MessageBoxA(HWND__* window, const char* text, const char* caption, unsigned int type);
+namespace frg {
+#endif
+
 [[noreturn]] inline void panic(const char* where, const std::string& msg) {
     std::fflush(stdout);
     std::fprintf(stderr, "\nRuntime error in %s: %s\n", where, msg.c_str());
+#ifdef FRG_NO_CONSOLE
+    std::string text = std::string("Runtime error in ") + where + ":\n\n" + msg;
+    MessageBoxA(nullptr, text.c_str(), "The game stopped", 0x10 /* MB_ICONERROR */);
+#endif
     std::exit(1);
 }
 

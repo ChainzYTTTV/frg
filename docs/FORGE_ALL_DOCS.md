@@ -858,6 +858,8 @@ Problems that can only happen while running (a list position that doesn't exist,
 Runtime error in main.frg:10: position 5 is outside the list (it has 3 items, at positions 0 to 2)
 ```
 
+**try / catch / throw.** `try { ... } catch (Error e) { ... }`: any runtime error inside `try` (including in functions it calls) skips the rest of it and runs `catch`. `e.message` is the text, `e.where` is like `"main.frg:12"`. Every runtime error can be caught. `throw "message";` makes one (uncaught, it stops the game like any runtime error); `throw e;` in a catch passes it on. Both parts need `{ }`, and catch always takes `(Error name)`. `wait()` works in `try` but not in `catch`; a `try` around starting a task doesn't catch the task's errors (put the try inside the task). Teach it for files and player input, not to hide bugs like bad list positions.
+
 ---
 
 ### Part 4: Easy things to get wrong
@@ -889,7 +891,7 @@ Runtime error in main.frg:10: position 5 is outside the list (it has 3 items, at
 - `char` (single letters are one-letter strings), fixed-size arrays (use `list`), tuples
 - Two methods with the same name (only constructors and top-level functions can share a name), operator overloading for your own types
 - `protected` (`private` already includes classes that inherit)
-- Labeled breaks, exceptions (`try` / `catch`), `goto`
+- Labeled breaks, `finally`, `goto`
 - Networking, shaders in the engine, 3D lighting
 - `<network>` is planned but **doesn't exist yet**.
 
@@ -4731,6 +4733,40 @@ Runtime error in main.frg:12: position 5 is outside the list (it has 3 items, at
 | `the window isn't open yet` | drawing before `window.open(...)` | open the window first |
 | `file.read(): can't open 'x'` | the file doesn't exist | `file.exists(path)` first |
 
+#### Catching runtime errors: try and catch
+
+Some runtime errors aren't mistakes in your code: a save file that's missing or broken, or text the player typed that isn't a number. Put code that might go wrong in `try { }`, and say what to do instead in `catch (Error e) { }`:
+
+```cpp
+try {
+    string text = file.read("save.txt");
+    level = int(text);
+} catch (Error e) {
+    print("couldn't load the save: {e.message}");
+    level = 1;
+}
+```
+
+If anything inside `try` has a runtime error, the rest of the `try` part is skipped and the `catch` part runs. If nothing goes wrong, the `catch` part is skipped.
+
+- `e.message` is the error's text, like `couldn't turn "abc" into an int`, and `e.where` is the file and line, like `main.frg:12`.
+- **Every** runtime error can be caught: list positions, `null`, missing files, `int("abc")`, division by zero, and the ones from libraries. This includes errors in functions called from inside the `try`, however deep.
+- Your own code can make an error with `throw "message";`. If nothing catches it, the game stops with that message, like any runtime error:
+
+  ```cpp
+  int loadLevel(string name) {
+      if (name == "") {
+          throw "the level needs a name";
+      }
+      ...
+  }
+  ```
+
+- Inside a `catch`, `throw e;` sends the same error on to an outer `try`.
+- `try` and `catch` both need `{ }`, and `catch` always takes `(Error e)` (the name can be anything).
+- A `try` around starting a task doesn't catch errors inside the task: put the `try` **inside** the task instead. `wait()` works inside `try { }`, but not inside `catch { }`.
+- Don't use `try` to hide mistakes: a list position that's outside the list is better fixed than caught. `try` is for things your game can't control, like files and what the player types.
+
 Crashes that don't give a message (`[game.exe crashed (code 0xC0000005)]`) usually mean a pointer (see “10. Enums, Optionals and Pointers” › “Pointers”) was used after the thing it pointed at went away, or a function called itself forever.
 
 ### The C++ compiler rejected Forge's output
@@ -4757,7 +4793,7 @@ These words have special meanings, so they can't be used as names for variables,
 
 | Group | Words |
 |---|---|
-| Control flow | `if` `else` `while` `do` `for` `in` `switch` `case` `default` `return` `break` `continue` |
+| Control flow | `if` `else` `while` `do` `for` `in` `switch` `case` `default` `return` `break` `continue` `try` `catch` `throw` |
 | Values | `true` `false` `null` `this` `super` |
 | Declarations | `struct` `class` `enum` `interface` `const` `void` |
 | Modifiers | `private` `public` `static` `abstract` |
@@ -4768,11 +4804,11 @@ These words have special meanings, so they can't be used as names for variables,
 
 ### Built-in type names
 
-`void` `bool` `string` `task` `int` `int8` `int16` `int32` `int64` `int128` `uint` `uint8` `uint16` `uint32` `uint64` `uint128` `float` `double` `list` `map` `Pointer` `Function` `Weak` `vec2` `vec3` `vec4` `color` `rect`
+`void` `bool` `string` `task` `int` `int8` `int16` `int32` `int64` `int128` `uint` `uint8` `uint16` `uint32` `uint64` `uint128` `float` `double` `list` `map` `Pointer` `Function` `Weak` `vec2` `vec3` `vec4` `color` `rect` `Error`
 
 ### Built-in functions
 
-`print` `write` `input` (from `<stdio>`), and `wait` (inside tasks).
+`print` `write` `input` (from `<stdio>`), `wait` (inside tasks), and `Weak(...)`.
 
 ### Library names
 
@@ -4861,7 +4897,7 @@ If you already know C++, C#, Java, JavaScript or Python, Forge will feel familia
 | `interface I` / `implements I` / abstract classes | `interface Attacker { int power(); }`, `class Goblin : Enemy, Attacker`, `abstract class Enemy { abstract int reward(); }` | at most one class after the `:`, then interfaces. See Interfaces and abstract classes (see “9. Structs and Classes” › “Interfaces and abstract classes”) |
 | `@Override` / `override` | nothing | a method with the same name and types replaces the parent's |
 | `base.method()` / `super.method()` | `super.method()` | |
-| `try` / `catch` | not available | runtime errors stop the game with a message |
+| `try` / `catch` / `throw` | `try { ... } catch (Error e) { print(e.message); }` and `throw "message";` | every runtime error can be caught; you throw text, not objects; there's no `finally`. See Catching runtime errors (see “12. Errors” › “Catching runtime errors: try and catch”) |
 | lambdas, function pointers, callbacks | `(Enemy e) { return e.hp <= 0; }`, typed `Function<bool(Enemy)>` | a function value gets a copy of the local variables it uses. See Functions as values (see “6. Functions” › “Functions as values”) |
 | templates / generics you write yourself | `class Box<T> { T item; }`, used as `Box<int> b = Box(5);` | structs and classes only, not functions; inside, a `T` can only be stored, passed, compared and printed. See Generic types (see “9. Structs and Classes” › “Generic types: one type that holds any type”) |
 | `weak_ptr`, `WeakReference`, `weakref` | `Weak<Player> w = Weak(p);` and `Player? x = w.get();` | only for class types. See Weak (see “9. Structs and Classes” › “Weak: pointing at an object without keeping it alive”) |
@@ -9730,10 +9766,22 @@ Problems that can only be found while the game runs stop it with the file and li
 Runtime error in main.frg:10: position 5 is outside the list (it has 3 items, at positions 0 to 2)
 ```
 
+Code that might fail for reasons outside your control (a missing file, a bad number typed in) can catch runtime errors instead of stopping:
+
+```cpp
+try {
+    level = int(file.read("save.txt"));
+} catch (Error e) {
+    print(e.message);       // e.where is the file and line, like "main.frg:12"
+    level = 1;
+}
+```
+
+Every runtime error can be caught, including from functions called inside the `try`. `throw "message";` makes your own error (it stops the game if nothing catches it), and `throw e;` inside a catch passes it on. `wait()` can't be used inside a `catch { }`, and a `try` doesn't catch errors from tasks it starts (put the `try` inside the task).
+
 If a file has several syntax mistakes, Forge reports all of them in one go.
 
 ### Coming next
 
 - **Networking:** a `<network>` library for multiplayer games
-- **Language:** generic types you write yourself (`class Box<T>`)
 - **Editor:** autocomplete for your own code (a language server)

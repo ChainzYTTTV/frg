@@ -550,6 +550,19 @@ void Gen::stmt(const Stmt* s) {
             children(s->then.get());
             line("}");
             break;
+        case SK::Try:
+            line("try {");
+            children(s->then.get());
+            line("} catch (const ::frg::core::Error_& " + id(s->var->name) + ") {");
+            children(s->els.get());
+            line("}");
+            break;
+        case SK::Throw:
+            if (s->expr->type == tString())
+                line("::frg::raise(" + where(s->loc) + ", " + ex(s->expr.get()) + ");");
+            else
+                line("throw " + ex(s->expr.get()) + ";");  // throw e; inside a catch sends the same error on
+            break;
         case SK::DoWhile:
             line("do {");
             children(s->then.get());
@@ -996,9 +1009,13 @@ GeneratedCpp Gen::run() {
 
     line("int main() {");
     line("    ::frg::init();");
-    line("    int code = static_cast<int>(" + qual(P.mainModule, "main") + "());");
-    line("    ::frg::shutdown();");
-    line("    return code;");
+    line("    try {");
+    line("        int code = static_cast<int>(" + qual(P.mainModule, "main") + "());");
+    line("        ::frg::shutdown();");
+    line("        return code;");
+    line("    } catch (const ::frg::core::Error_& e) {");
+    line("        ::frg::fatal(e);  // a runtime error that no try { } caught: stop the game with its message");
+    line("    }");
     line("}");
     result.code = out;
     return result;

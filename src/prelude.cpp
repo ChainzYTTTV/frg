@@ -3,6 +3,11 @@
 // Keep the order of enum values in sync with runtime/forge_window.hpp.
 
 static const char* kCore = R"FRG(
+struct Error {
+    string message;
+    string where;
+}
+
 struct vec2 {
     float x;
     float y;

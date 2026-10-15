@@ -759,10 +759,22 @@ Problems that can only be found while the game runs stop it with the file and li
 Runtime error in main.frg:10: position 5 is outside the list (it has 3 items, at positions 0 to 2)
 ```
 
+Code that might fail for reasons outside your control (a missing file, a bad number typed in) can catch runtime errors instead of stopping:
+
+```cpp
+try {
+    level = int(file.read("save.txt"));
+} catch (Error e) {
+    print(e.message);       // e.where is the file and line, like "main.frg:12"
+    level = 1;
+}
+```
+
+Every runtime error can be caught, including from functions called inside the `try`. `throw "message";` makes your own error (it stops the game if nothing catches it), and `throw e;` inside a catch passes it on. `wait()` can't be used inside a `catch { }`, and a `try` doesn't catch errors from tasks it starts (put the `try` inside the task).
+
 If a file has several syntax mistakes, Forge reports all of them in one go.
 
 ## Coming next
 
 - **Networking:** a `<network>` library for multiplayer games
-- **Language:** generic types you write yourself (`class Box<T>`)
 - **Editor:** autocomplete for your own code (a language server)

@@ -1,0 +1,129 @@
+=== main.frg
+#include <stdio>
+#include <file>
+
+class Enemy {
+    int hp = 10;
+}
+
+int loadLevel(string name) {
+    if (name == "") {
+        throw "the level needs a name";
+    }
+    return name.length;
+}
+
+int safeDivide(int a, int b) {
+    try {
+        return a / b;
+    } catch (Error e) {
+        print("can't divide: {e.message}");
+        return 0;
+    }
+}
+
+task slow() {
+    try {
+        wait(0);
+        list<int> none = [];
+        print(none[3]);
+    } catch (Error e) {
+        print("caught in a task: {e.message}");
+    }
+}
+
+task quick() {
+    try {
+        throw "oops in a task";
+    } catch (Error e) {
+        print("caught in a task: {e.message}");
+    }
+    wait(1);
+}
+
+int main(){
+    list<int> scores = [1, 2, 3];
+    try {
+        print(scores[10]);
+        print("not shown");
+    } catch (Error e) {
+        print("list: {e.message}");
+        print(e.where);
+    }
+
+    Enemy? boss = null;
+    try {
+        print(boss.hp);
+    } catch (Error e) {
+        print("null: {e.message}");
+    }
+
+    try {
+        string text = file.read("no_such_file.txt");
+        print(text);
+    } catch (Error e) {
+        print("file: {e.message}");
+    }
+
+    try {
+        int n = int("abc");
+        print(n);
+    } catch (Error e) {
+        print("number: {e.message}");
+    }
+
+    try {
+        print(loadLevel("cave"));
+        print(loadLevel(""));
+    } catch (Error e) {
+        print("mine: {e.message} at {e.where}");
+    }
+
+    print(safeDivide(10, 2));
+    print(safeDivide(1, 0));
+
+    for (int i = 0; i < 3; i++) {
+        try {
+            if (i == 1) {
+                throw "skip {i}";
+            }
+            print(i);
+        } catch (Error e) {
+            print(e.message);
+            continue;
+        }
+    }
+
+    try {
+        try {
+            throw "inner";
+        } catch (Error e) {
+            print("first: {e.message}");
+            throw e;
+        }
+    } catch (Error again) {
+        print("second: {again.message}");
+        print(again);
+    }
+    slow();             // its error comes after wait(0), when the game is already over
+    quick();
+    return 0;
+}
+=== output
+list: position 10 is outside the list (it has 3 items, at positions 0 to 2)
+main.frg:46
+null: 'boss' is null
+file: can't open 'no_such_file.txt' - use file.exists(path) to check first
+number: couldn't turn "abc" into an int
+4
+mine: the level needs a name at main.frg:10
+5
+can't divide: division by zero
+0
+0
+skip 1
+2
+first: inner
+second: inner
+Error(message: inner, where: main.frg:98)
+caught in a task: oops in a task

@@ -97,7 +97,8 @@ bool containsBreak(const Stmt* s) {
             for (auto& c : s->body)
                 if (containsBreak(c.get())) return true;
             return false;
-        case SK::If: return containsBreak(s->then.get()) || containsBreak(s->els.get());
+        case SK::If:
+        case SK::Try: return containsBreak(s->then.get()) || containsBreak(s->els.get());
         default: return false;  // a break inside a nested loop belongs to that loop
     }
 }
@@ -106,7 +107,9 @@ bool containsBreak(const Stmt* s) {
 bool alwaysReturns(const Stmt* s) {
     if (!s) return false;
     switch (s->kind) {
-        case SK::Return: return true;
+        case SK::Return:
+        case SK::Throw: return true;
+        case SK::Try: return alwaysReturns(s->then.get()) && alwaysReturns(s->els.get());
         case SK::Block:
             for (auto& c : s->body)
                 if (alwaysReturns(c.get())) return true;
@@ -255,7 +258,8 @@ private:
     Module* cur = nullptr;
     FuncDecl* fn = nullptr;
     TypeDecl* curType = nullptr;
-    TypeDecl* genericScope = nullptr;  // the generic type whose fields and methods are being read (its T is a type there)
+    TypeDecl* genericScope = nullptr;
+    bool inCatch = false;              // checking the code in a catch { }  // the generic type whose fields and methods are being read (its T is a type there)
     std::vector<std::map<std::string, VarDecl*>> scopes;
     std::vector<char> breakables;  // 'l' for a loop, 's' for a switch
     size_t callArgs = SIZE_MAX;    // while checking the callee of a call: how many values it's called with
@@ -1855,6 +1859,11 @@ Type* Checker::builtinCall(Expr* e, const Builtin* b) {
             if (needCount(0, 1) && args.size() == 1 && !bad) assignable(args[0], tString(), "the prompt of input()");
             return e->type = tString();
         case BSig::Wait:
+            if (inCatch) {
+                reportError(e->loc, "wait() can't be used inside a catch { }",
+                            "set a bool in the catch, and wait after it: catch (Error e) { failed = true; }  if (failed) { wait(1); }");
+                return e->type = tVoid();
+            }
             if (!fn || fn->ret != tTask()) {
                 reportError(e->loc, "wait() only works inside a task function",
                             fn && !fn->isCtor ? "change '" + fn->retRef.display() + " " + fn->name + "()' to 'task " + fn->name +
@@ -2395,6 +2404,34 @@ void Checker::stmt(Stmt* s) {
             stmt(s->then.get());
             breakables.pop_back();
             break;
+        case SK::Try: {
+            stmt(s->then.get());
+            VarDecl* v = s->var.get();
+            v->type = resolveType(v->typeRef, false);
+            Type* errType = P.core && P.core->types.count("Error") ? tNamed(P.core->types["Error"]) : tError();
+            if (v->type != tError() && v->type != errType) {
+                reportError(v->typeRef.loc, "catch takes an Error, like: catch (Error " + v->name + ")",
+                            v->type->decl && v->type->name == "Error" ? "your own type called Error hides Forge's - rename yours"
+                                                                      : "e.message is the error's text, and e.where is the file and line it happened on");
+                v->type = errType;
+            }
+            scopes.emplace_back();
+            declareLocal(v);
+            bool outer = inCatch;
+            inCatch = true;
+            stmt(s->els.get());
+            inCatch = outer;
+            scopes.pop_back();
+            break;
+        }
+        case SK::Throw: {
+            Type* t = value(s->expr.get());
+            Type* errType = P.core && P.core->types.count("Error") ? tNamed(P.core->types["Error"]) : tError();
+            if (t != tError() && t != tString() && t != errType)
+                reportError(s->expr->loc, "throw takes text (the error message), but this is " + aType(t),
+                            "for example: throw \"the save file is broken\";");
+            break;
+        }
         case SK::DoWhile:
             breakables.push_back('l');
             stmt(s->then.get());

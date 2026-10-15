@@ -37,15 +37,32 @@ extern "C" __declspec(dllimport) int __stdcall MessageBoxA(HWND__* window, const
 namespace frg {
 #endif
 
-[[noreturn]] inline void panic(const char* where, const std::string& msg) {
+namespace core {
+// A runtime error, as Forge's Error type: catch (Error e) gets one, with e.message and e.where.
+struct Error_ {
+    std::string message_;
+    std::string where_;
+    static Error_ frg$make() { return {}; }
+    static Error_ frg$make(std::string m, std::string w) { return {std::move(m), std::move(w)}; }
+    bool operator==(const Error_&) const = default;
+};
+}  // namespace core
+
+// Stops the game with the error's message (for an error that no try { } caught).
+[[noreturn]] inline void fatal(const core::Error_& e) {
     std::fflush(stdout);
-    std::fprintf(stderr, "\nRuntime error in %s: %s\n", where, msg.c_str());
+    std::fprintf(stderr, "\nRuntime error in %s: %s\n", e.where_.c_str(), e.message_.c_str());
 #ifdef FRG_NO_CONSOLE
-    std::string text = std::string("Runtime error in ") + where + ":\n\n" + msg;
+    std::string text = "Runtime error in " + e.where_ + ":\n\n" + e.message_;
     MessageBoxA(nullptr, text.c_str(), "The game stopped", 0x10 /* MB_ICONERROR */);
 #endif
     std::exit(1);
 }
+
+// Every runtime error goes through here. A try { } around the code catches it; otherwise main() stops the game with it.
+[[noreturn]] inline void panic(const char* where, const std::string& msg) { throw core::Error_{msg, where}; }
+// throw "message"; in Forge code.
+[[noreturn]] inline void raise(const char* where, const std::string& msg) { panic(where, msg); }
 
 // Libraries register cleanup to run when main returns (newest first), and work to do once per frame.
 inline std::vector<void (*)()>& shutdownHooks() {
@@ -257,7 +274,14 @@ struct Task {
             state->done = true;
             state->running = false;
         }
-        void unhandled_exception() { std::terminate(); }
+        void unhandled_exception() {
+            // An error inside a task that its own code didn't catch stops the game, like anywhere else.
+            try {
+                throw;
+            } catch (const core::Error_& e) {
+                fatal(e);
+            }
+        }
     };
 };
 
@@ -894,6 +918,7 @@ struct rect_ {
     bool operator==(const rect_&) const = default;
 };
 
+inline std::string frg$str(const Error_& e) { return "Error(message: " + e.message_ + ", where: " + e.where_ + ")"; }
 inline std::string frg$str(const vec2_& v) { return "vec2(" + str(v.x_) + ", " + str(v.y_) + ")"; }
 inline std::string frg$str(const vec3_& v) { return "vec3(" + str(v.x_) + ", " + str(v.y_) + ", " + str(v.z_) + ")"; }
 inline std::string frg$str(const vec4_& v) { return "vec4(" + str(v.x_) + ", " + str(v.y_) + ", " + str(v.z_) + ", " + str(v.w_) + ")"; }

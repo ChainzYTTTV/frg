@@ -170,6 +170,40 @@ Runtime error in main.frg:12: position 5 is outside the list (it has 3 items, at
 | `the window isn't open yet` | drawing before `window.open(...)` | open the window first |
 | `file.read(): can't open 'x'` | the file doesn't exist | `file.exists(path)` first |
 
+### Catching runtime errors: try and catch
+
+Some runtime errors aren't mistakes in your code: a save file that's missing or broken, or text the player typed that isn't a number. Put code that might go wrong in `try { }`, and say what to do instead in `catch (Error e) { }`:
+
+```cpp
+try {
+    string text = file.read("save.txt");
+    level = int(text);
+} catch (Error e) {
+    print("couldn't load the save: {e.message}");
+    level = 1;
+}
+```
+
+If anything inside `try` has a runtime error, the rest of the `try` part is skipped and the `catch` part runs. If nothing goes wrong, the `catch` part is skipped.
+
+- `e.message` is the error's text, like `couldn't turn "abc" into an int`, and `e.where` is the file and line, like `main.frg:12`.
+- **Every** runtime error can be caught: list positions, `null`, missing files, `int("abc")`, division by zero, and the ones from libraries. This includes errors in functions called from inside the `try`, however deep.
+- Your own code can make an error with `throw "message";`. If nothing catches it, the game stops with that message, like any runtime error:
+
+  ```cpp
+  int loadLevel(string name) {
+      if (name == "") {
+          throw "the level needs a name";
+      }
+      ...
+  }
+  ```
+
+- Inside a `catch`, `throw e;` sends the same error on to an outer `try`.
+- `try` and `catch` both need `{ }`, and `catch` always takes `(Error e)` (the name can be anything).
+- A `try` around starting a task doesn't catch errors inside the task: put the `try` **inside** the task instead. `wait()` works inside `try { }`, but not inside `catch { }`.
+- Don't use `try` to hide mistakes: a list position that's outside the list is better fixed than caught. `try` is for things your game can't control, like files and what the player types.
+
 Crashes that don't give a message (`[game.exe crashed (code 0xC0000005)]`) usually mean a [pointer](10-enums-optionals-pointers.md#pointers) was used after the thing it pointed at went away, or a function called itself forever.
 
 ## The C++ compiler rejected Forge's output

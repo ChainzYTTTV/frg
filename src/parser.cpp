@@ -592,6 +592,36 @@ StmtPtr Parser::parseStmt() {
             expect(Tok::Semi, "';'");
             return s;
         }
+        case Tok::KwTry: {
+            // try { ... } catch (Error e) { ... }: a runtime error in the first part runs the second part instead of stopping the game.
+            p++;
+            auto s = std::make_unique<Stmt>(SK::Try, l);
+            if (!at(Tok::LBrace)) fail(cur().loc, "'try' needs { } around its code", "for example: try { ... } catch (Error e) { ... }");
+            s->then = parseBlock();
+            if (!at(Tok::KwCatch))
+                fail(cur().loc, "a 'try { ... }' needs 'catch (Error e) { ... }' after its closing }",
+                     "the catch part runs if something goes wrong in the try part");
+            p++;
+            if (!at(Tok::LParen)) fail(cur().loc, "catch needs '(Error e)' after it", "for example: catch (Error e) { print(e.message); }");
+            p++;
+            s->var = std::make_unique<VarDecl>();
+            s->var->typeRef = parseType();
+            const Token& name = expect(Tok::Ident, "a name for the error, like: catch (Error e)");
+            s->var->name = name.text;
+            s->var->loc = name.loc;
+            expect(Tok::RParen, "')'");
+            if (!at(Tok::LBrace)) fail(cur().loc, "'catch' needs { } around its code", "for example: catch (Error e) { print(e.message); }");
+            s->els = parseBlock();
+            return s;
+        }
+        case Tok::KwThrow: {
+            p++;
+            auto s = std::make_unique<Stmt>(SK::Throw, l);
+            s->expr = parseExpr();
+            expect(Tok::Semi, "';'");
+            return s;
+        }
+        case Tok::KwCatch: fail(l, "this 'catch' doesn't belong to a 'try'", "catch has to come right after the } of a try");
         case Tok::KwReturn: {
             p++;
             auto s = std::make_unique<Stmt>(SK::Return, l);

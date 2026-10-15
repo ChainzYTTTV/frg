@@ -48,7 +48,7 @@ If you already know C++, C#, Java, JavaScript or Python, Forge will feel familia
 | `interface I` / `implements I` / abstract classes | `interface Attacker { int power(); }`, `class Goblin : Enemy, Attacker`, `abstract class Enemy { abstract int reward(); }` | at most one class after the `:`, then interfaces. See [Interfaces and abstract classes](09-structs-and-classes.md#interfaces-and-abstract-classes) |
 | `@Override` / `override` | nothing | a method with the same name and types replaces the parent's |
 | `base.method()` / `super.method()` | `super.method()` | |
-| `try` / `catch` | not available | runtime errors stop the game with a message |
+| `try` / `catch` / `throw` | `try { ... } catch (Error e) { print(e.message); }` and `throw "message";` | every runtime error can be caught; you throw text, not objects; there's no `finally`. See [Catching runtime errors](12-errors.md#catching-runtime-errors-try-and-catch) |
 | lambdas, function pointers, callbacks | `(Enemy e) { return e.hp <= 0; }`, typed `Function<bool(Enemy)>` | a function value gets a copy of the local variables it uses. See [Functions as values](06-functions.md#functions-as-values) |
 | templates / generics you write yourself | `class Box<T> { T item; }`, used as `Box<int> b = Box(5);` | structs and classes only, not functions; inside, a `T` can only be stored, passed, compared and printed. See [Generic types](09-structs-and-classes.md#generic-types-one-type-that-holds-any-type) |
 | `weak_ptr`, `WeakReference`, `weakref` | `Weak<Player> w = Weak(p);` and `Player? x = w.get();` | only for class types. See [Weak](09-structs-and-classes.md#weak-pointing-at-an-object-without-keeping-it-alive) |

@@ -58,7 +58,7 @@
         },
         "keywords": {
             "patterns": [
-                { "name": "keyword.control.forge", "match": "\\b(if|else|while|do|for|in|switch|case|default|return|break|continue|wait)\\b" },
+                { "name": "keyword.control.forge", "match": "\\b(if|else|while|do|for|in|switch|case|default|return|break|continue|try|catch|throw|wait)\\b" },
                 { "name": "keyword.operator.logical.forge", "match": "\\b(and|or|not)\\b" },
                 { "name": "keyword.operator.type.forge", "match": "\\b(is|as)\\b" },
                 { "name": "keyword.operator.word.forge", "match": "(?<=[\\w\\)\\]\"]\\s{1,8})\\b(plus|minus|times|div|mod|equals|greater|less|otherwise|bitand|bitor|bitxor|shiftleft|shiftright)\\b(?!\\s*=(?!=))(?=\\s)" },

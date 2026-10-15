@@ -6,7 +6,7 @@ These words have special meanings, so they can't be used as names for variables,
 
 | Group | Words |
 |---|---|
-| Control flow | `if` `else` `while` `do` `for` `in` `switch` `case` `default` `return` `break` `continue` |
+| Control flow | `if` `else` `while` `do` `for` `in` `switch` `case` `default` `return` `break` `continue` `try` `catch` `throw` |
 | Values | `true` `false` `null` `this` `super` |
 | Declarations | `struct` `class` `enum` `interface` `const` `void` |
 | Modifiers | `private` `public` `static` `abstract` |
@@ -17,11 +17,11 @@ These words have special meanings, so they can't be used as names for variables,
 
 ## Built-in type names
 
-`void` `bool` `string` `task` `int` `int8` `int16` `int32` `int64` `int128` `uint` `uint8` `uint16` `uint32` `uint64` `uint128` `float` `double` `list` `map` `Pointer` `Function` `Weak` `vec2` `vec3` `vec4` `color` `rect`
+`void` `bool` `string` `task` `int` `int8` `int16` `int32` `int64` `int128` `uint` `uint8` `uint16` `uint32` `uint64` `uint128` `float` `double` `list` `map` `Pointer` `Function` `Weak` `vec2` `vec3` `vec4` `color` `rect` `Error`
 
 ## Built-in functions
 
-`print` `write` `input` (from `<stdio>`), and `wait` (inside tasks).
+`print` `write` `input` (from `<stdio>`), `wait` (inside tasks), and `Weak(...)`.
 
 ## Library names
 

@@ -228,7 +228,7 @@ Type* primitiveTypeByName(const std::string& name) {
     return it == primitiveTable().end() ? nullptr : it->second;
 }
 
-static const char* kOtherBuiltinTypes[] = {"list", "map", "Pointer", "Function", "Weak", "vec2", "vec3", "vec4", "color", "rect"};
+static const char* kOtherBuiltinTypes[] = {"list", "map", "Pointer", "Function", "Weak", "Error", "vec2", "vec3", "vec4", "color", "rect"};
 
 bool isBuiltinTypeName(const std::string& name) {
     if (primitiveTypeByName(name)) return true;

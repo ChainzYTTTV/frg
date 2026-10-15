@@ -832,6 +832,8 @@ Problems that can only happen while running (a list position that doesn't exist,
 Runtime error in main.frg:10: position 5 is outside the list (it has 3 items, at positions 0 to 2)
 ```
 
+**try / catch / throw.** `try { ... } catch (Error e) { ... }`: any runtime error inside `try` (including in functions it calls) skips the rest of it and runs `catch`. `e.message` is the text, `e.where` is like `"main.frg:12"`. Every runtime error can be caught. `throw "message";` makes one (uncaught, it stops the game like any runtime error); `throw e;` in a catch passes it on. Both parts need `{ }`, and catch always takes `(Error name)`. `wait()` works in `try` but not in `catch`; a `try` around starting a task doesn't catch the task's errors (put the try inside the task). Teach it for files and player input, not to hide bugs like bad list positions.
+
 ---
 
 ## Part 4: Easy things to get wrong
@@ -863,7 +865,7 @@ Runtime error in main.frg:10: position 5 is outside the list (it has 3 items, at
 - `char` (single letters are one-letter strings), fixed-size arrays (use `list`), tuples
 - Two methods with the same name (only constructors and top-level functions can share a name), operator overloading for your own types
 - `protected` (`private` already includes classes that inherit)
-- Labeled breaks, exceptions (`try` / `catch`), `goto`
+- Labeled breaks, `finally`, `goto`
 - Networking, shaders in the engine, 3D lighting
 - `<network>` is planned but **doesn't exist yet**.
 

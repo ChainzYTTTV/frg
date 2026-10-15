@@ -1,0 +1,8 @@
+=== main.frg
+int main(){
+    catch (Error e) {
+    }
+    return 0;
+}
+=== error
+this 'catch' doesn't belong to a 'try'

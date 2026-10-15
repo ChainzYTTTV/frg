@@ -1,0 +1,9 @@
+=== main.frg
+int main(){
+    try {
+        int x = 1;
+    }
+    return 0;
+}
+=== error
+a 'try { ... }' needs 'catch (Error e) { ... }' after its closing }

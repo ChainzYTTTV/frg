@@ -1,0 +1,19 @@
+=== main.frg
+#include <stdio>
+#include <save>
+#include <file>
+
+``` A save file written earlier (by hand here) is read back, and broken lines are skipped. ```
+int main(){
+    file.writeLines("save.txt", ["# Forge save file", "coins=42", "broken line", "speed=2.5", "done=false"]);
+    print(save.getInt("coins"));
+    print(save.getFloat("speed"));
+    print(save.getBool("done", true));
+    print(save.has("broken line"));
+    return 0;
+}
+=== output
+42
+2.5
+false
+false

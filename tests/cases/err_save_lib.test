@@ -1,0 +1,11 @@
+=== main.frg
+#include <save>
+
+int main(){
+    save.setInt("score", "lots");
+    int x = save.getString("name");
+    return 0;
+}
+=== error
+'value' in save.setInt() needs an int, but this is a string
+'x' needs an int, but this is a string

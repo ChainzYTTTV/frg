@@ -46,7 +46,7 @@ Go in this order. Each stage ends with a small project. Move at the learner's pa
 | 14. The platformer | read Part 5 together and change it | Add a coin, a level, or a moving hazard |
 | 15. Tasks | `task` functions, `wait()` | Make the player flash, or a 3-2-1 countdown |
 | 16. Images and sound | `<assets>`, `<audio>`, sprite sheets | Give the platformer a sprite and a jump sound |
-| 17. Menus | `<scenes>`, `<ui>`, `<file>` | A main menu, and a best score saved to a file |
+| 17. Menus | `<scenes>`, `<ui>`, `<save>` | A main menu, and a best score that's remembered |
 | 18. Checking kinds, hiding things | `is` / `as`, `private`, several constructors | Different enemy types in one list |
 | 19. Components | `<ECS>` | Rebuild a small game out of components |
 | 20. 3D | `<graphics3d>` | A spinning cube scene |
@@ -474,6 +474,7 @@ Library functions are reached through the library name (`window.open(...)`). Lib
 | `<audio>` | `audio.loadSound("x.wav")` gives a `Sound`, `audio.loadMusic("x.ogg")` gives a `Music`, `audio.setVolume(v)` |
 | `<graphics3d>` | the `Camera` struct and `Model` class, `graphics3d.setCamera(cam)`, `drawCube(pos, size, color)`, `drawCubeOutline`, `drawSphere(center, radius, color)`, `drawSphereOutline`, `drawCylinder(pos, radius, height, color)`, `drawPlane(center, vec2 size, color)`, `drawGrid(slices, spacing)`, `drawLine(from, to, color)`, `toScreen(vec3)`, `loadModel("x.glb")` |
 | `<time>` | `time.now()`, `time.sleep(s)`, `time.clock()`, `time.date()`, `year() month() day() hour() minute() second()`, the `Timer` class |
+| `<save>` | `save.setInt(key, n)` / `getInt(key, backup)`, the same for `Float`, `String` and `Bool`, `has(key)`, `remove(key)`, `clear()`. Kept in `save.txt` in the game's folder |
 | `<file>` | `file.read(path)`, `write(path, text)`, `append(path, text)`, `exists(path)`, `remove(path)`, `readLines(path)`, `writeLines(path, list)`, `files(folder)` |
 | `<scenes>` | the `Scene` class, `scenes.change(scene)`, `update(dt)`, `draw()`, `current()` |
 | `<ui>` | `ui.button(rect, "text")` (true when clicked), `ui.checkbox(rect, "text", checked)` (new value), `ui.slider(rect, value, min, max)` (new value), `ui.label(text, x, y, size, color)`, `ui.panel(rect)`, `ui.setTheme(bg, accent, text)` |
@@ -601,7 +602,23 @@ An `Entity` has `name`, `active`, `components`, `add`, `get("Type")`, `has("Type
 
 **Timer** (`<time>`): `Timer cooldown = Timer(0.5);`, then `if (cooldown.isDone()) { ...; cooldown.restart(); }`. It also has `left()` and `elapsed()`.
 
-**Files** (`<file>`), useful for save games: `file.write("save.txt", "{score}");` and later `int score = int(file.read("save.txt").trim());`. Check `file.exists(path)` first.
+**Saving** (`<save>`), the easy way to remember things between runs (high scores, settings, progress). Values are kept by name in `save.txt` in the game's folder, and written straight away:
+
+```cpp
+#include <save>
+
+int best = save.getInt("best");           // 0 the very first time (or save.getInt("best", 100) for another backup)
+if (score > best) {
+    save.setInt("best", score);
+}
+save.setString("name", "Ana");
+save.setFloat("volume", 0.8);
+save.setBool("music", true);
+```
+
+`getInt` / `getFloat` / `getString` / `getBool` take the key and an optional backup value, given back when the key isn't saved yet. `save.has(key)`, `save.remove(key)` and `save.clear()` (to reset everything) are the rest. Because `save` is a library name, a function or variable can't be called `save` (use `saveGame`).
+
+**Files** (`<file>`), for your own file formats (levels, lists): `file.write("notes.txt", "{score}");` and later `int score = int(file.read("notes.txt").trim());`. Check `file.exists(path)` first.
 
 ### Making a game: two kinds of game loop
 
@@ -649,7 +666,7 @@ The rules, which the learner chose on purpose:
 - A toolkit is **not** part of the engine, and the engine can't be switched over to use one.
 - A game that includes a toolkit **can't** include `<window>`, `<input>`, `<graphics2d>`, `<graphics3d>`, `<assets>` or `<ui>`. Doing so is a build error: "<OpenGL> is a separate toolkit, so it can't be used together with Forge's engine (<window>)".
 - A game can use only **one** toolkit.
-- `<stdio>`, `<math>`, `<random>`, `<time>`, `<file>`, `<audio>`, `<physics>`, `<scenes>`, `<ECS>` and tasks still work with a toolkit.
+- `<stdio>`, `<math>`, `<random>`, `<time>`, `<file>`, `<save>`, `<audio>`, `<physics>`, `<scenes>`, `<ECS>` and tasks still work with a toolkit.
 
 Every toolkit has the same window, keyboard and mouse functions, with its own name in front:
 
@@ -1150,6 +1167,7 @@ Hints:
 
 - `sort()` only sorts lists of numbers or text, which is why step 3 keeps the list in order by hand.
 - Loading: `file.readLines("scores.txt")` gives a list of lines. For each line, `line.split(",")` gives `["Ana", "120"]`, and `int(parts[1])` is the score.
+- Another way to save: the `<save>` library keeps values by name, so there's no file format to write. Save entry `i` as `save.setString("name{i}", e.name)` and `save.setInt("score{i}", e.score)`, plus `save.setInt("count", entries.length)`, and read them back with `save.getString` and `save.getInt`. Doing it by hand with `<file>` first is good practice, though.
 
 Make it yours: show a medal (`*`) next to the top score. Don't allow empty names (`name.trim().isEmpty()`).
 
@@ -1399,14 +1417,15 @@ Steps:
 1. A big circle in the middle. Clicking inside it adds 1 cookie. Show the total.
 2. A `ui.button` "Better click (cost 10)". Buying it makes clicks worth more, and raises its cost.
 3. A "Helper" upgrade: each helper earns 1 cookie per second (`cookies += helpers * dt`).
-4. Save the numbers to a file when the game closes, and load them when it starts: `file.writeLines("save.txt", ["{cookies}", "{helpers}"])`.
+4. Save the numbers, and load them when the game starts, with `<save>`: `save.setFloat("cookies", cookies);` and `float cookies = save.getFloat("cookies");`.
 5. A title scene with "Play" and "Reset save" buttons (`<scenes>`).
 
 Hints:
 
 - Clicked inside the circle: `input.mousePressed(MouseButton.LEFT) and input.mousePosition().distance(center) < radius`.
 - Helpers earn fractions of a cookie, so keep `float cookies`, and show `int(cookies)` (or `"{cookies:.1}"` for one decimal).
-- Save several numbers as several lines with `file.writeLines`, and read them back in the same order.
+- `<save>` writes the file straight away, so saving after every purchase (and every few seconds for the helpers) is fine. Load with a backup value for the very first run: `save.getInt("helpers", 0)`.
+- "Reset save" is `save.clear()`, then set the variables back to their starting values.
 
 Make it yours: the cookie shrinks a little when clicked, then grows back. Achievements at 100, 1,000 and 10,000 cookies.
 

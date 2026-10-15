@@ -112,6 +112,7 @@ Hints:
 
 - `sort()` only sorts lists of numbers or text, which is why step 3 keeps the list in order by hand.
 - Loading: `file.readLines("scores.txt")` gives a list of lines. For each line, `line.split(",")` gives `["Ana", "120"]`, and `int(parts[1])` is the score.
+- Another way to save: the `<save>` library keeps values by name, so there's no file format to write. Save entry `i` as `save.setString("name{i}", e.name)` and `save.setInt("score{i}", e.score)`, plus `save.setInt("count", entries.length)`, and read them back with `save.getString` and `save.getInt`. Doing it by hand with `<file>` first is good practice, though.
 
 Make it yours: show a medal (`*`) next to the top score. Don't allow empty names (`name.trim().isEmpty()`).
 
@@ -361,14 +362,15 @@ Steps:
 1. A big circle in the middle. Clicking inside it adds 1 cookie. Show the total.
 2. A `ui.button` "Better click (cost 10)". Buying it makes clicks worth more, and raises its cost.
 3. A "Helper" upgrade: each helper earns 1 cookie per second (`cookies += helpers * dt`).
-4. Save the numbers to a file when the game closes, and load them when it starts: `file.writeLines("save.txt", ["{cookies}", "{helpers}"])`.
+4. Save the numbers, and load them when the game starts, with `<save>`: `save.setFloat("cookies", cookies);` and `float cookies = save.getFloat("cookies");`.
 5. A title scene with "Play" and "Reset save" buttons (`<scenes>`).
 
 Hints:
 
 - Clicked inside the circle: `input.mousePressed(MouseButton.LEFT) and input.mousePosition().distance(center) < radius`.
 - Helpers earn fractions of a cookie, so keep `float cookies`, and show `int(cookies)` (or `"{cookies:.1}"` for one decimal).
-- Save several numbers as several lines with `file.writeLines`, and read them back in the same order.
+- `<save>` writes the file straight away, so saving after every purchase (and every few seconds for the helpers) is fine. Load with a backup value for the very first run: `save.getInt("helpers", 0)`.
+- "Reset save" is `save.clear()`, then set the variables back to their starting values.
 
 Make it yours: the cookie shrinks a little when clicked, then grows back. Achievements at 100, 1,000 and 10,000 cookies.
 

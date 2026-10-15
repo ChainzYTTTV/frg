@@ -115,7 +115,7 @@ int loadHighScore(){
     return int(file.read("highscore.txt").trim());
 }
 
-void save(){
+void saveGame(){
     list<string> lines = [
         "level={level}",
         "coins={coins}",
@@ -124,7 +124,7 @@ void save(){
     file.writeLines("save.txt", lines);
 }
 
-void load(){
+void loadGame(){
     for (string line in file.readLines("save.txt")) {
         list<string> parts = line.split("=");
         if (parts.length != 2) {

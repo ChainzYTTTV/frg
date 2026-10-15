@@ -28,6 +28,7 @@ How libraries work:
 | [`<audio>`](audio.md) | Sound effects (`Sound`) and music (`Music`) | no |
 | [`<physics>`](physics.md) | Box bodies with gravity and collisions | no |
 | [`<time>`](time.md) | The clock and date, `sleep`, and the `Timer` class | no |
+| [`<save>`](save.md) | Remembering values (high scores, settings) between runs | no |
 | [`<file>`](file.md) | Reading and writing text files | no |
 | [`<scenes>`](scenes.md) | Splitting a game into scenes (menu, level...) | no |
 | [`<ui>`](ui.md) | Buttons, checkboxes, sliders, labels, panels | yes |

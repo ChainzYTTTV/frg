@@ -610,6 +610,20 @@ const int CULL_FRONT = 1;
 const int CULL_BACK = 2;
 )FRG";
 
+static const char* kSave = R"FRG(
+void setInt(string key, int value);
+int getInt(string key, int backup = 0);
+void setFloat(string key, float value);
+float getFloat(string key, float backup = 0);
+void setString(string key, string value);
+string getString(string key, string backup = "");
+void setBool(string key, bool value);
+bool getBool(string key, bool backup = false);
+bool has(string key);
+void remove(string key);
+void clear();
+)FRG";
+
 const std::vector<PreludeLib>& preludeLibs() {
     using K = LibKind;
     static const std::vector<PreludeLib> libs = {
@@ -624,6 +638,7 @@ const std::vector<PreludeLib>& preludeLibs() {
         {"tasks", kTasks, false, ""},
         {"time", kTime, false, "forge_time.hpp"},
         {"file", kFile, false, "forge_file.hpp"},
+        {"save", kSave, false, "forge_save.hpp"},
         {"scenes", kScenes, false, "forge_scenes.hpp"},
         {"ui", kUi, true, "forge_ui.hpp", K::Engine},
         {"graphics3d", kGraphics3d, true, "forge_graphics3d.hpp", K::Engine},

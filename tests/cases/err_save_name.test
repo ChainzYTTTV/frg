@@ -1,0 +1,10 @@
+=== main.frg
+``` save is now a library, so a function can't be called save (even without #include <save>). ```
+void save() {
+}
+
+int main(){
+    return 0;
+}
+=== error
+'save' is the name of a Forge library

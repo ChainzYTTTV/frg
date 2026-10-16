@@ -89,6 +89,19 @@ private:
     int tmp = 0;
     bool globalScope = false;  // writing a global's or static field's starting value, outside any function
     bool debug = false;        // a debug build: each statement says which .frg line it came from (#line)
+    bool framed = false;       // the code being written has a ::frg::Frame frg$frame (for runtime errors' "called from")
+
+    // Runtime errors list the calls that led to them, so each function keeps a Frame saying where it's up to.
+    void frameStart(const std::string& name, const Loc& l) {
+        if (!framed) return;
+        line("::frg::Frame frg$frame(" + cppString(name) + ", " + cppString(l.file ? l.file->displayPath : "?") + ", " +
+             std::to_string(l.line) + ");");
+    }
+    // A condition that's worked out again and again (while, else if): it also moves the Frame to its line.
+    std::string atLine(const Loc& l, const std::string& cond) {
+        if (!framed) return cond;
+        return "(frg$frame.line = " + std::to_string(l.line) + ", " + cond + ")";
+    }
 
     // #line tells the C++ compiler (and so the debugger) that the code after it comes from this line of a .frg file.
     void sourceLine(const Loc& l) {
@@ -594,10 +607,14 @@ std::string Gen::ex(const Expr* e) {
             std::string head = std::string(curType ? "[=, this]" : "[=]") + "(" + params(f) + ") mutable -> " + f->ret->cpp + " {\n";
             std::string savedOut = std::move(out);
             FuncDecl* savedFn = fn;
+            bool savedFramed = framed;
             out.clear();
             ind++;
             fn = f;
+            framed = true;
+            frameStart("a function value" + std::string(savedFn && !savedFn->name.empty() ? " in " + savedFn->name : ""), e->loc);
             children(f->body.get());
+            framed = savedFramed;
             fn = savedFn;
             ind--;
             std::string body = std::move(out);
@@ -650,7 +667,10 @@ void Gen::children(const Stmt* block) {
 }
 
 void Gen::stmt(const Stmt* s) {
-    if (s->kind != SK::Block) sourceLine(s->loc);
+    if (s->kind != SK::Block) {
+        sourceLine(s->loc);
+        if (framed) line("frg$frame.line = " + std::to_string(s->loc.line) + ";");
+    }
     switch (s->kind) {
         case SK::Block:
             line("{");
@@ -666,7 +686,7 @@ void Gen::stmt(const Stmt* s) {
             children(s->then.get());
             const Stmt* e = s->els.get();
             while (e && e->kind == SK::If) {
-                line("} else if (" + ex(e->expr.get()) + ") {");
+                line("} else if (" + atLine(e->loc, ex(e->expr.get())) + ") {");
                 children(e->then.get());
                 e = e->els.get();
             }
@@ -678,7 +698,7 @@ void Gen::stmt(const Stmt* s) {
             break;
         }
         case SK::While:
-            line("while (" + ex(s->expr.get()) + ") {");
+            line("while (" + atLine(s->loc, ex(s->expr.get())) + ") {");
             children(s->then.get());
             line("}");
             break;
@@ -957,6 +977,11 @@ void Gen::emitBody(const FuncDecl* f, TypeDecl* owner, const std::string& head) 
     curType = owner;
     sourceLine(f->loc);
     line(head + " {");
+    // Tasks pause and carry on later, out of order, so they don't keep a Frame (see ::frg::Frame).
+    framed = f->ret != tTask();
+    ind++;
+    frameStart(f->isCtor && owner ? owner->name + "(...)" : owner ? owner->name + "." + f->name : f->name, f->loc);
+    ind--;
     if (f->ret == tTask() && owner && owner->kind == DK::Class) {
         // A task can outlive the line that started it, so it keeps its object alive while it runs.
         line("    auto frg$self = this->shared_from_this();");
@@ -965,6 +990,7 @@ void Gen::emitBody(const FuncDecl* f, TypeDecl* owner, const std::string& head) 
     if (f->ret == tTask()) line("    co_return;");  // makes it a coroutine even if it never waits
     line("}");
     generatedLines();
+    framed = false;
     curType = nullptr;
 }
 

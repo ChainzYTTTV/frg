@@ -42,25 +42,56 @@ namespace core {
 struct Error_ {
     std::string message_;
     std::string where_;
+    std::string trace_;  // how the game got there: the functions that called the one it happened in (not in Forge)
     static Error_ frg$make() { return {}; }
-    static Error_ frg$make(std::string m, std::string w) { return {std::move(m), std::move(w)}; }
-    bool operator==(const Error_&) const = default;
+    static Error_ frg$make(std::string m, std::string w) { return {std::move(m), std::move(w), {}}; }
+    bool operator==(const Error_& o) const { return message_ == o.message_ && where_ == o.where_; }
 };
 }  // namespace core
+
+// The call stack, for runtime errors: each Forge function that's running has a Frame (made at its start, gone when
+// it ends), which knows the function's name, its file, and the line it's on now. Tasks don't have one: they pause
+// and carry on later, out of order.
+struct Frame;
+inline std::vector<Frame*>& frames() {
+    static std::vector<Frame*> v;
+    return v;
+}
+struct Frame {
+    const char* func;
+    const char* file;
+    int line;
+    Frame(const char* f, const char* fl, int l) : func(f), file(fl), line(l) { frames().push_back(this); }
+    ~Frame() { frames().pop_back(); }
+    Frame(const Frame&) = delete;
+    Frame& operator=(const Frame&) = delete;
+};
+
+// "  called from main.frg:21 (in main)" for each function that led to `where`, nearest first.
+inline std::string callTrace(const char* where) {
+    std::string out;
+    const std::vector<Frame*>& fs = frames();
+    for (size_t i = fs.size(); i-- > 0;) {
+        std::string at = std::string(fs[i]->file) + ":" + std::to_string(fs[i]->line);
+        if (i + 1 == fs.size() && at == where) continue;  // the function the error is in: its line is the error's
+        out += "  called from " + at + " (in " + fs[i]->func + ")\n";
+    }
+    return out;
+}
 
 // Stops the game with the error's message (for an error that no try { } caught).
 [[noreturn]] inline void fatal(const core::Error_& e) {
     std::fflush(stdout);
-    std::fprintf(stderr, "\nRuntime error in %s: %s\n", e.where_.c_str(), e.message_.c_str());
+    std::fprintf(stderr, "\nRuntime error in %s: %s\n%s", e.where_.c_str(), e.message_.c_str(), e.trace_.c_str());
 #ifdef FRG_NO_CONSOLE
-    std::string text = "Runtime error in " + e.where_ + ":\n\n" + e.message_;
+    std::string text = "Runtime error in " + e.where_ + ":\n\n" + e.message_ + (e.trace_.empty() ? "" : "\n\n" + e.trace_);
     MessageBoxA(nullptr, text.c_str(), "The game stopped", 0x10 /* MB_ICONERROR */);
 #endif
     std::exit(1);
 }
 
 // Every runtime error goes through here. A try { } around the code catches it; otherwise main() stops the game with it.
-[[noreturn]] inline void panic(const char* where, const std::string& msg) { throw core::Error_{msg, where}; }
+[[noreturn]] inline void panic(const char* where, const std::string& msg) { throw core::Error_{msg, where, callTrace(where)}; }
 // throw "message"; in Forge code.
 [[noreturn]] inline void raise(const char* where, const std::string& msg) { panic(where, msg); }
 
@@ -495,9 +526,11 @@ using Map = std::map<K, V>;
 
 template <class L>
 decltype(auto) at(L&& list, int64_t i, const char* where) {
-    if (i < 0 || i >= (int64_t)list.size())
+    if (i < 0 || i >= (int64_t)list.size()) {
+        if (list.empty()) panic(where, "position " + str(i) + " is outside the list: the list is empty");
         panic(where, "position " + str(i) + " is outside the list (it has " + str((int64_t)list.size()) + " items, at positions 0 to " +
                          str((int64_t)list.size() - 1) + ")");
+    }
     return std::forward<L>(list)[(size_t)i];
 }
 

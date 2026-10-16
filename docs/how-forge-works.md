@@ -163,6 +163,12 @@ The other kinds are `=== error` (the build must fail with these messages) and `=
 
 When you save, the extension runs `frg check <game folder> --machine`. In machine mode, each error is printed as one tab-separated line (`E`, file, line, column, length, message, hint), which the extension turns into red underlines. Warnings are the same, but start with `W` and become yellow underlines.
 
+## How runtime errors know the calls that led to them
+
+Every Forge function (except tasks) starts with a `::frg::Frame frg$frame("sumFirst", "main.frg", 11);`, which puts itself on a list of running functions and takes itself off when the function ends (C++ runs its destructor, even when an error passes through). Before each statement, the generated code sets `frg$frame.line` to that statement's line, and `while` and `else if` conditions set it too, with C++'s comma operator: `while ((frg$frame.line = 7, i < n))`. When a runtime error happens, `panic()` turns the list into the "called from" lines and keeps them with the error. A caught error never prints them; one that stops the game does.
+
+Tasks don't have a Frame, because a task pauses with `wait()` and carries on later, while other functions start and end, so it can't sit on a simple list of running functions. Function values get their own Frame (`a function value in main`).
+
 ## How frg fmt tidies code
 
 `format.cpp` goes through the file once, marking which characters are code and which are inside strings and comments (strings are read the same way the lexer reads them, including `"...{value}..."` with code inside). Then for each line:

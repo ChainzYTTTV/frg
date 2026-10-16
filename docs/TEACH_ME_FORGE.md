@@ -837,11 +837,15 @@ error: 'hp' needs an int, but this is a float
 
 Literal-only divisions like `float f = 70 / 30;` don't warn, because they already give a decimal answer when the result goes into a float.
 
-Problems that can only happen while running (a list position that doesn't exist, using something that's null, dividing by zero, `int("abc")`) stop the game with a message like:
+Problems that can only happen while running (a list position that doesn't exist, using something that's null, dividing by zero, `int("abc")`) stop the game with a message, followed by the chain of calls that led there ("called from main.frg:6 (in main)", nearest first), like:
 
 ```
-Runtime error in main.frg:10: position 5 is outside the list (it has 3 items, at positions 0 to 2)
+Runtime error in main.frg:19: position 3 is outside the list (it has 3 items, at positions 0 to 2)
+  called from main.frg:13 (in sumFirst)
+  called from main.frg:6 (in main)
 ```
+
+Teach the learner to read it from the top: the error is on line 19, inside something `sumFirst` called on line 13, which `main` called on line 6. The real mistake is often in a caller.
 
 **try / catch / throw.** `try { ... } catch (Error e) { ... }`: any runtime error inside `try` (including in functions it calls) skips the rest of it and runs `catch`. `e.message` is the text, `e.where` is like `"main.frg:12"`. Every runtime error can be caught. `throw "message";` makes one (uncaught, it stops the game like any runtime error); `throw e;` in a catch passes it on. Both parts need `{ }`, and catch always takes `(Error name)`. `wait()` works in `try` but not in `catch`; a `try` around starting a task doesn't catch the task's errors (put the try inside the task). Teach it for files and player input, not to hide bugs like bad list positions.
 

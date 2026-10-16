@@ -863,11 +863,15 @@ error: 'hp' needs an int, but this is a float
 
 Literal-only divisions like `float f = 70 / 30;` don't warn, because they already give a decimal answer when the result goes into a float.
 
-Problems that can only happen while running (a list position that doesn't exist, using something that's null, dividing by zero, `int("abc")`) stop the game with a message like:
+Problems that can only happen while running (a list position that doesn't exist, using something that's null, dividing by zero, `int("abc")`) stop the game with a message, followed by the chain of calls that led there ("called from main.frg:6 (in main)", nearest first), like:
 
 ```
-Runtime error in main.frg:10: position 5 is outside the list (it has 3 items, at positions 0 to 2)
+Runtime error in main.frg:19: position 3 is outside the list (it has 3 items, at positions 0 to 2)
+  called from main.frg:13 (in sumFirst)
+  called from main.frg:6 (in main)
 ```
+
+Teach the learner to read it from the top: the error is on line 19, inside something `sumFirst` called on line 13, which `main` called on line 6. The real mistake is often in a caller.
 
 **try / catch / throw.** `try { ... } catch (Error e) { ... }`: any runtime error inside `try` (including in functions it calls) skips the rest of it and runs `catch`. `e.message` is the text, `e.where` is like `"main.frg:12"`. Every runtime error can be caught. `throw "message";` makes one (uncaught, it stops the game like any runtime error); `throw e;` in a catch passes it on. Both parts need `{ }`, and catch always takes `(Error name)`. `wait()` works in `try` but not in `catch`; a `try` around starting a task doesn't catch the task's errors (put the try inside the task). Teach it for files and player input, not to hide bugs like bad list positions.
 
@@ -4889,17 +4893,22 @@ Divisions of plain numbers, like `float f = 70 / 30;`, don't give a warning: For
 
 ### Runtime errors
 
-These stop the game with a message, the file and the line:
+These stop the game with a message, the file and the line, and then **how the game got there**: which function called the one with the error, which called that one, and so on, nearest first:
 
 ```
-Runtime error in main.frg:12: position 5 is outside the list (it has 3 items, at positions 0 to 2)
+Runtime error in main.frg:19: position 3 is outside the list (it has 3 items, at positions 0 to 2)
+  called from main.frg:13 (in sumFirst)
+  called from main.frg:6 (in main)
 ```
 
-`frg run` then shows `[game.exe exited with code 1]`.
+Read it from the top: the error happened on line 19, inside a function that `sumFirst` called on line 13, which `main` called on line 6. Often the real mistake is in one of the callers (here, `main` asked for 7 numbers from a list of 3), so the trace says where to look. A function value shows as `a function value in main`. Code in a `task` doesn't appear in the list, because tasks pause and carry on later.
+
+`frg run` then shows `[game.exe exited with code 1]`. In a game without a console, the same text appears in the message box.
 
 | Message | Cause | Prevent it with |
 |---|---|---|
 | `position N is outside the list (...)` | `list[N]` where `N` isn't between 0 and `length - 1` | check `i < list.length`; loop with `for ... in` |
+| `position N is outside the list: the list is empty` | `list[N]` on a list with nothing in it | check `isEmpty()` first |
 | `first() was used on an empty list` (also `last()`, `pop()`) | | check `isEmpty()` first |
 | `can't insert at position N` | `insert(N, x)` with `N` greater than `length` | |
 | `the key isn't in the map` | reading `map[key]` for a missing key | `map.has(key)` or `map.get(key, backup)` |
@@ -9198,6 +9207,12 @@ The other kinds are `=== error` (the build must fail with these messages) and `=
 ### How the VS Code extension finds errors
 
 When you save, the extension runs `frg check <game folder> --machine`. In machine mode, each error is printed as one tab-separated line (`E`, file, line, column, length, message, hint), which the extension turns into red underlines. Warnings are the same, but start with `W` and become yellow underlines.
+
+### How runtime errors know the calls that led to them
+
+Every Forge function (except tasks) starts with a `::frg::Frame frg$frame("sumFirst", "main.frg", 11);`, which puts itself on a list of running functions and takes itself off when the function ends (C++ runs its destructor, even when an error passes through). Before each statement, the generated code sets `frg$frame.line` to that statement's line, and `while` and `else if` conditions set it too, with C++'s comma operator: `while ((frg$frame.line = 7, i < n))`. When a runtime error happens, `panic()` turns the list into the "called from" lines and keeps them with the error. A caught error never prints them; one that stops the game does.
+
+Tasks don't have a Frame, because a task pauses with `wait()` and carries on later, while other functions start and end, so it can't sit on a simple list of running functions. Function values get their own Frame (`a function value in main`).
 
 ### How frg fmt tidies code
 

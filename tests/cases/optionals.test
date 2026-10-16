@@ -17,8 +17,8 @@ int? findIndex(list<string> items, string wanted) {
     return null;
 }
 
-void addOne(Pointer<int> counter) {
-    counter.value += 1;
+int addOne(int counter) {
+    return counter + 1;
 }
 
 string label(State s) {
@@ -61,11 +61,9 @@ int main(){
     print(int(State.Jumping));
     print(State(0));
 
-    int score = 10;
-    Pointer<int> p = score;
-    p.value = 20;
-    addOne(score);
-    addOne(p);
+    int score = 20;
+    score = addOne(score);
+    score = addOne(score);
     print(score);
 
     print(scale(3));

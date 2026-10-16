@@ -46,7 +46,7 @@ physics.add(crate);
 |---|---|
 | `physics.add(Body body)` | adds a body to the world. Adding it twice does nothing. |
 | `physics.remove(Body body)` | takes it out of the world |
-| `physics.step(float dt)` | moves everything forward by `dt` seconds. Call it **once per frame**. |
+| `physics.step(float dt)` | moves everything forward by `dt` seconds. Call it **once per frame** with the frame's `dt`. The game behaves the same at any frame rate (see below). |
 | `physics.setGravity(vec2 gravity)` | gravity, in pixels per second per second. Starts at `vec2(0, 980)`. |
 | `physics.gravity()` | the current gravity |
 | `physics.clear()` | removes every body |
@@ -85,17 +85,20 @@ The physics library itself never draws (it doesn't use raylib), which is why the
 
 ## What happens in a step
 
-For each moving (not static) body:
+First, `onGround`, `onCeiling` and `onWall` are reset to false on every moving body. Then the frame is split into **equal small parts of at most 1/240 of a second** (4 parts at 60 FPS, 8 at 30 FPS, 2 at 144 FPS), and each part does this for every moving (not static) body:
 
-1. `onGround`, `onCeiling` and `onWall` are reset to false.
-2. Gravity is added to its velocity: `velocity += gravity × gravityScale × dt`.
-3. It moves sideways by `velocity.x × dt`. If that runs it into a static solid body, it's pushed back out, `velocity.x` becomes 0, and `onWall` becomes true.
-4. It moves up or down by `velocity.y × dt`. If that runs it into a static solid body, it's pushed out, `velocity.y` becomes 0, and `onGround` (when moving down) or `onCeiling` (when moving up) becomes true. A one-way platform (`oneWay = true`) only counts here, and only when the body is falling onto it from above; in step 3 it never counts.
-5. Fast bodies move in several small steps, so they can't pass straight through thin platforms.
+1. Gravity is added to its velocity: `velocity += gravity × gravityScale × dt`.
+2. It moves sideways by `velocity.x × dt`. If that runs it into a static solid body, it's pushed back out, `velocity.x` becomes 0, and `onWall` becomes true.
+3. It moves up or down by `velocity.y × dt`. If that runs it into a static solid body, it's pushed out, `velocity.y` becomes 0, and `onGround` (when moving down) or `onCeiling` (when moving up) becomes true. A one-way platform (`oneWay = true`) only counts here, and only when the body is falling onto it from above; in step 2 it never counts.
+4. Fast bodies move in several small steps, so they can't pass straight through thin platforms.
 
-Then moving solid bodies that overlap each other are pushed apart, in whichever direction they overlap least. A body resting on the ground isn't pushed down into it; the one on top is pushed up instead (and gets `onGround`), so things stack.
+The flags aren't reset between parts, so after `physics.step` they say whether the body touched the ground, a ceiling or a wall **at any moment during the frame**.
+
+After each part, moving solid bodies that overlap each other are pushed apart, in whichever direction they overlap least. A body resting on the ground isn't pushed down into it; the one on top is pushed up instead (and gets `onGround`), so things stack.
 
 To keep things stable after a pause, `dt` is capped at 0.05 seconds per step.
+
+**Why the small parts:** moving a body in one big jump per frame isn't exact, and the error depends on the frame's length. In Forge 0.9.0 and earlier, the same jump went about 6.5 pixels (5%) higher at 144 FPS than at 30 FPS, so a gap could be jumpable on one monitor and not on another. With the small parts, the jump height is the same at every frame rate to within half a pixel. (It's also about 3 pixels higher than before at 60 FPS, because it's now closer to the exact answer: a level tuned by feel in an older Forge plays very slightly differently.)
 
 ## Patterns
 

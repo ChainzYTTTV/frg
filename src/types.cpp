@@ -98,15 +98,6 @@ Type* tOptional(Type* inner) {
     return intern("opt:" + idOf(inner), t);
 }
 
-Type* tPointer(Type* target) {
-    Type t{};
-    t.kind = TK::Pointer;
-    t.name = "Pointer<" + target->name + ">";
-    t.cpp = target->cpp + "*";
-    t.elem = target;
-    return intern("ptr:" + idOf(target), t);
-}
-
 Type* tWeak(Type* target) {
     Type t{};
     t.kind = TK::Weak;
@@ -193,7 +184,6 @@ Type* substType(Type* t, const std::vector<Type*>& from, const std::vector<Type*
         case TK::List: return tList(substType(t->elem, from, to));
         case TK::Map: return tMap(substType(t->key, from, to), substType(t->elem, from, to));
         case TK::Optional: return tOptional(substType(t->elem, from, to));
-        case TK::Pointer: return tPointer(substType(t->elem, from, to));
         case TK::Weak: return tWeak(substType(t->elem, from, to));
         case TK::Function: {
             std::vector<Type*> ps;

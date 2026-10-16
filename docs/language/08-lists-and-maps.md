@@ -62,7 +62,7 @@ Runtime error in main.frg:9: position 5 is outside the list (it has 3 items, at 
 
 `first()`, `last()`, `pop()`, `removeAt()` and `insert()` stop the game with a runtime error if the list is empty or the position is wrong.
 
-"Equal" means `==`: numbers and text by value, structs field by field, and classes only when it's the very same object.
+"Equal" means `==`: numbers and text by value, structs field by field (or with their own [`equals`](04-operators.md#operators-for-your-own-types)), and classes only when it's the very same object. Lists of function values, and of structs holding one, can't use these three, because function values can't be compared.
 
 ### Going through a list
 

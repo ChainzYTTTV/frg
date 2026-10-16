@@ -18,7 +18,7 @@ $parts = [ordered]@{
     "Part C: The language" = @(
         "language/01-basics.md", "language/02-variables-and-types.md", "language/03-text.md", "language/04-operators.md",
         "language/05-control-flow.md", "language/06-functions.md", "language/07-files-and-folders.md",
-        "language/08-lists-and-maps.md", "language/09-structs-and-classes.md", "language/10-enums-optionals-pointers.md",
+        "language/08-lists-and-maps.md", "language/09-structs-and-classes.md", "language/10-enums-and-optionals.md",
         "language/11-tasks.md", "language/12-errors.md", "language/13-reserved-words.md",
         "language/14-coming-from-other-languages.md")
     "Part D: The libraries" = @(

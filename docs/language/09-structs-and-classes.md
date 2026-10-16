@@ -598,4 +598,4 @@ class Boss : enemies.goblin.Goblin { ... }
 
 ## What's next
 
-[Enums, optionals and pointers](10-enums-optionals-pointers.md).
+[Enums and optionals](10-enums-and-optionals.md).

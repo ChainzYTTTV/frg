@@ -4,7 +4,7 @@
 
 struct TypeDecl;
 
-enum class TK { Error, Void, Null, Bool, Int, Float, String, Task, Struct, Class, Enum, List, Map, Optional, Pointer, Function, TypeParam, Weak };
+enum class TK { Error, Void, Null, Bool, Int, Float, String, Task, Struct, Class, Enum, List, Map, Optional, Function, TypeParam, Weak };
 
 struct Type {
     TK kind;
@@ -29,7 +29,6 @@ Type* tFloat(int bits);
 Type* tList(Type* elem);
 Type* tMap(Type* key, Type* value);
 Type* tOptional(Type* inner);
-Type* tPointer(Type* target);
 Type* tWeak(Type* target);  // Weak<Player>: points at a class object without keeping it alive
 Type* tFunction(Type* ret, const std::vector<Type*>& params);  // Function<ret(params)>
 Type* tNamed(TypeDecl* decl);  // the type of a struct, class or enum (a generic one with its own type names: Box<T>)
@@ -41,14 +40,14 @@ bool isGeneric(const Type* t);
 
 // Primitive types by name (int, float, string, ...). nullptr if `name` isn't one.
 Type* primitiveTypeByName(const std::string& name);
-// Names no user declaration may take: primitives, list/map/Pointer, and the core types (vec2, color, ...).
+// Names no user declaration may take: primitives, list/map/Function/Weak, and the core types (vec2, color, ...).
 bool isBuiltinTypeName(const std::string& name);
 std::vector<std::string> builtinTypeNames();
 
 inline bool isNumeric(const Type* t) { return t->kind == TK::Int || t->kind == TK::Float; }
 inline bool isClass(const Type* t) { return t->kind == TK::Class; }
 // Types that are always shared by reference (copying the variable doesn't copy the object).
-inline bool isNullableRef(const Type* t) { return t->kind == TK::Class || t->kind == TK::Pointer; }
+inline bool isNullableRef(const Type* t) { return t->kind == TK::Class; }
 
 // "an int", "a float" - for error messages.
 std::string aType(const Type* t);

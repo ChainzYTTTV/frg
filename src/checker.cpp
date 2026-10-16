@@ -156,11 +156,9 @@ bool isMapKey(const Type* t) {
     return t->kind == TK::Int || t->kind == TK::String || t->kind == TK::Enum || t->kind == TK::Bool;
 }
 
-// Strips Pointer<T> and T? so `p.x` works on the thing they point at.
+// Strips T? so `p.x` works on the thing it holds.
 Type* derefType(Type* t) {
-    if (t->kind == TK::Pointer) t = t->elem;
     if (t->kind == TK::Optional) t = t->elem;
-    if (t->kind == TK::Pointer) t = t->elem;
     return t;
 }
 
@@ -218,8 +216,6 @@ const std::vector<BMethod>& bmethods() {
         {TK::String, "isInt", {}, "bool"},
         {TK::String, "isFloat", {}, "bool"},
         {TK::Task, "isDone", {}, "bool"},
-        {TK::Pointer, "remove", {}, "void"},
-        {TK::Pointer, "isRemoved", {}, "bool"},
         {TK::Weak, "get", {}, "E?"},
         {TK::Task, "stop", {}, "void"},
     };
@@ -334,6 +330,15 @@ private:
     bool checkArgs(Expr* e, std::vector<ExprPtr>& args, FuncDecl* f, const std::string& name, Type* inst = nullptr);
     Type* construct(Expr* e, std::vector<ExprPtr>& args, TypeDecl* d, Type* expected = nullptr);
     Type* genericInstance(Expr* o);
+    Type* callValue(Expr* e, Type* ct, const std::string& what);
+    std::string whyNotComparable(Type* t);
+    bool requireComparable(Type* t, const Loc& loc, const std::string& what);
+    struct GenericUse {
+        Type* type;
+        Loc loc;
+    };
+    std::vector<GenericUse> genericUses;  // every Box<...> written in a type, checked once all code is known
+    void checkGenericUses();
     FuncDecl* operatorMethod(Type* t, const std::string& name);
     Type* userOperator(Expr* e, Expr* obj, Expr* arg, const std::string& name, const std::string& shown, bool swap, bool negate, bool wantBool);
     Type* builtinCall(Expr* e, const Builtin* b);
@@ -499,7 +504,9 @@ Type* Checker::namedType(TypeDecl* d, const TypeRef& r) {
         if (t == tError()) return nullptr;
         args.push_back(t);
     }
-    return tGeneric(d, args);
+    Type* g = tGeneric(d, args);
+    genericUses.push_back({g, r.loc});
+    return g;
 }
 
 Type* Checker::resolveType(const TypeRef& r, bool allowVoid) {
@@ -533,10 +540,9 @@ Type* Checker::resolveType(const TypeRef& r, bool allowVoid) {
             }
             base = tMap(k, v);
         } else if (name == "Pointer") {
-            if (!argCount(1, "Pointer<int>")) return tError();
-            Type* target = resolveType(r.args[0], false);
-            if (target == tError()) return tError();
-            base = tPointer(target);
+            reportError(r.loc, "Forge doesn't have pointers (Pointer<T> was removed)",
+                        "to let a function change a number, return the new value: score = addOne(score); - or keep the value in a class object, which functions can change");
+            return tError();
         } else if (name == "Weak") {
             if (!argCount(1, "Weak<Player>")) return tError();
             Type* target = resolveType(r.args[0], false);
@@ -863,8 +869,6 @@ bool Checker::canAssignQuiet(Expr* e, Type* T) {
     if (implicitlyConverts(S, T)) return true;
     // An optional value can be used as a plain one; it's checked for null when the game runs.
     if (S->kind == TK::Optional && T->kind != TK::Optional && implicitlyConverts(S->elem, T)) return true;
-    // Pointer<int> p = score;  points p at the variable `score`.
-    if (T->kind == TK::Pointer && S == T->elem && isLvalue(e)) return true;
     return false;
 }
 
@@ -909,8 +913,6 @@ bool Checker::assignable(Expr* e, Type* T, const std::string& dest) {
         hint = T->name + " can't hold every " + S->name + " value - use " + T->name + "(...) to convert it anyway";
     else if (S->kind == TK::Float && T->kind == TK::Float)
         hint = "use float(...) to convert it (it loses some precision)";
-    else if (T->kind == TK::Pointer && S == T->elem)
-        hint = "a Pointer has to point at a variable, a field or a list item";
     else if (S->kind == TK::Class && T->kind == TK::Class)
         hint = "a " + S->name + " isn't a kind of " + T->name;
     else if (S->kind == TK::List && T->kind == TK::List)
@@ -929,12 +931,11 @@ bool Checker::isLvalue(Expr* e) {
     switch (e->kind) {
         case EK::Name: return e->res.kind == RK::Local || e->res.kind == RK::Global || e->res.kind == RK::Field || e->res.kind == RK::TypeStatic;
         case EK::Member:
-            if (e->res.kind == RK::PointerValue) return true;
             if (e->res.kind == RK::Global || e->res.kind == RK::TypeStatic) return true;
             if (e->res.kind == RK::Field) {
                 Expr* o = e->a.get();
                 if (o->kind == EK::This || o->kind == EK::Super) return true;
-                if (o->type && (o->type->kind == TK::Class || o->type->kind == TK::Pointer ||
+                if (o->type && (o->type->kind == TK::Class ||
                                 (o->type->kind == TK::Optional && isNullableRef(o->type->elem))))
                     return true;
                 return isLvalue(o);
@@ -1169,7 +1170,6 @@ Type* Checker::finishRef(Expr* e, bool allowNonValue) {
         case RK::TypeStatic: return e->type = e->res.var->type ? e->res.var->type : tError();
         case RK::EnumValue: return e->type = tNamed(e->res.tdecl);
         case RK::StdConst: e->litFloat = true; return e->type = tFloat(32);
-        case RK::PointerValue:
         case RK::Describe: return e->type;
         case RK::None: return e->type = tError();
         case RK::BuiltinMethod:
@@ -1345,21 +1345,6 @@ void Checker::valueMember(Expr* e, Expr* o) {
             return;
         }
     }
-    if (t->kind == TK::Pointer && n == "value") {
-        r.kind = RK::PointerValue;
-        e->type = t->elem;
-        return;
-    }
-    // The pointer's own methods. p.remove(x) with a value still goes to a list or map it points at.
-    if (t->kind == TK::Pointer && (n == "isRemoved" || (n == "remove" && callArgs == 0))) {
-        auto& tbl = bmethods();
-        for (size_t i = 0; i < tbl.size(); i++)
-            if (tbl[i].on == TK::Pointer && n == tbl[i].name) r.index = (int)i;
-        r.kind = RK::BuiltinMethod;
-        if (n == "remove" && !isLvalue(o))
-            reportError(o->loc, "only a Pointer variable or field can be removed", "store the pointer in a variable first");
-        return;
-    }
     Type* d = derefType(t);
     if (d->kind == TK::Struct || d->kind == TK::Class) {
         if (VarDecl* f = findField(d->decl, n)) {
@@ -1402,10 +1387,7 @@ void Checker::valueMember(Expr* e, Expr* o) {
         reportError(e->loc, what + " don't have anything called '" + n + "'", guess.empty() ? "" : "did you mean '" + guess + "'?");
         return;
     }
-    if (t->kind == TK::Pointer)
-        reportError(e->loc, "a Pointer<" + t->elem->name + "> only has '.value', remove() and isRemoved()", "use p.value to read or change what it points at");
-    else
-        reportError(e->loc, "'" + o->text + "' is " + aType(t) + ", which has nothing inside it to reach with '.'");
+    reportError(e->loc, "'" + o->text + "' is " + aType(t) + ", which has nothing inside it to reach with '.'");
 }
 
 Type* Checker::memberExpr(Expr* e, bool allowNonValue) {
@@ -1593,10 +1575,90 @@ void Checker::checkRunCallbacks(const Loc& loc) {
         reportError(d->loc, "for window.run(), draw has to be written as: void draw()");
 }
 
+static bool mentionsTypeParam(const Type* t) {
+    if (!t) return false;
+    if (t->kind == TK::TypeParam) return true;
+    if (mentionsTypeParam(t->elem) || mentionsTypeParam(t->key)) return true;
+    for (const Type* p : t->params)
+        if (mentionsTypeParam(p)) return true;
+    return false;
+}
+
+// Why values of type `t` can't be compared with == (which contains, indexOf and remove use too), or "" if they can.
+// Classes always can (== asks "the same object?"); a struct can if all its fields can, or if it has its own equals().
+std::string Checker::whyNotComparable(Type* t) {
+    std::set<const TypeDecl*> seen;
+    std::function<std::string(Type*)> why = [&](Type* t) -> std::string {
+        if (!t) return "";
+        switch (t->kind) {
+            case TK::Function: return "function values can't be compared";
+            case TK::Weak: return "Weak values can't be compared (compare what they point at: a.get() == b.get())";
+            case TK::Task: return "tasks can't be compared";
+            case TK::Optional:
+            case TK::List: return why(t->elem);
+            case TK::Map: return why(t->elem);
+            case TK::Struct: {
+                if (!t->decl || seen.count(t->decl)) return "";
+                FuncDecl* eq = operatorMethod(t, "equals");
+                if (eq && eq->params.size() == 1) return "";
+                seen.insert(t->decl);
+                for (VarDecl* f : allFields(t->decl)) {
+                    if (f->isStatic || !f->type) continue;
+                    Type* ft = isGeneric(t) ? substType(f->type, t->decl->paramTypes, t->params) : f->type;
+                    std::string r = why(ft);
+                    if (!r.empty()) return "its field '" + f->name + "' is " + aType(ft) + ", and " + r;
+                }
+                return "";
+            }
+            default: return "";
+        }
+    };
+    return why(t);
+}
+
+// Reports an error (and returns false) if values of type `t` can't be compared; `what` says what compares them.
+bool Checker::requireComparable(Type* t, const Loc& loc, const std::string& what) {
+    if (curType && !curType->typeParams.empty() && mentionsTypeParam(t)) curType->comparesTypeParams = true;
+    std::string r = whyNotComparable(t);
+    if (r.empty()) return true;
+    // The type inside the list, map or optional that's the actual problem.
+    Type* u = t;
+    while (u->kind == TK::List || u->kind == TK::Map || u->kind == TK::Optional) u = u->elem;
+    std::string because = u->kind == TK::Struct && (u != t || what[0] != '\'') ? aType(u) + " can't be compared: " + r : r;
+    std::string hint = u->kind == TK::Struct && !u->decl->builtin
+                           ? "give " + u->decl->name + " a method that says when two of them are equal: bool equals(" + u->name +
+                                 " other) { ... } - or compare one of its fields instead"
+                           : "compare something they hold instead, like a name or a number";
+    if (what[0] == '\'')
+        reportError(loc, "can't use " + what + " on " + aType(t) + (u == t ? ": " : ", because ") + because, hint);
+    else
+        reportError(loc, what + " compares the items with ==, but " + because, hint);
+    return false;
+}
+
+// A generic type whose code compares its T values (item == x, items.contains(x)) can't be made with a T that can't be
+// compared. That's only known once every function has been checked, so it's checked at the end.
+void Checker::checkGenericUses() {
+    std::set<std::pair<Type*, std::string>> done;
+    for (const GenericUse& u : genericUses) {
+        TypeDecl* d = u.type->decl;
+        if (!d->comparesTypeParams) continue;
+        for (size_t i = 0; i < u.type->params.size() && i < d->typeParams.size(); i++) {
+            std::string r = whyNotComparable(u.type->params[i]);
+            std::string key = std::to_string(u.loc.line) + ":" + std::to_string(u.loc.col) + (u.loc.file ? u.loc.file->displayPath : "");
+            if (r.empty() || !done.insert({u.type, key}).second) continue;
+            reportError(u.loc,
+                        u.type->name + " can't be used, because " + d->name + " compares its " + d->typeParams[i] +
+                            " values with == (or contains, indexOf, remove), but " + r,
+                        "use a type that can be compared here, or keep the value in a class (classes compare as \"the same object\")");
+        }
+    }
+}
+
 // The Box<int> that `o` is (following ? and pointers), or nullptr if it isn't a generic type.
 Type* Checker::genericInstance(Expr* o) {
     Type* t = o->type;
-    while (t && (t->kind == TK::Optional || t->kind == TK::Pointer)) t = t->elem;
+    while (t && t->kind == TK::Optional) t = t->elem;
     if (o->kind == EK::This || o->kind == EK::Super) t = curType ? tNamed(curType) : nullptr;
     return t && isGeneric(t) ? t : nullptr;
 }
@@ -1826,8 +1888,14 @@ Type* Checker::callExpr(Expr* e, Type* expected) {
             return bmethodCall(e);
         case RK::Type: return construct(e, e->args, callee->res.tdecl, expected);
         case RK::None:
+            // fs[0](), makeHandler()(): anything that gives a function value can be called.
+            if (callee->type && (callee->type->kind == TK::Function ||
+                                 (callee->type->kind == TK::Optional && callee->type->elem->kind == TK::Function)))
+                return callValue(e, callee->type->kind == TK::Optional ? callee->type->elem : callee->type, "this function value");
             for (auto& a : e->args) value(a.get());
-            if (callee->type && callee->type != tError()) reportError(e->loc, "this is " + aType(callee->type) + ", not a function");
+            if (callee->type && callee->type != tError())
+                reportError(e->loc, "this is " + aType(callee->type) + ", not a function, so it can't be called",
+                            "only functions and function values (like Function<void()>) can be called with ( )");
             return e->type = tError();
         case RK::Local:
         case RK::Global:
@@ -1835,17 +1903,7 @@ Type* Checker::callExpr(Expr* e, Type* expected) {
         case RK::StdConst:
         case RK::TypeStatic: {
             Type* ct = callee->type && callee->type->kind == TK::Optional ? callee->type->elem : callee->type;
-            if (ct && ct->kind == TK::Function) {  // calling a function value
-                if (e->args.size() != ct->params.size()) {
-                    for (auto& a : e->args) value(a.get());
-                    reportError(e->loc, "'" + callee->text + "' needs " + std::to_string(ct->params.size()) + " value" +
-                                            (ct->params.size() == 1 ? "" : "s") + ", but got " + std::to_string(e->args.size()),
-                                "it's a " + ct->name);
-                    return e->type = tError();
-                }
-                for (size_t i = 0; i < e->args.size(); i++) checkInto(e->args[i].get(), ct->params[i], "value " + std::to_string(i + 1) + " of " + callee->text + "()");
-                return e->type = ct->elem;
-            }
+            if (ct && ct->kind == TK::Function) return callValue(e, ct, "'" + callee->text + "'");  // calling a function value
             for (auto& a : e->args) value(a.get());
             reportError(e->loc, "'" + callee->text + "' is a variable, not a function");
             return e->type = tError();
@@ -1855,6 +1913,20 @@ Type* Checker::callExpr(Expr* e, Type* expected) {
             reportError(e->loc, "'" + callee->text + "' isn't a function, so it can't be called");
             return e->type = tError();
     }
+}
+
+// Calling a function value: checks the values given against its Function<ret(params)> type.
+Type* Checker::callValue(Expr* e, Type* ct, const std::string& what) {
+    if (e->args.size() != ct->params.size()) {
+        for (auto& a : e->args) value(a.get());
+        reportError(e->loc, what + " needs " + std::to_string(ct->params.size()) + " value" + (ct->params.size() == 1 ? "" : "s") + ", but got " +
+                                std::to_string(e->args.size()),
+                    "it's a " + ct->name);
+        return e->type = tError();
+    }
+    std::string name = what[0] == '\'' ? what.substr(1, what.size() - 2) + "()" : what;
+    for (size_t i = 0; i < e->args.size(); i++) checkInto(e->args[i].get(), ct->params[i], "value " + std::to_string(i + 1) + " of " + name);
+    return e->type = ct->elem;
 }
 
 Type* Checker::bmethodCall(Expr* e) {
@@ -1869,6 +1941,8 @@ Type* Checker::bmethodCall(Expr* e) {
         return e->type = tError();
     }
     for (size_t i = 0; i < e->args.size(); i++) checkInto(e->args[i].get(), bmType(m.params[i], obj), "the value given to " + name + "()");
+    if (m.on == TK::List && (name == "contains" || name == "indexOf" || name == "remove") && !requireComparable(obj->elem, e->loc, name + "()"))
+        return e->type = tError();
     if (m.sortable && !isNumeric(obj->elem) && obj->elem->kind != TK::String) {
         FuncDecl* less = operatorMethod(obj->elem, "less");
         if (less && less->params.size() == 1 && less->ret == tBool())
@@ -2164,6 +2238,8 @@ Type* Checker::equalityOp(Expr* e) {
         Expr* other = L->kind == TK::Optional ? b : a;
         if (canAssignQuiet(other, opt)) {
             assignable(other, opt, "");
+            if (!operatorMethod(opt->elem, "equals") && !requireComparable(opt, e->loc, "'" + (e->opWord.empty() ? e->text : e->opWord) + "'"))
+                return e->type = tError();
             return ok(opt);
         }
     }
@@ -2175,6 +2251,8 @@ Type* Checker::equalityOp(Expr* e) {
         reportError(e->loc, "Weak values can't be compared directly", "compare what they point at: a.get() == b.get()");
         return e->type = tError();
     }
+    std::string shownOp = "'" + (e->opWord.empty() ? e->text : e->opWord) + "'";
+    if (!requireComparable(L, e->loc, shownOp) || (R != L && !requireComparable(R, e->loc, shownOp))) return e->type = tError();
     if (L == R && L->kind != TK::Void) return ok(L);
     if (L->kind == TK::Class && R->kind == TK::Class && !isGeneric(L) && !isGeneric(R)) {
         if (inheritsFrom(L->decl, R->decl)) return ok(R);
@@ -2364,12 +2442,10 @@ void Checker::varStmt(VarDecl* v) {
     } else if (v->type->kind == TK::TypeParam) {
         reportError(v->loc, "'" + v->name + "' needs a starting value, because " + v->type->name + " could be a class",
                     "give it one, or make it optional: " + v->type->name + "? " + v->name + " = null;");
-    } else if (v->type->kind == TK::Class || v->type->kind == TK::Pointer) {
+    } else if (v->type->kind == TK::Class) {
         reportError(v->loc, "'" + v->name + "' needs a starting value",
-                    v->type->kind == TK::Class ? "make one, like: " + v->type->name + " " + v->name + " = " + v->type->name +
-                                                     "(...);  - or if it can be empty, make it optional: " + v->type->name + "? " +
-                                                     v->name + " = null;"
-                                               : "point it at a variable, like: Pointer<int> p = score;");
+                    "make one, like: " + v->type->name + " " + v->name + " = " + v->type->name + "(...);  - or if it can be empty, make it optional: " +
+                        v->type->name + "? " + v->name + " = null;");
     }
     declareLocal(v);
     newLocals.push_back(v);
@@ -2764,7 +2840,7 @@ bool Checker::run() {
                     checkInto(f->init.get(), f->type, "'" + f->name + "'");
                     continue;
                 }
-                if (f->isStatic && !m->isPrelude && (f->type->kind == TK::Class || f->type->kind == TK::Pointer || f->type->kind == TK::Function)) {
+                if (f->isStatic && !m->isPrelude && (f->type->kind == TK::Class || f->type->kind == TK::Function)) {
                     reportError(f->loc, "the static field '" + f->name + "' needs a starting value",
                                 "give it one, or make it optional: static " + f->typeRef.display() + "? " + f->name + " = null;");
                     continue;
@@ -2786,11 +2862,10 @@ bool Checker::run() {
                                         "add this." + f->name + " = ...; to it (not inside an if or a loop), or make the field optional: " +
                                             f->type->name + "? " + f->name + ";");
                     }
-                } else if (!m->isPrelude && (f->type->kind == TK::Class || f->type->kind == TK::Pointer)) {
+                } else if (!m->isPrelude && f->type->kind == TK::Class) {
                     reportError(f->loc, "the field '" + f->name + "' needs a starting value",
-                                f->type->kind == TK::Class ? "give it one (" + f->typeRef.display() + " " + f->name + " = " + f->typeRef.display() +
-                                                                 "(...);) or make it optional (" + f->typeRef.display() + "? " + f->name + ";)"
-                                                           : "make it optional: Pointer<...>? " + f->name + ";");
+                                "give it one (" + f->typeRef.display() + " " + f->name + " = " + f->typeRef.display() + "(...);) or make it optional (" +
+                                    f->typeRef.display() + "? " + f->name + ";)");
                 }
             }
         }
@@ -2799,7 +2874,7 @@ bool Checker::run() {
                 checkInto(g->init.get(), g->type, "'" + g->name + "'");
             } else if (g->isConst) {
                 reportError(g->loc, "a const variable needs a value", "for example: const int MAX_HP = 100;");
-            } else if (g->type->kind == TK::Class || g->type->kind == TK::Pointer) {
+            } else if (g->type->kind == TK::Class) {
                 reportError(g->loc, "'" + g->name + "' needs a starting value", "or make it optional: " + g->type->name + "? " + g->name + " = null;");
             }
         }
@@ -2811,6 +2886,7 @@ bool Checker::run() {
             for (auto& meth : d->methods) checkBody(meth.get(), d.get());
         }
     }
+    checkGenericUses();
 
     Module* mm = P.mainModule;
     auto it = mm->funcs.find("main");

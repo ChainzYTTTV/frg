@@ -407,7 +407,7 @@ std::vector<Segment> parseChain(std::string s) {
 }
 
 Type* unwrap(Type* t) {
-    while (t && (t->kind == TK::Optional || t->kind == TK::Pointer)) t = t->elem;
+    while (t && t->kind == TK::Optional) t = t->elem;
     return t;
 }
 

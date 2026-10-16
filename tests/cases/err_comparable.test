@@ -1,0 +1,62 @@
+=== main.frg
+#include <stdio>
+
+// Each of these used to pass Forge's checks and then fail in the C++ compiler.
+struct Button {
+    string label;
+    Function<void()> onClick;
+}
+
+class Player {
+}
+
+struct Link {
+    Weak<Player> target;
+}
+
+struct Pair<A, B> {
+    A first;
+    B second;
+}
+
+task blink(){
+    wait(1);
+}
+
+int main(){
+    Button b = Button("Play", () { });
+    print(b == b);
+    list<Button> buttons = [b];
+    print(buttons.contains(b));
+    print(buttons.indexOf(b));
+    print(buttons.remove(b));
+    print(buttons == buttons);
+    Button? maybe = null;
+    print(maybe != b);
+
+    Function<void()> f = () { };
+    print(f == f);
+    list<Function<void()>> fs = [f];
+    print(fs.contains(f));
+
+    Link l = Link();
+    print(l == l);
+    task t = blink();
+    print(t == t);
+    Pair<int, Function<void()>> p = Pair(1, f);
+    print(p == p);
+    return 0;
+}
+=== error
+can't use '==' on a Button: its field 'onClick' is a Function<void()>, and function values can't be compared
+contains() compares the items with ==, but a Button can't be compared
+indexOf() compares the items with ==
+remove() compares the items with ==
+can't use '==' on a list<Button>, because a Button can't be compared
+can't use '!=' on a Button?, because a Button can't be compared
+can't use '==' on a Function<void()>: function values can't be compared
+contains() compares the items with ==, but function values can't be compared
+its field 'target' is a Weak<Player>, and Weak values can't be compared
+can't use '==' on a task: tasks can't be compared
+can't use '==' on a Pair<int, Function<void()>>: its field 'second' is a Function<void()>
+bool equals(Button other)

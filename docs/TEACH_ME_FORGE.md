@@ -257,7 +257,7 @@ void greet(string who, string greeting = "Hi"){   // a default value
 - `void` means it gives nothing back.
 - Functions can share a name if their parameters differ (`void drawHealth(int hp)` and `void drawHealth(float fraction)`): Forge picks the version whose parameter types match the values best (`drawHealth(75)` is the int one). Two versions with exactly the same parameter types are an error. Methods can't share names (only constructors can).
 
-**Functions as values.** A function value is written like a function without a return type or name: `(Enemy e) { return e.hp <= 0; }`. Its type is `Function<` return type `(` parameter types `)>`, like `Function<bool(Enemy)>`, `Function<void()>` or `Function<int(int, int)>` (it reads like the function's first line without names). Call one like a function: `isEven(4)`. A named function can be used as a value by writing its name without `()`: `Function<int(int)> f = twice;`. A function value goes where a `Function<...>` is expected (variable, parameter, field, list method), never on its own. It gets a **copy** of the local variables around it, so it can't change them (an error says so); it can change globals, fields and class objects. A `Function<...>` field can be empty until set (calling an empty one is a runtime error); a variable needs a starting value or `?`. Tasks can't be function values: wrap them, `() { blink(); }`.
+**Functions as values.** A function value is written like a function without a return type or name: `(Enemy e) { return e.hp <= 0; }`. Its type is `Function<` return type `(` parameter types `)>`, like `Function<bool(Enemy)>`, `Function<void()>` or `Function<int(int, int)>` (it reads like the function's first line without names). Call one like a function: `isEven(4)`, also straight from a list, map or call: `actions[0]()`, `makeAdder(10)(5)`. A named function can be used as a value by writing its name without `()`: `Function<int(int)> f = twice;`. A function value goes where a `Function<...>` is expected (variable, parameter, field, list method), never on its own. It gets a **copy** of the local variables around it, so it can't change them (an error says so); it can change globals, fields and class objects. A `Function<...>` field can be empty until set (calling an empty one is a runtime error); a variable needs a starting value or `?`. Tasks can't be function values: wrap them, `() { blink(); }`.
 
 ```cpp
 enemies.removeWhere((Enemy e) { return e.hp <= 0; });
@@ -388,7 +388,7 @@ Rules:
 - A variable or field whose type is a class must start with a value: `Enemy e = Enemy(...);`. To start empty, make it optional: `Enemy? e = null;`.
 - A struct can't contain itself (a list of itself is fine).
 - `print(obj)` shows something like `Point(x: 3.0, y: 4.0)`. Adding a method `string toText()` changes what's shown.
-- `==` on structs compares every field, and `==` on classes checks whether both are **the same object**.
+- `==` on structs compares every field, and `==` on classes checks whether both are **the same object**. Function values, `Weak` values and tasks can't be compared, so a struct with such a field can't use `==`, `contains`, `indexOf` or `remove` unless it has `bool equals(T other)`; the error names the field. A generic type whose code compares its `T` (like `items.contains(x)`) can't be used with such a `T`.
 - In `for (Point p in points)`, `p` is a **copy** of a struct, so changing it doesn't change the list. Use `points[i].x = ...` instead. With classes, the loop variable is the real object.
 
 **Checking the real kind of an object** (classes only):
@@ -472,20 +472,9 @@ int shown = bestScore ?? 0;
 - An optional can be used where its plain type is needed. If it's null at that moment, the game stops with `Runtime error in main.frg:12: 'target' is null`. Teach the learner to check with `!= null` first.
 - `if (target)` is an error. Write `if (target != null)`.
 
-### Pointers
+### No pointers
 
-```cpp
-void addOne(Pointer<int> counter){
-    counter.value += 1;       // .value is the variable it points at
-}
-
-int score = 10;
-addOne(score);                // score is now 11
-Pointer<int> p = score;       // points at score
-p.value = 50;                 // score is now 50
-```
-
-A pointer must point at a variable, field or list item. Don't keep one pointing at a function's local variable after that function ends. `p.remove()` throws a pointer away (the variable it pointed at is untouched): afterwards `p.isRemoved()` is true, and using `p` stops the game with "this pointer was removed (with remove()) ..." until it's pointed at something again with `p = someVariable;`. With a pointer to a list or map, `p.remove(x)` (with a value) is still the list's own remove. Pointers are rarely needed, since classes are already shared, so teach them late.
+Forge has no pointers (`Pointer<T>` existed up to 0.9.0 and was removed). To let a function change a caller's number, bool, text, struct or list, return the new value: `score = addOne(score);`. Class objects are shared, so a function can change one it's given; teach "keep values that change together in a class". If the learner writes `Pointer<int>`, the error explains this.
 
 ### Built-in types (always available, no include)
 
@@ -557,7 +546,7 @@ void draw(){
 
 A `Body` is a box: `Body(x, y, width, height)`.
 - Fields you set: `position`, `size`, `velocity` (all vec2), `isStatic` (true for floors, walls and platforms that never move), `oneWay` (with `isStatic`: a one-way platform, which you can jump up through from below and walk through sideways, but land on from above), and `gravityScale` (1 by default).
-- Fields Forge sets during each `physics.step(dt)`: `onGround`, `onCeiling` and `onWall`.
+- Fields Forge sets during each `physics.step(dt)`: `onGround`, `onCeiling` and `onWall` (true if it happened at any moment during that frame). `physics.step` splits each frame into equal parts of at most 1/240 s, so jumps go equally high at any frame rate.
 - Methods: `bounds()` (a rect), `center()`, `overlaps(otherBody)`.
 - Gravity starts at `vec2(0, 980)`, in pixels per second per second, pointing down.
 - Moving bodies stop when they hit static bodies, and push each other apart (so crates stack). A body with `solid = false` passes through everything, which is useful for coins and trigger zones; check those with `a.overlaps(b)`.
@@ -627,7 +616,7 @@ void draw(){
 
 **UI** (`<ui>`). UI is drawn every frame like everything else: `if (ui.button(rect(380, 200, 200, 50), "Play")) { ... }` draws the button and is true on the frame it's clicked. `volume = ui.slider(rect(...), volume, 0, 1);` and `showFps = ui.checkbox(rect(...), "Show FPS", showFps);` give back the new value.
 
-**ECS** (`<ECS>`): entities made of components.
+**ECS** (`<ECS>`): entities made of components. Despite the name, it's the entities-and-components style (Unity's GameObjects), not a data-oriented ECS: an entity is an object with a list of component objects, each with its own `update`/`draw`, and `get("Health")` checks each component's class name. Fine for hundreds of objects; for thousands of identical things (bullets), teach a plain `list` of structs instead.
 
 ```cpp
 class Health : Component {

@@ -1,4 +1,4 @@
-# Forge 0.9.0: the complete documentation
+# Forge 0.9.1: the complete documentation
 
 This one file holds everything written about the Forge programming language, so it can be uploaded in one go:
 
@@ -12,7 +12,7 @@ Where the parts disagree, the detailed pages (B to F) are more precise, and the 
 
 - **Part A: The teaching brief (for an AI tutor)**: Teaching Brief: the Forge Programming Language
 - **Part B: Start here**: Forge Documentation - Getting Started
-- **Part C: The language**: 1. The Basics - 2. Variables and Types - 3. Text - 4. Operators - 5. Making Decisions and Repeating - 6. Functions - 7. Files and Folders - 8. Lists and Maps - 9. Structs and Classes - 10. Enums, Optionals and Pointers - 11. Tasks - 12. Errors - 13. Reserved Words - 14. Coming From Other Languages
+- **Part C: The language**: 1. The Basics - 2. Variables and Types - 3. Text - 4. Operators - 5. Making Decisions and Repeating - 6. Functions - 7. Files and Folders - 8. Lists and Maps - 9. Structs and Classes - 10. Enums and Optionals - 11. Tasks - 12. Errors - 13. Reserved Words - 14. Coming From Other Languages
 - **Part D: The libraries**: Library Overview - Built-in Types: vec2, vec3, vec4, color, rect - <stdio>: Console Input and Output - <math>: Math Functions - <random>: Random Numbers - <window>: The Game Window - <input>: Keyboard, Mouse and Controllers - <graphics2d>: 2D Drawing - <graphics3d>: 3D Drawing - <assets>: Images, Animations and Fonts - <audio>: Sounds and Music - <physics>: Boxes, Gravity and Collisions - <time>: Clock, Date and Timers - <file>: Reading and Writing Text Files - <save>: Remembering Things Between Runs - <tween>: Smooth Changes Over Time - <particles>: Dust, Sparks and Explosions - <tilemap>: Levels Drawn as Text - <scenes>: Menus, Levels and Game Over - <ui>: Buttons, Checkboxes, Sliders and Text Boxes - <ECS>: Entities and Components - <tasks>: Tasks Without a Window - <testing>: Testing Your Game's Code - Low-Level Toolkits: OpenGL, DirectX and Vulkan - <OpenGL>: Drawing with OpenGL Yourself - <DirectX>: Drawing with Direct3D 11 Yourself - <Vulkan>: Drawing with Vulkan Yourself
 - **Part E: Guides**: The Game Loop - Sprites and Animation - Platformer Walkthrough
 - **Part F: Under the hood**: How Forge Works
@@ -283,7 +283,7 @@ void greet(string who, string greeting = "Hi"){   // a default value
 - `void` means it gives nothing back.
 - Functions can share a name if their parameters differ (`void drawHealth(int hp)` and `void drawHealth(float fraction)`): Forge picks the version whose parameter types match the values best (`drawHealth(75)` is the int one). Two versions with exactly the same parameter types are an error. Methods can't share names (only constructors can).
 
-**Functions as values.** A function value is written like a function without a return type or name: `(Enemy e) { return e.hp <= 0; }`. Its type is `Function<` return type `(` parameter types `)>`, like `Function<bool(Enemy)>`, `Function<void()>` or `Function<int(int, int)>` (it reads like the function's first line without names). Call one like a function: `isEven(4)`. A named function can be used as a value by writing its name without `()`: `Function<int(int)> f = twice;`. A function value goes where a `Function<...>` is expected (variable, parameter, field, list method), never on its own. It gets a **copy** of the local variables around it, so it can't change them (an error says so); it can change globals, fields and class objects. A `Function<...>` field can be empty until set (calling an empty one is a runtime error); a variable needs a starting value or `?`. Tasks can't be function values: wrap them, `() { blink(); }`.
+**Functions as values.** A function value is written like a function without a return type or name: `(Enemy e) { return e.hp <= 0; }`. Its type is `Function<` return type `(` parameter types `)>`, like `Function<bool(Enemy)>`, `Function<void()>` or `Function<int(int, int)>` (it reads like the function's first line without names). Call one like a function: `isEven(4)`, also straight from a list, map or call: `actions[0]()`, `makeAdder(10)(5)`. A named function can be used as a value by writing its name without `()`: `Function<int(int)> f = twice;`. A function value goes where a `Function<...>` is expected (variable, parameter, field, list method), never on its own. It gets a **copy** of the local variables around it, so it can't change them (an error says so); it can change globals, fields and class objects. A `Function<...>` field can be empty until set (calling an empty one is a runtime error); a variable needs a starting value or `?`. Tasks can't be function values: wrap them, `() { blink(); }`.
 
 ```cpp
 enemies.removeWhere((Enemy e) { return e.hp <= 0; });
@@ -414,7 +414,7 @@ Rules:
 - A variable or field whose type is a class must start with a value: `Enemy e = Enemy(...);`. To start empty, make it optional: `Enemy? e = null;`.
 - A struct can't contain itself (a list of itself is fine).
 - `print(obj)` shows something like `Point(x: 3.0, y: 4.0)`. Adding a method `string toText()` changes what's shown.
-- `==` on structs compares every field, and `==` on classes checks whether both are **the same object**.
+- `==` on structs compares every field, and `==` on classes checks whether both are **the same object**. Function values, `Weak` values and tasks can't be compared, so a struct with such a field can't use `==`, `contains`, `indexOf` or `remove` unless it has `bool equals(T other)`; the error names the field. A generic type whose code compares its `T` (like `items.contains(x)`) can't be used with such a `T`.
 - In `for (Point p in points)`, `p` is a **copy** of a struct, so changing it doesn't change the list. Use `points[i].x = ...` instead. With classes, the loop variable is the real object.
 
 **Checking the real kind of an object** (classes only):
@@ -498,20 +498,9 @@ int shown = bestScore ?? 0;
 - An optional can be used where its plain type is needed. If it's null at that moment, the game stops with `Runtime error in main.frg:12: 'target' is null`. Teach the learner to check with `!= null` first.
 - `if (target)` is an error. Write `if (target != null)`.
 
-#### Pointers
+#### No pointers
 
-```cpp
-void addOne(Pointer<int> counter){
-    counter.value += 1;       // .value is the variable it points at
-}
-
-int score = 10;
-addOne(score);                // score is now 11
-Pointer<int> p = score;       // points at score
-p.value = 50;                 // score is now 50
-```
-
-A pointer must point at a variable, field or list item. Don't keep one pointing at a function's local variable after that function ends. `p.remove()` throws a pointer away (the variable it pointed at is untouched): afterwards `p.isRemoved()` is true, and using `p` stops the game with "this pointer was removed (with remove()) ..." until it's pointed at something again with `p = someVariable;`. With a pointer to a list or map, `p.remove(x)` (with a value) is still the list's own remove. Pointers are rarely needed, since classes are already shared, so teach them late.
+Forge has no pointers (`Pointer<T>` existed up to 0.9.0 and was removed). To let a function change a caller's number, bool, text, struct or list, return the new value: `score = addOne(score);`. Class objects are shared, so a function can change one it's given; teach "keep values that change together in a class". If the learner writes `Pointer<int>`, the error explains this.
 
 #### Built-in types (always available, no include)
 
@@ -583,7 +572,7 @@ void draw(){
 
 A `Body` is a box: `Body(x, y, width, height)`.
 - Fields you set: `position`, `size`, `velocity` (all vec2), `isStatic` (true for floors, walls and platforms that never move), `oneWay` (with `isStatic`: a one-way platform, which you can jump up through from below and walk through sideways, but land on from above), and `gravityScale` (1 by default).
-- Fields Forge sets during each `physics.step(dt)`: `onGround`, `onCeiling` and `onWall`.
+- Fields Forge sets during each `physics.step(dt)`: `onGround`, `onCeiling` and `onWall` (true if it happened at any moment during that frame). `physics.step` splits each frame into equal parts of at most 1/240 s, so jumps go equally high at any frame rate.
 - Methods: `bounds()` (a rect), `center()`, `overlaps(otherBody)`.
 - Gravity starts at `vec2(0, 980)`, in pixels per second per second, pointing down.
 - Moving bodies stop when they hit static bodies, and push each other apart (so crates stack). A body with `solid = false` passes through everything, which is useful for coins and trigger zones; check those with `a.overlaps(b)`.
@@ -653,7 +642,7 @@ void draw(){
 
 **UI** (`<ui>`). UI is drawn every frame like everything else: `if (ui.button(rect(380, 200, 200, 50), "Play")) { ... }` draws the button and is true on the frame it's clicked. `volume = ui.slider(rect(...), volume, 0, 1);` and `showFps = ui.checkbox(rect(...), "Show FPS", showFps);` give back the new value.
 
-**ECS** (`<ECS>`): entities made of components.
+**ECS** (`<ECS>`): entities made of components. Despite the name, it's the entities-and-components style (Unity's GameObjects), not a data-oriented ECS: an entity is an object with a list of component objects, each with its own `update`/`draw`, and `get("Health")` checks each component's class name. Fine for hundreds of objects; for thousands of identical things (bullets), teach a plain `list` of structs instead.
 
 ```cpp
 class Health : Component {
@@ -1718,7 +1707,7 @@ Read these in order the first time.
 | 7 | Files and folders (see “7. Files and Folders”) | Splitting a game into files, the file-name prefix rule, folders, `#include` |
 | 8 | Lists and maps (see “8. Lists and Maps”) | `list<T>`, `map<K, V>` and every method they have |
 | 9 | Structs and classes (see “9. Structs and Classes”) | Your own types: fields, methods, constructors, inheritance, `is`/`as`, `private` |
-| 10 | Enums, optionals and pointers (see “10. Enums, Optionals and Pointers”) | `enum`, `Type?` and `null`, `Pointer<T>` |
+| 10 | Enums and optionals (see “10. Enums and Optionals”) | `enum`, `Type?` and `null`, changing a caller's value |
 | 11 | Tasks (see “11. Tasks”) | `task` functions and `wait()`: timed events without freezing the game |
 | 12 | Errors (see “12. Errors”) | How to read error messages, and a list of common ones with fixes |
 | 13 | Reserved words (see “13. Reserved Words”) | Every keyword, built-in name and word operator |
@@ -1800,7 +1789,7 @@ frg version
 g++ --version
 ```
 
-The first should print `Forge 0.9.0` and the second should print a GCC version. If `frg` isn't found, add Forge's `bin` folder to your PATH and restart the terminal.
+The first should print `Forge 0.9.1` and the second should print a GCC version. If `frg` isn't found, add Forge's `bin` folder to your PATH and restart the terminal.
 
 #### Building Forge from source
 
@@ -2278,7 +2267,7 @@ A variable made without a value starts at the "zero" of its type:
 | optional (`Type?`) | `null` |
 | `task` | a finished task |
 
-**Classes and pointers have no zero**, so a variable of a class type must be given a value: `Enemy e = Enemy();`. If it should start empty, make it optional instead: `Enemy? e = null;`. See Structs and classes (see “9. Structs and Classes”).
+**Classes have no zero**, so a variable of a class type must be given a value: `Enemy e = Enemy();`. If it should start empty, make it optional instead: `Enemy? e = null;`. See Structs and classes (see “9. Structs and Classes”).
 
 ### Where variables live
 
@@ -2398,8 +2387,8 @@ string greeting = "Hi {name}!";
 | Type | Chapter |
 |---|---|
 | `list<T>`, `map<K, V>` | Lists and maps (see “8. Lists and Maps”) |
-| your own `struct`, `class`, `enum` | Structs and classes (see “9. Structs and Classes”), Enums (see “10. Enums, Optionals and Pointers”) |
-| `Type?` (optional), `Pointer<T>` | Enums, optionals and pointers (see “10. Enums, Optionals and Pointers”) |
+| your own `struct`, `class`, `enum` | Structs and classes (see “9. Structs and Classes”), Enums (see “10. Enums and Optionals”) |
+| `Type?` (optional) | Enums and optionals (see “10. Enums and Optionals”) |
 | `task` | Tasks (see “11. Tasks”) |
 | `vec2`, `vec3`, `vec4`, `color`, `rect` | Built-in types (see “Built-in Types: vec2, vec3, vec4, color, rect”) |
 
@@ -2820,7 +2809,7 @@ int shown = best ?? 0;
 int shown2 = best otherwise 0;                          // the same thing
 ```
 
-Both choices must be the same type, or types that fit together (like `int` and `float`, giving a `float`). For `if ... else`, the word `if` must be on the same line as the value before it. See Optionals (see “10. Enums, Optionals and Pointers”) for more about `null`.
+Both choices must be the same type, or types that fit together (like `int` and `float`, giving a `float`). For `if ... else`, the word `if` must be on the same line as the value before it. See Optionals (see “10. Enums and Optionals”) for more about `null`.
 
 ### Changing variables
 
@@ -2974,7 +2963,7 @@ Things to know:
 - Your type has to be on the **left**: `a * 3` uses `a.times(3)`, but `3 * a` is an error.
 - The method takes one value. `less` and `equals` have to give back a `bool`; the others can give back anything (usually the same type).
 - With `less`, `a > b` is `b.less(a)`, `a <= b` is "not `b.less(a)`", and `a >= b` is "not `a.less(b)`". So one method gives all four.
-- Without `equals`, `==` compares every field of a struct, and for classes it checks whether both sides are the **same object**. A struct's `equals` is also used by `contains`, `indexOf` and `remove` on its lists.
+- Without `equals`, `==` compares every field of a struct, and for classes it checks whether both sides are the **same object**. Function values, `Weak` values and tasks can't be compared, so a struct holding one can't use `==` (or `contains`, `indexOf`, `remove`) until it has an `equals` method; Forge says which field is the problem. A struct's `equals` is also used by `contains`, `indexOf` and `remove` on its lists.
 - These are normal methods too: `a.plus(b)` works.
 
 ### What's next
@@ -3283,7 +3272,6 @@ What happens when a function changes a parameter depends on its type:
 |---|---|---|
 | numbers, bools, strings, structs, lists, maps | its own **copy** | no |
 | classes | the **same object** | yes |
-| `Pointer<T>` | a pointer to the caller's variable | yes, through `.value` |
 
 ```cpp
 void tryToChange(int n, list<int> xs, Enemy e){
@@ -3293,7 +3281,7 @@ void tryToChange(int n, list<int> xs, Enemy e){
 }
 ```
 
-To change a number or a list for the caller, either return the new value, or pass a `Pointer`. See Pointers (see “10. Enums, Optionals and Pointers” › “Pointers”).
+To change a number or a list for the caller, return the new value: `score = addOne(score);`. To change several values, keep them in a class. See Changing a caller's number (see “10. Enums and Optionals” › “Changing a caller's number: return it”).
 
 #### Default values
 
@@ -3397,6 +3385,8 @@ To keep a function value in a variable, a field or a parameter, its type is `Fun
 Function<bool(int)> isEven = (int n) { return n % 2 == 0; };
 print(isEven(4));      // true: call it like a function
 ```
+
+A function value can be called wherever it comes from, not only from a variable: `actions[0]()` calls the first one in a list, `handlers["jump"]()` one in a map, and `makeAdder(10)(5)` the one a function gave back.
 
 The part inside `< >` reads like the first line of a function, without the names: `bool isEven(int n)` becomes `Function<bool(int)>`.
 
@@ -3672,7 +3662,7 @@ Runtime error in main.frg:9: position 5 is outside the list (it has 3 items, at 
 
 `first()`, `last()`, `pop()`, `removeAt()` and `insert()` stop the game with a runtime error if the list is empty or the position is wrong.
 
-"Equal" means `==`: numbers and text by value, structs field by field, and classes only when it's the very same object.
+"Equal" means `==`: numbers and text by value, structs field by field (or with their own `equals` (see “4. Operators” › “Operators for your own types”)), and classes only when it's the very same object. Lists of function values, and of structs holding one, can't use these three, because function values can't be compared.
 
 #### Going through a list
 
@@ -4389,11 +4379,11 @@ class Boss : enemies.goblin.Goblin { ... }
 
 ### What's next
 
-Enums, optionals and pointers (see “10. Enums, Optionals and Pointers”).
+Enums and optionals (see “10. Enums and Optionals”).
 
-<!-- docs/language/10-enums-optionals-pointers.md -->
+<!-- docs/language/10-enums-and-optionals.md -->
 
-## 10. Enums, Optionals and Pointers
+## 10. Enums and Optionals
 
 ### Enums
 
@@ -4516,63 +4506,32 @@ if (where != null) {
 - `obj as Type` gives an optional (see is and as (see “9. Structs and Classes” › “is and as: what kind of object is it?”)).
 - Fields of class type are often optional: `Enemy? target;` (otherwise they need a starting value).
 
-### Pointers
+### Changing a caller's number: return it
 
-A `Pointer<T>` points at a variable, so you can read and change that variable from somewhere else. `.value` is the variable it points at:
-
-```cpp
-void addOne(Pointer<int> counter){
-    counter.value += 1;
-}
-
-int score = 10;
-addOne(score);              // score is now 11
-
-Pointer<int> p = score;     // p points at score
-p.value = 50;               // score is now 50
-print(score);               // 50
-```
-
-- Making a pointer from a variable is automatic: write the variable, and Forge points at it.
-- A pointer can point at a variable, a field (`player.hp`) or a list item (`scores[0]`), but not at a calculated value like `score + 1`.
-- For a pointer to a struct, fields can be used directly: `Pointer<Point> pp = p; pp.x = 5;`.
-- A `Pointer<T>` must start pointing at something. `Pointer<T>?` can be `null`.
-
-#### Throwing a pointer away: remove()
-
-`p.remove()` makes the pointer point at nothing. The thing it pointed at isn't changed; only the pointer lets go of it. After that, `p.isRemoved()` is `true`, and using `p` stops the game with a clear message instead of doing something strange:
-
-```cpp
-int score = 10;
-Pointer<int> p = score;
-p.remove();
-print(p.isRemoved());    // true
-print(score);            // 10 - score itself is fine
-p.value = 5;             // stops the game: "this pointer was removed (with remove()), so it doesn't point at anything any more"
-p = score;               // pointing it at something again makes it usable again
-```
-
-| | What it does |
-|---|---|
-| `p.remove()` | makes `p` point at nothing |
-| `p.isRemoved()` | `true` after `remove()`, until `p` is pointed at something again |
-
-If a pointer points at a list or a map, `p.remove(x)` **with** a value is still the list's (or map's) own `remove`. Only `p.remove()` with nothing in the brackets is the pointer's.
-
-#### When to use pointers
-
-Rarely. Class objects are already shared (a function that gets a `Player` can change it), so pointers are only needed to let a function change a caller's **number, bool, string, struct or list** variable. Often it's clearer to return the new value instead:
+Forge has no pointers. When a function should change a number, a bool, text, a struct or a list for whoever called it, **return the new value**:
 
 ```cpp
 int addOne(int n){
     return n + 1;
 }
+
 score = addOne(score);
 ```
 
-#### Danger: don't keep pointers to things that go away
+Class objects are already shared, so a function that gets a `Player` can change it directly. To change several values at once, keep them together in a class:
 
-A pointer to a function's local variable stops being valid when that function ends, and the same goes for a pointer to a list item once the list grows or shrinks. Forge can't always catch this. Using such a pointer gives garbage values or a crash. Keep pointers short-lived: pass them into a function, and don't store them. When you do keep one and you're done with it, `p.remove()` it, so using it by mistake gives a clear error.
+```cpp
+class Stats {
+    int hp = 100;
+    int coins = 0;
+}
+
+void pickUpCoin(Stats s){
+    s.coins += 1;           // changes the caller's Stats
+}
+```
+
+(Forge 0.9.0 and earlier had a `Pointer<T>` type. It was removed, because a pointer to a list item or to a field of an object could quietly change the wrong memory once the list grew or the object was freed.)
 
 ### What's next
 
@@ -4959,7 +4918,7 @@ If anything inside `try` has a runtime error, the rest of the `try` part is skip
 - A `try` around starting a task doesn't catch errors inside the task: put the `try` **inside** the task instead. `wait()` works inside `try { }`, but not inside `catch { }`.
 - Don't use `try` to hide mistakes: a list position that's outside the list is better fixed than caught. `try` is for things your game can't control, like files and what the player types.
 
-Crashes that don't give a message (`[game.exe crashed (code 0xC0000005)]`) usually mean a pointer (see “10. Enums, Optionals and Pointers” › “Pointers”) was used after the thing it pointed at went away, or a function called itself forever.
+Crashes that don't give a message (`[game.exe crashed (code 0xC0000005)]`) usually mean a function called itself forever (or a bug in Forge or a library: please report it).
 
 ### The C++ compiler rejected Forge's output
 
@@ -4996,7 +4955,7 @@ These words have special meanings, so they can't be used as names for variables,
 
 ### Built-in type names
 
-`void` `bool` `string` `task` `int` `int8` `int16` `int32` `int64` `int128` `uint` `uint8` `uint16` `uint32` `uint64` `uint128` `float` `double` `list` `map` `Pointer` `Function` `Weak` `vec2` `vec3` `vec4` `color` `rect` `Error`
+`void` `bool` `string` `task` `int` `int8` `int16` `int32` `int64` `int128` `uint` `uint8` `uint16` `uint32` `uint64` `uint128` `float` `double` `list` `map` `Function` `Weak` `vec2` `vec3` `vec4` `color` `rect` `Error`
 
 ### Built-in member names
 
@@ -5692,7 +5651,7 @@ if (input.keyPressed(Key.SPACE) and onGround) {
 | Modifiers | `Key.LEFT_SHIFT` `Key.RIGHT_SHIFT` `Key.LEFT_CONTROL` `Key.RIGHT_CONTROL` `Key.LEFT_ALT` `Key.RIGHT_ALT` |
 | Function keys | `Key.F1` … `Key.F12` |
 
-`Key` is an enum (see “10. Enums, Optionals and Pointers” › “Enums”), so keys can be stored in variables and lists: `Key jumpKey = Key.SPACE;`.
+`Key` is an enum (see “10. Enums and Optionals” › “Enums”), so keys can be stored in variables and lists: `Key jumpKey = Key.SPACE;`.
 
 Escape also closes the window by default.
 
@@ -6426,7 +6385,7 @@ physics.add(crate);
 |---|---|
 | `physics.add(Body body)` | adds a body to the world. Adding it twice does nothing. |
 | `physics.remove(Body body)` | takes it out of the world |
-| `physics.step(float dt)` | moves everything forward by `dt` seconds. Call it **once per frame**. |
+| `physics.step(float dt)` | moves everything forward by `dt` seconds. Call it **once per frame** with the frame's `dt`. The game behaves the same at any frame rate (see below). |
 | `physics.setGravity(vec2 gravity)` | gravity, in pixels per second per second. Starts at `vec2(0, 980)`. |
 | `physics.gravity()` | the current gravity |
 | `physics.clear()` | removes every body |
@@ -6465,17 +6424,20 @@ The physics library itself never draws (it doesn't use raylib), which is why the
 
 ### What happens in a step
 
-For each moving (not static) body:
+First, `onGround`, `onCeiling` and `onWall` are reset to false on every moving body. Then the frame is split into **equal small parts of at most 1/240 of a second** (4 parts at 60 FPS, 8 at 30 FPS, 2 at 144 FPS), and each part does this for every moving (not static) body:
 
-1. `onGround`, `onCeiling` and `onWall` are reset to false.
-2. Gravity is added to its velocity: `velocity += gravity × gravityScale × dt`.
-3. It moves sideways by `velocity.x × dt`. If that runs it into a static solid body, it's pushed back out, `velocity.x` becomes 0, and `onWall` becomes true.
-4. It moves up or down by `velocity.y × dt`. If that runs it into a static solid body, it's pushed out, `velocity.y` becomes 0, and `onGround` (when moving down) or `onCeiling` (when moving up) becomes true. A one-way platform (`oneWay = true`) only counts here, and only when the body is falling onto it from above; in step 3 it never counts.
-5. Fast bodies move in several small steps, so they can't pass straight through thin platforms.
+1. Gravity is added to its velocity: `velocity += gravity × gravityScale × dt`.
+2. It moves sideways by `velocity.x × dt`. If that runs it into a static solid body, it's pushed back out, `velocity.x` becomes 0, and `onWall` becomes true.
+3. It moves up or down by `velocity.y × dt`. If that runs it into a static solid body, it's pushed out, `velocity.y` becomes 0, and `onGround` (when moving down) or `onCeiling` (when moving up) becomes true. A one-way platform (`oneWay = true`) only counts here, and only when the body is falling onto it from above; in step 2 it never counts.
+4. Fast bodies move in several small steps, so they can't pass straight through thin platforms.
 
-Then moving solid bodies that overlap each other are pushed apart, in whichever direction they overlap least. A body resting on the ground isn't pushed down into it; the one on top is pushed up instead (and gets `onGround`), so things stack.
+The flags aren't reset between parts, so after `physics.step` they say whether the body touched the ground, a ceiling or a wall **at any moment during the frame**.
+
+After each part, moving solid bodies that overlap each other are pushed apart, in whichever direction they overlap least. A body resting on the ground isn't pushed down into it; the one on top is pushed up instead (and gets `onGround`), so things stack.
 
 To keep things stable after a pause, `dt` is capped at 0.05 seconds per step.
+
+**Why the small parts:** moving a body in one big jump per frame isn't exact, and the error depends on the frame's length. In Forge 0.9.0 and earlier, the same jump went about 6.5 pixels (5%) higher at 144 FPS than at 30 FPS, so a gap could be jumpable on one monitor and not on another. With the small parts, the jump height is the same at every frame rate to within half a pixel. (It's also about 3 pixels higher than before at 60 FPS, because it's now closer to the exact answer: a level tuned by feel in an older Forge plays very slightly differently.)
 
 ### Patterns
 
@@ -7356,7 +7318,13 @@ See examples/menu (the file `examples/menu/main.frg` in the Forge folder) for a 
 
 An alternative way to organize a game. Instead of one big class per kind of thing (a `Player` class, a `Goblin` class...), every game object is an **Entity**: a named container. You give it **Components**: small, reusable pieces of behavior like `Health`, `Mover` or `Sprite`. Mixing components makes different things: a goblin might be `Health` + `Mover` + `ChasePlayer`, and a crate just `Health`.
 
-(ECS stands for Entity Component System. Forge's version is the friendly "game objects with components" style, as in Unity, rather than a data-oriented engine.)
+**What `<ECS>` is, and isn't.** The name comes from "Entity Component System", but Forge's `<ECS>` is the **entities-and-components** style that Unity's GameObjects use, not a data-oriented ECS like Bevy's or Unity DOTS:
+
+- An entity is an ordinary object that keeps a list of component objects. Each component is a class with its own `update` and `draw`, so the code lives in the components, not in separate "systems".
+- `get("Health")`, `has(...)`, `remove(...)` and `ECS.withComponent(...)` find components by their class name, by checking each component (and, for `withComponent`, each entity) in turn.
+- Nothing is packed into arrays for speed. It's as fast as the same game written with classes and lists, which is plenty for the tens or hundreds of objects of a typical Forge game. For thousands of identical things (bullets, particles), a plain `list` of structs updated in one loop is faster and simpler.
+
+Use it when mixing behaviors is easier than writing one class per kind of thing. Plain classes and lists are just as good a way to make a game.
 
 ### Components
 
@@ -9411,7 +9379,7 @@ Each question starts `frg` again and reads the whole game, which takes a fractio
 
 The whole language on one page, for looking things up quickly. For full explanations, examples and every detail, see the complete documentation (see “Forge Documentation”). Planned features are listed at the end.
 
-**Contents:** A Forge game (see “A Forge game”) · Variables (see “Variables and types”) · Text (see “Text”) · Operators (see “Operators”) · If and loops (see “If, loops and switch”) · Functions (see “Functions”) · Files and folders (see “Multiple files”) · Lists and maps (see “Lists and maps”) · Structs and classes (see “Structs and classes”) · Enums (see “Enums”) · Optional values and null (see “Optional values and null”) · Pointers (see “Pointers”) · Tasks (see “Tasks: waiting without freezing the game”) · Built-in types (see “Built-in types: vec2, color, rect”) · Libraries (see “Libraries”) · Making a game (see “Making a game”) · Errors (see “Errors”)
+**Contents:** A Forge game (see “A Forge game”) · Variables (see “Variables and types”) · Text (see “Text”) · Operators (see “Operators”) · If and loops (see “If, loops and switch”) · Functions (see “Functions”) · Files and folders (see “Multiple files”) · Lists and maps (see “Lists and maps”) · Structs and classes (see “Structs and classes”) · Enums (see “Enums”) · Optional values and null (see “Optional values and null”) · Tasks (see “Tasks: waiting without freezing the game”) · Built-in types (see “Built-in types: vec2, color, rect”) · Libraries (see “Libraries”) · Making a game (see “Making a game”) · Errors (see “Errors”)
 
 ### A Forge game
 
@@ -9884,20 +9852,9 @@ int shown = bestScore ?? 0;   // 0 when there's no best score yet
 
 Variables of class type **without** a `?` must always hold an object, so they need a starting value. You can use an optional anywhere its plain type is needed. If it turns out to be null, the game stops and tells you exactly where.
 
-### Pointers
+#### Changing a caller's value
 
-A `Pointer<T>` points at a variable, so you can change that variable from somewhere else. `.value` reads or changes the variable it points at:
-
-```cpp
-void addOne(Pointer<int> counter){
-    counter.value += 1;
-}
-
-int score = 10;
-addOne(score);        // score is now 11
-```
-
-Don't keep a pointer to a function's local variable after that function ends. `p.remove()` makes a pointer point at nothing: `p.isRemoved()` is then true, and using `p` stops the game with a clear message ("this pointer was removed ...") until it's pointed at something again (`p = score;`).
+Forge has no pointers. To change a caller's number, return the new value (`score = addOne(score);`). Class objects are shared, so a function can change a class object it's given; keep values that change together in a class.
 
 ### Tasks: waiting without freezing the game
 
@@ -10075,7 +10032,7 @@ Health h = slime.get("Health") as Health;    // find a component by its class na
 // every frame:  ECS.update(dt);  ECS.draw();
 ```
 
-A `Component` has `start()` (runs once, before its first update), `update(dt)`, `draw()` and `entity()`. An `Entity` has `name`, `active`, `components`, `add(c)`, `get("Type")`, `has("Type")`, `remove("Type")` and `destroy()`. The world has `ECS.create(name)` `add(entity)` `update(dt)` `draw()` `find(name)` `all()` `withComponent("Type")` `clear()` `count()`.
+This is the entities-and-components style (like Unity's GameObjects), not a data-oriented ECS: entities are ordinary objects holding a list of components, and `get("Type")` checks each component's class name. A `Component` has `start()` (runs once, before its first update), `update(dt)`, `draw()` and `entity()`. An `Entity` has `name`, `active`, `components`, `add(c)`, `get("Type")`, `has("Type")`, `remove("Type")` and `destroy()`. The world has `ECS.create(name)` `add(entity)` `update(dt)` `draw()` `find(name)` `all()` `withComponent("Type")` `clear()` `count()`.
 
 #### Timer
 
@@ -10216,7 +10173,7 @@ try {
 
 Every runtime error can be caught, including from functions called inside the `try`. `throw "message";` makes your own error (it stops the game if nothing catches it), and `throw e;` inside a catch passes it on. `wait()` can't be used inside a `catch { }`, and a `try` doesn't catch errors from tasks it starts (put the `try` inside the task).
 
-If a file has several syntax mistakes, Forge reports all of them in one go.
+If a file has several syntax mistakes, Forge reports the first one in each function in one go; a second mistake in the same function shows up once the first is fixed. Type mistakes (like giving text where a number is needed) are reported once there are no syntax mistakes left.
 
 ### Coming next
 

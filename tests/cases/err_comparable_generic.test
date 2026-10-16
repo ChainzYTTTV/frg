@@ -1,0 +1,28 @@
+=== main.frg
+#include <stdio>
+
+class Bag<T> {
+    list<T> items = [];
+
+    bool has(T x){
+        return items.contains(x);
+    }
+}
+
+class Slot<T> {
+    T item;
+
+    Slot(T item){
+        this.item = item;
+    }
+}
+
+int main(){
+    Bag<Function<void()>> actions = Bag();
+    Slot<Function<void()>> slot = Slot(() { });     // fine: Slot never compares its T
+    Bag<int> numbers = Bag();
+    print(numbers.has(3));
+    return 0;
+}
+=== error
+Bag<Function<void()>> can't be used, because Bag compares its T values with == (or contains, indexOf, remove), but function values can't be compared

@@ -209,7 +209,7 @@ If anything inside `try` has a runtime error, the rest of the `try` part is skip
 - A `try` around starting a task doesn't catch errors inside the task: put the `try` **inside** the task instead. `wait()` works inside `try { }`, but not inside `catch { }`.
 - Don't use `try` to hide mistakes: a list position that's outside the list is better fixed than caught. `try` is for things your game can't control, like files and what the player types.
 
-Crashes that don't give a message (`[game.exe crashed (code 0xC0000005)]`) usually mean a [pointer](10-enums-optionals-pointers.md#pointers) was used after the thing it pointed at went away, or a function called itself forever.
+Crashes that don't give a message (`[game.exe crashed (code 0xC0000005)]`) usually mean a function called itself forever (or a bug in Forge or a library: please report it).
 
 ## The C++ compiler rejected Forge's output
 

@@ -421,8 +421,6 @@ template <class T>
 bool isNull(const std::optional<T>& o) { return !o.has_value(); }
 template <class T>
 bool isNull(const std::shared_ptr<T>& p) { return p == nullptr; }
-template <class T>
-bool isNull(T* p) { return p == nullptr; }
 
 // Using a T? as a T: stops the game with a clear message if it's null.
 template <class O>
@@ -451,10 +449,6 @@ struct OptOf<std::optional<T>> {
     using type = std::optional<T>;
 };
 template <class T>
-struct OptOf<T*> {
-    using type = T*;
-};
-template <class T>
 using Opt = typename OptOf<T>::type;
 template <class P>
 P&& nn(P&& p, const char* where, const char* what) {
@@ -462,18 +456,6 @@ P&& nn(P&& p, const char* where, const char* what) {
     return std::forward<P>(p);
 }
 
-// Pointer<T>: p.remove() makes it point at nothing; using it after that stops the game with a clear message.
-template <class T>
-T* live(T* p, const char* where) {
-    if (p == nullptr)
-        panic(where, "this pointer was removed (with remove()), so it doesn't point at anything any more - point it at "
-                     "something again first (p = someVariable;), or check p.isRemoved()");
-    return p;
-}
-template <class T>
-void ptr_remove(T*& p, const char*) { p = nullptr; }
-template <class T>
-bool ptr_isRemoved(T* p, const char*) { return p == nullptr; }
 // Weak<T>: get() gives the object, or null once nothing else keeps it alive.
 template <class T>
 std::shared_ptr<T> weak_get(const std::weak_ptr<T>& w, const char*) { return w.lock(); }
@@ -482,15 +464,11 @@ std::string strWeak(const std::weak_ptr<T>& w, F&& show) {
     auto p = w.lock();
     return p ? show(p) : std::string("null");
 }
-template <class T, class F>
-std::string strPtr(T* p, F&& show) { return p ? show(*p) : std::string("removed pointer"); }
 
 template <class T, class B>
 T orElse(const std::optional<T>& o, B&& b) { return o ? *o : T(std::forward<B>(b)); }
 template <class T, class B>
 std::shared_ptr<T> orElse(const std::shared_ptr<T>& o, B&& b) { return o ? o : std::shared_ptr<T>(std::forward<B>(b)); }
-template <class T, class B>
-T* orElse(T* o, B&& b) { return o ? o : static_cast<T*>(b); }
 template <class T>
 std::optional<T> orElseOpt(const std::optional<T>& o, const std::optional<T>& b) { return o ? o : b; }
 template <class T>
@@ -500,8 +478,6 @@ template <class T, class F>
 std::string strOpt(const std::optional<T>& o, F f) { return o ? f(*o) : "null"; }
 template <class T, class F>
 std::string strOpt(const std::shared_ptr<T>& p, F f) { return p ? f(p) : "null"; }
-template <class T, class F>
-std::string strOpt(T* p, F f) { return p ? f(p) : "null"; }
 
 // ---------------------------------------------------------------- lists
 
@@ -698,8 +674,6 @@ std::string strAny(const T& x) {
     } else if constexpr (IsWeak<T>::value) {
         auto p = x.lock();
         return p ? strAny(p) : std::string("null");
-    } else if constexpr (std::is_pointer_v<T>) {
-        return x ? strAny(*x) : std::string("removed pointer");
     } else if constexpr (IsFunction<T>::value) {
         return "function value";
     } else {

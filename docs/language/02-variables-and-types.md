@@ -44,7 +44,7 @@ A variable made without a value starts at the "zero" of its type:
 | optional (`Type?`) | `null` |
 | `task` | a finished task |
 
-**Classes and pointers have no zero**, so a variable of a class type must be given a value: `Enemy e = Enemy();`. If it should start empty, make it optional instead: `Enemy? e = null;`. See [Structs and classes](09-structs-and-classes.md).
+**Classes have no zero**, so a variable of a class type must be given a value: `Enemy e = Enemy();`. If it should start empty, make it optional instead: `Enemy? e = null;`. See [Structs and classes](09-structs-and-classes.md).
 
 ## Where variables live
 
@@ -164,8 +164,8 @@ string greeting = "Hi {name}!";
 | Type | Chapter |
 |---|---|
 | `list<T>`, `map<K, V>` | [Lists and maps](08-lists-and-maps.md) |
-| your own `struct`, `class`, `enum` | [Structs and classes](09-structs-and-classes.md), [Enums](10-enums-optionals-pointers.md) |
-| `Type?` (optional), `Pointer<T>` | [Enums, optionals and pointers](10-enums-optionals-pointers.md) |
+| your own `struct`, `class`, `enum` | [Structs and classes](09-structs-and-classes.md), [Enums](10-enums-and-optionals.md) |
+| `Type?` (optional) | [Enums and optionals](10-enums-and-optionals.md) |
 | `task` | [Tasks](11-tasks.md) |
 | `vec2`, `vec3`, `vec4`, `color`, `rect` | [Built-in types](../libraries/core-types.md) |
 

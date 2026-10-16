@@ -1,0 +1,14 @@
+=== main.frg
+int main(){
+    list<int> xs = [1, 2];
+    int a = xs[0]();
+    list<Function<int(int)>> fs = [(int x) { return x; }];
+    int b = fs[0]();
+    int c = fs[0]("one");
+    return 0;
+}
+=== error
+this is an int, not a function, so it can't be called
+only functions and function values (like Function<void()>) can be called
+this function value needs 1 value, but got 0
+value 1 of this function value needs an int, but this is a string

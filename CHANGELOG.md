@@ -8,6 +8,8 @@ What changed in each version of Forge. Plans for later versions are in the [road
 - **`Pointer<T>` is removed.** A pointer to a list item, or to a field of an object, could quietly change the wrong memory once the list grew or the object was freed, with no error. To change a caller's number, return the new value (`score = addOne(score);`); class objects are shared, so a function can change one it's given. Using `Pointer` now gives an error that says this. The pointers docs page is now "Enums and optionals" (`docs/language/10-enums-and-optionals.md`).
 
 **Engine**
+- **Physics is the same at every frame rate.** `physics.step(dt)` now splits each frame into equal parts of at most 1/240 s. Before, the same jump went about 6.5 pixels (5%) higher at 144 FPS than at 30 FPS; now every frame rate agrees to within half a pixel. Jumps are about 3 pixels higher than before at 60 FPS, because the result is closer to exact. Physics takes about 1.7 times as long as before (still about 2.6 ms for 400 moving bodies).
+- `onGround`, `onCeiling` and `onWall` now mean "at any moment during this `physics.step`". With several parts per frame, a wall that stopped a body early in the frame used to be forgotten by the end of it.
 - **Meshes.** `graphics3d.makeMesh(positions, uvs, shades, texture)` sends your own triangles to the graphics card once, so thousands of them draw in one call. Mostly see-through pixels of the texture are cut out, so leaves and glass can have holes.
 - **Looking around with the mouse.** `input.mouseDelta()` is how far the mouse moved this frame, and `input.lockMouse(true)` hides the pointer and keeps it in the window (`isMouseLocked()` to check).
 - `FRG_AUTOTEST_INPUT` can press mouse buttons too: `MOUSE_LEFT`, `MOUSE_RIGHT`, `MOUSE_MIDDLE`.

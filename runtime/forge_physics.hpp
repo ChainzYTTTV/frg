@@ -96,14 +96,12 @@ inline void separateMovingBodies(const std::vector<std::shared_ptr<Body_>>& bodi
     }
 }
 
-inline void step_(float dt) {
-    if (dt <= 0) return;
-    if (dt > 0.05f) dt = 0.05f;  // after a long pause, don't jump everything forward at once
+// One small step of the world (see step_ below).
+inline void tick(float dt) {
     auto bodies = world().bodies;  // a copy, in case the list changes while stepping
     for (auto& bp : bodies) {
         Body_& b = *bp;
         if (b.isStatic_) continue;
-        b.onGround_ = b.onCeiling_ = b.onWall_ = false;
         b.velocity_ += world().gravity * (b.gravityScale_ * dt);
 
         // Move in small steps so fast bodies can't pass straight through thin platforms.
@@ -144,6 +142,18 @@ inline void step_(float dt) {
         }
     }
     separateMovingBodies(bodies);
+}
+
+// physics.step(dt): the frame is split into equal parts of at most 1/240 s, so a jump goes as high at 30 FPS as at
+// 144 FPS (the frame time only changes how many parts there are). onGround, onCeiling and onWall describe the
+// whole frame: true if it happened in any part.
+inline void step_(float dt) {
+    if (dt <= 0) return;
+    if (dt > 0.05f) dt = 0.05f;  // after a long pause, don't jump everything forward at once
+    int parts = std::max(1, (int)std::ceil(dt * 240.0f - 1e-4f));
+    for (auto& b : world().bodies)
+        if (!b->isStatic_) b->onGround_ = b->onCeiling_ = b->onWall_ = false;
+    for (int i = 0; i < parts; i++) tick(dt / parts);
 }
 
 inline std::string frg$str(const std::shared_ptr<Body_>& b) {

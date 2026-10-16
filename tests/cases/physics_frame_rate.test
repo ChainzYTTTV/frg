@@ -1,0 +1,55 @@
+=== main.frg
+#include <stdio>
+#include <physics>
+#include <math>
+
+// The same jump at 30, 60 and 144 frames a second, and with uneven frame times,
+// must go equally high: physics.step(dt) splits each frame into equal small parts.
+// (Before this, the jump was 6.5 pixels higher at 144 FPS than at 30 FPS.)
+
+// How high the jump goes, in pixels above where it started.
+float jumpHeight(list<float> frames){
+    physics.clear();
+    Body ground = Body(0, 500, 5000, 20);
+    ground.isStatic = true;
+    physics.add(ground);
+    Body ball = Body(100, 490, 10, 10);
+    physics.add(ball);
+    physics.step(0.1);
+    ball.velocity = vec2(200, -500);
+
+    float t = 0;
+    float peak = 1000;
+    int i = 0;
+    while (t < 1.5) {
+        float dt = frames[i % frames.length];
+        i++;
+        physics.step(dt);
+        t += dt;
+        if (ball.position.y < peak) {
+            peak = ball.position.y;
+        }
+    }
+    if (!ball.onGround) {
+        print("didn't land");
+    }
+    return 490 - peak;
+}
+
+int main(){
+    list<float> heights = [jumpHeight([1.0 / 30]), jumpHeight([1.0 / 60]), jumpHeight([1.0 / 144]),
+                           jumpHeight([1.0 / 30, 1.0 / 144, 1.0 / 60])];
+    float lowest = heights[0];
+    float highest = heights[0];
+    for (float h in heights) {
+        lowest = math.min(lowest, h);
+        highest = math.max(highest, h);
+    }
+    // v * v / (2 * gravity) = 500 * 500 / 1960 = 127.6 pixels for a perfect simulation.
+    print("about 126 pixels high: {lowest > 125 and highest < 128}");
+    print("the same at every frame rate (within half a pixel): {highest - lowest < 0.5}");
+    return 0;
+}
+=== output
+about 126 pixels high: true
+the same at every frame rate (within half a pixel): true

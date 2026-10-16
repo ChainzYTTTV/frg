@@ -546,7 +546,7 @@ void draw(){
 
 A `Body` is a box: `Body(x, y, width, height)`.
 - Fields you set: `position`, `size`, `velocity` (all vec2), `isStatic` (true for floors, walls and platforms that never move), `oneWay` (with `isStatic`: a one-way platform, which you can jump up through from below and walk through sideways, but land on from above), and `gravityScale` (1 by default).
-- Fields Forge sets during each `physics.step(dt)`: `onGround`, `onCeiling` and `onWall`.
+- Fields Forge sets during each `physics.step(dt)`: `onGround`, `onCeiling` and `onWall` (true if it happened at any moment during that frame). `physics.step` splits each frame into equal parts of at most 1/240 s, so jumps go equally high at any frame rate.
 - Methods: `bounds()` (a rect), `center()`, `overlaps(otherBody)`.
 - Gravity starts at `vec2(0, 980)`, in pixels per second per second, pointing down.
 - Moving bodies stop when they hit static bodies, and push each other apart (so crates stack). A body with `solid = false` passes through everything, which is useful for coins and trigger zones; check those with `a.overlaps(b)`.

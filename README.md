@@ -2,7 +2,7 @@
 
 <img src="art/forge-icon-512.png" width="96" alt="Forge's logo: an orange anvil with sparks" align="right">
 
-[![tests](https://github.com/ChainzYTTTV/frg/actions/workflows/tests.yml/badge.svg)](https://github.com/ChainzYTTTV/frg/actions/workflows/tests.yml) · Version 0.8.1 · [Changelog](CHANGELOG.md) · [Roadmap](ROADMAP.md) · [License: MIT](LICENSE)
+[![tests](https://github.com/ChainzYTTTV/frg/actions/workflows/tests.yml/badge.svg)](https://github.com/ChainzYTTTV/frg/actions/workflows/tests.yml) · Version 0.9.0 · [Changelog](CHANGELOG.md) · [Roadmap](ROADMAP.md) · [License: MIT](LICENSE)
 
 > **This project was made with AI.** I designed the language: what it looks like, how files and folders work, and which features it has. The compiler, runtime, tools and docs were written by an AI (Claude), not by me.
 >
@@ -32,7 +32,7 @@ int main(){
 
 ## How it works
 
-`frg build` checks your `.frg` files and translates them to C++. It then uses g++ to turn that C++ into a standalone `.exe`. The C++ is an internal step: it's saved as `build/forge_generated.cpp`, but you never need to read it.
+`frg build` checks your `.frg` files and translates them to C++. It then uses g++ to turn that C++ into a standalone `.exe`. The C++ is an internal step: it's saved in the `build/forge/` folder, but you never need to read it.
 
 ```
 src/

@@ -93,14 +93,14 @@ These were decided by Forge's designer (2026-10-16). Build them this way.
 
 ## 0.9.0: Better tools
 
-| Feature | Why | Size |
-|---|---|---|
-| A language server: autocomplete and hover help for your own code, go to definition, rename | the biggest editor upgrade | L |
-| A debugger: breakpoints in `.frg` files, and seeing variables while paused | debugging without only `print` | L |
-| `frg fmt` | tidies spacing and indentation automatically | M |
-| Runtime errors show which function calls led there | easier crash fixing | M |
-| `frg test`: tests for your own games | checking game logic without playing | M |
-| Split builds: one C++ file per `.frg` file instead of one big one, compiled in parallel on every CPU core, with unchanged files reused from the last build | big games rebuild in seconds after a small change. Measured with one big file: 50 files take 6 s, 500 files 48 s, 1,000 files 103 s, every time | L |
+| Feature | Why | Size | Status |
+|---|---|---|---|
+| Split builds: one C++ file per `.frg` file instead of one big one, compiled in parallel on every CPU core, with unchanged files reused from the last build | big games rebuild in seconds after a small change. Measured with one big file: 50 files take 6 s, 500 files 48 s, 1,000 files 103 s, every time | L | done: big games are split into parts (small ones stay one part); a one-file edit in 1,000 files takes 4 s |
+| A language server: autocomplete and hover help for your own code, go to definition, rename | the biggest editor upgrade | L | done (`frg query`), plus find all uses and the Outline |
+| A debugger: breakpoints in `.frg` files, and seeing variables while paused | debugging without only `print` | L | done (`frg build --debug`, Forge: Debug Game) |
+| `frg fmt` | tidies spacing and indentation automatically | M | done |
+| Runtime errors show which function calls led there | easier crash fixing | M | done |
+| `frg test`: tests for your own games | checking game logic without playing | M | done (`<testing>`, the `tests` folder) |
 
 ## 0.9.x: Engine extras
 

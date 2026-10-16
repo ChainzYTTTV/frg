@@ -22,11 +22,16 @@ add_executable(frg
     src/project.cpp
     src/checker.cpp
     src/codegen.cpp
+    src/query.cpp
+    src/format.cpp
     src/templates.cpp
 )
 target_compile_options(frg PRIVATE -Wall -Wextra -Wno-missing-field-initializers)
 target_link_options(frg PRIVATE -static)
 
-add_custom_command(TARGET frg POST_BUILD
-    COMMAND ${CMAKE_COMMAND} -E copy_directory ${CMAKE_SOURCE_DIR}/runtime ${CMAKE_SOURCE_DIR}/bin/runtime
+# The runtime folder is copied next to frg.exe on every build, so a change to a runtime file alone is picked up too.
+# (copy_directory_if_different only copies changed files, so unchanged files keep their dates and the build cache.)
+add_custom_target(runtime ALL
+    COMMAND ${CMAKE_COMMAND} -E copy_directory_if_different ${CMAKE_SOURCE_DIR}/runtime ${CMAKE_SOURCE_DIR}/bin/runtime
 )
+add_dependencies(frg runtime)

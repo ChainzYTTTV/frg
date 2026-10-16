@@ -2832,3 +2832,17 @@ bool checkProject(Project& proj) {
     Checker c(proj);
     return c.run();
 }
+
+std::vector<BuiltinMethodInfo> builtinMethodsOf(Type* t) {
+    std::vector<BuiltinMethodInfo> out;
+    if (!t) return out;
+    if (t->kind == TK::List || t->kind == TK::Map || t->kind == TK::String) out.push_back({"length", "int length", tInt(32, true), false});
+    for (const BMethod& m : bmethods()) {
+        if (m.on != t->kind) continue;
+        std::string sig = m.name + std::string("(");
+        for (size_t i = 0; i < m.params.size(); i++) sig += (i ? ", " : "") + bmType(m.params[i], t)->name;
+        Type* ret = bmType(m.ret, t);
+        out.push_back({m.name, ret->name + " " + sig + ")", ret, true});
+    }
+    return out;
+}

@@ -1,4 +1,4 @@
-# Forge 0.8.1: the complete documentation
+# Forge 0.9.0: the complete documentation
 
 This one file holds everything written about the Forge programming language, so it can be uploaded in one go:
 
@@ -13,10 +13,10 @@ Where the parts disagree, the detailed pages (B to F) are more precise, and the 
 - **Part A: The teaching brief (for an AI tutor)**: Teaching Brief: the Forge Programming Language
 - **Part B: Start here**: Forge Documentation - Getting Started
 - **Part C: The language**: 1. The Basics - 2. Variables and Types - 3. Text - 4. Operators - 5. Making Decisions and Repeating - 6. Functions - 7. Files and Folders - 8. Lists and Maps - 9. Structs and Classes - 10. Enums, Optionals and Pointers - 11. Tasks - 12. Errors - 13. Reserved Words - 14. Coming From Other Languages
-- **Part D: The libraries**: Library Overview - Built-in Types: vec2, vec3, vec4, color, rect - <stdio>: Console Input and Output - <math>: Math Functions - <random>: Random Numbers - <window>: The Game Window - <input>: Keyboard, Mouse and Controllers - <graphics2d>: 2D Drawing - <graphics3d>: 3D Drawing - <assets>: Images, Animations and Fonts - <audio>: Sounds and Music - <physics>: Boxes, Gravity and Collisions - <time>: Clock, Date and Timers - <file>: Reading and Writing Text Files - <save>: Remembering Things Between Runs - <tween>: Smooth Changes Over Time - <particles>: Dust, Sparks and Explosions - <tilemap>: Levels Drawn as Text - <scenes>: Menus, Levels and Game Over - <ui>: Buttons, Checkboxes, Sliders and Text Boxes - <ECS>: Entities and Components - <tasks>: Tasks Without a Window - Low-Level Toolkits: OpenGL, DirectX and Vulkan - <OpenGL>: Drawing with OpenGL Yourself - <DirectX>: Drawing with Direct3D 11 Yourself - <Vulkan>: Drawing with Vulkan Yourself
+- **Part D: The libraries**: Library Overview - Built-in Types: vec2, vec3, vec4, color, rect - <stdio>: Console Input and Output - <math>: Math Functions - <random>: Random Numbers - <window>: The Game Window - <input>: Keyboard, Mouse and Controllers - <graphics2d>: 2D Drawing - <graphics3d>: 3D Drawing - <assets>: Images, Animations and Fonts - <audio>: Sounds and Music - <physics>: Boxes, Gravity and Collisions - <time>: Clock, Date and Timers - <file>: Reading and Writing Text Files - <save>: Remembering Things Between Runs - <tween>: Smooth Changes Over Time - <particles>: Dust, Sparks and Explosions - <tilemap>: Levels Drawn as Text - <scenes>: Menus, Levels and Game Over - <ui>: Buttons, Checkboxes, Sliders and Text Boxes - <ECS>: Entities and Components - <tasks>: Tasks Without a Window - <testing>: Testing Your Game's Code - Low-Level Toolkits: OpenGL, DirectX and Vulkan - <OpenGL>: Drawing with OpenGL Yourself - <DirectX>: Drawing with Direct3D 11 Yourself - <Vulkan>: Drawing with Vulkan Yourself
 - **Part E: Guides**: The Game Loop - Sprites and Animation - Platformer Walkthrough
 - **Part F: Under the hood**: How Forge Works
-- **Part G: The cheat sheet (everything on one page)**: Forge Cheat Sheet (v0.8)
+- **Part G: The cheat sheet (everything on one page)**: Forge Cheat Sheet (v0.9)
 
 ---
 
@@ -102,15 +102,18 @@ Commands, typed in a terminal inside the game's folder:
 | `frg run` | checks the code, compiles it, and runs the game |
 | `frg build` | compiles into `build/<folder name>.exe` without running it |
 | `frg check` | only looks for errors |
+| `frg fmt` | tidies the layout (indentation, `int main(){` braces, blank lines). In VS Code: **Shift+Alt+F** |
+| `frg test` | runs the game's tests (the `tests` folder). In VS Code: **Forge: Run Tests** |
 | `frg package` | the finished game, with every file it needs (but not the `.frg` files or `save.txt`), zipped into `dist/<name>.zip` to share. If the game is in git, add `build/`, `dist/` and `save.txt` to `.gitignore` |
 | `frg build --release` | the finished game: no console window, smaller `.exe` |
 | `--no-console` / `--console` | add to `run` or `build` to turn the console window off or on |
+| `--debug` | add to `build` for a debugger build. In VS Code, the bug button (or **F6**) does it and starts the debugger |
 
 A picture called `icon.png` in the game's top folder becomes the `.exe`'s icon and the window's icon (square, ideally 256 × 256). Without one, the game just gets the plain Windows icon.
 
 The **console window** (the black window next to the game) shows `print` output and errors. It's on while testing. Turn it off with `--no-console` to see the game as players will, and `--release` turns it off for the finished game. Without a console, runtime errors pop up in a box titled "The game stopped". Text-only programs need the console: without it nothing shows. In VS Code, **Forge: Turn the Console On/Off** switches it for the ▶ button, and **Forge: Build Release** builds the finished game.
 
-In **VS Code** (with the Forge extension): errors are underlined when you save, the **▶ button** at the top right (or **F5**) runs the game, typing `window.` or `color.` shows autocomplete, and snippets like `game`, `class` and `foreach` insert templates.
+In **VS Code** (with the Forge extension): errors are underlined when you save, the **▶ button** at the top right (or **F5**) runs the game, and snippets like `game`, `class` and `foreach` insert templates. Autocomplete suggests the learner's own variables, functions and files as well as the libraries (`player.` lists a player's fields and methods). Hovering over a name shows what it is, **F12** jumps to where something is written, **Shift+F12** finds everywhere it's used, and **F2** renames it everywhere. The **bug button** next to ▶ (or **F6**) runs the game in the **debugger**: click left of a line number to put a red dot (a breakpoint) there, and the game pauses on that line, showing every variable's value (Forge's names end with `_` there, like `score_`). **F10** runs one more line, **F11** goes into a function, **F5** carries on. It's a great way to understand what a program really does, step by step.
 
 Forge is **compiled**. The whole program is checked before it runs, so most mistakes are caught before the game starts.
 
@@ -543,6 +546,7 @@ Library functions are reached through the library name (`window.open(...)`). Lib
 | `<particles>` | dust, sparks, smoke, explosions: `Emitter sparks = Emitter(vec2(x, y));`, then `sparks.burst(30);` (all at once) or `sparks.rate = 50;` (a steady stream per second), and each frame `sparks.update(dt);` and `sparks.draw();`. Fields to set: `position`, `lifetime` (seconds), `speed`, `direction` (degrees: 0 right, -90 up), `spread` (degrees around it: 360 every way), `startColor`/`endColor` (an end color with alpha 0 fades them out), `startSize`/`endSize`, `gravity` (a vec2). Also `count()` and `clear()`. It draws in 2D, through the 2D camera |
 | `<tween>` | smooth changes over time: `Tween slide = Tween(-300, 40, 0.5, Ease.OUT);` (from, to, seconds, easing), then `slide.update(dt);` and use `slide.value()`. Also `progress()` (0 to 1, with `lerp` for positions and colors: `a.lerp(b, t.progress())`), `isDone()`, `restart()`, `reverse()` (go back from where it is), fields `looping` and `pingPong`. `Ease.LINEAR` (steady), `IN` (slow start), `OUT` (slow end, the default), `IN_OUT`, `BOUNCE`. There are no callbacks: check `isDone()` |
 | `<save>` | `save.setInt(key, n)` / `getInt(key, backup)`, the same for `Float`, `String` and `Bool`, `has(key)`, `remove(key)`, `clear()`. Kept in `save.txt` in the game's folder |
+| `<testing>` | `testing.check(ok, message)`, `testing.fail(message)`: in tests, which are functions named `test...` in the game's `tests` folder (next to main.frg, not #included). `frg test` runs them and shows PASS/FAIL, with both values of a failed comparison |
 | `<file>` | `file.read(path)`, `write(path, text)`, `append(path, text)`, `exists(path)`, `remove(path)`, `readLines(path)`, `writeLines(path, list)`, `files(folder)` |
 | `<scenes>` | the `Scene` class, `scenes.change(scene)`, `update(dt)`, `draw()`, `current()` |
 | `<ui>` | `ui.button(rect, "text")` (true when clicked), `ui.checkbox(rect, "text", checked)` (new value), `ui.slider(rect, value, min, max)` (new value), `ui.textBox(rect, text, maxLength = 0)` (a box to type in: `name = ui.textBox(rect(20, 20, 240, 40), name, 12);` gives the new text; click to type, Backspace deletes, Enter or a click elsewhere finishes), `ui.isTyping()` (true while typing, so the game can skip its key shortcuts), `ui.label(text, x, y, size, color)`, `ui.panel(rect)`, `ui.setTheme(bg, accent, text)` |
@@ -861,11 +865,15 @@ error: 'hp' needs an int, but this is a float
 
 Literal-only divisions like `float f = 70 / 30;` don't warn, because they already give a decimal answer when the result goes into a float.
 
-Problems that can only happen while running (a list position that doesn't exist, using something that's null, dividing by zero, `int("abc")`) stop the game with a message like:
+Problems that can only happen while running (a list position that doesn't exist, using something that's null, dividing by zero, `int("abc")`) stop the game with a message, followed by the chain of calls that led there ("called from main.frg:6 (in main)", nearest first), like:
 
 ```
-Runtime error in main.frg:10: position 5 is outside the list (it has 3 items, at positions 0 to 2)
+Runtime error in main.frg:19: position 3 is outside the list (it has 3 items, at positions 0 to 2)
+  called from main.frg:13 (in sumFirst)
+  called from main.frg:6 (in main)
 ```
+
+Teach the learner to read it from the top: the error is on line 19, inside something `sumFirst` called on line 13, which `main` called on line 6. The real mistake is often in a caller.
 
 **try / catch / throw.** `try { ... } catch (Error e) { ... }`: any runtime error inside `try` (including in functions it calls) skips the rest of it and runs `catch`. `e.message` is the text, `e.where` is like `"main.frg:12"`. Every runtime error can be caught. `throw "message";` makes one (uncaught, it stops the game like any runtime error); `throw e;` in a catch passes it on. Both parts need `{ }`, and catch always takes `(Error name)`. `wait()` works in `try` but not in `catch`; a `try` around starting a task doesn't catch the task's errors (put the try inside the task). Teach it for files and player input, not to hide bugs like bad list positions.
 
@@ -1671,7 +1679,7 @@ Then build version 1, play it, and only then add more.
 
 ---
 
-*Forge v0.8. If the learner reports that something in this file doesn't work, believe the compiler over this file and tell them to report it to whoever maintains Forge.*
+*Forge v0.9. If the learner reports that something in this file doesn't work, believe the compiler over this file and tell them to report it to whoever maintains Forge.*
 
 ---
 
@@ -1685,14 +1693,14 @@ Forge (`.frg`) is a compiled programming language for making 2D and 3D games. It
 
 These docs are for **anyone using or learning Forge**, including people who have never programmed before. If you're new, read them in order. If you already know another language, skim Getting Started (see “Getting Started”), then read Things that surprise people from other languages (see “14. Coming From Other Languages”).
 
-> Forge was designed by a person and written by an AI (see the main README (the file `README.md` in the Forge folder)). These docs describe **Forge 0.8**. If something here disagrees with what the compiler does, the compiler is right; please report the mismatch.
+> Forge was designed by a person and written by an AI (see the main README (the file `README.md` in the Forge folder)). These docs describe **Forge 0.9**. If something here disagrees with what the compiler does, the compiler is right; please report the mismatch.
 
 ### Start here
 
 | | |
 |---|---|
 | Getting Started (see “Getting Started”) | Setup, the `frg` command, VS Code, your first program, and building a finished game |
-| Cheat sheet (see “Forge Cheat Sheet (v0.8)”) | The whole language on one page, for looking things up quickly |
+| Cheat sheet (see “Forge Cheat Sheet (v0.9)”) | The whole language on one page, for looking things up quickly |
 | Everything in one file (the file `FORGE_ALL_DOCS.md` in the Forge folder) | The teaching brief and every page below, combined into one file to upload to an AI chat. Rebuild it with `.\docs\make-all-docs.ps1` after changing the docs. |
 
 ### The language
@@ -1735,6 +1743,7 @@ Everything that isn't the core language lives in a library you `#include`. See t
 | `<physics>` (see “`<physics>`: Boxes, Gravity and Collisions”) | Gravity and collisions for boxes |
 | `<time>` (see “`<time>`: Clock, Date and Timers”) | The clock, the date, and timers |
 | `<save>` (see “`<save>`: Remembering Things Between Runs”) | Remembering values between runs: high scores, settings, progress |
+| `<testing>` (see “`<testing>`: Testing Your Game's Code”) | Checking your game's code with `frg test` |
 | `<tilemap>` (see “`<tilemap>`: Levels Drawn as Text”) | Levels drawn as text: walls, coins and the start from characters |
 | `<particles>` (see “`<particles>`: Dust, Sparks and Explosions”) | Dust, sparks, smoke and explosions |
 | `<tween>` (see “`<tween>`: Smooth Changes Over Time”) | Smooth changes over time: sliding, bouncing, fading |
@@ -1791,7 +1800,7 @@ frg version
 g++ --version
 ```
 
-The first should print `Forge 0.8.1` and the second should print a GCC version. If `frg` isn't found, add Forge's `bin` folder to your PATH and restart the terminal.
+The first should print `Forge 0.9.0` and the second should print a GCC version. If `frg` isn't found, add Forge's `bin` folder to your PATH and restart the terminal.
 
 #### Building Forge from source
 
@@ -1865,6 +1874,8 @@ Run these in a terminal. `[folder]` is the game's top folder (the one with `main
 | `frg run [folder]` | Checks, compiles and runs the game |
 | `frg build [folder]` | Checks and compiles into `build/<folder name>.exe`, without running it |
 | `frg check [folder]` | Only looks for errors (fast, makes no `.exe`) |
+| `frg fmt [folder or files]` | Tidies the layout of your `.frg` files (see below) |
+| `frg test [folder]` | Runs the tests in the game's `tests` folder (`<testing>` (see “`<testing>`: Testing Your Game's Code”)) |
 | `frg package [folder]` | Makes the finished game and zips it, ready to share: `dist/<name>.zip` (see Sharing your game (see “Sharing your game”)) |
 | `frg cache` | Shows how big the build cache is (why there is one (see “Why the first build is slower”)). `frg cache clear` deletes it |
 | `frg version` | Shows the Forge version |
@@ -1978,15 +1989,50 @@ The Forge extension adds:
 | Syntax colors | Automatic for `.frg` files |
 | Errors while you work | Saving a file checks the whole game; mistakes are underlined in red, with the hint attached. The Problems panel (Ctrl+Shift+M) lists them all. |
 | Run the game | The ▶ button at the top-right of the editor, or **F5** |
+| Debug the game | The bug button next to ▶, or **F6**: runs the game in the debugger (see below) |
 | Build only | **Ctrl+Shift+B** |
-| Autocomplete | Type a library name and a dot (`window.`, `graphics2d.`, `color.`, `Key.`) to see what's in it |
-| Hover help | Hold the mouse over a library function to see how it's used |
+| Autocomplete | Suggests what fits where you're typing: your variables, functions, types and files, and after a dot, what's inside (`player.` shows its fields and methods, `enemies.goblin.` what that file has, `window.` the library's functions). **Ctrl+Space** shows the list any time. |
+| Hover help | Hold the mouse over a name to see what it is: a variable's type, a function's parameters, a library function's description |
+| Go to definition | **F12** (or Ctrl+click) on a name jumps to where it's written, even in another file |
+| Find all uses | **Shift+F12** on a name lists everywhere it's used |
+| Rename | **F2** on a name renames it everywhere it's used, in every file. Forge says so if the new name isn't allowed. |
+| Outline | The Outline panel (and **Ctrl+Shift+O**) lists the file's types, functions and variables |
 | Snippets | Type `main`, `game`, `gameloop`, `class`, `struct`, `enum`, `func`, `if`, `for`, `foreach`, `while`, `switch`, `task`, `scene`, `component` or `body`, then press Tab |
 | Comments | **Ctrl+/** toggles `//` comments; **Shift+Alt+A** wraps a selection in a ` ``` ` comment |
 
 To install or update it, run `.\editors\vscode\package.ps1 -Install` from the Forge folder, then in VS Code run **Developer: Reload Window**.
 
 Settings: `forge.path` is the full path to `frg.exe` if VS Code can't find it. `forge.checkOnSave` turns checking on save on or off.
+
+Autocomplete, hover help, go to definition and rename all read your game the same way a build does, including what you've typed but not saved yet in the file you're in. Other files are read as they are on disk, so save them first if you've changed them.
+
+#### Tidying your code: frg fmt
+
+`frg fmt` tidies the layout of every `.frg` file in the game (or just the files you name), without changing what the code does:
+
+- each line is indented 4 spaces for each `{ }` level it's inside, and in a `switch`, the `case`s go one level in and their code one more;
+- a function's or method's opening brace goes straight after the `)`: `int main(){` (an `if`, `while` or `for` keeps its space: `if (x) {`);
+- spaces at the ends of lines go, and several blank lines in a row become one.
+
+It never touches what's inside ` ``` ` comments or `"""raw text"""`. A line that carries on a statement (like the second line of a long list) keeps how you lined it up, moved along with the statement. After tidying, Forge reads the file again, and if anything except spaces would change, it leaves the file as it was and says so.
+
+`frg fmt --check` only lists the files that aren't tidy, and `frg fmt main.frg --print` shows the tidied file without saving it. In VS Code, **Format Document** (**Shift+Alt+F**) does the same for the open file; turn on the `editor.formatOnSave` setting to tidy every time you save.
+
+#### Debugging: pausing the game to look inside
+
+The **debugger** lets you pause the game on a line and look at every variable, then go on one line at a time. It's the best way to find out why something doesn't do what you expected.
+
+1. Click in the margin just left of a line number in a `.frg` file. A red dot appears: a **breakpoint**.
+2. Press **F6** (or the bug button next to ▶). Forge makes a debug build, and the game runs until it reaches a line with a breakpoint, then pauses there.
+3. The **Variables** panel on the left shows the variables and their values. Hold the mouse over a name in the code to see its value too. The **Call Stack** shows which function called which, file by file.
+4. **F10** runs one line, **F11** goes into the function called on this line, **Shift+F11** comes back out, **F5** carries on to the next breakpoint, and **Shift+F5** stops the game.
+
+Good to know:
+
+- It uses **gdb**, the debugger that comes with w64devkit, through Microsoft's **C/C++ extension** for VS Code. Forge asks you to install the extension the first time if you don't have it.
+- In the Variables panel, names have a `_` on the end (`score_`), because that's how Forge names things in the C++ it makes. Numbers, `bool`s and objects show normally. Text shows as C++ details: the letters are in the part called `_M_p`. A class object is a pointer: open it to see its fields.
+- A line that calls several functions (like `a() + b()`) can pause twice, because Forge works the calls out one by one there.
+- `frg build --debug` makes the same build from a terminal. Debug builds aren't optimized, so they can be slower than normal ones.
 
 #### The `.frg` icon in File Explorer
 
@@ -4851,17 +4897,22 @@ Divisions of plain numbers, like `float f = 70 / 30;`, don't give a warning: For
 
 ### Runtime errors
 
-These stop the game with a message, the file and the line:
+These stop the game with a message, the file and the line, and then **how the game got there**: which function called the one with the error, which called that one, and so on, nearest first:
 
 ```
-Runtime error in main.frg:12: position 5 is outside the list (it has 3 items, at positions 0 to 2)
+Runtime error in main.frg:19: position 3 is outside the list (it has 3 items, at positions 0 to 2)
+  called from main.frg:13 (in sumFirst)
+  called from main.frg:6 (in main)
 ```
 
-`frg run` then shows `[game.exe exited with code 1]`.
+Read it from the top: the error happened on line 19, inside a function that `sumFirst` called on line 13, which `main` called on line 6. Often the real mistake is in one of the callers (here, `main` asked for 7 numbers from a list of 3), so the trace says where to look. A function value shows as `a function value in main`. Code in a `task` doesn't appear in the list, because tasks pause and carry on later.
+
+`frg run` then shows `[game.exe exited with code 1]`. In a game without a console, the same text appears in the message box.
 
 | Message | Cause | Prevent it with |
 |---|---|---|
 | `position N is outside the list (...)` | `list[N]` where `N` isn't between 0 and `length - 1` | check `i < list.length`; loop with `for ... in` |
+| `position N is outside the list: the list is empty` | `list[N]` on a list with nothing in it | check `isEmpty()` first |
 | `first() was used on an empty list` (also `last()`, `pop()`) | | check `isEmpty()` first |
 | `can't insert at position N` | `insert(N, x)` with `N` greater than `length` | |
 | `the key isn't in the map` | reading `map[key]` for a missing key | `map.has(key)` or `map.get(key, backup)` |
@@ -4957,7 +5008,7 @@ These words have special meanings, so they can't be used as names for variables,
 
 ### Library names
 
-`stdio` `math` `random` `window` `input` `graphics2d` `graphics3d` `assets` `audio` `physics` `time` `file` `save` `tween` `particles` `tilemap` `scenes` `ui` `ECS` `tasks` `OpenGL` `DirectX` `Vulkan`, plus `network`, which is planned.
+`stdio` `math` `random` `window` `input` `graphics2d` `graphics3d` `assets` `audio` `physics` `time` `file` `save` `tween` `particles` `tilemap` `scenes` `ui` `ECS` `tasks` `testing` `OpenGL` `DirectX` `Vulkan`, plus `network`, which is planned.
 
 Types that come from a library (`Key`, `MouseButton`, `GamepadButton`, `Body`, `Texture`, `Animation`, `Font`, `Sound`, `Music`, `Camera`, `Camera2D`, `Model`, `Timer`, `Tween`, `Ease`, `Emitter`, `TileMap`, `Scene`, `Entity`, `Component`) can't be reused as names of your own types **in a file that includes that library**.
 
@@ -5106,6 +5157,7 @@ How libraries work:
 | `<physics>` (see “`<physics>`: Boxes, Gravity and Collisions”) | Box bodies with gravity and collisions | no |
 | `<time>` (see “`<time>`: Clock, Date and Timers”) | The clock and date, `sleep`, and the `Timer` class | no |
 | `<save>` (see “`<save>`: Remembering Things Between Runs”) | Remembering values (high scores, settings) between runs | no |
+| `<testing>` (see “`<testing>`: Testing Your Game's Code”) | `testing.check(...)` in tests that `frg test` runs | no |
 | `<tilemap>` (see “`<tilemap>`: Levels Drawn as Text”) | Levels drawn as text, turned into physics bodies and drawn as tiles (`TileMap`) | to draw them |
 | `<particles>` (see “`<particles>`: Dust, Sparks and Explosions”) | Dust, sparks, smoke and explosions (`Emitter`) | yes |
 | `<tween>` (see “`<tween>`: Smooth Changes Over Time”) | Smooth changes over time: sliding, bouncing, fading, with easing | no |
@@ -7424,6 +7476,86 @@ Notes:
 - A task that loops forever (`while (true) { wait(1); }`) makes `runAll` run forever. Stop it first, or use `update`.
 - In a windowed game, don't call `tasks.update` yourself; the window already does, and calling it too would move time forward twice.
 
+<!-- docs/libraries/testing.md -->
+
+## `<testing>`: Testing Your Game's Code
+
+```cpp
+#include <testing>
+```
+
+**Tests** are small functions that use your game's code and check that it gives the right answers: "after healing 5, the hero has 15 hp". `frg test` runs them all and says which ones passed. They catch mistakes without playing the game, and they keep catching them after you change something.
+
+### Where tests go
+
+Tests live in a folder called **`tests`** next to `main.frg`. Folders only join a game when a file `#include`s them, so the tests are never part of the game itself; `frg test` adds them when it runs.
+
+```
+mygame/
+  main.frg
+  hero.frg
+  tests/
+    hero_test.frg
+```
+
+Inside `tests/`, every function whose name starts with `test` (and takes nothing and gives nothing back) is a test. Other functions there are ordinary helpers. Test files reach the game's code the usual way, with the file's name first: `hero.Hero`, `level.build()`.
+
+```cpp
+// tests/hero_test.frg
+#include <testing>
+
+void testHealAddsHp(){
+    hero.Hero h = hero.Hero();
+    h.heal(5);
+    testing.check(h.hp == 15);
+}
+
+void testHealStopsAtTwenty(){
+    hero.Hero h = hero.Hero();
+    h.heal(50);
+    testing.check(h.hp == 20, "hp should never go over 20");
+}
+```
+
+A folder inside `tests/` joins the tests the same way as anywhere in Forge: a file next to it writes `#include <"folder">`.
+
+### Running them
+
+```
+frg test
+```
+
+In VS Code: **Forge: Run Tests** (Ctrl+Shift+P). The game's own `main()` doesn't run; the tests do, one after another:
+
+```
+  PASS  testHealAddsHp  (tests/hero_test.frg)
+  FAIL  testHealStopsAtTwenty  (tests/hero_test.frg)
+        tests/hero_test.frg:12: testing.check(h.hp == 20, "hp should never go over 20");
+          left side: 25, right side: 20
+          hp should never go over 20
+
+1 test passed, 1 failed (2 checks).
+```
+
+- A failed check doesn't stop its test, so one run shows every check that failed.
+- A runtime error stops only that test (it fails, with the error and the calls that led to it); the next test still runs.
+- `frg test` finishes with exit code 1 if anything failed, and 0 if everything passed.
+- The test program is built in `build/tests/`, so the game's own `.exe` isn't touched.
+
+### Functions
+
+| Function | What it does |
+|---|---|
+| `testing.check(bool ok, string message = "")` | the test fails if `ok` is false. It shows the line as written, and for a comparison (`==`, `!=`, `<`, `>`, `<=`, `>=` between numbers, text, `bool`s or enum values) both values too. The message is shown under it. |
+| `testing.fail(string message = "")` | the test fails here, with the message (for code that should never be reached, or a test that isn't finished) |
+
+### Tips
+
+- **One idea per test**, named after it: `testJumpNeedsGround`, `testCoinAddsScore`. When one fails, its name says what broke.
+- **Make fresh objects in each test.** Global variables keep their values from one test to the next, because the tests run one after another in the same program.
+- **Test the rules, not the drawing.** Code that needs the window (drawing, input) can't run in a test, but the rules of the game (scores, health, inventories, levels made from text) can.
+- `frg check` and VS Code's error underlines check the test files too.
+
 <!-- docs/libraries/toolkits.md -->
 
 ## Low-Level Toolkits: OpenGL, DirectX and Vulkan
@@ -9018,7 +9150,7 @@ your .frg files
  4. check ───────── checker.cpp: works out types and names, and reports errors
       │
       ▼
- 5. generate ────── codegen.cpp: writes the program out as C++ (build/forge_generated.cpp)
+ 5. generate ────── codegen.cpp: writes the program out as C++ (build/forge/)
       │
       ▼
  6. compile ─────── g++ turns that C++, plus Forge's runtime, into build/<game>.exe
@@ -9064,18 +9196,38 @@ The **code generator** writes the checked program as C++:
 | `list<T>`, `map<K, V>` | `std::vector`, `std::map` |
 | `T?` | `std::optional<T>` (or a null-able pointer for classes) |
 | `task` functions | C++20 coroutines (`co_await`) |
-| `"HP: {hp}"` | string concatenation |
+| `"HP: {hp}"` | `::frg::cat({...})`: the pieces joined in order |
 | `list[i]` | a checked access that stops with a clear message if `i` is out of range |
 
-Forge's own helper names contain `$`, which Forge names can't, so they never clash with yours either. You can read the result in `build/forge_generated.cpp`.
+Forge's own helper names contain `$`, which Forge names can't, so they never clash with yours either. You can read the result in the `build/forge/` folder.
+
+**Left to right.** Forge promises that the parts of a call (`f(a(), b())`), of an operator (`a() + b()`) and of text with values are worked out left to right. C++ doesn't promise any order for those (g++ often goes right to left), so when two or more parts call something, the generator works them out one by one first, inside a small lambda: `[&]() -> auto { auto&& t0 = a(); auto&& t1 = b(); return f(t0, t1); }()`. Parts that only read values are written as plain C++, as before. Text with values is joined with `::frg::cat({...})`, because C++ always works out a `{ }` list left to right.
 
 ### 6. Compiling
 
-`frg` runs g++ on the generated file:
+The generated C++ is in pieces, in `build/forge/`:
+
+| File | What's in it |
+|---|---|
+| `game.hpp` | every type, function and global variable's declaration, plus generic types' code (C++ templates). Every part includes it. |
+| `game.cpp` | a small game: all the code, and C++'s `main()` |
+| `part1.cpp`, `part2.cpp` ... `main.cpp` | a bigger game, split into parts: each part has some of the `.frg` files' code, and `main.cpp` has the global variables and `main()` |
+
+`frg` compiles each part into a `.o` file, then links them into the `.exe`:
 
 ```
-g++ -std=gnu++20 -O1 -fwrapv -w -I<runtime> -I<cache> forge_generated.cpp -o game.exe -static
+g++ -std=gnu++20 -O1 -fwrapv -w -I<runtime> -I<cache> -c build/forge/game.cpp -o build/forge/game.o
+g++ build/forge/game.o -o game.exe -static
 ```
+
+**Split builds.** Compiling a part always costs about half a second, just to load Forge's runtime. So a small game is one part, and a game whose C++ is bigger than about 64 KB is split into 2, 4, 8 ... up to 64 parts of about 48 KB each:
+
+- **The parts are compiled at the same time**, one per processor core (fewer if memory is short).
+- **Each `.frg` file always goes in the same part.** The part is chosen from the file's name, not its size, so editing one file can't move the others. The number of parts only changes when the game's size passes a power of two.
+- **Only changed parts are compiled again.** Each part has a `.key` file saying everything it was made from (Forge, g++, the flags, the declarations and its own code). If that matches, its `.o` is reused. Editing the inside of one function recompiles just its part, and a build where nothing changed doesn't even link.
+- **A big game's declarations are precompiled too.** When `game.hpp` is big (over 96 KB), every part would spend time reading it, so it's compiled once together with the runtime into `game_pch.hpp.gch`, in the game's own `build/forge/` folder. It's only made again when a declaration changes (a type, a function's parameters, a global), not when the code inside a function changes.
+
+Global variables all go in one part, because C++ sets them in the order they're written within one file, but in no fixed order between files, and Forge sets them in a fixed order.
 
 - If the game's folder has `icon.png`, Forge wraps the PNG in an `.ico` file (an `.ico` can simply hold a PNG), writes a one-line resource script `GLFW_ICON ICON "icon.ico"`, and runs **windres** (from w64devkit) to turn it into `build/icon_res.o`, which is linked in. That gives the `.exe` its icon; the name `GLFW_ICON` is the one raylib's window library looks for, and the window also loads `icon.png` with raylib's `SetWindowIcon`.
 - `-O1` optimizes a little, and compiles fast. `--release` builds use `-O2`, which optimizes more but takes longer.
@@ -9084,6 +9236,7 @@ g++ -std=gnu++20 -O1 -fwrapv -w -I<runtime> -I<cache> forge_generated.cpp -o gam
 - `-static` puts everything into the `.exe`, so it runs anywhere without extra files.
 - Games that use the engine libraries also link **raylib** (`-lraylib -lopengl32 -lgdi32 -lwinmm`).
 - Without a console (`--release` or `--no-console`), it adds `-mwindows` and defines `FRG_NO_CONSOLE`, which makes runtime errors show in a message box. `--release` also adds `-s` (a smaller file).
+- `--debug` builds use `-O0 -g`: no optimizing, plus debug information. The generator also writes a `#line` before every statement, like `#line 12 "C:\\game\\player.frg"`, which tells g++ (and so the debugger) that the C++ after it comes from that line of that file. After each function it writes `#line 1 "<code made by Forge>"`, so Forge's own helper code isn't mistaken for your lines. VS Code's **Forge: Debug Game** runs this build, then starts gdb through Microsoft's C/C++ extension (`cppdbg`), with breakpoints allowed in `.frg` files.
 
 ### The runtime
 
@@ -9140,6 +9293,39 @@ The other kinds are `=== error` (the build must fail with these messages) and `=
 
 When you save, the extension runs `frg check <game folder> --machine`. In machine mode, each error is printed as one tab-separated line (`E`, file, line, column, length, message, hint), which the extension turns into red underlines. Warnings are the same, but start with `W` and become yellow underlines.
 
+### How runtime errors know the calls that led to them
+
+Every Forge function (except tasks) starts with a `::frg::Frame frg$frame("sumFirst", "main.frg", 11);`, which puts itself on a list of running functions and takes itself off when the function ends (C++ runs its destructor, even when an error passes through). Before each statement, the generated code sets `frg$frame.line` to that statement's line, and `while` and `else if` conditions set it too, with C++'s comma operator: `while ((frg$frame.line = 7, i < n))`. When a runtime error happens, `panic()` turns the list into the "called from" lines and keeps them with the error. A caught error never prints them; one that stops the game does.
+
+Tasks don't have a Frame, because a task pauses with `wait()` and carries on later, while other functions start and end, so it can't sit on a simple list of running functions. Function values get their own Frame (`a function value in main`).
+
+### How frg fmt tidies code
+
+`format.cpp` goes through the file once, marking which characters are code and which are inside strings and comments (strings are read the same way the lexer reads them, including `"...{value}..."` with code inside). Then for each line:
+
+- a line that starts inside a ` ``` ` comment or `"""raw text"""` is kept exactly, and so are the spaces at the end of a line that ends inside raw text, because they're part of the text;
+- a line that starts a statement gets 4 spaces for each `{ }` it's inside (counting only braces in code), with one more for the code under a `case`, and one less when it starts with `}`;
+- a line that carries on a statement (inside `( )` or `[ ]`, or after a line that didn't end with `;`, `{` or `}`) moves by as much as the statement's first line did, so its own lining-up stays, but it's always at least one level further in;
+- a function's first line ending in `) {` becomes `){`, Forge's style; `if`, `while`, `for`, `switch`, `catch` and anything with `=` (a function value) keep `) {`.
+
+Then both versions go through the lexer, and the result is only used if every token is the same. So `frg fmt` can only ever change spaces and line breaks between tokens.
+
+### How the VS Code extension understands your code
+
+Autocomplete, hover help, go to definition, find all uses, rename and the outline all come from one command, `query.cpp`:
+
+```
+frg query <question> <game folder> <file> <line> <column> --stdin
+```
+
+The extension sends the file's text (with any unsaved changes) on standard input. Forge reads and checks the whole game exactly as for a build, with that text in place of the saved file, and prints one line of JSON. The questions are `definition`, `references`, `hover`, `complete`, `rename` (with the new name after the column) and `symbols`.
+
+- **Definition, uses, hover and rename** use what the checker worked out: every name in the code knows what it refers to (a local variable, a field, a function in another file...). The query collects every place each thing is written, then answers from that list.
+- **Autocomplete** first takes the unfinished word (and the `.` before it) out of the line, so the rest of the file still reads cleanly. Then it works out the chain before the dot itself: `player.body.velocity.` means the variable `player`, then its field `body`, then that type's field `velocity`, and it lists what that type has. Without a dot, it lists what exists at that spot: the variables of every `{ }` block the cursor is inside, the fields of the class you're in, the file's own names, the other files and folders, and the included libraries.
+- **Rename** refuses names that aren't allowed (keywords, type names), things built into Forge, files and folders (their names come from the files), and methods that replace a parent class's method.
+
+Each question starts `frg` again and reads the whole game, which takes a fraction of a second for most games.
+
 ### Adding a library
 
 1. Write the Forge declarations (functions, and classes with their methods) in `src/prelude.cpp`, as a new entry in `preludeLibs()`.
@@ -9152,7 +9338,7 @@ When you save, the extension runs `frg check <game folder> --machine`. In machin
 
 <!-- docs/LANGUAGE.md -->
 
-## Forge Cheat Sheet (v0.8)
+## Forge Cheat Sheet (v0.9)
 
 The whole language on one page, for looking things up quickly. For full explanations, examples and every detail, see the complete documentation (see “Forge Documentation”). Planned features are listed at the end.
 
@@ -9178,10 +9364,13 @@ int main(){
 | `frg build` | compiles the game into `build/<folder name>.exe` |
 | `frg run` | builds, then runs the game |
 | `frg check` | only looks for errors |
+| `frg fmt` | tidies the layout of the game's `.frg` files (indentation, braces, blank lines) |
+| `frg test` | runs the tests in the game's `tests` folder (details (see “`<testing>`: Testing Your Game's Code”)) |
 | `frg cache` / `frg cache clear` | show how big the build cache is (kept under about 400 MB) / delete it |
 | `frg package` | makes the finished game and zips it into `dist/<name>.zip`, ready to share |
 | `--release` (after build or run) | the finished game: no console window, smaller `.exe` |
 | `--no-console` / `--console` | turn the console window off or on, whatever else is chosen |
+| `--debug` (after build or run) | a build for the debugger: breakpoints and variables on your `.frg` lines |
 
 ### Comments
 
@@ -9699,6 +9888,7 @@ Each file includes the libraries it uses. Functions are reached through the libr
 | `<particles>` | `Emitter e = Emitter(vec2(x, y));`, then `e.burst(30)` (all at once) or `e.rate = 50` (per second); `e.update(dt)` and `e.draw()` each frame. Fields: `position` `rate` `lifetime` `speed` `direction` (degrees, -90 is up) `spread` (degrees, 360 is every way) `startColor` `endColor` `startSize` `endSize` `gravity`; `count()` `clear()` |
 | `<tween>` | `Tween t = Tween(from, to, seconds, Ease.OUT);` then `t.update(dt)` and `t.value()` each frame; `progress()` (0 to 1, for `lerp`), `isDone()`, `restart()`, `reverse()`, fields `looping` `pingPong`. Easing: `Ease.LINEAR` `IN` `OUT` `IN_OUT` `BOUNCE`; `tween.ease(Ease.OUT, t)` |
 | `<save>` | `save.setInt(key, n)` and `save.getInt(key, backup)`, also `setFloat`/`getFloat`, `setString`/`getString`, `setBool`/`getBool`, and `has(key)` `remove(key)` `clear()`. Kept in `save.txt` in the game's folder, written straight away. |
+| `<testing>` | `testing.check(ok, message)` and `testing.fail(message)`, in tests: functions named `test...` in the `tests` folder, run by `frg test` |
 | `<file>` | `file.read(path)` `write(path, text)` `append(path, text)` `exists(path)` `remove(path)` `readLines(path)` `writeLines(path, lines)` `files(folder)`. Paths are relative to the game's folder. |
 | `<scenes>` | the `Scene` class and `scenes.change(scene)` `update(dt)` `draw()` `current()` (see below) |
 | `<ui>` | `ui.button(rect, "text")` (true when clicked), `ui.checkbox(rect, "text", checked)` (gives the new value), `ui.slider(rect, value, min, max)` (gives the new value), `ui.textBox(rect, text, maxLength = 0)` (a box to type in; gives the new text), `ui.isTyping()`, `ui.label(text, x, y, size, color)`, `ui.panel(rect)`, `ui.setTheme(background, accent, text)` |

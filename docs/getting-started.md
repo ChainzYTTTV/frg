@@ -18,7 +18,7 @@ frg version
 g++ --version
 ```
 
-The first should print `Forge 0.8.1` and the second should print a GCC version. If `frg` isn't found, add Forge's `bin` folder to your PATH and restart the terminal.
+The first should print `Forge 0.9.0` and the second should print a GCC version. If `frg` isn't found, add Forge's `bin` folder to your PATH and restart the terminal.
 
 ### Building Forge from source
 
@@ -92,6 +92,8 @@ Run these in a terminal. `[folder]` is the game's top folder (the one with `main
 | `frg run [folder]` | Checks, compiles and runs the game |
 | `frg build [folder]` | Checks and compiles into `build/<folder name>.exe`, without running it |
 | `frg check [folder]` | Only looks for errors (fast, makes no `.exe`) |
+| `frg fmt [folder or files]` | Tidies the layout of your `.frg` files (see below) |
+| `frg test [folder]` | Runs the tests in the game's `tests` folder ([`<testing>`](libraries/testing.md)) |
 | `frg package [folder]` | Makes the finished game and zips it, ready to share: `dist/<name>.zip` (see [Sharing your game](#sharing-your-game)) |
 | `frg cache` | Shows how big the build cache is ([why there is one](#why-the-first-build-is-slower)). `frg cache clear` deletes it |
 | `frg version` | Shows the Forge version |
@@ -205,15 +207,50 @@ The Forge extension adds:
 | Syntax colors | Automatic for `.frg` files |
 | Errors while you work | Saving a file checks the whole game; mistakes are underlined in red, with the hint attached. The Problems panel (Ctrl+Shift+M) lists them all. |
 | Run the game | The ▶ button at the top-right of the editor, or **F5** |
+| Debug the game | The bug button next to ▶, or **F6**: runs the game in the debugger (see below) |
 | Build only | **Ctrl+Shift+B** |
-| Autocomplete | Type a library name and a dot (`window.`, `graphics2d.`, `color.`, `Key.`) to see what's in it |
-| Hover help | Hold the mouse over a library function to see how it's used |
+| Autocomplete | Suggests what fits where you're typing: your variables, functions, types and files, and after a dot, what's inside (`player.` shows its fields and methods, `enemies.goblin.` what that file has, `window.` the library's functions). **Ctrl+Space** shows the list any time. |
+| Hover help | Hold the mouse over a name to see what it is: a variable's type, a function's parameters, a library function's description |
+| Go to definition | **F12** (or Ctrl+click) on a name jumps to where it's written, even in another file |
+| Find all uses | **Shift+F12** on a name lists everywhere it's used |
+| Rename | **F2** on a name renames it everywhere it's used, in every file. Forge says so if the new name isn't allowed. |
+| Outline | The Outline panel (and **Ctrl+Shift+O**) lists the file's types, functions and variables |
 | Snippets | Type `main`, `game`, `gameloop`, `class`, `struct`, `enum`, `func`, `if`, `for`, `foreach`, `while`, `switch`, `task`, `scene`, `component` or `body`, then press Tab |
 | Comments | **Ctrl+/** toggles `//` comments; **Shift+Alt+A** wraps a selection in a ` ``` ` comment |
 
 To install or update it, run `.\editors\vscode\package.ps1 -Install` from the Forge folder, then in VS Code run **Developer: Reload Window**.
 
 Settings: `forge.path` is the full path to `frg.exe` if VS Code can't find it. `forge.checkOnSave` turns checking on save on or off.
+
+Autocomplete, hover help, go to definition and rename all read your game the same way a build does, including what you've typed but not saved yet in the file you're in. Other files are read as they are on disk, so save them first if you've changed them.
+
+### Tidying your code: frg fmt
+
+`frg fmt` tidies the layout of every `.frg` file in the game (or just the files you name), without changing what the code does:
+
+- each line is indented 4 spaces for each `{ }` level it's inside, and in a `switch`, the `case`s go one level in and their code one more;
+- a function's or method's opening brace goes straight after the `)`: `int main(){` (an `if`, `while` or `for` keeps its space: `if (x) {`);
+- spaces at the ends of lines go, and several blank lines in a row become one.
+
+It never touches what's inside ` ``` ` comments or `"""raw text"""`. A line that carries on a statement (like the second line of a long list) keeps how you lined it up, moved along with the statement. After tidying, Forge reads the file again, and if anything except spaces would change, it leaves the file as it was and says so.
+
+`frg fmt --check` only lists the files that aren't tidy, and `frg fmt main.frg --print` shows the tidied file without saving it. In VS Code, **Format Document** (**Shift+Alt+F**) does the same for the open file; turn on the `editor.formatOnSave` setting to tidy every time you save.
+
+### Debugging: pausing the game to look inside
+
+The **debugger** lets you pause the game on a line and look at every variable, then go on one line at a time. It's the best way to find out why something doesn't do what you expected.
+
+1. Click in the margin just left of a line number in a `.frg` file. A red dot appears: a **breakpoint**.
+2. Press **F6** (or the bug button next to ▶). Forge makes a debug build, and the game runs until it reaches a line with a breakpoint, then pauses there.
+3. The **Variables** panel on the left shows the variables and their values. Hold the mouse over a name in the code to see its value too. The **Call Stack** shows which function called which, file by file.
+4. **F10** runs one line, **F11** goes into the function called on this line, **Shift+F11** comes back out, **F5** carries on to the next breakpoint, and **Shift+F5** stops the game.
+
+Good to know:
+
+- It uses **gdb**, the debugger that comes with w64devkit, through Microsoft's **C/C++ extension** for VS Code. Forge asks you to install the extension the first time if you don't have it.
+- In the Variables panel, names have a `_` on the end (`score_`), because that's how Forge names things in the C++ it makes. Numbers, `bool`s and objects show normally. Text shows as C++ details: the letters are in the part called `_M_p`. A class object is a pointer: open it to see its fields.
+- A line that calls several functions (like `a() + b()`) can pause twice, because Forge works the calls out one by one there.
+- `frg build --debug` makes the same build from a terminal. Debug builds aren't optimized, so they can be slower than normal ones.
 
 ### The `.frg` icon in File Explorer
 

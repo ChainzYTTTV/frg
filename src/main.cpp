@@ -6,22 +6,28 @@
 #include "codegen.hpp"
 #include "common.hpp"
 #include "project.hpp"
+#include "query.hpp"
+#include "format.hpp"
 #include "templates.hpp"
 
 #include <algorithm>
+#include <set>
 #include <cctype>
 #include <chrono>
 #include <cstdint>
 #include <cstdio>
 #include <filesystem>
 #include <fstream>
+#include <fcntl.h>
+#include <io.h>
+#include <iostream>
 #include <iterator>
 #include <string>
 #include <vector>
 
 namespace fs = std::filesystem;
 
-static const char* kVersion = "0.8.1";
+static const char* kVersion = "0.9.0";
 
 static fs::path exeDir() {
     std::wstring buf(32768, L'\0');
@@ -297,6 +303,105 @@ static int compileTo(const std::wstring& args, const fs::path& output) {
     return code;
 }
 
+// ---------------------------------------------------------------- compiling several parts at once
+
+// One g++ run. Its messages go to a log file instead of the console, because several run at the same time.
+struct Job {
+    std::wstring args;  // everything after "g++"
+    fs::path log;
+    HANDLE process = nullptr;
+    HANDLE logFile = nullptr;
+    int code = 0;       // its exit code once it's done; -1 if it couldn't be started
+};
+
+static bool startJob(Job& j) {
+    SECURITY_ATTRIBUTES sa{sizeof sa, nullptr, TRUE};
+    j.logFile = CreateFileW(j.log.c_str(), GENERIC_WRITE, FILE_SHARE_READ | FILE_SHARE_DELETE, &sa, CREATE_ALWAYS,
+                            FILE_ATTRIBUTE_NORMAL, nullptr);
+    if (j.logFile == INVALID_HANDLE_VALUE) {
+        j.logFile = nullptr;
+        return false;
+    }
+    // Only this job's log file is passed on to g++, not the other jobs' (which would stay open until it ends).
+    SIZE_T size = 0;
+    InitializeProcThreadAttributeList(nullptr, 1, 0, &size);
+    std::vector<char> buf(size);
+    auto attrs = reinterpret_cast<LPPROC_THREAD_ATTRIBUTE_LIST>(buf.data());
+    InitializeProcThreadAttributeList(attrs, 1, 0, &size);
+    HANDLE inherit[1] = {j.logFile};
+    UpdateProcThreadAttribute(attrs, 0, PROC_THREAD_ATTRIBUTE_HANDLE_LIST, inherit, sizeof inherit, nullptr, nullptr);
+    STARTUPINFOEXW si{};
+    si.StartupInfo.cb = sizeof si;
+    si.StartupInfo.dwFlags = STARTF_USESTDHANDLES;
+    si.StartupInfo.hStdOutput = si.StartupInfo.hStdError = j.logFile;
+    si.lpAttributeList = attrs;
+    PROCESS_INFORMATION pi{};
+    std::wstring cmd = L"g++ " + j.args;
+    BOOL ok = CreateProcessW(nullptr, cmd.data(), nullptr, nullptr, TRUE, EXTENDED_STARTUPINFO_PRESENT, nullptr, nullptr,
+                             &si.StartupInfo, &pi);
+    DeleteProcThreadAttributeList(attrs);
+    if (!ok) {
+        CloseHandle(j.logFile);
+        j.logFile = nullptr;
+        return false;
+    }
+    CloseHandle(pi.hThread);
+    j.process = pi.hProcess;
+    return true;
+}
+
+// How many g++ runs to have going at once: one per processor, but each needs several hundred MB of memory.
+static int jobLimit() {
+    int cores = (int)GetActiveProcessorCount(ALL_PROCESSOR_GROUPS);
+    MEMORYSTATUSEX mem{};
+    mem.dwLength = sizeof mem;
+    if (GlobalMemoryStatusEx(&mem)) cores = std::min<int>(cores, (int)(mem.ullAvailPhys / (700ull * 1024 * 1024)));
+    return std::clamp(cores, 1, (int)MAXIMUM_WAIT_OBJECTS);
+}
+
+// Runs every job, up to `limit` at a time, and waits until they've all finished.
+static void runJobs(std::vector<Job>& jobs, int limit) {
+    size_t next = 0;
+    std::vector<Job*> running;
+    while (next < jobs.size() || !running.empty()) {
+        while (next < jobs.size() && (int)running.size() < limit) {
+            Job& j = jobs[next++];
+            if (startJob(j))
+                running.push_back(&j);
+            else
+                j.code = -1;
+        }
+        if (running.empty()) break;
+        std::vector<HANDLE> handles;
+        for (Job* j : running) handles.push_back(j->process);
+        DWORD w = WaitForMultipleObjects((DWORD)handles.size(), handles.data(), FALSE, INFINITE);
+        size_t done = w - WAIT_OBJECT_0;
+        if (done >= running.size()) done = 0;  // shouldn't happen; wait for the first one properly next time round
+        Job* j = running[done];
+        if (WaitForSingleObject(j->process, INFINITE) == WAIT_OBJECT_0) {
+            DWORD code = 0;
+            GetExitCodeProcess(j->process, &code);
+            j->code = (int)code;
+        }
+        CloseHandle(j->process);
+        CloseHandle(j->logFile);
+        running.erase(running.begin() + done);
+    }
+}
+
+static std::string readFile(const fs::path& p) {
+    std::ifstream f(p, std::ios::binary);
+    return std::string((std::istreambuf_iterator<char>(f)), std::istreambuf_iterator<char>());
+}
+
+// Writes a file only if its contents changed, so unchanged files keep their old dates.
+static void writeIfChanged(const fs::path& p, const std::string& text) {
+    std::error_code ec;
+    if (fs::exists(p, ec) && readFile(p) == text) return;
+    std::ofstream f(p, std::ios::binary);
+    f << text;
+}
+
 // ---------------------------------------------------------------- the game's icon
 //
 // If the game's folder has icon.png, it becomes the .exe's icon (and, through raylib's window library GLFW, which
@@ -356,6 +461,8 @@ static BOOL WINAPI ignoreCtrlC(DWORD type) { return type == CTRL_C_EVENT || type
 struct BuildOptions {
     bool release = false;
     bool console = true;
+    bool debug = false;  // --debug: not optimized, with debug information and each line of C++ marked with its .frg line
+    bool test = false;   // frg test: with the tests/ folder, and a main() that runs the tests, in build/tests/
 };
 
 static bool build(const fs::path& dir, fs::path& exeOut, const BuildOptions& opt) {
@@ -371,7 +478,7 @@ static bool build(const fs::path& dir, fs::path& exeOut, const BuildOptions& opt
     }
 
     Project proj;
-    if (!loadProject(proj, dir) || !checkProject(proj)) {
+    if (!loadProject(proj, dir, opt.test) || !checkProject(proj)) {
         int n = errorCount();
         std::fprintf(stderr, "Build failed: %d error%s.\n", n, n == 1 ? "" : "s");
         return false;
@@ -380,24 +487,21 @@ static bool build(const fs::path& dir, fs::path& exeOut, const BuildOptions& opt
     printStatus("Compiling", proj.name + " (" + std::to_string(proj.allModules.size()) + " file" +
                                  (proj.allModules.size() == 1 ? "" : "s") + ")");
 
-    fs::path buildDir = proj.root / "build";
+    fs::path buildDir = opt.test ? proj.root / "build" / "tests" : proj.root / "build";
     std::error_code ec;
     fs::create_directories(buildDir, ec);
-    fs::path cppPath = buildDir / "forge_generated.cpp";
-    GeneratedCpp gen = generateCpp(proj);
-    {
-        std::ofstream f(cppPath, std::ios::binary);
-        f << gen.code;
-    }
-
-    fs::path exe = buildDir / (proj.name + ".exe");
-    if (fs::exists(exe)) {
-        fs::remove(exe, ec);
-        if (ec) {
-            reportPlainError("couldn't replace " + exe.string(), "is the game still running? Close it and try again");
-            return false;
-        }
-    }
+    // FRG_VERBOSE=1 shows how long each step of the build takes.
+    bool verbose = std::getenv("FRG_VERBOSE") != nullptr;
+    auto phaseStart = start;
+    auto phase = [&](const char* name) {
+        auto now = std::chrono::steady_clock::now();
+        if (verbose) std::fprintf(stderr, "    [build] %s: %.2fs\n", name, std::chrono::duration<double>(now - phaseStart).count());
+        phaseStart = now;
+    };
+    phase("reading and checking");
+    GeneratedCpp gen = generateCpp(proj, opt.debug, opt.test);
+    phase("generating C++");
+    fs::path exe = buildDir / (proj.name + (opt.test ? "_tests.exe" : ".exe"));
 
     fs::path runtime = exeDir() / "runtime";
     if (!fs::exists(runtime / "forge.hpp")) {
@@ -414,7 +518,7 @@ static bool build(const fs::path& dir, fs::path& exeOut, const BuildOptions& opt
 
     // Release builds are optimized more (-O2). Other builds use -O1, which compiles faster and still runs well.
     // -fwrapv: whole numbers wrap around when they overflow, the same at every optimization level.
-    std::wstring flags = std::wstring(L"-std=gnu++20 ") + (opt.release ? L"-O2" : L"-O1") + L" -fwrapv -w -I" + quote(runtime);
+    std::wstring flags = std::wstring(L"-std=gnu++20 ") + (opt.debug ? L"-O0 -g" : opt.release ? L"-O2" : L"-O1") + L" -fwrapv -w -I" + quote(runtime);
     if (!opt.console) flags += L" -DFRG_NO_CONSOLE";  // no console window: runtime errors pop up in a box instead
     if (vulkan) flags += L" -I" + quote(runtime / "vulkan" / "include");
     fs::path raylib = runtime / "raylib";
@@ -463,7 +567,140 @@ static bool build(const fs::path& dir, fs::path& exeOut, const BuildOptions& opt
         objects.push_back(obj);
     }
 
-    std::wstring cmd = L"g++ " + flags + L" -I" + quote(pchDir) + L" " + quote(cppPath);
+    // ---- The game's C++, in parts (build/forge/). See "split builds" in docs/how-forge-works.md.
+    // A small game is one part. A bigger one is split into more parts, each a share of the .frg files, so the
+    // parts can be compiled at the same time and an edit only recompiles the part with that file in it. Each part
+    // also has to load Forge's runtime (about half a second), so parts aren't made smaller than about 48 KB of C++.
+    phase("preparing the runtime");
+    fs::path forgeDir = buildDir / "forge";
+    fs::create_directories(forgeDir, ec);
+    fs::remove(buildDir / "forge_generated.cpp", ec);  // the one big file made by Forge 0.8 and older
+    size_t total = 0;
+    for (const GeneratedModule& m : gen.modules) total += m.code.size();
+    const size_t kPartSize = 48 * 1024;
+    size_t parts = 1;
+    if (total > 64 * 1024)
+        while (parts < 64 && parts * kPartSize < total) parts *= 2;  // only powers of two, so it rarely changes
+    // Each file always goes in the same part (chosen from its name, not its size), so an edit can't move the others.
+    std::vector<std::string> partCode(parts);
+    for (const GeneratedModule& m : gen.modules) partCode[parts == 1 ? 0 : std::stoull(hashName(m.path), nullptr, 16) % parts] += m.code;
+
+    // Every part includes the game's declarations (game.hpp). In a big game those are a lot to read, so then they're
+    // precompiled too, together with the runtime (game_pch.hpp), and kept in build/forge/ (this one is the game's own).
+    writeIfChanged(forgeDir / "game.hpp", gen.header);
+    bool bigHeader = parts > 1 && gen.header.size() > 96 * 1024;
+    std::string partStart, pchKey;
+    if (bigHeader) {
+        std::string gamePchText = pchText + "#include \"game.hpp\"\n";
+        writeIfChanged(forgeDir / "game_pch.hpp", gamePchText);
+        pchKey = hashName(tools + "|" + stamp + "|" + gamePchText + "|" + gen.header);
+        fs::path gamePch = forgeDir / "game_pch.hpp.gch", keyFile = forgeDir / "game_pch.key";
+        if (!fs::exists(gamePch, ec) || readFile(keyFile) != pchKey) {
+            fs::remove(keyFile, ec);
+            if (compileTo(flags + L" -x c++-header " + quote(forgeDir / "game_pch.hpp"), gamePch) != 0) {
+                reportPlainError("the C++ compiler rejected Forge's output (game.hpp) - this is a bug in Forge, not in your code",
+                                 "the generated file is " + (forgeDir / "game.hpp").string());
+                return false;
+            }
+            writeIfChanged(keyFile, pchKey);
+        }
+        partStart = "#include \"game_pch.hpp\"  // Forge's runtime and this game's declarations, precompiled\n";
+    } else {
+        fs::remove(forgeDir / "game_pch.hpp.gch", ec);
+        pchKey = hashName(gen.header);
+        partStart = "#include \"forge_pch.hpp\"  // Forge's runtime headers, precompiled to make builds faster\n#include \"game.hpp\"\n";
+    }
+    const std::string partHead = "// Generated by Forge from your .frg files. Edit those instead - this file is rebuilt every time.\n" + partStart + "\n";
+
+    struct Part {
+        std::string name;  // "part3" or "main"
+        std::string code;
+    };
+    std::vector<Part> all;
+    if (parts == 1) {
+        // A small game is a single part, with main() in it too: each part costs a runtime load, so fewer is faster.
+        all.push_back({"game", partHead + partCode[0] + gen.mainCode});
+    } else {
+        for (size_t i = 0; i < parts; i++)
+            if (!partCode[i].empty()) all.push_back({"part" + std::to_string(i + 1), partHead + partCode[i]});
+        all.push_back({"main", partHead + gen.mainCode});
+    }
+
+    // Parts left over from a build that was split differently.
+    std::set<std::string> keep = {"game.hpp", "game_pch.hpp", "game_pch.hpp.gch", "game_pch.key", "link.key"};
+    for (const Part& p : all)
+        for (const char* ext : {".cpp", ".o", ".key", ".log"}) keep.insert(p.name + ext);
+    for (const auto& entry : fs::directory_iterator(forgeDir, ec))
+        if (entry.is_regular_file() && !keep.count(entry.path().filename().string())) fs::remove(entry.path(), ec);
+
+    phase("writing the parts");
+    // Compile the parts that changed. A part's key says everything it was made from; if it matches, its .o is reused.
+    // A one-part game is compiled and linked by a single g++ run below instead, which is quicker than two.
+    bool single = all.size() == 1;
+    std::vector<Job> jobs;
+    std::vector<const Part*> jobParts;
+    std::string linkKey = tools + "|" + stamp + "|" + pchKey;
+    for (const Part& p : all) {
+        fs::path cpp = forgeDir / (p.name + ".cpp"), obj = forgeDir / (p.name + ".o"), keyFile = forgeDir / (p.name + ".key");
+        writeIfChanged(cpp, p.code);
+        std::string key = hashName(tools + "|" + stamp + "|" + pchKey + "|" + p.code);
+        linkKey += "|" + key;
+        if (single || (fs::exists(obj, ec) && readFile(keyFile) == key)) continue;
+        fs::remove(keyFile, ec);
+        Job j;
+        j.args = flags + L" -I" + quote(pchDir) + L" -I" + quote(forgeDir) + L" -c " + quote(cpp) + L" -o " + quote(obj);
+        j.log = forgeDir / (p.name + ".log");
+        jobs.push_back(j);
+        jobParts.push_back(&p);
+    }
+    if (!jobs.empty()) {
+        // The biggest parts start first, so a slow one doesn't end up running alone at the end.
+        std::vector<size_t> order(jobs.size());
+        for (size_t i = 0; i < order.size(); i++) order[i] = i;
+        std::stable_sort(order.begin(), order.end(), [&](size_t a, size_t b) { return jobParts[a]->code.size() > jobParts[b]->code.size(); });
+        std::vector<Job> sorted;
+        std::vector<const Part*> sortedParts;
+        for (size_t i : order) {
+            sorted.push_back(jobs[i]);
+            sortedParts.push_back(jobParts[i]);
+        }
+        jobs = std::move(sorted);
+        jobParts = std::move(sortedParts);
+        int limit = jobLimit();
+        if (std::getenv("FRG_VERBOSE"))
+            std::fprintf(stderr, "    [build] %zu parts, compiling %zu, %d at a time, declarations %s\n", all.size(), jobs.size(), limit,
+                         bigHeader ? "precompiled" : "read by each part");
+        auto t0 = std::chrono::steady_clock::now();
+        runJobs(jobs, limit);
+        if (std::getenv("FRG_VERBOSE"))
+            std::fprintf(stderr, "    [build] compiling took %.2fs\n", std::chrono::duration<double>(std::chrono::steady_clock::now() - t0).count());
+        for (size_t i = 0; i < jobs.size(); i++) {
+            const Part& p = *jobParts[i];
+            if (jobs[i].code == -1) {
+                reportPlainError("couldn't find g++, which Forge uses to make .exe files",
+                                 "install w64devkit and make sure its bin folder is on your PATH");
+                return false;
+            }
+            if (jobs[i].code != 0) {
+                std::string log = readFile(jobs[i].log);
+                if (log.size() > 2000) log = log.substr(0, 2000) + "\n...";
+                reportPlainError("the C++ compiler rejected Forge's output - this is a bug in Forge, not in your code",
+                                 "the generated file is " + (forgeDir / (p.name + ".cpp")).string() + ", and g++'s message is in " +
+                                     jobs[i].log.string());
+                std::fprintf(stderr, "%s\n", log.c_str());
+                return false;
+            }
+            writeIfChanged(forgeDir / (p.name + ".key"), hashName(tools + "|" + stamp + "|" + pchKey + "|" + p.code));
+        }
+    }
+
+    phase("compiling");
+    // Link: the parts, a toolkit's runtime code and the icon, into the .exe. Skipped if none of it changed.
+    std::wstring cmd = L"g++";
+    if (single)
+        cmd += L" " + flags + L" -I" + quote(pchDir) + L" -I" + quote(forgeDir) + L" " + quote(forgeDir / (all[0].name + ".cpp"));
+    else
+        for (const Part& p : all) cmd += L" " + quote(forgeDir / (p.name + ".o"));
     for (const fs::path& obj : objects) cmd += L" " + quote(obj);
     fs::path icon = makeIcon(proj.root, buildDir);
     if (!icon.empty()) cmd += L" " + quote(icon);
@@ -472,27 +709,66 @@ static bool build(const fs::path& dir, fs::path& exeOut, const BuildOptions& opt
     if (opt.release) cmd += L" -s";  // a smaller .exe
     if (gen.needsRaylib) cmd += L" -L" + quote(raylib / "lib") + L" -lraylib -lopengl32 -lgdi32 -lwinmm";
     for (const std::string& flag : gen.linkFlags) cmd += L" " + fs::path(flag).wstring();
-    int code = runProcess(cmd);
+    linkKey = hashName(linkKey + "|" + fs::path(cmd).string() + "|" + (icon.empty() ? "" : timeStamp(icon)));
+    bool linked = false;
+    if (!fs::exists(exe, ec) || readFile(forgeDir / "link.key") != linkKey) {
+        if (fs::exists(exe, ec)) {
+            fs::remove(exe, ec);
+            if (ec) {
+                reportPlainError("couldn't replace " + exe.string(), "is the game still running? Close it and try again");
+                return false;
+            }
+        }
+        fs::remove(forgeDir / "link.key", ec);
+        int code = runProcess(cmd);
+        if (code == -1) {
+            reportPlainError("couldn't find g++, which Forge uses to make .exe files",
+                             "install w64devkit and make sure its bin folder is on your PATH");
+            return false;
+        }
+        if (code != 0) {
+            reportPlainError(std::string("the C++ ") + (single ? "compiler" : "linker") + " rejected Forge's output - this is a bug in Forge, not in your code",
+                             "the generated files are in " + forgeDir.string());
+            return false;
+        }
+        writeIfChanged(forgeDir / "link.key", linkKey);
+        linked = true;
+    }
+    phase("linking");
     limitCache();
-    if (code == -1) {
-        reportPlainError("couldn't find g++, which Forge uses to make .exe files",
-                         "install w64devkit and make sure its bin folder is on your PATH");
-        return false;
-    }
-    if (code != 0) {
-        reportPlainError("the C++ compiler rejected Forge's output - this is a bug in Forge, not in your code",
-                         "the generated file is " + cppPath.string());
-        return false;
-    }
 
     double secs = std::chrono::duration<double>(std::chrono::steady_clock::now() - start).count();
     char timeBuf[32];
     std::snprintf(timeBuf, sizeof timeBuf, "%.2fs", secs);
-    printStatus("Finished", "build/" + exe.filename().string() + (opt.console ? "" : " (no console)") + " in " + timeBuf);
+    std::string note = !linked ? " (nothing changed)" : all.size() > 2 ? " (" + std::to_string(jobs.size()) + " of " + std::to_string(all.size()) + " parts compiled)" : "";
+    printStatus("Finished", fs::relative(exe, proj.root, ec).generic_string() + (opt.debug ? " (debug)" : "") + (opt.console ? "" : " (no console)") + note + " in " + timeBuf);
     if (!opt.console && !gen.needsRaylib)
         std::fprintf(stderr, "    note: this game doesn't open a window, so without a console nothing will show when it runs\n");
     exeOut = exe;
     return true;
+}
+
+// frg test: builds the game with its tests/ folder (into build/tests/) and runs every test function in there.
+static int cmdTest(const fs::path& dir, BuildOptions opt) {
+    std::error_code ec;
+    if (fs::is_directory(dir, ec) && !fs::is_directory(dir / "tests", ec)) {
+        reportPlainError("there's no tests folder in " + fs::absolute(dir).string(),
+                         "make a folder called tests next to main.frg, with files like tests/player_test.frg holding functions "
+                         "like void testJump(){ ... } that use testing.check(...) (they need #include <testing>)");
+        return 1;
+    }
+    opt.test = true;
+    opt.release = false;
+    fs::path exe;
+    if (!build(dir, exe, opt)) return 1;
+    printStatus("Testing", exe.filename().string());
+    std::fflush(stderr);
+    int code = runProcess(quote(exe), fs::absolute(dir));
+    if (code == -1) {
+        reportPlainError("couldn't start " + exe.string());
+        return 1;
+    }
+    return code;
 }
 
 static int cmdRun(const fs::path& dir, const BuildOptions& opt) {
@@ -634,12 +910,14 @@ static void printHelp() {
         "  frg build [folder]  compile the game into build/<name>.exe\n"
         "  frg run [folder]    compile the game, then run it\n"
         "  frg check [folder]  look for errors without building\n"
+        "  frg test [folder]   run the tests in the game's tests folder\n"
         "  frg package [folder]  make a finished build and zip it, ready to share: dist/<name>.zip\n"
         "  frg cache           show how big the build cache is (frg cache clear deletes it)\n"
         "  frg version         show the Forge version\n\n"
         "[folder] is the game's top folder (the one with main.frg). It defaults to the current folder.\n"
         "Options for build and run:\n"
         "  --release           make a finished game: no console window, and a smaller .exe\n"
+        "  --debug             a build for the debugger: breakpoints and variables on your .frg lines\n"
         "  --no-console        no console window (print() output isn't shown; runtime errors pop up in a box)\n"
         "  --console           keep the console window, even with --release\n"
         "Without options the console is on, so print() and errors show while you test the game.\n",
@@ -658,13 +936,15 @@ int main(int argc, char** argv) {
         std::printf("Forge %s\n", kVersion);
         return 0;
     }
-    if (cmd == "build" || cmd == "run" || cmd == "package") {
+    if (cmd == "build" || cmd == "run" || cmd == "package" || cmd == "test") {
         BuildOptions opt;
         int consoleChoice = -1;  // -1: not chosen, 0: --no-console, 1: --console
         std::vector<std::string> rest;
         for (size_t i = 1; i < args.size(); i++) {
             if (args[i] == "--release") {
                 opt.release = true;
+            } else if (args[i] == "--debug") {
+                opt.debug = true;
             } else if (args[i] == "--console" || args[i] == "--no-console") {
                 int choice = args[i] == "--console" ? 1 : 0;
                 if (consoleChoice != -1 && consoleChoice != choice) {
@@ -673,19 +953,25 @@ int main(int argc, char** argv) {
                 }
                 consoleChoice = choice;
             } else if (args[i].starts_with("--")) {
-                reportPlainError("there's no option called " + args[i], "the options are --release, --console and --no-console");
+                reportPlainError("there's no option called " + args[i], "the options are --release, --debug, --console and --no-console");
                 return 1;
             } else {
                 rest.push_back(args[i]);
             }
         }
         if (rest.size() > 1) {
-            reportPlainError("too many arguments", "usage: frg " + cmd + " [folder] [--release] [--console | --no-console]");
+            reportPlainError("too many arguments", "usage: frg " + cmd + " [folder] [--release | --debug] [--console | --no-console]");
+            return 1;
+        }
+        if (opt.release && opt.debug) {
+            reportPlainError("--release and --debug can't both be used",
+                             "--debug is for finding mistakes with a debugger, --release for the finished game");
             return 1;
         }
         opt.console = consoleChoice == -1 ? !opt.release : consoleChoice == 1;
         fs::path dir = rest.empty() ? fs::current_path() : fs::path(rest[0]);
         if (cmd == "run") return cmdRun(dir, opt);
+        if (cmd == "test") return cmdTest(dir, opt);
         if (cmd == "package") {
             if (!opt.release) {
                 opt.release = true;  // a package is always a finished build
@@ -695,6 +981,104 @@ int main(int argc, char** argv) {
         }
         fs::path exe;
         return build(dir, exe, opt) ? 0 : 1;
+    }
+    if (cmd == "fmt") {
+        // frg fmt [folders or files] [--check] [--print] [--stdin]: tidies the layout of .frg files (see format.cpp).
+        bool check = false, print = false, fromStdin = false;
+        std::vector<fs::path> targets;
+        for (size_t i = 1; i < args.size(); i++) {
+            if (args[i] == "--check") check = true;
+            else if (args[i] == "--print") print = true;
+            else if (args[i] == "--stdin") fromStdin = true;
+            else if (args[i].starts_with("--")) {
+                reportPlainError("there's no option called " + args[i], "the options are --check, --print and --stdin");
+                return 1;
+            } else targets.push_back(args[i]);
+        }
+        if (fromStdin) {  // for editors: the text on standard input, tidied, on standard output
+            std::string text((std::istreambuf_iterator<char>(std::cin)), std::istreambuf_iterator<char>());
+            FormatResult r = formatSource(text);
+            if (!r.ok) {
+                std::fprintf(stderr, "%s\n", r.error.c_str());
+                return 1;
+            }
+            _setmode(_fileno(stdout), _O_BINARY);  // the text exactly: Windows would turn each line ending into two characters
+            std::fwrite(r.text.data(), 1, r.text.size(), stdout);
+            return 0;
+        }
+        if (targets.empty()) targets.push_back(fs::current_path());
+        std::vector<fs::path> files;
+        std::error_code ec;
+        for (const fs::path& t : targets) {
+            if (fs::is_directory(t, ec)) {
+                for (auto it = fs::recursive_directory_iterator(t, ec); it != fs::recursive_directory_iterator(); it.increment(ec)) {
+                    std::string name = it->path().filename().string();
+                    if (it->is_directory() && (name == "build" || name == "dist" || name.starts_with("."))) {
+                        it.disable_recursion_pending();
+                        continue;
+                    }
+                    if (it->is_regular_file() && it->path().extension() == ".frg") files.push_back(it->path());
+                }
+            } else if (fs::is_regular_file(t, ec)) {
+                files.push_back(t);
+            } else {
+                reportPlainError("there's no file or folder called '" + t.string() + "'");
+                return 1;
+            }
+        }
+        std::sort(files.begin(), files.end());
+        int changed = 0, failed = 0;
+        for (const fs::path& f : files) {
+            std::ifstream in(f, std::ios::binary);
+            std::string text((std::istreambuf_iterator<char>(in)), std::istreambuf_iterator<char>());
+            in.close();
+            FormatResult r = formatSource(text);
+            std::string shown = fs::relative(f, fs::current_path(), ec).string();
+            if (ec || shown.empty()) shown = f.string();
+            if (!r.ok) {
+                reportPlainError("couldn't tidy " + shown + ": " + r.error);
+                failed++;
+                continue;
+            }
+            if (print) {
+                std::fwrite(r.text.data(), 1, r.text.size(), stdout);
+                continue;
+            }
+            if (!r.changed) continue;
+            changed++;
+            if (check) {
+                printStatus("Untidy", shown);
+                continue;
+            }
+            std::ofstream out(f, std::ios::binary);
+            out << r.text;
+            printStatus("Tidied", shown);
+        }
+        if (print) return failed ? 1 : 0;
+        if (check) {
+            if (changed) std::fprintf(stderr, "%d of %zu files would be tidied by frg fmt.\n", changed, files.size());
+            else printStatus("Tidy", std::to_string(files.size()) + " file" + (files.size() == 1 ? " is" : "s are") + " already tidy");
+            return changed || failed ? 1 : 0;
+        }
+        if (!changed && !failed) printStatus("Tidy", std::to_string(files.size()) + " file" + (files.size() == 1 ? " was" : "s were") + " already tidy");
+        return failed ? 1 : 0;
+    }
+    if (cmd == "query") {
+        // frg query <question> <folder> <file> <line> <column> [--stdin] [new name]: for the VS Code extension.
+        std::vector<std::string> rest;
+        bool fromStdin = false;
+        for (size_t i = 1; i < args.size(); i++) {
+            if (args[i] == "--stdin")
+                fromStdin = true;
+            else
+                rest.push_back(args[i]);
+        }
+        if (rest.size() < 5) {
+            std::printf("{\"error\":\"usage: frg query <question> <folder> <file> <line> <column> [--stdin] [new name]\"}\n");
+            return 1;
+        }
+        int line = std::atoi(rest[3].c_str()), col = std::atoi(rest[4].c_str());
+        return runQuery(rest[0], rest[1], rest[2], line, col, fromStdin, rest.size() > 5 ? rest[5] : "");
     }
     if (cmd == "check") {
         // frg check [folder] [--machine]: find errors without building anything.
@@ -711,7 +1095,7 @@ int main(int argc, char** argv) {
             return 1;
         }
         Project proj;
-        bool ok = loadProject(proj, dir) && checkProject(proj);
+        bool ok = loadProject(proj, dir, true) && checkProject(proj);  // the tests folder too
         int warnings = flushWarnings();
         if (!ok) {
             int n = errorCount();

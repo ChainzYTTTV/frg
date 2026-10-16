@@ -10,7 +10,7 @@ Open an issue on GitHub with:
 - what you expected to happen, and what happened instead (paste the full error message);
 - your Forge version (`frg version`) and Windows version.
 
-If the message says "this is a bug in Forge, not in your code", please also attach `build/forge_generated.cpp` from your game's folder.
+If the message says "this is a bug in Forge, not in your code", please also attach the `build/forge/` folder from your game's folder (zipped).
 
 ## Suggesting a feature
 

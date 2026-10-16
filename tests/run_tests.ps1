@@ -6,8 +6,11 @@
 #   === output          the exact text the program must print
 #   === error           text that must appear in the compile errors (one check per line)
 #   === build           (empty) the program must compile; it isn't run (for games that open a window)
-#   === command         (one line) runs frg with these words instead of building, like "cache". Each line of
+#   === command         (one line) runs frg with these words instead of building, like "cache" ({game} is this
+#                       test's game folder, as in "build {game} --debug"). Each line of
 #                       === prints must appear in what it prints; with === error, it must fail with those messages.
+#   === query           (one line: "<question> <file> <line> <column> [new name]") runs frg query on this game;
+#                       each line of === prints must appear in the JSON it prints (or, starting with !, must not)
 #   === new             (one line: a template name, and optionally the game's name) makes a game with
 #                       frg new --template, which must build without warnings. With === error, frg new must fail.
 #   === package         runs frg package; each line is a path (from the game's folder) that must exist afterwards,
@@ -69,7 +72,7 @@ foreach ($file in Get-ChildItem (Join-Path $PSScriptRoot "cases") -Filter "$Filt
     foreach ($key in @($sections.Keys)) {
         $lines = $sections[$key]
         while ($lines.Count -gt 0 -and $lines[$lines.Count - 1] -eq '') { $lines.RemoveAt($lines.Count - 1) }
-        if ($key -in 'output', 'error', 'build', 'warning', 'no warnings', 'runtime error', 'package', 'new', 'command', 'prints') { continue }
+        if ($key -in 'output', 'error', 'build', 'warning', 'no warnings', 'runtime error', 'package', 'new', 'command', 'prints', 'query') { continue }
         if ($key -match '^(.+) \(base64\)$') {
             $path = Join-Path $dir $Matches[1]
             New-Item -ItemType Directory -Force (Split-Path $path) | Out-Null
@@ -82,8 +85,19 @@ foreach ($file in Get-ChildItem (Join-Path $PSScriptRoot "cases") -Filter "$Filt
     }
 
     $problem = $null
-    if ($sections.Contains('command')) {
-        $words = @($sections['command'][0] -split ' ')
+    if ($sections.Contains('query')) {
+        # "=== query" is one line, "<question> <file> <line> <column> [new name]": frg query on this test's game.
+        # Every line of "=== prints" must be in the JSON it prints.
+        $words = @($sections['query'][0] -split ' ')
+        $extra = @($words[0], $dir, (Join-Path $dir $words[1])) + @($words | Select-Object -Skip 2)
+        $r = Invoke-Frg query '' $extra
+        foreach ($want in $sections['prints']) {
+            if ($want.StartsWith('!')) {
+                if ($r.Out.Contains($want.Substring(1))) { $problem = "the query's answer shouldn't contain: $($want.Substring(1))`n--- it printed:`n$($r.Out)" }
+            } elseif ($want -and -not $r.Out.Contains($want)) { $problem = "the query's answer doesn't contain: $want`n--- it printed:`n$($r.Out)$($r.Err)" }
+        }
+    } elseif ($sections.Contains('command')) {
+        $words = @(($sections['command'][0] -replace '\{game\}', $dir) -split ' ')
         $r = Invoke-Frg $words[0] '' @($words | Select-Object -Skip 1)
         $all = $r.Out + $r.Err
         if ($sections.Contains('error')) {

@@ -1,0 +1,8 @@
+=== main.frg
+int main(){
+    list<string> names = [];
+    string first = names[0];
+    return 0;
+}
+=== runtime error
+position 0 is outside the list: the list is empty

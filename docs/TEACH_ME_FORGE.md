@@ -76,15 +76,18 @@ Commands, typed in a terminal inside the game's folder:
 | `frg run` | checks the code, compiles it, and runs the game |
 | `frg build` | compiles into `build/<folder name>.exe` without running it |
 | `frg check` | only looks for errors |
+| `frg fmt` | tidies the layout (indentation, `int main(){` braces, blank lines). In VS Code: **Shift+Alt+F** |
+| `frg test` | runs the game's tests (the `tests` folder). In VS Code: **Forge: Run Tests** |
 | `frg package` | the finished game, with every file it needs (but not the `.frg` files or `save.txt`), zipped into `dist/<name>.zip` to share. If the game is in git, add `build/`, `dist/` and `save.txt` to `.gitignore` |
 | `frg build --release` | the finished game: no console window, smaller `.exe` |
 | `--no-console` / `--console` | add to `run` or `build` to turn the console window off or on |
+| `--debug` | add to `build` for a debugger build. In VS Code, the bug button (or **F6**) does it and starts the debugger |
 
 A picture called `icon.png` in the game's top folder becomes the `.exe`'s icon and the window's icon (square, ideally 256 × 256). Without one, the game just gets the plain Windows icon.
 
 The **console window** (the black window next to the game) shows `print` output and errors. It's on while testing. Turn it off with `--no-console` to see the game as players will, and `--release` turns it off for the finished game. Without a console, runtime errors pop up in a box titled "The game stopped". Text-only programs need the console: without it nothing shows. In VS Code, **Forge: Turn the Console On/Off** switches it for the ▶ button, and **Forge: Build Release** builds the finished game.
 
-In **VS Code** (with the Forge extension): errors are underlined when you save, the **▶ button** at the top right (or **F5**) runs the game, typing `window.` or `color.` shows autocomplete, and snippets like `game`, `class` and `foreach` insert templates.
+In **VS Code** (with the Forge extension): errors are underlined when you save, the **▶ button** at the top right (or **F5**) runs the game, and snippets like `game`, `class` and `foreach` insert templates. Autocomplete suggests the learner's own variables, functions and files as well as the libraries (`player.` lists a player's fields and methods). Hovering over a name shows what it is, **F12** jumps to where something is written, **Shift+F12** finds everywhere it's used, and **F2** renames it everywhere. The **bug button** next to ▶ (or **F6**) runs the game in the **debugger**: click left of a line number to put a red dot (a breakpoint) there, and the game pauses on that line, showing every variable's value (Forge's names end with `_` there, like `score_`). **F10** runs one more line, **F11** goes into a function, **F5** carries on. It's a great way to understand what a program really does, step by step.
 
 Forge is **compiled**. The whole program is checked before it runs, so most mistakes are caught before the game starts.
 
@@ -517,6 +520,7 @@ Library functions are reached through the library name (`window.open(...)`). Lib
 | `<particles>` | dust, sparks, smoke, explosions: `Emitter sparks = Emitter(vec2(x, y));`, then `sparks.burst(30);` (all at once) or `sparks.rate = 50;` (a steady stream per second), and each frame `sparks.update(dt);` and `sparks.draw();`. Fields to set: `position`, `lifetime` (seconds), `speed`, `direction` (degrees: 0 right, -90 up), `spread` (degrees around it: 360 every way), `startColor`/`endColor` (an end color with alpha 0 fades them out), `startSize`/`endSize`, `gravity` (a vec2). Also `count()` and `clear()`. It draws in 2D, through the 2D camera |
 | `<tween>` | smooth changes over time: `Tween slide = Tween(-300, 40, 0.5, Ease.OUT);` (from, to, seconds, easing), then `slide.update(dt);` and use `slide.value()`. Also `progress()` (0 to 1, with `lerp` for positions and colors: `a.lerp(b, t.progress())`), `isDone()`, `restart()`, `reverse()` (go back from where it is), fields `looping` and `pingPong`. `Ease.LINEAR` (steady), `IN` (slow start), `OUT` (slow end, the default), `IN_OUT`, `BOUNCE`. There are no callbacks: check `isDone()` |
 | `<save>` | `save.setInt(key, n)` / `getInt(key, backup)`, the same for `Float`, `String` and `Bool`, `has(key)`, `remove(key)`, `clear()`. Kept in `save.txt` in the game's folder |
+| `<testing>` | `testing.check(ok, message)`, `testing.fail(message)`: in tests, which are functions named `test...` in the game's `tests` folder (next to main.frg, not #included). `frg test` runs them and shows PASS/FAIL, with both values of a failed comparison |
 | `<file>` | `file.read(path)`, `write(path, text)`, `append(path, text)`, `exists(path)`, `remove(path)`, `readLines(path)`, `writeLines(path, list)`, `files(folder)` |
 | `<scenes>` | the `Scene` class, `scenes.change(scene)`, `update(dt)`, `draw()`, `current()` |
 | `<ui>` | `ui.button(rect, "text")` (true when clicked), `ui.checkbox(rect, "text", checked)` (new value), `ui.slider(rect, value, min, max)` (new value), `ui.textBox(rect, text, maxLength = 0)` (a box to type in: `name = ui.textBox(rect(20, 20, 240, 40), name, 12);` gives the new text; click to type, Backspace deletes, Enter or a click elsewhere finishes), `ui.isTyping()` (true while typing, so the game can skip its key shortcuts), `ui.label(text, x, y, size, color)`, `ui.panel(rect)`, `ui.setTheme(bg, accent, text)` |
@@ -835,11 +839,15 @@ error: 'hp' needs an int, but this is a float
 
 Literal-only divisions like `float f = 70 / 30;` don't warn, because they already give a decimal answer when the result goes into a float.
 
-Problems that can only happen while running (a list position that doesn't exist, using something that's null, dividing by zero, `int("abc")`) stop the game with a message like:
+Problems that can only happen while running (a list position that doesn't exist, using something that's null, dividing by zero, `int("abc")`) stop the game with a message, followed by the chain of calls that led there ("called from main.frg:6 (in main)", nearest first), like:
 
 ```
-Runtime error in main.frg:10: position 5 is outside the list (it has 3 items, at positions 0 to 2)
+Runtime error in main.frg:19: position 3 is outside the list (it has 3 items, at positions 0 to 2)
+  called from main.frg:13 (in sumFirst)
+  called from main.frg:6 (in main)
 ```
+
+Teach the learner to read it from the top: the error is on line 19, inside something `sumFirst` called on line 13, which `main` called on line 6. The real mistake is often in a caller.
 
 **try / catch / throw.** `try { ... } catch (Error e) { ... }`: any runtime error inside `try` (including in functions it calls) skips the rest of it and runs `catch`. `e.message` is the text, `e.where` is like `"main.frg:12"`. Every runtime error can be caught. `throw "message";` makes one (uncaught, it stops the game like any runtime error); `throw e;` in a catch passes it on. Both parts need `{ }`, and catch always takes `(Error name)`. `wait()` works in `try` but not in `catch`; a `try` around starting a task doesn't catch the task's errors (put the try inside the task). Teach it for files and player input, not to hide bugs like bad list positions.
 
@@ -1645,4 +1653,4 @@ Then build version 1, play it, and only then add more.
 
 ---
 
-*Forge v0.8. If the learner reports that something in this file doesn't work, believe the compiler over this file and tell them to report it to whoever maintains Forge.*
+*Forge v0.9. If the learner reports that something in this file doesn't work, believe the compiler over this file and tell them to report it to whoever maintains Forge.*

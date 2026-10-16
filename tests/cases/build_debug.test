@@ -1,0 +1,12 @@
+=== main.frg
+#include <stdio>
+
+int main(){
+    int x = 5;
+    print(x);
+    return 0;
+}
+=== command
+build {game} --debug
+=== prints
+(debug)

@@ -1,0 +1,25 @@
+=== main.frg
+#include <stdio>
+
+int main(){
+    list<int> scores = [1, 2, 3];
+    print(sumFirst(scores, 2));
+    print(sumFirst(scores, 7));
+    return 0;
+}
+
+int sumFirst(list<int> xs, int count){
+    int t = 0;
+    for (int i in 0..count - 1) {
+        t += valueAt(xs, i);
+    }
+    return t;
+}
+
+int valueAt(list<int> xs, int i){
+    return xs[i];
+}
+=== runtime error
+main.frg:19: position 3 is outside the list
+  called from main.frg:13 (in sumFirst)
+  called from main.frg:6 (in main)

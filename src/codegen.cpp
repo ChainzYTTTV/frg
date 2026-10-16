@@ -77,7 +77,7 @@ Type* derefType(Type* t) {
 
 class Gen {
 public:
-    explicit Gen(Project& p) : P(p) {}
+    Gen(Project& p, bool debug, bool tests) : P(p), debug(debug), tests(tests) {}
     GeneratedCpp run();
 
 private:
@@ -87,6 +87,34 @@ private:
     FuncDecl* fn = nullptr;
     TypeDecl* curType = nullptr;
     int tmp = 0;
+    bool globalScope = false;  // writing a global's or static field's starting value, outside any function
+    bool debug = false;        // a debug build: each statement says which .frg line it came from (#line)
+    bool framed = false;       // the code being written has a ::frg::Frame frg$frame (for runtime errors' "called from")
+    bool tests = false;        // frg test: main() runs the tests instead of the game
+
+    // Runtime errors list the calls that led to them, so each function keeps a Frame saying where it's up to.
+    void frameStart(const std::string& name, const Loc& l) {
+        if (!framed) return;
+        line("::frg::Frame frg$frame(" + cppString(name) + ", " + cppString(l.file ? l.file->displayPath : "?") + ", " +
+             std::to_string(l.line) + ");");
+    }
+    // A condition that's worked out again and again (while, else if): it also moves the Frame to its line.
+    std::string atLine(const Loc& l, const std::string& cond) {
+        if (!framed) return cond;
+        return "(frg$frame.line = " + std::to_string(l.line) + ", " + cond + ")";
+    }
+
+    // #line tells the C++ compiler (and so the debugger) that the code after it comes from this line of a .frg file.
+    void sourceLine(const Loc& l) {
+        if (!debug || !l.file || l.file->fullPath.empty()) return;
+        std::string path;
+        for (char c : l.file->fullPath) path += c == '\\' ? std::string("\\\\") : c == '"' ? std::string("\\\"") : std::string(1, c);
+        out += "#line " + std::to_string(l.line) + " \"" + path + "\"\n";
+    }
+    // After a function, Forge's own helper code isn't from any line of a .frg file.
+    void generatedLines() {
+        if (debug) out += "#line 1 \"<code made by Forge>\"\n";
+    }
 
     void line(const std::string& s) {
         out.append(ind * 4, ' ');
@@ -116,13 +144,13 @@ private:
     std::string objValue(const Expr* o);
     std::string strCode(const std::string& code, const Type* t, bool shallow = false);
     std::string ref(const Expr* e);
-    std::string args(const Expr* e, const std::vector<ExprPtr>& given, const FuncDecl* f);
     std::vector<std::string> argList(const Expr* e, const std::vector<ExprPtr>& given, const FuncDecl* f);
     bool effects(const Expr* e);
     bool awaits(const Expr* e);
     std::string ordered(const std::vector<const Expr*>& exprs, const std::vector<std::string>& codes,
                         const std::function<std::string(const std::vector<std::string>&)>& build);
     std::string call(const Expr* e);
+    std::string testingCall(const Expr* e, const FuncDecl* f);
     std::string construct(const Expr* e, const std::vector<ExprPtr>& given);
     std::string binary(const Expr* e);
 
@@ -291,8 +319,6 @@ std::string joinArgs(const std::vector<std::string>& codes, size_t from = 0) {
     return s;
 }
 
-std::string Gen::args(const Expr* e, const std::vector<ExprPtr>& given, const FuncDecl* f) { return joinArgs(argList(e, given, f)); }
-
 // Whether working out this value could do something (call a function), so the order it happens in matters.
 bool Gen::effects(const Expr* e) {
     if (!e || e->kind == EK::Lambda) return false;  // making a function value doesn't run it
@@ -328,7 +354,7 @@ std::string Gen::ordered(const std::vector<const Expr*>& exprs, const std::vecto
     }
     if (doing < 2) return build(codes);
     // Outside any function (a global's starting value), a lambda can't capture anything, and doesn't need to.
-    std::string s = std::string(fn ? "[&]" : "[]") + "() -> auto { ";
+    std::string s = std::string(globalScope ? "[]" : "[&]") + "() -> auto { ";
     std::vector<std::string> names = codes;
     for (size_t i = 0; i < exprs.size(); i++) {
         std::string t = "frg$t" + std::to_string(tmp++);
@@ -354,6 +380,32 @@ std::string Gen::construct(const Expr* e, const std::vector<ExprPtr>& given) {
     return ordered(exprs, codes, [&](const std::vector<std::string>& c) { return head + joinArgs(c) + ")"; });
 }
 
+// testing.check(ok) and testing.fail(): they get their place and the line as written, and a comparison like
+// testing.check(h.hp == 15) also shows both of its values when it fails.
+std::string Gen::testingCall(const Expr* e, const FuncDecl* f) {
+    std::vector<std::string> codes = argList(e, e->args, f);
+    std::string text = e->loc.file ? e->loc.file->getLine(e->loc.line) : "";
+    text.erase(0, text.find_first_not_of(" \t"));
+    while (!text.empty() && (text.back() == ' ' || text.back() == '\t')) text.pop_back();
+    if (f->name == "fail") return "::frg::testing::failAt(" + where(e->loc) + ", " + codes[0] + ")";
+    const Expr* cond = e->args[0].get();
+    static const std::set<std::string> comparisons = {"==", "!=", "<", ">", "<=", ">="};
+    const Type* T = cond->kind == EK::Binary ? cond->opType : nullptr;
+    bool simple = T && (T->kind == TK::Int || T->kind == TK::Float || T->kind == TK::String || T->kind == TK::Bool || T->kind == TK::Enum);
+    if (cond->kind == EK::Binary && comparisons.count(cond->text) && !cond->opMethod && simple && cond->a->type->kind != TK::Null &&
+        cond->b->type->kind != TK::Null && !awaits(cond)) {
+        std::string ok = "(frg$l " + cond->text + " frg$r)";
+        // Text values are shown in quotes, so spaces and empty text can be seen.
+        std::string q = T->kind == TK::String ? "\"\\\"\" + " : "";
+        std::string qEnd = T->kind == TK::String ? " + \"\\\"\"" : "";
+        std::string values = "::std::string(\"left side: \") + " + q + strCode("frg$l", T) + qEnd + " + \", right side: \" + " + q + strCode("frg$r", T) + qEnd;
+        return std::string(globalScope ? "[]" : "[&]") + "() { auto&& frg$l = " + conv(cond->a.get(), T) + "; auto&& frg$r = " +
+               conv(cond->b.get(), T) + "; ::frg::testing::checkAt(" + ok + ", " + where(e->loc) + ", " + cppString(text) + ", " +
+               codes[1] + ", " + values + "); }()";
+    }
+    return "::frg::testing::checkAt(" + codes[0] + ", " + where(e->loc) + ", " + cppString(text) + ", " + codes[1] + ", \"\")";
+}
+
 std::string Gen::call(const Expr* e) {
     const Expr* callee = e->a.get();
     std::vector<const Expr*> argExprs;
@@ -365,6 +417,7 @@ std::string Gen::call(const Expr* e) {
                 return "::frg::window::run_([](float dt) { " + qual(P.mainModule, "update") + "(dt); }, []() { " +
                        qual(P.mainModule, "draw") + "(); })";
             }
+            if (f->module->isPrelude && f->module->name == "testing") return testingCall(e, f);
             std::string name = ref(callee);
             return ordered(argExprs, argList(e, e->args, f), [&](const std::vector<std::string>& c) { return name + "(" + joinArgs(c) + ")"; });
         }
@@ -583,10 +636,14 @@ std::string Gen::ex(const Expr* e) {
             std::string head = std::string(curType ? "[=, this]" : "[=]") + "(" + params(f) + ") mutable -> " + f->ret->cpp + " {\n";
             std::string savedOut = std::move(out);
             FuncDecl* savedFn = fn;
+            bool savedFramed = framed;
             out.clear();
             ind++;
             fn = f;
+            framed = true;
+            frameStart("a function value" + std::string(savedFn && !savedFn->name.empty() ? " in " + savedFn->name : ""), e->loc);
             children(f->body.get());
+            framed = savedFramed;
             fn = savedFn;
             ind--;
             std::string body = std::move(out);
@@ -639,6 +696,10 @@ void Gen::children(const Stmt* block) {
 }
 
 void Gen::stmt(const Stmt* s) {
+    if (s->kind != SK::Block) {
+        sourceLine(s->loc);
+        if (framed) line("frg$frame.line = " + std::to_string(s->loc.line) + ";");
+    }
     switch (s->kind) {
         case SK::Block:
             line("{");
@@ -654,7 +715,7 @@ void Gen::stmt(const Stmt* s) {
             children(s->then.get());
             const Stmt* e = s->els.get();
             while (e && e->kind == SK::If) {
-                line("} else if (" + ex(e->expr.get()) + ") {");
+                line("} else if (" + atLine(e->loc, ex(e->expr.get())) + ") {");
                 children(e->then.get());
                 e = e->els.get();
             }
@@ -666,7 +727,7 @@ void Gen::stmt(const Stmt* s) {
             break;
         }
         case SK::While:
-            line("while (" + ex(s->expr.get()) + ") {");
+            line("while (" + atLine(s->loc, ex(s->expr.get())) + ") {");
             children(s->then.get());
             line("}");
             break;
@@ -943,7 +1004,13 @@ void Gen::emitTypeDef(TypeDecl* d) {
 void Gen::emitBody(const FuncDecl* f, TypeDecl* owner, const std::string& head) {
     fn = const_cast<FuncDecl*>(f);
     curType = owner;
+    sourceLine(f->loc);
     line(head + " {");
+    // Tasks pause and carry on later, out of order, so they don't keep a Frame (see ::frg::Frame).
+    framed = f->ret != tTask();
+    ind++;
+    frameStart(f->isCtor && owner ? owner->name + "(...)" : owner ? owner->name + "." + f->name : f->name, f->loc);
+    ind--;
     if (f->ret == tTask() && owner && owner->kind == DK::Class) {
         // A task can outlive the line that started it, so it keeps its object alive while it runs.
         line("    auto frg$self = this->shared_from_this();");
@@ -951,6 +1018,8 @@ void Gen::emitBody(const FuncDecl* f, TypeDecl* owner, const std::string& head) 
     children(f->body.get());
     if (f->ret == tTask()) line("    co_return;");  // makes it a coroutine even if it never waits
     line("}");
+    generatedLines();
+    framed = false;
     curType = nullptr;
 }
 
@@ -1108,12 +1177,12 @@ GeneratedCpp Gen::run() {
                         if (std::find(result.linkFlags.begin(), result.linkFlags.end(), f) == result.linkFlags.end()) result.linkFlags.push_back(f);
                 }
 
-    out = "// Generated by Forge from your .frg files. Edit those instead - this file is rebuilt every time.\n";
+    out = "// Generated by Forge from your .frg files: every declaration, shared by all the parts of the game's C++.\n"
+          "// Edit your .frg files instead - this file is rebuilt every time.\n#pragma once\n";
     result.headers.push_back("forge.hpp");
     for (const std::string& h : headers) result.headers.push_back(h);
     // physics.drawDebug() is drawn with raylib, so its code is only added to games that also use <graphics2d>.
     if (headers.count("forge_physics.hpp") && headers.count("forge_window.hpp")) result.headers.push_back("forge_physics_draw.hpp");
-    out += "#include \"forge_pch.hpp\"  // Forge's runtime headers, precompiled to make builds faster\n";
     for (const std::string& h : result.headers) out += "#include \"" + h + "\"\n";
     out += "\n";
 
@@ -1153,7 +1222,8 @@ GeneratedCpp Gen::run() {
         out += "\n";
     }
 
-    // 4. Global variables, and the static fields of structs and classes.
+    // 4. The static fields of structs and classes ("inline", so every part can include them).
+    globalScope = true;
     for (TypeDecl* d : typeOrder())
         for (auto& f : d->fields) {
             if (!f->isStatic) continue;
@@ -1161,6 +1231,40 @@ GeneratedCpp Gen::run() {
             std::string decl = "inline " + f->type->cpp + " " + d->cpp.substr(2) + "::" + id(f->name);
             line(f->init ? decl + " = " + conv(f->init.get(), f->type) + ";" : decl + "{};");
         }
+
+    globalScope = false;
+
+    // 5. Generic types' code: C++ templates, which have to be in the header that every part includes.
+    for (Module* m : P.allModules)
+        for (auto& d : m->ast.types)
+            if (!d->typeParams.empty()) {
+                emitTypeFuncs(d.get());
+                out += "\n";
+            }
+    result.header = std::move(out);
+
+    // 6. Each file's function, method and constructor bodies.
+    for (Module* m : P.allModules) {
+        out.clear();
+        for (auto& d : m->ast.types) {
+            if (!d->typeParams.empty()) continue;
+            emitTypeFuncs(d.get());
+            out += "\n";
+        }
+        if (!m->ast.funcs.empty()) {
+            line("namespace " + m->cppNs + " {");
+            ind++;
+            for (auto& f : m->ast.funcs) emitBody(f.get(), nullptr, f->ret->cpp + " " + id(f->name) + "(" + params(f.get()) + ")");
+            ind--;
+            line("}");
+        }
+        if (!out.empty()) result.modules.push_back({m->src->displayPath, std::move(out)});
+    }
+
+    // 7. Global variables, all in one place: C++ sets them in the order they're written within one file, but in no
+    // fixed order between files. Then C++'s main().
+    out.clear();
+    globalScope = true;
     for (Module* m : P.allModules) {
         if (m->ast.globals.empty()) continue;
         line("namespace " + m->cppNs + " {");
@@ -1173,22 +1277,28 @@ GeneratedCpp Gen::run() {
         line("}");
         out += "\n";
     }
-
-    // 5. Function, method and constructor bodies.
-    for (Module* m : P.allModules) {
-        for (auto& d : m->ast.types) {
-            emitTypeFuncs(d.get());
-            out += "\n";
+    globalScope = false;
+    if (tests) {
+        // frg test: every function in the tests folder whose name starts with "test" (and that takes nothing and
+        // gives nothing back) is run, one after another. A failed check or a runtime error fails only that test.
+        std::vector<std::string> calls;
+        for (Module* m : P.allModules) {
+            if (!m->folder || (m->folder->qualName != "tests" && m->folder->qualName.rfind("tests.", 0) != 0)) continue;
+            for (auto& f : m->ast.funcs)
+                if (f->name.rfind("test", 0) == 0 && f->params.empty() && f->ret == tVoid())
+                    calls.push_back("::frg::testing::run(" + cppString(m->src->displayPath) + ", " + cppString(f->name) + ", &" +
+                                    qual(m, f->name) + ");");
         }
-        if (m->ast.funcs.empty()) continue;
-        line("namespace " + m->cppNs + " {");
-        ind++;
-        for (auto& f : m->ast.funcs) emitBody(f.get(), nullptr, f->ret->cpp + " " + id(f->name) + "(" + params(f.get()) + ")");
-        ind--;
+        line("int main() {");
+        line("    ::frg::init();");
+        for (const std::string& c : calls) line("    " + c);
+        line("    int code = ::frg::testing::summary(" + std::to_string(calls.size()) + ");");
+        line("    ::frg::shutdown();");
+        line("    return code;");
         line("}");
-        out += "\n";
+        result.mainCode = std::move(out);
+        return result;
     }
-
     line("int main() {");
     line("    ::frg::init();");
     line("    try {");
@@ -1199,13 +1309,13 @@ GeneratedCpp Gen::run() {
     line("        ::frg::fatal(e);  // a runtime error that no try { } caught: stop the game with its message");
     line("    }");
     line("}");
-    result.code = out;
+    result.mainCode = std::move(out);
     return result;
 }
 
 }  // namespace
 
-GeneratedCpp generateCpp(Project& proj) {
-    Gen g(proj);
+GeneratedCpp generateCpp(Project& proj, bool debug, bool tests) {
+    Gen g(proj, debug, tests);
     return g.run();
 }

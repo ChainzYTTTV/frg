@@ -2,7 +2,7 @@
     "name": "forge",
     "displayName": "Forge",
     "description": "Forge (.frg) game language: syntax colors, errors as you save, autocomplete for the built-in libraries, and a Run button.",
-    "version": "0.8.1",
+    "version": "0.9.0",
     "publisher": "forge-lang",
     "license": "MIT",
     "icon": "icons/forge-128.png",
@@ -55,6 +55,16 @@
                 "icon": "$(play)"
             },
             {
+                "command": "forge.debug",
+                "title": "Forge: Debug Game (breakpoints and variables)",
+                "icon": "$(debug-alt)"
+            },
+            {
+                "command": "forge.test",
+                "title": "Forge: Run Tests (the game's tests folder)",
+                "icon": "$(beaker)"
+            },
+            {
                 "command": "forge.build",
                 "title": "Forge: Build Game",
                 "icon": "$(tools)"
@@ -82,6 +92,11 @@
                     "command": "forge.run",
                     "when": "resourceLangId == forge",
                     "group": "navigation"
+                },
+                {
+                    "command": "forge.debug",
+                    "when": "resourceLangId == forge",
+                    "group": "navigation"
                 }
             ]
         },
@@ -89,12 +104,17 @@
             {
                 "command": "forge.run",
                 "key": "f5",
-                "when": "editorLangId == forge"
+                "when": "editorLangId == forge && !inDebugMode"
             },
             {
                 "command": "forge.build",
                 "key": "ctrl+shift+b",
                 "when": "editorLangId == forge"
+            },
+            {
+                "command": "forge.debug",
+                "key": "f6",
+                "when": "editorLangId == forge && !inDebugMode"
             }
         ],
         "configuration": {
@@ -116,6 +136,11 @@
                     "description": "Look for errors every time a .frg file is saved."
                 }
             }
-        }
+        },
+        "breakpoints": [
+            {
+                "language": "forge"
+            }
+        ]
     }
 }

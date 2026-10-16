@@ -339,6 +339,11 @@ int minute();
 int second();
 )FRG";
 
+static const char* kTesting = R"FRG(
+void check(bool ok, string message = "");
+void fail(string message = "");
+)FRG";
+
 static const char* kFile = R"FRG(
 string read(string path);
 bool write(string path, string text);
@@ -751,6 +756,7 @@ const std::vector<PreludeLib>& preludeLibs() {
         {"tasks", kTasks, false, ""},
         {"time", kTime, false, "forge_time.hpp"},
         {"file", kFile, false, "forge_file.hpp"},
+        {"testing", kTesting, false, "forge_testing.hpp"},
         {"save", kSave, false, "forge_save.hpp"},
         {"tween", kTween, false, "forge_tween.hpp"},
         {"particles", kParticles, true, "forge_particles.hpp", K::Engine},

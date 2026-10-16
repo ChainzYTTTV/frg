@@ -1,0 +1,31 @@
+=== main.frg
+#include <stdio>
+
+string SHADER = """
+   keep   this
+      exactly   
+""";
+
+```
+    a comment
+        kept as written
+```
+
+int main(){
+          print(SHADER);
+          list<int> xs = [
+              1, 2,
+              3
+          ];
+    return 0;
+}
+=== command
+fmt {game}/main.frg --print
+=== prints
+   keep   this
+      exactly   
+        kept as written
+    print(SHADER);
+    list<int> xs = [
+        1, 2,
+    ];

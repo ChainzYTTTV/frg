@@ -150,6 +150,7 @@ struct SwitchCase {
 struct Stmt {
     SK kind;
     Loc loc;
+    Loc end;                    // Block: its closing '}' (line 0 if it was never closed)
     std::vector<StmtPtr> body;  // Block
     VarPtr var;                 // Var, ForEach loop variable, Try: the Error in catch (Error e)
     ExprPtr expr;               // ExprStmt, Return value, If/While/For condition, Assign/IncDec target, ForEach list, Switch subject

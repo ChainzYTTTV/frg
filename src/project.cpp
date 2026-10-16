@@ -18,11 +18,33 @@ static bool isIdentifier(const std::string& s) {
     return std::all_of(s.begin(), s.end(), [](char c) { return std::isalnum((unsigned char)c) || c == '_'; });
 }
 
+// Files whose text comes from somewhere else than the disk: an editor's unsaved changes (frg query --stdin).
+static std::map<std::string, std::string>& sourceOverrides() {
+    static std::map<std::string, std::string> m;
+    return m;
+}
+
+// Two spellings of the same file compare equal: Windows paths don't care about case or / versus \.
+std::string normalPath(const fs::path& p) {
+    std::error_code ec;
+    std::string s = fs::weakly_canonical(fs::absolute(p), ec).string();
+    for (char& c : s) c = c == '/' ? '\\' : (char)std::tolower((unsigned char)c);
+    return s;
+}
+
+void setSourceOverride(const fs::path& path, const std::string& text) { sourceOverrides()[normalPath(path)] = text; }
+
 static std::unique_ptr<SourceFile> readSource(const fs::path& path, const std::string& displayPath) {
-    std::ifstream in(path, std::ios::binary);
-    std::stringstream ss;
-    ss << in.rdbuf();
-    std::string text = ss.str();
+    std::string text;
+    auto over = sourceOverrides().find(normalPath(path));
+    if (over != sourceOverrides().end()) {
+        text = over->second;
+    } else {
+        std::ifstream in(path, std::ios::binary);
+        std::stringstream ss;
+        ss << in.rdbuf();
+        text = ss.str();
+    }
     if (text.compare(0, 3, "\xEF\xBB\xBF") == 0) text.erase(0, 3);  // UTF-8 byte order mark
     text.erase(std::remove(text.begin(), text.end(), '\r'), text.end());
 
@@ -175,13 +197,25 @@ static void checkEngineAndToolkits(Project& proj) {
                         toolkitUse->name + " has its own window, keyboard and mouse functions");
 }
 
-bool loadProject(Project& proj, const fs::path& root) {
+bool loadProject(Project& proj, const fs::path& root, bool withTests) {
     loadPrelude(proj);
     proj.root = fs::weakly_canonical(fs::absolute(root));
     proj.name = proj.root.filename().string();
     if (proj.name.empty()) proj.name = "game";
     proj.rootFolder.dir = proj.root;
     loadFolder(proj, proj.rootFolder);
+    fs::path tests = proj.root / "tests";
+    std::error_code ec;
+    if (withTests && fs::is_directory(tests, ec) && !proj.rootFolder.folders.count("tests") && !proj.rootFolder.modules.count("tests")) {
+        auto f = std::make_unique<Folder>();
+        f->name = "tests";
+        f->qualName = "tests";
+        f->dir = tests;
+        f->parent = &proj.rootFolder;
+        Folder* raw = f.get();
+        proj.rootFolder.folders["tests"] = std::move(f);
+        loadFolder(proj, *raw);
+    }
     checkEngineAndToolkits(proj);
 
     auto it = proj.rootFolder.modules.find("main");

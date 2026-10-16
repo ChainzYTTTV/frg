@@ -1,0 +1,8 @@
+=== main.frg
+int main(){
+    return 0;
+}
+=== command
+build {game} --debug --release
+=== error
+--release and --debug can't both be used

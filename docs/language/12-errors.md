@@ -147,17 +147,22 @@ Divisions of plain numbers, like `float f = 70 / 30;`, don't give a warning: For
 
 ## Runtime errors
 
-These stop the game with a message, the file and the line:
+These stop the game with a message, the file and the line, and then **how the game got there**: which function called the one with the error, which called that one, and so on, nearest first:
 
 ```
-Runtime error in main.frg:12: position 5 is outside the list (it has 3 items, at positions 0 to 2)
+Runtime error in main.frg:19: position 3 is outside the list (it has 3 items, at positions 0 to 2)
+  called from main.frg:13 (in sumFirst)
+  called from main.frg:6 (in main)
 ```
 
-`frg run` then shows `[game.exe exited with code 1]`.
+Read it from the top: the error happened on line 19, inside a function that `sumFirst` called on line 13, which `main` called on line 6. Often the real mistake is in one of the callers (here, `main` asked for 7 numbers from a list of 3), so the trace says where to look. A function value shows as `a function value in main`. Code in a `task` doesn't appear in the list, because tasks pause and carry on later.
+
+`frg run` then shows `[game.exe exited with code 1]`. In a game without a console, the same text appears in the message box.
 
 | Message | Cause | Prevent it with |
 |---|---|---|
 | `position N is outside the list (...)` | `list[N]` where `N` isn't between 0 and `length - 1` | check `i < list.length`; loop with `for ... in` |
+| `position N is outside the list: the list is empty` | `list[N]` on a list with nothing in it | check `isEmpty()` first |
 | `first() was used on an empty list` (also `last()`, `pop()`) | | check `isEmpty()` first |
 | `can't insert at position N` | `insert(N, x)` with `N` greater than `length` | |
 | `the key isn't in the map` | reading `map[key]` for a missing key | `map.has(key)` or `map.get(key, backup)` |

@@ -1,0 +1,8 @@
+=== main.frg
+int main(){
+    return 0;
+}
+=== command
+test {game}
+=== error
+there's no tests folder

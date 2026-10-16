@@ -198,6 +198,10 @@ const LIBRARIES = {
         ['count', 'int count()', 'How many tasks are waiting.'],
         ['stopAll', 'void stopAll()', 'Stops every task.'],
     ],
+    testing: [
+        ['check', 'void check(bool ok, string message = "")', 'In a test: fails the test if ok is false. A comparison (h.hp == 15) also shows both values. frg test runs the tests.'],
+        ['fail', 'void fail(string message = "")', 'In a test: fails the test here, with the message.'],
+    ],
     physics: [
         ['add', 'void add(Body body)', 'Adds a body to the world so step() moves it. A Body has position, size, velocity, isStatic, solid, oneWay (a platform you can jump up through), gravityScale, and onGround / onCeiling / onWall.'],
         ['remove', 'void remove(Body body)', 'Takes a body out of the world.'],
@@ -516,7 +520,7 @@ function check(doc, announce = false) {
 
 let gameTerminal = null;
 
-// command is 'run', 'build' or 'package'. Unless extraArgs says otherwise, the forge.console setting decides the console.
+// command is 'run', 'build', 'package' or 'test'. Unless extraArgs says otherwise, the forge.console setting decides the console.
 async function runCommand(command, extraArgs) {
     const editor = vscode.window.activeTextEditor;
     const file = editor ? editor.document.fileName : null;
@@ -534,6 +538,78 @@ async function runCommand(command, extraArgs) {
         shellArgs: [command, root].concat(extraArgs || (settings().get('console', true) ? [] : ['--no-console'])),
     });
     gameTerminal.show(true);
+}
+
+// ---------------------------------------------------------------- debugging
+//
+// Forge: Debug Game makes a debug build (frg build --debug: every line of the C++ is marked with its .frg line),
+// then starts gdb (from w64devkit) through Microsoft's C/C++ extension, so breakpoints go on .frg lines.
+
+let output = null;
+
+function outputChannel() {
+    if (!output) output = vscode.window.createOutputChannel('Forge');
+    return output;
+}
+
+// A program's full path, found on the PATH like a terminal would.
+function findOnPath(exe) {
+    for (const dir of (process.env.PATH || '').split(path.delimiter)) {
+        if (!dir) continue;
+        const full = path.join(dir.replace(/^"|"$/g, ''), exe);
+        if (fs.existsSync(full)) return full;
+    }
+    return null;
+}
+
+async function debugGame() {
+    const editor = vscode.window.activeTextEditor;
+    const file = editor ? editor.document.fileName : null;
+    const root = file ? projectRoot(file) : null;
+    if (!root) {
+        vscode.window.showErrorMessage('Open a .frg file from a Forge game first (its top folder needs a main.frg).');
+        return;
+    }
+    if (!vscode.extensions.getExtension('ms-vscode.cpptools')) {
+        const choice = await vscode.window.showErrorMessage(
+            "Debugging Forge games uses Microsoft's C/C++ extension (it drives the gdb debugger). Install it, then try again.",
+            'Show the C/C++ extension');
+        if (choice) vscode.commands.executeCommand('workbench.extensions.search', 'ms-vscode.cpptools');
+        return;
+    }
+    await vscode.workspace.saveAll(false);
+    const out = outputChannel();
+    out.clear();
+    out.show(true);
+    out.appendLine('Making a debug build...');
+    const built = await new Promise(resolve => {
+        const child = cp.spawn(frgPath(), ['build', root, '--debug'], { cwd: root, windowsHide: true });
+        const show = data => out.append(data.toString().replace(/\x1b\[[0-9;]*m/g, ''));  // without the terminal's colors
+        child.stdout.on('data', show);
+        child.stderr.on('data', show);
+        child.on('error', err => {
+            if (err.code === 'ENOENT') showMissingFrg();
+            resolve(false);
+        });
+        child.on('close', code => resolve(code === 0));
+    });
+    if (!built) {
+        vscode.window.showErrorMessage('Forge: the debug build failed. The Forge output panel says why.');
+        return;
+    }
+    const exe = path.join(root, 'build', path.basename(root) + '.exe');
+    await vscode.debug.startDebugging(vscode.workspace.getWorkspaceFolder(vscode.Uri.file(file)), {
+        name: `Forge: ${path.basename(root)}`,
+        type: 'cppdbg',
+        request: 'launch',
+        program: exe,
+        args: [],
+        cwd: root,
+        MIMode: 'gdb',
+        miDebuggerPath: findOnPath('gdb.exe') || 'gdb',
+        externalConsole: true,  // print() output appears in the game's own console window, as with Run
+        stopAtEntry: false,
+    });
 }
 
 // ---------------------------------------------------------------- autocomplete and hover help
@@ -575,6 +651,173 @@ function libraryHover(document, position) {
     return new vscode.Hover(md, range);
 }
 
+// ---------------------------------------------------------------- your own code: definitions, hover, autocomplete, rename
+//
+// Each question runs `frg query`, which reads the whole game (with this file's unsaved text, sent on its standard input)
+// exactly as a build would, and answers in JSON. Positions go to frg as lines and byte columns starting at 1.
+
+const COMPLETION_KINDS = {
+    variable: vscode.CompletionItemKind.Variable, constant: vscode.CompletionItemKind.Constant,
+    function: vscode.CompletionItemKind.Function, method: vscode.CompletionItemKind.Method,
+    field: vscode.CompletionItemKind.Field, property: vscode.CompletionItemKind.Property,
+    class: vscode.CompletionItemKind.Class, struct: vscode.CompletionItemKind.Struct,
+    enum: vscode.CompletionItemKind.Enum, enumMember: vscode.CompletionItemKind.EnumMember,
+    interface: vscode.CompletionItemKind.Interface, module: vscode.CompletionItemKind.Module,
+    folder: vscode.CompletionItemKind.Folder, keyword: vscode.CompletionItemKind.Keyword,
+};
+
+const SYMBOL_KINDS = {
+    struct: vscode.SymbolKind.Struct, class: vscode.SymbolKind.Class, 'abstract class': vscode.SymbolKind.Class,
+    enum: vscode.SymbolKind.Enum, interface: vscode.SymbolKind.Interface, enumMember: vscode.SymbolKind.EnumMember,
+    field: vscode.SymbolKind.Field, method: vscode.SymbolKind.Method, constructor: vscode.SymbolKind.Constructor,
+    function: vscode.SymbolKind.Function, variable: vscode.SymbolKind.Variable, constant: vscode.SymbolKind.Constant,
+};
+
+function query(question, document, position, extra, token) {
+    return new Promise(resolve => {
+        const root = projectRoot(document.fileName);
+        if (!root) return resolve(null);
+        const lineText = document.lineAt(position.line).text;
+        const col = Buffer.byteLength(lineText.slice(0, position.character), 'utf8') + 1;
+        const args = ['query', question, root, document.fileName, String(position.line + 1), String(col), '--stdin'];
+        if (extra) args.push(extra);
+        const child = cp.execFile(frgPath(), args, { cwd: root, windowsHide: true, maxBuffer: 32 * 1024 * 1024 }, (err, stdout) => {
+            if (err && err.code === 'ENOENT') {
+                showMissingFrg();
+                return resolve(null);
+            }
+            try {
+                const lines = stdout.trim().split(/\r?\n/);
+                resolve(JSON.parse(lines[lines.length - 1] || '{}'));
+            } catch (e) {
+                resolve(null);
+            }
+        });
+        if (token) token.onCancellationRequested(() => { try { child.kill(); } catch (e) { /* already finished */ } });
+        child.stdin.on('error', () => {});
+        child.stdin.end(document.getText());
+    });
+}
+
+// A place frg names ({file, line, col, len}, byte columns) as a VS Code location.
+function toLocation(loc, cache) {
+    const text = fileLines(loc.file, cache)[loc.line - 1] || '';
+    const start = byteColToChar(text, loc.col - 1);
+    const end = byteColToChar(text, loc.col - 1 + loc.len);
+    return new vscode.Location(vscode.Uri.file(loc.file), new vscode.Range(loc.line - 1, start, loc.line - 1, Math.max(end, start)));
+}
+
+const definitionProvider = {
+    async provideDefinition(document, position, token) {
+        const r = await query('definition', document, position, null, token);
+        return r && r.location ? toLocation(r.location, new Map()) : undefined;
+    },
+};
+
+const referenceProvider = {
+    async provideReferences(document, position, context, token) {
+        const r = await query('references', document, position, null, token);
+        if (!r || !r.locations) return [];
+        const cache = new Map();
+        return r.locations.map(l => toLocation(l, cache));
+    },
+};
+
+const hoverProvider = {
+    async provideHover(document, position, token) {
+        const library = libraryHover(document, position);  // the built-in libraries have longer descriptions
+        if (library) return library;
+        const r = await query('hover', document, position, null, token);
+        if (!r || !r.text) return undefined;
+        return new vscode.Hover(new vscode.MarkdownString(r.text), document.getWordRangeAtPosition(position));
+    },
+};
+
+const completionProvider = {
+    async provideCompletionItems(document, position, token) {
+        const library = libraryCompletions(document, position);
+        if (library) return library;
+        const r = await query('complete', document, position, null, token);
+        if (!r || !r.items) return undefined;
+        return r.items.map(i => {
+            const item = new vscode.CompletionItem(i.label, COMPLETION_KINDS[i.kind] ?? vscode.CompletionItemKind.Text);
+            if (i.detail) item.detail = i.detail;
+            return item;
+        });
+    },
+};
+
+const renameProvider = {
+    async prepareRename(document, position, token) {
+        const range = document.getWordRangeAtPosition(position, /[A-Za-z_][A-Za-z0-9_]*/);
+        if (!range) throw new Error('Put the cursor on a name to rename it.');
+        const r = await query('rename', document, position, document.getText(range), token);
+        if (!r || (!r.edits && !r.error)) throw new Error("Forge doesn't know what this name is, so it can't rename it.");
+        if (r.error) throw new Error(r.error);
+        return range;
+    },
+    async provideRenameEdits(document, position, newName, token) {
+        const r = await query('rename', document, position, newName, token);
+        if (!r) throw new Error("Forge couldn't work out what to rename.");
+        if (r.error) throw new Error(r.error);
+        const edit = new vscode.WorkspaceEdit();
+        const cache = new Map();
+        for (const l of r.edits || []) {
+            const loc = toLocation(l, cache);
+            edit.replace(loc.uri, loc.range, newName);
+        }
+        return edit;
+    },
+};
+
+// Format Document (Shift+Alt+F, or on save with editor.formatOnSave): frg fmt --stdin tidies the text.
+const formattingProvider = {
+    provideDocumentFormattingEdits(document, options, token) {
+        return new Promise(resolve => {
+            const child = cp.execFile(frgPath(), ['fmt', '--stdin'], { windowsHide: true, maxBuffer: 64 * 1024 * 1024 }, (err, stdout, stderr) => {
+                if (err) {
+                    if (err.code === 'ENOENT') showMissingFrg();
+                    else if (stderr) vscode.window.showWarningMessage(`Forge couldn't tidy this file: ${stderr.trim()}`);
+                    return resolve([]);
+                }
+                const text = document.getText();
+                const tidy = document.eol === vscode.EndOfLine.CRLF ? stdout.replace(/\n/g, '\r\n') : stdout;
+                if (tidy === text) return resolve([]);
+                const all = new vscode.Range(document.positionAt(0), document.positionAt(text.length));
+                resolve([vscode.TextEdit.replace(all, tidy)]);
+            });
+            if (token) token.onCancellationRequested(() => { try { child.kill(); } catch (e) { /* already finished */ } });
+            child.stdin.on('error', () => {});
+            child.stdin.end(document.getText());
+        });
+    },
+};
+
+const symbolProvider = {
+    async provideDocumentSymbols(document, token) {
+        const r = await query('symbols', document, new vscode.Position(0, 0), null, token);
+        if (!r || !r.symbols) return [];
+        const lastLine = document.lineCount - 1;
+        // Each symbol reaches down to the line before the next one (the outline only needs a rough end).
+        const make = (list, endLine) => {
+            const sorted = [...list].sort((a, b) => a.line - b.line || a.col - b.col);
+            return sorted.map((s, i) => {
+                const start = Math.min(Math.max(s.line - 1, 0), lastLine);
+                const next = i + 1 < sorted.length ? sorted[i + 1].line - 2 : endLine;
+                const end = Math.min(Math.max(start, next), lastLine);
+                const text = document.lineAt(start).text;
+                const startCh = byteColToChar(text, s.col - 1);
+                const range = new vscode.Range(start, 0, end, document.lineAt(end).text.length);
+                const selection = new vscode.Range(start, startCh, start, Math.min(startCh + s.name.length, text.length));
+                const sym = new vscode.DocumentSymbol(s.name, s.detail || '', SYMBOL_KINDS[s.kind] ?? vscode.SymbolKind.Variable, range, selection);
+                sym.children = make(s.children || [], end);
+                return sym;
+            });
+        };
+        return make(r.symbols, lastLine);
+    },
+};
+
 // ---------------------------------------------------------------- activation
 
 function activate(context) {
@@ -584,6 +827,8 @@ function activate(context) {
         diagnostics,
         vscode.commands.registerCommand('forge.run', () => runCommand('run')),
         vscode.commands.registerCommand('forge.build', () => runCommand('build')),
+        vscode.commands.registerCommand('forge.debug', debugGame),
+        vscode.commands.registerCommand('forge.test', () => runCommand('test', [])),
         vscode.commands.registerCommand('forge.buildRelease', () => runCommand('build', ['--release'])),
         vscode.commands.registerCommand('forge.package', () => runCommand('package', [])),
         vscode.commands.registerCommand('forge.toggleConsole', async () => {
@@ -606,8 +851,13 @@ function activate(context) {
         vscode.workspace.onDidChangeConfiguration(e => {
             if (e.affectsConfiguration('forge.path')) warnedMissing = false;
         }),
-        vscode.languages.registerCompletionItemProvider('forge', { provideCompletionItems: libraryCompletions }, '.'),
-        vscode.languages.registerHoverProvider('forge', { provideHover: libraryHover }),
+        vscode.languages.registerCompletionItemProvider('forge', completionProvider, '.'),
+        vscode.languages.registerHoverProvider('forge', hoverProvider),
+        vscode.languages.registerDefinitionProvider('forge', definitionProvider),
+        vscode.languages.registerReferenceProvider('forge', referenceProvider),
+        vscode.languages.registerRenameProvider('forge', renameProvider),
+        vscode.languages.registerDocumentSymbolProvider('forge', symbolProvider),
+        vscode.languages.registerDocumentFormattingEditProvider('forge', formattingProvider),
     );
     for (const doc of vscode.workspace.textDocuments) if (doc.languageId === 'forge') check(doc);
 }

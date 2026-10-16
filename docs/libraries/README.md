@@ -29,6 +29,7 @@ How libraries work:
 | [`<physics>`](physics.md) | Box bodies with gravity and collisions | no |
 | [`<time>`](time.md) | The clock and date, `sleep`, and the `Timer` class | no |
 | [`<save>`](save.md) | Remembering values (high scores, settings) between runs | no |
+| [`<testing>`](testing.md) | `testing.check(...)` in tests that `frg test` runs | no |
 | [`<tilemap>`](tilemap.md) | Levels drawn as text, turned into physics bodies and drawn as tiles (`TileMap`) | to draw them |
 | [`<particles>`](particles.md) | Dust, sparks, smoke and explosions (`Emitter`) | yes |
 | [`<tween>`](tween.md) | Smooth changes over time: sliding, bouncing, fading, with easing | no |

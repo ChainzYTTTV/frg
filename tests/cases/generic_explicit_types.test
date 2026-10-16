@@ -1,0 +1,48 @@
+=== main.frg
+#include <stdio>
+#include <"things">
+
+class Box<T> {
+    T item;
+    Box(T item){ this.item = item; }
+}
+
+struct Pair<A, B> {
+    A first;
+    B second;
+}
+
+class Bag<T> {
+    list<T> items = [];
+}
+
+int twice(int n){ return n * 2; }
+
+int main(){
+    Box<int> b = Box<int>(5);
+    print(Box<string>("hi").item);
+    print(Pair<int, string>(1, "one").second);
+    Bag<list<int>> bag = Bag<list<int>>();
+    bag.items.add([1, 2]);
+    print(bag.items);
+    print(things.holder.Holder<float>(2.5).value);
+    int x = 3;
+    int y = 4;
+    bool less = x < y;
+    bool both = x < y and y > x;
+    print("{less} {both} {(x < y) == (y > x)}");
+    print(b.item);
+    return 0;
+}
+=== things/holder.frg
+class Holder<T> {
+    T value;
+    Holder(T value){ this.value = value; }
+}
+=== output
+hi
+one
+[[1, 2]]
+2.5
+true true true
+5

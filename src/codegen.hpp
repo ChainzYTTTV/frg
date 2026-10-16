@@ -29,4 +29,5 @@ struct GeneratedCpp {
 // Turns a checked project into C++. Every user name gets a trailing '_' so it can never collide with a C++ keyword or
 // macro, and every file becomes its own namespace. Forge's own helpers use '$' in their names, which Forge code can't,
 // so they never collide either.
-GeneratedCpp generateCpp(Project& proj);
+// With `debug`, every statement is marked with the .frg file and line it came from (#line), for the debugger.
+GeneratedCpp generateCpp(Project& proj, bool debug = false);

@@ -205,6 +205,7 @@ The Forge extension adds:
 | Syntax colors | Automatic for `.frg` files |
 | Errors while you work | Saving a file checks the whole game; mistakes are underlined in red, with the hint attached. The Problems panel (Ctrl+Shift+M) lists them all. |
 | Run the game | The ▶ button at the top-right of the editor, or **F5** |
+| Debug the game | The bug button next to ▶, or **F6**: runs the game in the debugger (see below) |
 | Build only | **Ctrl+Shift+B** |
 | Autocomplete | Suggests what fits where you're typing: your variables, functions, types and files, and after a dot, what's inside (`player.` shows its fields and methods, `enemies.goblin.` what that file has, `window.` the library's functions). **Ctrl+Space** shows the list any time. |
 | Hover help | Hold the mouse over a name to see what it is: a variable's type, a function's parameters, a library function's description |
@@ -220,6 +221,22 @@ To install or update it, run `.\editors\vscode\package.ps1 -Install` from the Fo
 Settings: `forge.path` is the full path to `frg.exe` if VS Code can't find it. `forge.checkOnSave` turns checking on save on or off.
 
 Autocomplete, hover help, go to definition and rename all read your game the same way a build does, including what you've typed but not saved yet in the file you're in. Other files are read as they are on disk, so save them first if you've changed them.
+
+### Debugging: pausing the game to look inside
+
+The **debugger** lets you pause the game on a line and look at every variable, then go on one line at a time. It's the best way to find out why something doesn't do what you expected.
+
+1. Click in the margin just left of a line number in a `.frg` file. A red dot appears: a **breakpoint**.
+2. Press **F6** (or the bug button next to ▶). Forge makes a debug build, and the game runs until it reaches a line with a breakpoint, then pauses there.
+3. The **Variables** panel on the left shows the variables and their values. Hold the mouse over a name in the code to see its value too. The **Call Stack** shows which function called which, file by file.
+4. **F10** runs one line, **F11** goes into the function called on this line, **Shift+F11** comes back out, **F5** carries on to the next breakpoint, and **Shift+F5** stops the game.
+
+Good to know:
+
+- It uses **gdb**, the debugger that comes with w64devkit, through Microsoft's **C/C++ extension** for VS Code. Forge asks you to install the extension the first time if you don't have it.
+- In the Variables panel, names have a `_` on the end (`score_`), because that's how Forge names things in the C++ it makes. Numbers, `bool`s and objects show normally. Text shows as C++ details: the letters are in the part called `_M_p`. A class object is a pointer: open it to see its fields.
+- A line that calls several functions (like `a() + b()`) can pause twice, because Forge works the calls out one by one there.
+- `frg build --debug` makes the same build from a terminal. Debug builds aren't optimized, so they can be slower than normal ones.
 
 ### The `.frg` icon in File Explorer
 

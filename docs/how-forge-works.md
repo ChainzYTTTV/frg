@@ -106,6 +106,7 @@ Global variables all go in one part, because C++ sets them in the order they're 
 - `-static` puts everything into the `.exe`, so it runs anywhere without extra files.
 - Games that use the engine libraries also link **raylib** (`-lraylib -lopengl32 -lgdi32 -lwinmm`).
 - Without a console (`--release` or `--no-console`), it adds `-mwindows` and defines `FRG_NO_CONSOLE`, which makes runtime errors show in a message box. `--release` also adds `-s` (a smaller file).
+- `--debug` builds use `-O0 -g`: no optimizing, plus debug information. The generator also writes a `#line` before every statement, like `#line 12 "C:\\game\\player.frg"`, which tells g++ (and so the debugger) that the C++ after it comes from that line of that file. After each function it writes `#line 1 "<code made by Forge>"`, so Forge's own helper code isn't mistaken for your lines. VS Code's **Forge: Debug Game** runs this build, then starts gdb through Microsoft's C/C++ extension (`cppdbg`), with breakpoints allowed in `.frg` files.
 
 ## The runtime
 

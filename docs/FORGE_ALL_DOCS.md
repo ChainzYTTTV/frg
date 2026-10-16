@@ -105,12 +105,13 @@ Commands, typed in a terminal inside the game's folder:
 | `frg package` | the finished game, with every file it needs (but not the `.frg` files or `save.txt`), zipped into `dist/<name>.zip` to share. If the game is in git, add `build/`, `dist/` and `save.txt` to `.gitignore` |
 | `frg build --release` | the finished game: no console window, smaller `.exe` |
 | `--no-console` / `--console` | add to `run` or `build` to turn the console window off or on |
+| `--debug` | add to `build` for a debugger build. In VS Code, the bug button (or **F6**) does it and starts the debugger |
 
 A picture called `icon.png` in the game's top folder becomes the `.exe`'s icon and the window's icon (square, ideally 256 × 256). Without one, the game just gets the plain Windows icon.
 
 The **console window** (the black window next to the game) shows `print` output and errors. It's on while testing. Turn it off with `--no-console` to see the game as players will, and `--release` turns it off for the finished game. Without a console, runtime errors pop up in a box titled "The game stopped". Text-only programs need the console: without it nothing shows. In VS Code, **Forge: Turn the Console On/Off** switches it for the ▶ button, and **Forge: Build Release** builds the finished game.
 
-In **VS Code** (with the Forge extension): errors are underlined when you save, the **▶ button** at the top right (or **F5**) runs the game, and snippets like `game`, `class` and `foreach` insert templates. Autocomplete suggests the learner's own variables, functions and files as well as the libraries (`player.` lists a player's fields and methods). Hovering over a name shows what it is, **F12** jumps to where something is written, **Shift+F12** finds everywhere it's used, and **F2** renames it everywhere.
+In **VS Code** (with the Forge extension): errors are underlined when you save, the **▶ button** at the top right (or **F5**) runs the game, and snippets like `game`, `class` and `foreach` insert templates. Autocomplete suggests the learner's own variables, functions and files as well as the libraries (`player.` lists a player's fields and methods). Hovering over a name shows what it is, **F12** jumps to where something is written, **Shift+F12** finds everywhere it's used, and **F2** renames it everywhere. The **bug button** next to ▶ (or **F6**) runs the game in the **debugger**: click left of a line number to put a red dot (a breakpoint) there, and the game pauses on that line, showing every variable's value (Forge's names end with `_` there, like `score_`). **F10** runs one more line, **F11** goes into a function, **F5** carries on. It's a great way to understand what a program really does, step by step.
 
 Forge is **compiled**. The whole program is checked before it runs, so most mistakes are caught before the game starts.
 
@@ -1978,6 +1979,7 @@ The Forge extension adds:
 | Syntax colors | Automatic for `.frg` files |
 | Errors while you work | Saving a file checks the whole game; mistakes are underlined in red, with the hint attached. The Problems panel (Ctrl+Shift+M) lists them all. |
 | Run the game | The ▶ button at the top-right of the editor, or **F5** |
+| Debug the game | The bug button next to ▶, or **F6**: runs the game in the debugger (see below) |
 | Build only | **Ctrl+Shift+B** |
 | Autocomplete | Suggests what fits where you're typing: your variables, functions, types and files, and after a dot, what's inside (`player.` shows its fields and methods, `enemies.goblin.` what that file has, `window.` the library's functions). **Ctrl+Space** shows the list any time. |
 | Hover help | Hold the mouse over a name to see what it is: a variable's type, a function's parameters, a library function's description |
@@ -1993,6 +1995,22 @@ To install or update it, run `.\editors\vscode\package.ps1 -Install` from the Fo
 Settings: `forge.path` is the full path to `frg.exe` if VS Code can't find it. `forge.checkOnSave` turns checking on save on or off.
 
 Autocomplete, hover help, go to definition and rename all read your game the same way a build does, including what you've typed but not saved yet in the file you're in. Other files are read as they are on disk, so save them first if you've changed them.
+
+#### Debugging: pausing the game to look inside
+
+The **debugger** lets you pause the game on a line and look at every variable, then go on one line at a time. It's the best way to find out why something doesn't do what you expected.
+
+1. Click in the margin just left of a line number in a `.frg` file. A red dot appears: a **breakpoint**.
+2. Press **F6** (or the bug button next to ▶). Forge makes a debug build, and the game runs until it reaches a line with a breakpoint, then pauses there.
+3. The **Variables** panel on the left shows the variables and their values. Hold the mouse over a name in the code to see its value too. The **Call Stack** shows which function called which, file by file.
+4. **F10** runs one line, **F11** goes into the function called on this line, **Shift+F11** comes back out, **F5** carries on to the next breakpoint, and **Shift+F5** stops the game.
+
+Good to know:
+
+- It uses **gdb**, the debugger that comes with w64devkit, through Microsoft's **C/C++ extension** for VS Code. Forge asks you to install the extension the first time if you don't have it.
+- In the Variables panel, names have a `_` on the end (`score_`), because that's how Forge names things in the C++ it makes. Numbers, `bool`s and objects show normally. Text shows as C++ details: the letters are in the part called `_M_p`. A class object is a pointer: open it to see its fields.
+- A line that calls several functions (like `a() + b()`) can pause twice, because Forge works the calls out one by one there.
+- `frg build --debug` makes the same build from a terminal. Debug builds aren't optimized, so they can be slower than normal ones.
 
 #### The `.frg` icon in File Explorer
 
@@ -9110,6 +9128,7 @@ Global variables all go in one part, because C++ sets them in the order they're 
 - `-static` puts everything into the `.exe`, so it runs anywhere without extra files.
 - Games that use the engine libraries also link **raylib** (`-lraylib -lopengl32 -lgdi32 -lwinmm`).
 - Without a console (`--release` or `--no-console`), it adds `-mwindows` and defines `FRG_NO_CONSOLE`, which makes runtime errors show in a message box. `--release` also adds `-s` (a smaller file).
+- `--debug` builds use `-O0 -g`: no optimizing, plus debug information. The generator also writes a `#line` before every statement, like `#line 12 "C:\\game\\player.frg"`, which tells g++ (and so the debugger) that the C++ after it comes from that line of that file. After each function it writes `#line 1 "<code made by Forge>"`, so Forge's own helper code isn't mistaken for your lines. VS Code's **Forge: Debug Game** runs this build, then starts gdb through Microsoft's C/C++ extension (`cppdbg`), with breakpoints allowed in `.frg` files.
 
 ### The runtime
 
@@ -9224,6 +9243,7 @@ int main(){
 | `frg package` | makes the finished game and zips it into `dist/<name>.zip`, ready to share |
 | `--release` (after build or run) | the finished game: no console window, smaller `.exe` |
 | `--no-console` / `--console` | turn the console window off or on, whatever else is chosen |
+| `--debug` (after build or run) | a build for the debugger: breakpoints and variables on your `.frg` lines |
 
 ### Comments
 

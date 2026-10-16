@@ -28,6 +28,7 @@ int main(){
 | `frg package` | makes the finished game and zips it into `dist/<name>.zip`, ready to share |
 | `--release` (after build or run) | the finished game: no console window, smaller `.exe` |
 | `--no-console` / `--console` | turn the console window off or on, whatever else is chosen |
+| `--debug` (after build or run) | a build for the debugger: breakpoints and variables on your `.frg` lines |
 
 ## Comments
 

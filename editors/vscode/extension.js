@@ -536,6 +536,78 @@ async function runCommand(command, extraArgs) {
     gameTerminal.show(true);
 }
 
+// ---------------------------------------------------------------- debugging
+//
+// Forge: Debug Game makes a debug build (frg build --debug: every line of the C++ is marked with its .frg line),
+// then starts gdb (from w64devkit) through Microsoft's C/C++ extension, so breakpoints go on .frg lines.
+
+let output = null;
+
+function outputChannel() {
+    if (!output) output = vscode.window.createOutputChannel('Forge');
+    return output;
+}
+
+// A program's full path, found on the PATH like a terminal would.
+function findOnPath(exe) {
+    for (const dir of (process.env.PATH || '').split(path.delimiter)) {
+        if (!dir) continue;
+        const full = path.join(dir.replace(/^"|"$/g, ''), exe);
+        if (fs.existsSync(full)) return full;
+    }
+    return null;
+}
+
+async function debugGame() {
+    const editor = vscode.window.activeTextEditor;
+    const file = editor ? editor.document.fileName : null;
+    const root = file ? projectRoot(file) : null;
+    if (!root) {
+        vscode.window.showErrorMessage('Open a .frg file from a Forge game first (its top folder needs a main.frg).');
+        return;
+    }
+    if (!vscode.extensions.getExtension('ms-vscode.cpptools')) {
+        const choice = await vscode.window.showErrorMessage(
+            "Debugging Forge games uses Microsoft's C/C++ extension (it drives the gdb debugger). Install it, then try again.",
+            'Show the C/C++ extension');
+        if (choice) vscode.commands.executeCommand('workbench.extensions.search', 'ms-vscode.cpptools');
+        return;
+    }
+    await vscode.workspace.saveAll(false);
+    const out = outputChannel();
+    out.clear();
+    out.show(true);
+    out.appendLine('Making a debug build...');
+    const built = await new Promise(resolve => {
+        const child = cp.spawn(frgPath(), ['build', root, '--debug'], { cwd: root, windowsHide: true });
+        const show = data => out.append(data.toString().replace(/\x1b\[[0-9;]*m/g, ''));  // without the terminal's colors
+        child.stdout.on('data', show);
+        child.stderr.on('data', show);
+        child.on('error', err => {
+            if (err.code === 'ENOENT') showMissingFrg();
+            resolve(false);
+        });
+        child.on('close', code => resolve(code === 0));
+    });
+    if (!built) {
+        vscode.window.showErrorMessage('Forge: the debug build failed. The Forge output panel says why.');
+        return;
+    }
+    const exe = path.join(root, 'build', path.basename(root) + '.exe');
+    await vscode.debug.startDebugging(vscode.workspace.getWorkspaceFolder(vscode.Uri.file(file)), {
+        name: `Forge: ${path.basename(root)}`,
+        type: 'cppdbg',
+        request: 'launch',
+        program: exe,
+        args: [],
+        cwd: root,
+        MIMode: 'gdb',
+        miDebuggerPath: findOnPath('gdb.exe') || 'gdb',
+        externalConsole: true,  // print() output appears in the game's own console window, as with Run
+        stopAtEntry: false,
+    });
+}
+
 // ---------------------------------------------------------------- autocomplete and hover help
 
 function libraryCompletions(document, position) {
@@ -728,6 +800,7 @@ function activate(context) {
         diagnostics,
         vscode.commands.registerCommand('forge.run', () => runCommand('run')),
         vscode.commands.registerCommand('forge.build', () => runCommand('build')),
+        vscode.commands.registerCommand('forge.debug', debugGame),
         vscode.commands.registerCommand('forge.buildRelease', () => runCommand('build', ['--release'])),
         vscode.commands.registerCommand('forge.package', () => runCommand('package', [])),
         vscode.commands.registerCommand('forge.toggleConsole', async () => {

@@ -77,7 +77,7 @@ Type* derefType(Type* t) {
 
 class Gen {
 public:
-    explicit Gen(Project& p) : P(p) {}
+    Gen(Project& p, bool debug) : P(p), debug(debug) {}
     GeneratedCpp run();
 
 private:
@@ -88,6 +88,19 @@ private:
     TypeDecl* curType = nullptr;
     int tmp = 0;
     bool globalScope = false;  // writing a global's or static field's starting value, outside any function
+    bool debug = false;        // a debug build: each statement says which .frg line it came from (#line)
+
+    // #line tells the C++ compiler (and so the debugger) that the code after it comes from this line of a .frg file.
+    void sourceLine(const Loc& l) {
+        if (!debug || !l.file || l.file->fullPath.empty()) return;
+        std::string path;
+        for (char c : l.file->fullPath) path += c == '\\' ? std::string("\\\\") : c == '"' ? std::string("\\\"") : std::string(1, c);
+        out += "#line " + std::to_string(l.line) + " \"" + path + "\"\n";
+    }
+    // After a function, Forge's own helper code isn't from any line of a .frg file.
+    void generatedLines() {
+        if (debug) out += "#line 1 \"<code made by Forge>\"\n";
+    }
 
     void line(const std::string& s) {
         out.append(ind * 4, ' ');
@@ -637,6 +650,7 @@ void Gen::children(const Stmt* block) {
 }
 
 void Gen::stmt(const Stmt* s) {
+    if (s->kind != SK::Block) sourceLine(s->loc);
     switch (s->kind) {
         case SK::Block:
             line("{");
@@ -941,6 +955,7 @@ void Gen::emitTypeDef(TypeDecl* d) {
 void Gen::emitBody(const FuncDecl* f, TypeDecl* owner, const std::string& head) {
     fn = const_cast<FuncDecl*>(f);
     curType = owner;
+    sourceLine(f->loc);
     line(head + " {");
     if (f->ret == tTask() && owner && owner->kind == DK::Class) {
         // A task can outlive the line that started it, so it keeps its object alive while it runs.
@@ -949,6 +964,7 @@ void Gen::emitBody(const FuncDecl* f, TypeDecl* owner, const std::string& head) 
     children(f->body.get());
     if (f->ret == tTask()) line("    co_return;");  // makes it a coroutine even if it never waits
     line("}");
+    generatedLines();
     curType = nullptr;
 }
 
@@ -1223,7 +1239,7 @@ GeneratedCpp Gen::run() {
 
 }  // namespace
 
-GeneratedCpp generateCpp(Project& proj) {
-    Gen g(proj);
+GeneratedCpp generateCpp(Project& proj, bool debug) {
+    Gen g(proj, debug);
     return g.run();
 }

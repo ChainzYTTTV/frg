@@ -457,6 +457,7 @@ static BOOL WINAPI ignoreCtrlC(DWORD type) { return type == CTRL_C_EVENT || type
 struct BuildOptions {
     bool release = false;
     bool console = true;
+    bool debug = false;  // --debug: not optimized, with debug information and each line of C++ marked with its .frg line
 };
 
 static bool build(const fs::path& dir, fs::path& exeOut, const BuildOptions& opt) {
@@ -493,7 +494,7 @@ static bool build(const fs::path& dir, fs::path& exeOut, const BuildOptions& opt
         phaseStart = now;
     };
     phase("reading and checking");
-    GeneratedCpp gen = generateCpp(proj);
+    GeneratedCpp gen = generateCpp(proj, opt.debug);
     phase("generating C++");
     fs::path exe = buildDir / (proj.name + ".exe");
 
@@ -512,7 +513,7 @@ static bool build(const fs::path& dir, fs::path& exeOut, const BuildOptions& opt
 
     // Release builds are optimized more (-O2). Other builds use -O1, which compiles faster and still runs well.
     // -fwrapv: whole numbers wrap around when they overflow, the same at every optimization level.
-    std::wstring flags = std::wstring(L"-std=gnu++20 ") + (opt.release ? L"-O2" : L"-O1") + L" -fwrapv -w -I" + quote(runtime);
+    std::wstring flags = std::wstring(L"-std=gnu++20 ") + (opt.debug ? L"-O0 -g" : opt.release ? L"-O2" : L"-O1") + L" -fwrapv -w -I" + quote(runtime);
     if (!opt.console) flags += L" -DFRG_NO_CONSOLE";  // no console window: runtime errors pop up in a box instead
     if (vulkan) flags += L" -I" + quote(runtime / "vulkan" / "include");
     fs::path raylib = runtime / "raylib";
@@ -735,7 +736,7 @@ static bool build(const fs::path& dir, fs::path& exeOut, const BuildOptions& opt
     char timeBuf[32];
     std::snprintf(timeBuf, sizeof timeBuf, "%.2fs", secs);
     std::string note = !linked ? " (nothing changed)" : all.size() > 2 ? " (" + std::to_string(jobs.size()) + " of " + std::to_string(all.size()) + " parts compiled)" : "";
-    printStatus("Finished", "build/" + exe.filename().string() + (opt.console ? "" : " (no console)") + note + " in " + timeBuf);
+    printStatus("Finished", "build/" + exe.filename().string() + (opt.debug ? " (debug)" : "") + (opt.console ? "" : " (no console)") + note + " in " + timeBuf);
     if (!opt.console && !gen.needsRaylib)
         std::fprintf(stderr, "    note: this game doesn't open a window, so without a console nothing will show when it runs\n");
     exeOut = exe;
@@ -887,6 +888,7 @@ static void printHelp() {
         "[folder] is the game's top folder (the one with main.frg). It defaults to the current folder.\n"
         "Options for build and run:\n"
         "  --release           make a finished game: no console window, and a smaller .exe\n"
+        "  --debug             a build for the debugger: breakpoints and variables on your .frg lines\n"
         "  --no-console        no console window (print() output isn't shown; runtime errors pop up in a box)\n"
         "  --console           keep the console window, even with --release\n"
         "Without options the console is on, so print() and errors show while you test the game.\n",
@@ -912,6 +914,8 @@ int main(int argc, char** argv) {
         for (size_t i = 1; i < args.size(); i++) {
             if (args[i] == "--release") {
                 opt.release = true;
+            } else if (args[i] == "--debug") {
+                opt.debug = true;
             } else if (args[i] == "--console" || args[i] == "--no-console") {
                 int choice = args[i] == "--console" ? 1 : 0;
                 if (consoleChoice != -1 && consoleChoice != choice) {
@@ -920,14 +924,19 @@ int main(int argc, char** argv) {
                 }
                 consoleChoice = choice;
             } else if (args[i].starts_with("--")) {
-                reportPlainError("there's no option called " + args[i], "the options are --release, --console and --no-console");
+                reportPlainError("there's no option called " + args[i], "the options are --release, --debug, --console and --no-console");
                 return 1;
             } else {
                 rest.push_back(args[i]);
             }
         }
         if (rest.size() > 1) {
-            reportPlainError("too many arguments", "usage: frg " + cmd + " [folder] [--release] [--console | --no-console]");
+            reportPlainError("too many arguments", "usage: frg " + cmd + " [folder] [--release | --debug] [--console | --no-console]");
+            return 1;
+        }
+        if (opt.release && opt.debug) {
+            reportPlainError("--release and --debug can't both be used",
+                             "--debug is for finding mistakes with a debugger, --release for the finished game");
             return 1;
         }
         opt.console = consoleChoice == -1 ? !opt.release : consoleChoice == 1;

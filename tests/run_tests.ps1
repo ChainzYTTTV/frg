@@ -6,7 +6,8 @@
 #   === output          the exact text the program must print
 #   === error           text that must appear in the compile errors (one check per line)
 #   === build           (empty) the program must compile; it isn't run (for games that open a window)
-#   === command         (one line) runs frg with these words instead of building, like "cache". Each line of
+#   === command         (one line) runs frg with these words instead of building, like "cache" ({game} is this
+#                       test's game folder, as in "build {game} --debug"). Each line of
 #                       === prints must appear in what it prints; with === error, it must fail with those messages.
 #   === query           (one line: "<question> <file> <line> <column> [new name]") runs frg query on this game;
 #                       each line of === prints must appear in the JSON it prints (or, starting with !, must not)
@@ -96,7 +97,7 @@ foreach ($file in Get-ChildItem (Join-Path $PSScriptRoot "cases") -Filter "$Filt
             } elseif ($want -and -not $r.Out.Contains($want)) { $problem = "the query's answer doesn't contain: $want`n--- it printed:`n$($r.Out)$($r.Err)" }
         }
     } elseif ($sections.Contains('command')) {
-        $words = @($sections['command'][0] -split ' ')
+        $words = @(($sections['command'][0] -replace '\{game\}', $dir) -split ' ')
         $r = Invoke-Frg $words[0] '' @($words | Select-Object -Skip 1)
         $all = $r.Out + $r.Err
         if ($sections.Contains('error')) {

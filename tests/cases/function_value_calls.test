@@ -1,0 +1,41 @@
+=== main.frg
+#include <stdio>
+
+// A function value can be called wherever it comes from, not only from a variable.
+Function<int(int)> makeAdder(int n){
+    return (int x) { return x + n; };
+}
+
+// A global function value (and one made inside it, which uses its parameter).
+Function<Function<int(int)>(int)> makeMultiplier = (int n) { return (int x) { return x * n; }; };
+
+class Waves {
+    list<Function<string()>> spawners = [() { return "slimes"; }, () { return "bats"; }];
+    static Function<string()> boss = () { return "dragon"; };
+}
+
+int main(){
+    list<Function<int()>> fs = [() { return 1; }, () { return 2; }];
+    print(fs[0]() + fs[1]());
+    print(makeAdder(10)(5));
+    Waves w = Waves();
+    for (int i in 0..w.spawners.length - 1) {
+        print(w.spawners[i]());
+    }
+    print(Waves.boss());
+    map<string, Function<int(int)>> ops = {"double": (int x) { return x * 2; }};
+    print(ops["double"](21));
+    list<Function<void()>?> maybe = [() { print("called"); }];
+    maybe[0]();
+    print(makeMultiplier(3)(7));
+    return 0;
+}
+=== output
+3
+15
+slimes
+bats
+dragon
+42
+called
+21

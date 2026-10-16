@@ -202,6 +202,8 @@ Function<bool(int)> isEven = (int n) { return n % 2 == 0; };
 print(isEven(4));      // true: call it like a function
 ```
 
+A function value can be called wherever it comes from, not only from a variable: `actions[0]()` calls the first one in a list, `handlers["jump"]()` one in a map, and `makeAdder(10)(5)` the one a function gave back.
+
 The part inside `< >` reads like the first line of a function, without the names: `bool isEven(int n)` becomes `Function<bool(int)>`.
 
 A function you've written can be used as a value too: write its name **without** `()`.

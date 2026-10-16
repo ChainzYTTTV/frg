@@ -330,6 +330,7 @@ private:
     bool checkArgs(Expr* e, std::vector<ExprPtr>& args, FuncDecl* f, const std::string& name, Type* inst = nullptr);
     Type* construct(Expr* e, std::vector<ExprPtr>& args, TypeDecl* d, Type* expected = nullptr);
     Type* genericInstance(Expr* o);
+    Type* callValue(Expr* e, Type* ct, const std::string& what);
     std::string whyNotComparable(Type* t);
     bool requireComparable(Type* t, const Loc& loc, const std::string& what);
     struct GenericUse {
@@ -1887,8 +1888,14 @@ Type* Checker::callExpr(Expr* e, Type* expected) {
             return bmethodCall(e);
         case RK::Type: return construct(e, e->args, callee->res.tdecl, expected);
         case RK::None:
+            // fs[0](), makeHandler()(): anything that gives a function value can be called.
+            if (callee->type && (callee->type->kind == TK::Function ||
+                                 (callee->type->kind == TK::Optional && callee->type->elem->kind == TK::Function)))
+                return callValue(e, callee->type->kind == TK::Optional ? callee->type->elem : callee->type, "this function value");
             for (auto& a : e->args) value(a.get());
-            if (callee->type && callee->type != tError()) reportError(e->loc, "this is " + aType(callee->type) + ", not a function");
+            if (callee->type && callee->type != tError())
+                reportError(e->loc, "this is " + aType(callee->type) + ", not a function, so it can't be called",
+                            "only functions and function values (like Function<void()>) can be called with ( )");
             return e->type = tError();
         case RK::Local:
         case RK::Global:
@@ -1896,17 +1903,7 @@ Type* Checker::callExpr(Expr* e, Type* expected) {
         case RK::StdConst:
         case RK::TypeStatic: {
             Type* ct = callee->type && callee->type->kind == TK::Optional ? callee->type->elem : callee->type;
-            if (ct && ct->kind == TK::Function) {  // calling a function value
-                if (e->args.size() != ct->params.size()) {
-                    for (auto& a : e->args) value(a.get());
-                    reportError(e->loc, "'" + callee->text + "' needs " + std::to_string(ct->params.size()) + " value" +
-                                            (ct->params.size() == 1 ? "" : "s") + ", but got " + std::to_string(e->args.size()),
-                                "it's a " + ct->name);
-                    return e->type = tError();
-                }
-                for (size_t i = 0; i < e->args.size(); i++) checkInto(e->args[i].get(), ct->params[i], "value " + std::to_string(i + 1) + " of " + callee->text + "()");
-                return e->type = ct->elem;
-            }
+            if (ct && ct->kind == TK::Function) return callValue(e, ct, "'" + callee->text + "'");  // calling a function value
             for (auto& a : e->args) value(a.get());
             reportError(e->loc, "'" + callee->text + "' is a variable, not a function");
             return e->type = tError();
@@ -1916,6 +1913,20 @@ Type* Checker::callExpr(Expr* e, Type* expected) {
             reportError(e->loc, "'" + callee->text + "' isn't a function, so it can't be called");
             return e->type = tError();
     }
+}
+
+// Calling a function value: checks the values given against its Function<ret(params)> type.
+Type* Checker::callValue(Expr* e, Type* ct, const std::string& what) {
+    if (e->args.size() != ct->params.size()) {
+        for (auto& a : e->args) value(a.get());
+        reportError(e->loc, what + " needs " + std::to_string(ct->params.size()) + " value" + (ct->params.size() == 1 ? "" : "s") + ", but got " +
+                                std::to_string(e->args.size()),
+                    "it's a " + ct->name);
+        return e->type = tError();
+    }
+    std::string name = what[0] == '\'' ? what.substr(1, what.size() - 2) + "()" : what;
+    for (size_t i = 0; i < e->args.size(); i++) checkInto(e->args[i].get(), ct->params[i], "value " + std::to_string(i + 1) + " of " + name);
+    return e->type = ct->elem;
 }
 
 Type* Checker::bmethodCall(Expr* e) {

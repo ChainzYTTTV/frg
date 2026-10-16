@@ -428,6 +428,8 @@ std::string Gen::call(const Expr* e) {
             return ordered(argExprs, argList(e, e->args, f), [&](const std::vector<std::string>& c) { return name + "(" + joinArgs(c) + ")"; });
         }
         case RK::Type: return construct(e, e->args);
+        case RK::None:  // fs[0](), makeHandler()(): the checker allows this only for function values
+        case RK::TypeStatic:  // Waves.boss(), a static Function field
         case RK::Local:
         case RK::Global:
         case RK::Field: {  // calling a function value
@@ -618,9 +620,13 @@ std::string Gen::ex(const Expr* e) {
         case EK::Lambda: {
             // A C++ lambda that gets copies of the variables around it (and `this`, inside a method).
             FuncDecl* f = e->lambda.get();
-            std::string head = std::string(curType ? "[=, this]" : "[=]") + "(" + params(f) + ") mutable -> " + f->ret->cpp + " {\n";
+            // A global or static field's starting value is outside every function, where C++ allows no captures.
+            std::string capture = globalScope ? "[]" : curType ? "[=, this]" : "[=]";
+            std::string head = capture + "(" + params(f) + ") mutable -> " + f->ret->cpp + " {\n";
             std::string savedOut = std::move(out);
             FuncDecl* savedFn = fn;
+            bool savedGlobal = globalScope;
+            globalScope = false;  // a function value inside this one can use this one's parameters
             bool savedFramed = framed;
             out.clear();
             ind++;
@@ -630,6 +636,7 @@ std::string Gen::ex(const Expr* e) {
             children(f->body.get());
             framed = savedFramed;
             fn = savedFn;
+            globalScope = savedGlobal;
             ind--;
             std::string body = std::move(out);
             out = std::move(savedOut);

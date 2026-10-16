@@ -283,7 +283,7 @@ void greet(string who, string greeting = "Hi"){   // a default value
 - `void` means it gives nothing back.
 - Functions can share a name if their parameters differ (`void drawHealth(int hp)` and `void drawHealth(float fraction)`): Forge picks the version whose parameter types match the values best (`drawHealth(75)` is the int one). Two versions with exactly the same parameter types are an error. Methods can't share names (only constructors can).
 
-**Functions as values.** A function value is written like a function without a return type or name: `(Enemy e) { return e.hp <= 0; }`. Its type is `Function<` return type `(` parameter types `)>`, like `Function<bool(Enemy)>`, `Function<void()>` or `Function<int(int, int)>` (it reads like the function's first line without names). Call one like a function: `isEven(4)`. A named function can be used as a value by writing its name without `()`: `Function<int(int)> f = twice;`. A function value goes where a `Function<...>` is expected (variable, parameter, field, list method), never on its own. It gets a **copy** of the local variables around it, so it can't change them (an error says so); it can change globals, fields and class objects. A `Function<...>` field can be empty until set (calling an empty one is a runtime error); a variable needs a starting value or `?`. Tasks can't be function values: wrap them, `() { blink(); }`.
+**Functions as values.** A function value is written like a function without a return type or name: `(Enemy e) { return e.hp <= 0; }`. Its type is `Function<` return type `(` parameter types `)>`, like `Function<bool(Enemy)>`, `Function<void()>` or `Function<int(int, int)>` (it reads like the function's first line without names). Call one like a function: `isEven(4)`, also straight from a list, map or call: `actions[0]()`, `makeAdder(10)(5)`. A named function can be used as a value by writing its name without `()`: `Function<int(int)> f = twice;`. A function value goes where a `Function<...>` is expected (variable, parameter, field, list method), never on its own. It gets a **copy** of the local variables around it, so it can't change them (an error says so); it can change globals, fields and class objects. A `Function<...>` field can be empty until set (calling an empty one is a runtime error); a variable needs a starting value or `?`. Tasks can't be function values: wrap them, `() { blink(); }`.
 
 ```cpp
 enemies.removeWhere((Enemy e) { return e.hp <= 0; });
@@ -3385,6 +3385,8 @@ To keep a function value in a variable, a field or a parameter, its type is `Fun
 Function<bool(int)> isEven = (int n) { return n % 2 == 0; };
 print(isEven(4));      // true: call it like a function
 ```
+
+A function value can be called wherever it comes from, not only from a variable: `actions[0]()` calls the first one in a list, `handlers["jump"]()` one in a map, and `makeAdder(10)(5)` the one a function gave back.
 
 The part inside `< >` reads like the first line of a function, without the names: `bool isEven(int n)` becomes `Function<bool(int)>`.
 

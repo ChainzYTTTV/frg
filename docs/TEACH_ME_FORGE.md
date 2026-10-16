@@ -388,7 +388,7 @@ Rules:
 - A variable or field whose type is a class must start with a value: `Enemy e = Enemy(...);`. To start empty, make it optional: `Enemy? e = null;`.
 - A struct can't contain itself (a list of itself is fine).
 - `print(obj)` shows something like `Point(x: 3.0, y: 4.0)`. Adding a method `string toText()` changes what's shown.
-- `==` on structs compares every field, and `==` on classes checks whether both are **the same object**.
+- `==` on structs compares every field, and `==` on classes checks whether both are **the same object**. Function values, `Weak` values and tasks can't be compared, so a struct with such a field can't use `==`, `contains`, `indexOf` or `remove` unless it has `bool equals(T other)`; the error names the field. A generic type whose code compares its `T` (like `items.contains(x)`) can't be used with such a `T`.
 - In `for (Point p in points)`, `p` is a **copy** of a struct, so changing it doesn't change the list. Use `points[i].x = ...` instead. With classes, the loop variable is the real object.
 
 **Checking the real kind of an object** (classes only):

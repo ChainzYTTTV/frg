@@ -1,0 +1,51 @@
+=== main.frg
+#include <stdio>
+#include <graphics2d>
+
+// Things that can be compared: classes (the same object?), structs whose fields can be, and structs with equals().
+struct Button {
+    string label;
+    Function<void()> onClick;
+
+    bool equals(Button other){
+        return label == other.label;
+    }
+}
+
+class Enemy {
+    Function<void()> onDeath = () { };
+}
+
+struct Point {
+    int x;
+    int y;
+}
+
+int main(){
+    Button a = Button("Play", () { });
+    Button b = Button("Play", () { print("other"); });
+    print(a == b);
+    list<Button> buttons = [a];
+    print(buttons.contains(b));
+
+    Enemy e = Enemy();
+    list<Enemy> enemies = [e];
+    print(enemies.contains(e));
+    print(e == Enemy());
+
+    list<Point> points = [Point(1, 2)];
+    print(points.indexOf(Point(1, 2)));
+    print(points == [Point(1, 2)]);
+
+    Camera2D c = Camera2D(vec2(0, 0), vec2(0, 0));
+    print(c == c);
+    return 0;
+}
+=== output
+true
+true
+true
+false
+0
+true
+true

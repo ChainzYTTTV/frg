@@ -249,7 +249,7 @@ Things to know:
 - Your type has to be on the **left**: `a * 3` uses `a.times(3)`, but `3 * a` is an error.
 - The method takes one value. `less` and `equals` have to give back a `bool`; the others can give back anything (usually the same type).
 - With `less`, `a > b` is `b.less(a)`, `a <= b` is "not `b.less(a)`", and `a >= b` is "not `a.less(b)`". So one method gives all four.
-- Without `equals`, `==` compares every field of a struct, and for classes it checks whether both sides are the **same object**. A struct's `equals` is also used by `contains`, `indexOf` and `remove` on its lists.
+- Without `equals`, `==` compares every field of a struct, and for classes it checks whether both sides are the **same object**. Function values, `Weak` values and tasks can't be compared, so a struct holding one can't use `==` (or `contains`, `indexOf`, `remove`) until it has an `equals` method; Forge says which field is the problem. A struct's `equals` is also used by `contains`, `indexOf` and `remove` on its lists.
 - These are normal methods too: `a.plus(b)` works.
 
 ## What's next

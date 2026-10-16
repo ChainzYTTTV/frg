@@ -414,7 +414,7 @@ Rules:
 - A variable or field whose type is a class must start with a value: `Enemy e = Enemy(...);`. To start empty, make it optional: `Enemy? e = null;`.
 - A struct can't contain itself (a list of itself is fine).
 - `print(obj)` shows something like `Point(x: 3.0, y: 4.0)`. Adding a method `string toText()` changes what's shown.
-- `==` on structs compares every field, and `==` on classes checks whether both are **the same object**.
+- `==` on structs compares every field, and `==` on classes checks whether both are **the same object**. Function values, `Weak` values and tasks can't be compared, so a struct with such a field can't use `==`, `contains`, `indexOf` or `remove` unless it has `bool equals(T other)`; the error names the field. A generic type whose code compares its `T` (like `items.contains(x)`) can't be used with such a `T`.
 - In `for (Point p in points)`, `p` is a **copy** of a struct, so changing it doesn't change the list. Use `points[i].x = ...` instead. With classes, the loop variable is the real object.
 
 **Checking the real kind of an object** (classes only):
@@ -2963,7 +2963,7 @@ Things to know:
 - Your type has to be on the **left**: `a * 3` uses `a.times(3)`, but `3 * a` is an error.
 - The method takes one value. `less` and `equals` have to give back a `bool`; the others can give back anything (usually the same type).
 - With `less`, `a > b` is `b.less(a)`, `a <= b` is "not `b.less(a)`", and `a >= b` is "not `a.less(b)`". So one method gives all four.
-- Without `equals`, `==` compares every field of a struct, and for classes it checks whether both sides are the **same object**. A struct's `equals` is also used by `contains`, `indexOf` and `remove` on its lists.
+- Without `equals`, `==` compares every field of a struct, and for classes it checks whether both sides are the **same object**. Function values, `Weak` values and tasks can't be compared, so a struct holding one can't use `==` (or `contains`, `indexOf`, `remove`) until it has an `equals` method; Forge says which field is the problem. A struct's `equals` is also used by `contains`, `indexOf` and `remove` on its lists.
 - These are normal methods too: `a.plus(b)` works.
 
 ### What's next
@@ -3660,7 +3660,7 @@ Runtime error in main.frg:9: position 5 is outside the list (it has 3 items, at 
 
 `first()`, `last()`, `pop()`, `removeAt()` and `insert()` stop the game with a runtime error if the list is empty or the position is wrong.
 
-"Equal" means `==`: numbers and text by value, structs field by field, and classes only when it's the very same object.
+"Equal" means `==`: numbers and text by value, structs field by field (or with their own `equals` (see “4. Operators” › “Operators for your own types”)), and classes only when it's the very same object. Lists of function values, and of structs holding one, can't use these three, because function values can't be compared.
 
 #### Going through a list
 

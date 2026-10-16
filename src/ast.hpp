@@ -205,6 +205,7 @@ struct TypeDecl {
     std::vector<std::string> typeParams;    // class Box<T>: {"T"}
     std::vector<Loc> typeParamLocs;
     std::vector<Type*> paramTypes;          // the type each of typeParams stands for inside the type
+    bool comparesTypeParams = false;        // its code compares T values with == (or contains/indexOf/remove)
     std::vector<VarPtr> fields;     // includes `static` built-in constants
     std::vector<FuncPtr> methods;
     std::vector<FuncPtr> ctors;

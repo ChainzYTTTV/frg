@@ -5,6 +5,7 @@ What changed in each version of Forge. Plans for later versions are in the [road
 ## Unreleased
 
 **Language**
+- **Comparing things that can't be compared is now a Forge error.** `==`, `!=`, `contains`, `indexOf` and `remove` on function values, `Weak` values, tasks, or structs and lists holding them used to pass Forge's checks and then fail with hundreds of lines of C++ errors. Now Forge says which field is the problem and suggests an `equals` method. The same goes for a generic type that compares its `T` (like `items.contains(x)`) when it's made with such a `T`.
 - **`Pointer<T>` is removed.** A pointer to a list item, or to a field of an object, could quietly change the wrong memory once the list grew or the object was freed, with no error. To change a caller's number, return the new value (`score = addOne(score);`); class objects are shared, so a function can change one it's given. Using `Pointer` now gives an error that says this. The pointers docs page is now "Enums and optionals" (`docs/language/10-enums-and-optionals.md`).
 
 **Engine**

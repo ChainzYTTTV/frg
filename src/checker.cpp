@@ -330,6 +330,14 @@ private:
     bool checkArgs(Expr* e, std::vector<ExprPtr>& args, FuncDecl* f, const std::string& name, Type* inst = nullptr);
     Type* construct(Expr* e, std::vector<ExprPtr>& args, TypeDecl* d, Type* expected = nullptr);
     Type* genericInstance(Expr* o);
+    std::string whyNotComparable(Type* t);
+    bool requireComparable(Type* t, const Loc& loc, const std::string& what);
+    struct GenericUse {
+        Type* type;
+        Loc loc;
+    };
+    std::vector<GenericUse> genericUses;  // every Box<...> written in a type, checked once all code is known
+    void checkGenericUses();
     FuncDecl* operatorMethod(Type* t, const std::string& name);
     Type* userOperator(Expr* e, Expr* obj, Expr* arg, const std::string& name, const std::string& shown, bool swap, bool negate, bool wantBool);
     Type* builtinCall(Expr* e, const Builtin* b);
@@ -495,7 +503,9 @@ Type* Checker::namedType(TypeDecl* d, const TypeRef& r) {
         if (t == tError()) return nullptr;
         args.push_back(t);
     }
-    return tGeneric(d, args);
+    Type* g = tGeneric(d, args);
+    genericUses.push_back({g, r.loc});
+    return g;
 }
 
 Type* Checker::resolveType(const TypeRef& r, bool allowVoid) {
@@ -1564,6 +1574,86 @@ void Checker::checkRunCallbacks(const Loc& loc) {
         reportError(d->loc, "for window.run(), draw has to be written as: void draw()");
 }
 
+static bool mentionsTypeParam(const Type* t) {
+    if (!t) return false;
+    if (t->kind == TK::TypeParam) return true;
+    if (mentionsTypeParam(t->elem) || mentionsTypeParam(t->key)) return true;
+    for (const Type* p : t->params)
+        if (mentionsTypeParam(p)) return true;
+    return false;
+}
+
+// Why values of type `t` can't be compared with == (which contains, indexOf and remove use too), or "" if they can.
+// Classes always can (== asks "the same object?"); a struct can if all its fields can, or if it has its own equals().
+std::string Checker::whyNotComparable(Type* t) {
+    std::set<const TypeDecl*> seen;
+    std::function<std::string(Type*)> why = [&](Type* t) -> std::string {
+        if (!t) return "";
+        switch (t->kind) {
+            case TK::Function: return "function values can't be compared";
+            case TK::Weak: return "Weak values can't be compared (compare what they point at: a.get() == b.get())";
+            case TK::Task: return "tasks can't be compared";
+            case TK::Optional:
+            case TK::List: return why(t->elem);
+            case TK::Map: return why(t->elem);
+            case TK::Struct: {
+                if (!t->decl || seen.count(t->decl)) return "";
+                FuncDecl* eq = operatorMethod(t, "equals");
+                if (eq && eq->params.size() == 1) return "";
+                seen.insert(t->decl);
+                for (VarDecl* f : allFields(t->decl)) {
+                    if (f->isStatic || !f->type) continue;
+                    Type* ft = isGeneric(t) ? substType(f->type, t->decl->paramTypes, t->params) : f->type;
+                    std::string r = why(ft);
+                    if (!r.empty()) return "its field '" + f->name + "' is " + aType(ft) + ", and " + r;
+                }
+                return "";
+            }
+            default: return "";
+        }
+    };
+    return why(t);
+}
+
+// Reports an error (and returns false) if values of type `t` can't be compared; `what` says what compares them.
+bool Checker::requireComparable(Type* t, const Loc& loc, const std::string& what) {
+    if (curType && !curType->typeParams.empty() && mentionsTypeParam(t)) curType->comparesTypeParams = true;
+    std::string r = whyNotComparable(t);
+    if (r.empty()) return true;
+    // The type inside the list, map or optional that's the actual problem.
+    Type* u = t;
+    while (u->kind == TK::List || u->kind == TK::Map || u->kind == TK::Optional) u = u->elem;
+    std::string because = u->kind == TK::Struct && (u != t || what[0] != '\'') ? aType(u) + " can't be compared: " + r : r;
+    std::string hint = u->kind == TK::Struct && !u->decl->builtin
+                           ? "give " + u->decl->name + " a method that says when two of them are equal: bool equals(" + u->name +
+                                 " other) { ... } - or compare one of its fields instead"
+                           : "compare something they hold instead, like a name or a number";
+    if (what[0] == '\'')
+        reportError(loc, "can't use " + what + " on " + aType(t) + (u == t ? ": " : ", because ") + because, hint);
+    else
+        reportError(loc, what + " compares the items with ==, but " + because, hint);
+    return false;
+}
+
+// A generic type whose code compares its T values (item == x, items.contains(x)) can't be made with a T that can't be
+// compared. That's only known once every function has been checked, so it's checked at the end.
+void Checker::checkGenericUses() {
+    std::set<std::pair<Type*, std::string>> done;
+    for (const GenericUse& u : genericUses) {
+        TypeDecl* d = u.type->decl;
+        if (!d->comparesTypeParams) continue;
+        for (size_t i = 0; i < u.type->params.size() && i < d->typeParams.size(); i++) {
+            std::string r = whyNotComparable(u.type->params[i]);
+            std::string key = std::to_string(u.loc.line) + ":" + std::to_string(u.loc.col) + (u.loc.file ? u.loc.file->displayPath : "");
+            if (r.empty() || !done.insert({u.type, key}).second) continue;
+            reportError(u.loc,
+                        u.type->name + " can't be used, because " + d->name + " compares its " + d->typeParams[i] +
+                            " values with == (or contains, indexOf, remove), but " + r,
+                        "use a type that can be compared here, or keep the value in a class (classes compare as \"the same object\")");
+        }
+    }
+}
+
 // The Box<int> that `o` is (following ? and pointers), or nullptr if it isn't a generic type.
 Type* Checker::genericInstance(Expr* o) {
     Type* t = o->type;
@@ -1840,6 +1930,8 @@ Type* Checker::bmethodCall(Expr* e) {
         return e->type = tError();
     }
     for (size_t i = 0; i < e->args.size(); i++) checkInto(e->args[i].get(), bmType(m.params[i], obj), "the value given to " + name + "()");
+    if (m.on == TK::List && (name == "contains" || name == "indexOf" || name == "remove") && !requireComparable(obj->elem, e->loc, name + "()"))
+        return e->type = tError();
     if (m.sortable && !isNumeric(obj->elem) && obj->elem->kind != TK::String) {
         FuncDecl* less = operatorMethod(obj->elem, "less");
         if (less && less->params.size() == 1 && less->ret == tBool())
@@ -2135,6 +2227,8 @@ Type* Checker::equalityOp(Expr* e) {
         Expr* other = L->kind == TK::Optional ? b : a;
         if (canAssignQuiet(other, opt)) {
             assignable(other, opt, "");
+            if (!operatorMethod(opt->elem, "equals") && !requireComparable(opt, e->loc, "'" + (e->opWord.empty() ? e->text : e->opWord) + "'"))
+                return e->type = tError();
             return ok(opt);
         }
     }
@@ -2146,6 +2240,8 @@ Type* Checker::equalityOp(Expr* e) {
         reportError(e->loc, "Weak values can't be compared directly", "compare what they point at: a.get() == b.get()");
         return e->type = tError();
     }
+    std::string shownOp = "'" + (e->opWord.empty() ? e->text : e->opWord) + "'";
+    if (!requireComparable(L, e->loc, shownOp) || (R != L && !requireComparable(R, e->loc, shownOp))) return e->type = tError();
     if (L == R && L->kind != TK::Void) return ok(L);
     if (L->kind == TK::Class && R->kind == TK::Class && !isGeneric(L) && !isGeneric(R)) {
         if (inheritsFrom(L->decl, R->decl)) return ok(R);
@@ -2779,6 +2875,7 @@ bool Checker::run() {
             for (auto& meth : d->methods) checkBody(meth.get(), d.get());
         }
     }
+    checkGenericUses();
 
     Module* mm = P.mainModule;
     auto it = mm->funcs.find("main");

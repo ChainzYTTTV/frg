@@ -21,15 +21,15 @@ class Menu : Scene {
     // From above the window (y = -80) down to y = 70, in 0.9 seconds, bouncing at the end.
     Tween titleDrop = Tween(-80, 70, 0.9, Ease.BOUNCE);
 
-    void enter() {
+    void enter(){
         titleDrop.restart();
     }
 
-    void update(float dt) {
+    void update(float dt){
         titleDrop.update(dt);
     }
 
-    void draw() {
+    void draw(){
         graphics2d.drawText("FORGE", 380, titleDrop.value(), 64, color.ORANGE);
         ui.panel(rect(330, 150, 300, 370));
 
@@ -50,17 +50,17 @@ class Menu : Scene {
 class Playing : Scene {
     Timer clock = Timer(0);
 
-    void enter() {
+    void enter(){
         clock.restart();
     }
 
-    void update(float dt) {
+    void update(float dt){
         if (input.keyPressed(Key.BACKSPACE)) {
             scenes.change(Menu());
         }
     }
 
-    void draw() {
+    void draw(){
         graphics2d.drawText("Good luck, {playerName}!", 300, 140, 30, color.ORANGE);
         graphics2d.drawText("Playing for {int(clock.elapsed())} seconds", 300, 200, 30, color.WHITE);
         graphics2d.drawText("Press Backspace to go back to the menu", 270, 260, 20, color.LIGHTGRAY);

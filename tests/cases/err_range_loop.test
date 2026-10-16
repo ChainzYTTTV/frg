@@ -1,0 +1,19 @@
+=== main.frg
+#include <stdio>
+
+int main(){
+    for (float x in 0..10) {
+        print(x);
+    }
+    for (int i in 0.."ten") {
+        print(i);
+    }
+    for (int i in 0.5..2) {
+        print(i);
+    }
+    return 0;
+}
+=== error
+a counting loop counts whole numbers, so 'x' has to be an int
+the end of the range
+the start of the range

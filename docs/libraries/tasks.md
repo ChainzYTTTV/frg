@@ -19,7 +19,7 @@
 #include <stdio>
 #include <tasks>
 
-task countdown() {
+task countdown(){
     for (int i = 3; i > 0; i--) {
         print(i);
         wait(1);

@@ -45,11 +45,11 @@ struct Point {
     float x;
     float y;
 
-    float length() {
+    float length(){
         return math.sqrt(x * x + y * y);
     }
 
-    void moveBy(float dx, float dy) {
+    void moveBy(float dx, float dy){
         x += dx;
         y += dy;
     }
@@ -65,7 +65,7 @@ p.moveBy(1, 1);
 Inside a method, **`this`** means "the value this method was called on". You usually don't need it, since `x` already means this point's `x`. It's needed when a parameter has the same name as a field:
 
 ```cpp
-void setX(float x) {
+void setX(float x){
     this.x = x;          // the field = the parameter
 }
 ```
@@ -93,7 +93,7 @@ class Enemy {
     string name;
     int hp = 100;
 
-    Enemy(string name) {
+    Enemy(string name){
         this.name = name;
     }
 }
@@ -112,12 +112,12 @@ struct Size {
     float w;
     float h;
 
-    Size(float side) {          // a square
+    Size(float side){          // a square
         w = side;
         h = side;
     }
 
-    Size(float w, float h) {
+    Size(float w, float h){
         this.w = w;
         this.h = h;
     }
@@ -199,6 +199,37 @@ void removeEnemy(Enemy e){
 
 A common example is a parent and its children, like a team and its players. Let the team hold a `list<Player>`, and give each `Player` a `Team? team` field. When a player leaves the team, set its `team = null` as well as removing it from the list.
 
+### Weak: pointing at an object without keeping it alive
+
+The other way to avoid the loop is a **weak** link. A `Weak<Player>` points at a player, but doesn't count as "something still refers to it". When nothing else keeps the player alive, it's freed, and the weak link simply becomes empty:
+
+```cpp
+class Enemy {
+    Weak<Player> target;              // starts empty
+
+    void chase(){
+        Player? p = target.get();     // the player, or null if it's gone
+        if (p != null) {
+            print("chasing {p.name}");
+        }
+    }
+}
+
+Enemy e = Enemy();
+e.target = Weak(hero);                // point at hero, without keeping it alive
+```
+
+So for a team and its players, the team holds `list<Player> players` (strong: the team keeps them), and each player holds `Weak<Team> team` (weak: no loop). Nothing needs to be set to `null` by hand.
+
+Things to know:
+
+- `Weak(object)` makes one. `Weak<Player>` only works with class types (structs, numbers and text are copied, so there's nothing to point at).
+- `get()` gives a `Player?`: the object if it's still alive, or `null`. Always check it before using it.
+- A `Weak<...>` variable or field without a starting value is empty, and `get()` gives `null`.
+- A `Weak<Goblin>` can be stored in a `Weak<Enemy>` when `Goblin` inherits from `Enemy`.
+- Two `Weak` values can't be compared with `==`: compare what they point at, `a.get() == b.get()`.
+- `print` shows the object it points at, or `null`.
+
 ## Inheritance
 
 A class can **inherit** from another class with `:`. It gets all the parent's fields and methods, and can add its own:
@@ -208,15 +239,15 @@ class Entity {
     string name;
     int hp = 100;
 
-    Entity(string name) {
+    Entity(string name){
         this.name = name;
     }
 
-    void takeHit(int amount) {
+    void takeHit(int amount){
         hp -= amount;
     }
 
-    string describe() {
+    string info(){
         return "an entity";
     }
 }
@@ -224,14 +255,14 @@ class Entity {
 class Goblin : Entity {
     int gold = 5;              // extra field
 
-    string describe() {        // replaces Entity's version
+    string info(){        // replaces Entity's version
         return "a goblin carrying {gold} gold";
     }
 }
 
 Goblin g = Goblin("Grok");     // Goblin has no constructor, so it uses Entity's
 g.takeHit(10);                 // inherited from Entity
-print(g.describe());           // a goblin carrying 5 gold
+print(g.info());           // a goblin carrying 5 gold
 ```
 
 - **A child can go anywhere its parent can.** An `Entity` variable, parameter or list item can hold a `Goblin`:
@@ -239,7 +270,7 @@ print(g.describe());           // a goblin carrying 5 gold
   ```cpp
   list<Entity> everyone = [Goblin("Grok"), Entity("Blob")];
   for (Entity e in everyone) {
-      print(e.describe());       // each one uses its own version
+      print(e.info());       // each one uses its own version
   }
   ```
 
@@ -256,13 +287,13 @@ print(g.describe());           // a goblin carrying 5 gold
 class Player : Entity {
     int score = 0;
 
-    Player(string name) {
+    Player(string name){
         super(name);                   // run Entity's constructor
         hp = 150;
     }
 
-    string describe() {
-        return "the player, " + super.describe();    // Entity's describe()
+    string info(){
+        return "the player, " + super.info();    // Entity's info()
     }
 }
 ```
@@ -315,13 +346,13 @@ if (e is Goblin) {
 class BankAccount {
     private int balance = 0;
 
-    void deposit(int amount) {
+    void deposit(int amount){
         if (amount > 0) {
             balance += amount;
         }
     }
 
-    int getBalance() {
+    int getBalance(){
         return balance;
     }
 }
@@ -345,18 +376,204 @@ Enemy(name: Grok, hp: 100, speed: 2.5, loot: [], target: null)
 
 Inside a class's output, other class objects show as `<Name>` (so two objects pointing at each other don't print forever).
 
-To choose what's shown, add a method `string toString()`:
+To choose what's shown, add a method `string toText()`:
 
 ```cpp
 class Enemy {
     string name;
     int hp = 100;
 
-    string toString() {
+    string toText(){
         return "{name} ({hp} HP)";
     }
 }
 ```
+
+## describe: looking inside any object
+
+Every struct and class has `describe` built in, with nothing to write. It's handy while debugging:
+
+```cpp
+class Enemy {
+    int hp = 30;
+}
+
+class Goblin : Enemy {
+    string name = "Grub";
+}
+
+Goblin g = Goblin();
+print(g.describe);              // Goblin (an Enemy): hp = 30, name = "Grub"
+print(g.describe.name);         // Goblin
+print(g.describe.parent);       // Enemy  ("" if it doesn't inherit)
+print(g.describe.fields);       // [hp, name]
+print(g.describe.values);       // {hp: 30, name: Grub}  (a map<string, string>)
+```
+
+- On its own, `describe` is everything as text: it can be printed, put in `"{g.describe}"`, or stored in a `string`. A part after it gives only that part.
+- `fields` is a `list<string>` of the field names (the parent's first), and `values` is a `map<string, string>` of each field's value as text.
+- It describes the real object: an `Enemy e` that holds a `Goblin` says `Goblin`.
+- `private` and `static` fields are left out.
+- `describe` is a reserved member name, so your own field or method can't be called `describe`.
+
+Structs and classes can also use `+`, `<`, `==` and the other operators, with methods named after the operator's word (`plus`, `less`, `equals`, ...). See [Operators for your own types](04-operators.md#operators-for-your-own-types).
+
+## static: shared by the whole type
+
+A normal field belongs to **each object**: every enemy has its own `hp`. A **`static`** field belongs to the **type itself**: there's only one, shared by all of them. A static method is a function that belongs to the type: it's called on the type's name, not on an object.
+
+```cpp
+class Enemy {
+    static int count = 0;        // one counter for all enemies
+    string name;
+
+    Enemy(string name){
+        this.name = name;
+        count++;                 // inside the class, no "Enemy." is needed
+    }
+
+    static Enemy boss(){        // makes a special enemy
+        Enemy b = Enemy("Boss");
+        return b;
+    }
+}
+
+Enemy a = Enemy("Grub");
+Enemy b = Enemy.boss();         // a static method: called on the type
+print(Enemy.count);             // 2: a static field, reached through the type
+Enemy.count = 0;                // and changed the same way
+```
+
+Things to know:
+
+- Outside the type, write the type's name first: `Enemy.count`, `Enemy.boss()`. Inside it, the plain name works.
+- A static method has no object, so it can't use the normal fields, the normal methods or `this`. Forge says so, and suggests making it a normal method or giving it the object as a parameter.
+- A normal method can't be called on the type (`Enemy.attack()`); it needs an object.
+- Static fields can have a starting value. Like global variables, static fields of a class type (or a `Function<...>`) need one, or must be optional.
+- Static fields aren't part of an object: they're not in its constructor, and not shown when it's printed.
+- Structs can have static fields and methods too: `Point.origin`, `Point.distance(a, b)`.
+- `private static` works: only the type itself can use it.
+- A class that inherits gets its parent's static fields and methods (they're still the same, shared ones). Static methods can't be replaced.
+
+## Interfaces and abstract classes
+
+Sometimes you want to say "every enemy can be attacked" without writing *how* yet. Forge has two ways.
+
+An **interface** is a list of methods, with no code. A class that has the interface promises to write them all:
+
+```cpp
+interface Attacker {
+    int power();
+    void attack(string target);
+}
+
+class Trap : Attacker {
+    int power(){
+        return 7;
+    }
+
+    void attack(string target){
+        print("the trap snaps at {target}");
+    }
+}
+```
+
+An **abstract class** is a normal class that can also have `abstract` methods: methods with no code, which every class that inherits from it must write. It can still have fields, constructors and normal methods:
+
+```cpp
+abstract class Enemy {
+    string name;
+    int hp = 10;
+
+    Enemy(string name){
+        this.name = name;
+    }
+
+    abstract int reward();          // no code: each kind of enemy says how much it's worth
+
+    void hurt(int amount){
+        hp -= amount;
+        print("{name} is worth {reward()} gold");
+    }
+}
+
+class Goblin : Enemy, Attacker {    // one class first, then any number of interfaces
+    Goblin(string name){
+        super(name);
+    }
+
+    int reward(){
+        return 5;
+    }
+
+    int power(){
+        return 3;
+    }
+
+    void attack(string target){
+        print("{name} pokes {target}");
+    }
+}
+```
+
+Interfaces and abstract classes are used like any class type: in variables, lists, parameters, `is` and `as`:
+
+```cpp
+list<Attacker> attackers = [Goblin("Grub"), Trap()];
+for (Attacker a in attackers) {
+    a.attack("you");                // each one does its own attack
+}
+if (attackers[0] is Goblin) {
+    Goblin g = attackers[0] as Goblin;
+}
+```
+
+Things to know:
+
+- After the `:` comes at most one class, then any number of interfaces, separated by commas: `class Goblin : Enemy, Attacker, Flyer`. A class can also have only interfaces: `class Trap : Attacker`.
+- An interface has only methods ending in `;`: no code, no fields, no constructors, nothing `static` or `private`. An interface can't inherit from anything.
+- Only an `abstract class` can have `abstract` methods. A class that inherits from it, or has an interface, must write every one of those methods with exactly the same parameter and return types. If one is missing, Forge tells you which, and what to add.
+- An interface or an abstract class can't be made directly: `Attacker()` and `Enemy()` are errors. Make one of the classes that have it.
+- `super.reward()` doesn't work when `reward` is abstract in the parent, because there's no code to call.
+- Structs can't have interfaces or be abstract, because they're copied rather than shared.
+- Printing something through an interface prints the real object, like `Goblin(name: Grub, hp: 10)`.
+
+## Generic types: one type that holds any type
+
+`list<int>` and `list<string>` are the same kind of thing holding different types. Your own structs and classes can work like that too. Put a name for "some type" inside `< >` after the type's name, and use it like a type inside:
+
+```cpp
+class Box<T> {
+    T item;
+
+    Box(T item){
+        this.item = item;
+    }
+
+    T open(){
+        return item;
+    }
+}
+
+Box<int> coins = Box(5);              // here T is int
+Box<string> note = Box("hello");      // here T is string
+Box<Player> hero = Box(Player());     // here T is Player
+print(coins.open() + 1);              // 6
+```
+
+A type can have several of them: `struct Pair<A, B> { A first; B second; }`, used as `Pair<string, int> score = Pair("Ana", 30);`.
+
+Things to know:
+
+- `T` can be any type at all: numbers, text, lists, your own structs and classes, even another `Box<int>`.
+- Forge works out what `T` is from where the value goes, so write the full type where you make one: `Box<int> coins = Box(5);`. On its own, like `print(Box(5))`, Forge asks you to say what `T` is.
+- Inside the type, Forge doesn't know what `T` will be, so a `T` can only be stored, passed on, given back, compared with `==` and `!=`, and printed. You can't use its fields or methods (`item.name`) or do maths with it.
+- `T?`, `list<T>` and `map<string, T>` all work inside.
+- Because `T` could be a class, which can't be empty, a field of type `T` needs a value from every constructor (`this.item = item;`, not inside an `if` or a loop), or has to be optional (`T? item;`). A `T` local variable needs a starting value.
+- Without a constructor, a generic type is made with all its fields: `Pair("Ana", 30)`.
+- `Box<int>` and `Box<float>` are different types: one can't be stored in the other.
+- For now, a generic type can't inherit, have interfaces, or have `static` fields and methods, and no class can inherit from one. Functions can't be generic (only structs and classes).
+- The name inside `< >` can't already be a type's name. `T` is the usual choice, or a short word like `Item`.
 
 ## Types from other files
 
@@ -375,6 +592,8 @@ class Boss : enemies.goblin.Goblin { ... }
 - A field of class type needs a starting value or must be optional.
 - Methods can call each other by name, and can use fields by name or through `this`.
 - Methods can't have the same name as each other. Only constructors can share a name.
+- A class inherits from at most one class, plus any number of interfaces.
+- A generic type (`class Box<T>`) is written with every type it holds: `Box<int>`.
 - Class objects are cleaned up automatically once nothing uses them anymore. There's no need (and no way) to delete them.
 
 ## What's next

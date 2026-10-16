@@ -1,0 +1,9 @@
+=== main.frg
+int main(){
+    print((int n) { return n; });
+    Function nope = 5;
+    return 0;
+}
+=== error
+Forge can't tell what kind of function value this is
+Function needs the kind of function inside < >

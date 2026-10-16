@@ -34,7 +34,7 @@ If you already know C++, C#, Java, JavaScript or Python, Forge will feel familia
 | `arr.size()`, `len(arr)`, `arr.Count` | `arr.length` (no parentheses) | |
 | `str[0]` | `str.charAt(0)` | text can't be indexed |
 | `'c'` (a char) | `"c"` | there's no `char` type; single quotes are an error |
-| `for i in range(10)` (Python) | `for (int i = 0; i < 10; i++)` | |
+| `for i in range(10)` (Python) | `for (int i in 0..9)` or `for (int i = 0; i < 10; i++)` | a range includes **both** ends: `0..9` is ten numbers |
 | `for (auto& x : list)` (C++) | `for (int x in list)` | the item type is written out |
 | `x ** 2`, `x ^ 2`, `pow(x, 2)` | `x * x` or `math.pow(x, 2)` | no power operator; `^` is bitwise xor |
 | `7 / 2 == 3.5` (Python 3) | `7 / 2` is `3` | whole-number division, like C, C++, Java and C# |
@@ -42,14 +42,18 @@ If you already know C++, C#, Java, JavaScript or Python, Forge will feel familia
 | `x?.y` (C#/JS) | `if (x != null) { x.y }` | an optional is used directly; it stops the game if it's null |
 | `(Goblin)e` / `e as Goblin` (C#) | `e as Goblin` gives `Goblin?` | |
 | `protected` | `private` | `private` already includes classes that inherit |
-| `static` members | top-level functions and globals in a file | `static` isn't available for your own types |
-| overloading `void f(int)` / `void f(float)` | different names | only constructors can share a name |
+| `static` members | `static int count = 0;` and `static Enemy boss() { ... }` | reached as `Enemy.count`, `Enemy.boss()` |
+| overloading `void f(int)` / `void f(float)` | the same: `void f(int)` and `void f(float)` | top-level functions and constructors can share a name; methods can't |
+| operator overloading, `__add__`, `__lt__`, `__eq__`, `__str__`, `toString()` | methods `plus`, `minus`, `times`, `div`, `mod`, `less`, `equals`, `toText` | `less` gives all four comparisons and `list.sort()`. Your type goes on the left. See [Operators for your own types](04-operators.md#operators-for-your-own-types) |
 | `class B extends A` / `class B : public A` | `class B : A` | |
+| `interface I` / `implements I` / abstract classes | `interface Attacker { int power(); }`, `class Goblin : Enemy, Attacker`, `abstract class Enemy { abstract int reward(); }` | at most one class after the `:`, then interfaces. See [Interfaces and abstract classes](09-structs-and-classes.md#interfaces-and-abstract-classes) |
 | `@Override` / `override` | nothing | a method with the same name and types replaces the parent's |
 | `base.method()` / `super.method()` | `super.method()` | |
-| `try` / `catch` | not available | runtime errors stop the game with a message |
-| lambdas, function pointers, callbacks | not available | |
-| templates / generics you write yourself | not available | the built-in `list<T>`, `map<K, V>` and `Pointer<T>` are generic |
+| `try` / `catch` / `throw` | `try { ... } catch (Error e) { print(e.message); }` and `throw "message";` | every runtime error can be caught; you throw text, not objects; there's no `finally`. See [Catching runtime errors](12-errors.md#catching-runtime-errors-try-and-catch) |
+| lambdas, function pointers, callbacks | `(Enemy e) { return e.hp <= 0; }`, typed `Function<bool(Enemy)>` | a function value gets a copy of the local variables it uses. See [Functions as values](06-functions.md#functions-as-values) |
+| templates / generics you write yourself | `class Box<T> { T item; }`, used as `Box<int> b = Box(5);` | structs and classes only, not functions; inside, a `T` can only be stored, passed, compared and printed. See [Generic types](09-structs-and-classes.md#generic-types-one-type-that-holds-any-type) |
+| `weak_ptr`, `WeakReference`, `weakref` | `Weak<Player> w = Weak(p);` and `Player? x = w.get();` | only for class types. See [Weak](09-structs-and-classes.md#weak-pointing-at-an-object-without-keeping-it-alive) |
+| `__name__`, `__class__`, `vars(obj)` (Python), reflection | `obj.describe`, `obj.describe.name`, `.parent`, `.fields`, `.values` | built into every struct and class. See [describe](09-structs-and-classes.md#describe-looking-inside-any-object) |
 | threads | not available | use [tasks](11-tasks.md) for things that happen over time |
 
 ## Things Forge adds

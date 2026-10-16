@@ -1,0 +1,19 @@
+=== main.frg
+#include <stdio>
+
+void load(string name) {
+    if (name == "") {
+        throw "the level needs a name";
+    }
+}
+
+int main(){
+    print("start");
+    load("");
+    print("not shown");
+    return 0;
+}
+=== output
+start
+=== runtime error
+main.frg:5: the level needs a name

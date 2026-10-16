@@ -51,6 +51,7 @@ private:
         while (!atEnd()) {
             Tok k = cur().kind;
             bool starts = k == Tok::Ident || k == Tok::KwVoid || k == Tok::KwStruct || k == Tok::KwClass || k == Tok::KwEnum ||
+                          k == Tok::KwInterface || k == Tok::KwAbstract ||
                           k == Tok::KwConst || k == Tok::Hash || k == Tok::KwPrivate || k == Tok::KwPublic;
             if (starts && cur().loc.col == 1) return;
             p++;
@@ -83,8 +84,11 @@ private:
         return r;
     }
     bool declAhead(bool allowParen);
+    bool lambdaAhead();
+    bool bodyless = false;  // parsing an interface's or an abstract method: it ends with ; instead of { code }
+    ExprPtr parseLambda();
     Include parseInclude();
-    TypeDeclPtr parseTypeDecl();
+    TypeDeclPtr parseTypeDecl(bool isAbstract = false);
     FuncPtr parseFuncRest(const TypeRef& ret, const Token& name, bool isCtor);
     VarPtr finishVar(bool isConst, const TypeRef& type, const Token& name);
 
@@ -150,7 +154,32 @@ bool Parser::parseTypeImpl(TypeRef& r, bool quiet) {
     } else {
         return bail("a type");
     }
-    if (at(Tok::Lt)) {
+    if (r.path.size() == 1 && r.path[0] == "Function" && at(Tok::Lt)) {
+        // Function<bool(Enemy, int)>: the return type, then the parameter types in ( ).
+        p++;
+        r.isFunction = true;
+        TypeRef ret;
+        if (!parseTypeImpl(ret, quiet)) return false;
+        r.args.push_back(std::move(ret));
+        if (!accept(Tok::LParen)) return bail("'(' and the parameter types, like Function<bool(Enemy)>");
+        if (!at(Tok::RParen)) {
+            do {
+                TypeRef arg;
+                if (!parseTypeImpl(arg, quiet)) return false;
+                r.args.push_back(std::move(arg));
+            } while (accept(Tok::Comma));
+        }
+        if (!accept(Tok::RParen)) return bail("')'");
+        if (at(Tok::Shr)) {
+            splitLog.push_back({p, t[p]});
+            t[p].kind = Tok::Gt;
+            t[p].text = ">";
+            t[p].loc.col++;
+            t[p].loc.len = 1;
+        } else if (!accept(Tok::Gt)) {
+            return bail("'>'");
+        }
+    } else if (at(Tok::Lt)) {
         p++;
         do {
             TypeRef arg;
@@ -173,6 +202,54 @@ bool Parser::parseTypeImpl(TypeRef& r, bool quiet) {
 }
 
 // Is a declaration (`Type name ...`) coming up? Looks ahead without consuming anything.
+// Is a function value like `(Enemy e) { ... }` or `() { ... }` coming up? Looks ahead without consuming anything.
+bool Parser::lambdaAhead() {
+    size_t save = p, splits = splitLog.size();
+    bool result = false;
+    p++;  // (
+    if (at(Tok::RParen)) {
+        result = peek().kind == Tok::LBrace;
+    } else {
+        for (;;) {
+            TypeRef tmp;
+            if (!parseTypeImpl(tmp, true) || !at(Tok::Ident)) break;
+            p++;
+            if (accept(Tok::Comma)) continue;
+            if (at(Tok::RParen)) result = peek().kind == Tok::LBrace;
+            break;
+        }
+    }
+    while (splitLog.size() > splits) {
+        t[splitLog.back().first] = splitLog.back().second;
+        splitLog.pop_back();
+    }
+    p = save;
+    return result;
+}
+
+ExprPtr Parser::parseLambda() {
+    auto e = std::make_unique<Expr>(EK::Lambda, cur().loc);
+    auto f = std::make_shared<FuncDecl>();
+    f->name = "function value";
+    f->loc = cur().loc;
+    expect(Tok::LParen, "'('");
+    if (!at(Tok::RParen)) {
+        do {
+            auto v = std::make_unique<VarDecl>();
+            v->typeRef = parseType();
+            const Token& pn = expect(Tok::Ident, "a parameter name");
+            v->name = pn.text;
+            v->loc = pn.loc;
+            v->isParam = true;
+            f->params.push_back(std::move(v));
+        } while (accept(Tok::Comma));
+    }
+    expect(Tok::RParen, "')'");
+    f->body = parseBlock();
+    e->lambda = f;
+    return e;
+}
+
 bool Parser::declAhead(bool allowParen) {
     if (!at(Tok::Ident) && !at(Tok::KwVoid)) return false;
     size_t save = p, splits = splitLog.size();
@@ -208,7 +285,15 @@ FileAST Parser::parseFile() {
             Loc modLoc = cur().loc;
             bool isPrivate = at(Tok::KwPrivate);
             bool hasModifier = accept(Tok::KwPrivate) || accept(Tok::KwPublic);
-            if (at(Tok::KwStruct) || at(Tok::KwClass) || at(Tok::KwEnum)) {
+            if (at(Tok::KwAbstract)) {
+                Loc l = cur().loc;
+                p++;
+                if (!at(Tok::KwClass)) fail(l, "only a class can be abstract", "write it as: abstract class Enemy { ... }");
+                ast.types.push_back(parseTypeDecl(true));
+                ast.types.back()->isPrivate = isPrivate;
+                continue;
+            }
+            if (at(Tok::KwStruct) || at(Tok::KwClass) || at(Tok::KwEnum) || at(Tok::KwInterface)) {
                 ast.types.push_back(parseTypeDecl());
                 ast.types.back()->isPrivate = isPrivate;
                 continue;
@@ -271,15 +356,29 @@ Include Parser::parseInclude() {
     return inc;
 }
 
-TypeDeclPtr Parser::parseTypeDecl() {
+TypeDeclPtr Parser::parseTypeDecl(bool isAbstract) {
     auto d = std::make_unique<TypeDecl>();
+    d->isAbstract = isAbstract;
     Tok kw = cur().kind;
     std::string kwName = cur().text;
-    d->kind = kw == Tok::KwStruct ? DK::Struct : kw == Tok::KwClass ? DK::Class : DK::Enum;
+    d->kind = kw == Tok::KwStruct ? DK::Struct : kw == Tok::KwClass ? DK::Class : kw == Tok::KwInterface ? DK::Interface : DK::Enum;
     p++;
     const Token& name = expect(Tok::Ident, "a name for the " + kwName);
     d->name = name.text;
     d->loc = name.loc;
+
+    if (at(Tok::Lt)) {
+        // class Box<T>, struct Pair<A, B>: a generic type, with a type name for each type it's made with.
+        if (d->kind == DK::Enum || d->kind == DK::Interface)
+            fail(cur().loc, "an " + kwName + " can't be generic", "only structs and classes can have types inside < >, like class Box<T>");
+        p++;
+        do {
+            const Token& tp = expect(Tok::Ident, "a name for the type inside < >, like T");
+            d->typeParams.push_back(tp.text);
+            d->typeParamLocs.push_back(tp.loc);
+        } while (accept(Tok::Comma));
+        expect(Tok::Gt, "'>'");
+    }
 
     if (d->kind == DK::Enum) {
         const Token& open = expect(Tok::LBrace, "'{'");
@@ -299,9 +398,15 @@ TypeDeclPtr Parser::parseTypeDecl() {
     if (at(Tok::Colon)) {
         if (d->kind == DK::Struct)
             fail(cur().loc, "structs can't inherit from other types", "use a class if you need inheritance");
+        if (d->kind == DK::Interface)
+            fail(cur().loc, "an interface can't inherit from other types", "a class can have several interfaces: class Goblin : Enemy, Attacker, Flyer");
         p++;
         d->baseRef = parseType();
         if (d->baseRef.optional) fail(d->baseRef.loc, "a class can't inherit from an optional type");
+        while (accept(Tok::Comma)) {
+            d->moreBaseRefs.push_back(parseType());
+            if (d->moreBaseRefs.back().optional) fail(d->moreBaseRefs.back().loc, "a class can't inherit from an optional type");
+        }
     }
     const Token& open = expect(Tok::LBrace, "'{'");
     while (!at(Tok::RBrace)) {
@@ -311,13 +416,55 @@ TypeDeclPtr Parser::parseTypeDecl() {
         if (accept(Tok::KwPrivate) || accept(Tok::KwPublic)) {
             if (at(Tok::KwPrivate) || at(Tok::KwPublic)) fail(cur().loc, "only one of private or public can be used");
         }
-        if (at(Tok::KwStatic)) {
-            if (!prelude) fail(cur().loc, "'static' isn't available yet");
+        if (d->kind == DK::Interface) {
+            // An interface only lists methods, without their code: void attack(Enemy target);
+            if (at(Tok::KwStatic) || at(Tok::KwAbstract) || isPrivate)
+                fail(cur().loc, "an interface only lists methods, like: void attack(Enemy target);", "everything in an interface is public, and nothing is static");
+            if (at(Tok::Ident) && cur().text == d->name && peek().kind == Tok::LParen)
+                fail(cur().loc, "an interface can't have a constructor", "interfaces are never made directly - classes that have them are");
+            TypeRef type = parseType();
+            const Token& mname = expect(Tok::Ident, "a method name");
+            if (!at(Tok::LParen)) fail(mname.loc, "an interface can't have fields, only methods", "for example: int power();");
+            bodyless = true;
+            d->methods.push_back(parseFuncRest(type, mname, false));
+            bodyless = false;
+            d->methods.back()->isAbstract = true;
+            if (d->methods.back()->body)
+                fail(mname.loc, "a method in an interface has no code - just end it with ;", "the classes that have the interface write the code");
+            continue;
+        }
+        if (at(Tok::KwAbstract)) {
+            // abstract void attack();  - only in an abstract class; the classes below write the code.
+            Loc l = cur().loc;
             p++;
+            if (!d->isAbstract) fail(l, "only an abstract class can have abstract methods", "write it as: abstract class " + d->name);
+            TypeRef type = parseType();
+            const Token& mname = expect(Tok::Ident, "a method name");
+            if (!at(Tok::LParen)) fail(mname.loc, "only methods can be abstract, not fields");
+            bodyless = true;
+            d->methods.push_back(parseFuncRest(type, mname, false));
+            bodyless = false;
+            d->methods.back()->isAbstract = true;
+            d->methods.back()->isPrivate = isPrivate;
+            if (d->methods.back()->body)
+                fail(mname.loc, "an abstract method has no code - end it with ;", "the classes that inherit from " + d->name + " write the code");
+            continue;
+        }
+        if (at(Tok::KwStatic)) {
+            // static: a field or method that belongs to the type itself (Enemy.count), not to each object.
+            p++;
+            if (d->kind == DK::Enum) fail(cur().loc, "an enum can't have static fields or methods");
             TypeRef type = parseType();
             const Token& fname = expect(Tok::Ident, "a name");
+            if (at(Tok::LParen)) {
+                d->methods.push_back(parseFuncRest(type, fname, false));
+                d->methods.back()->isStatic = true;
+                d->methods.back()->isPrivate = isPrivate;
+                continue;
+            }
             auto v = finishVar(false, type, fname);
             v->isStatic = true;
+            v->isPrivate = isPrivate;
             expect(Tok::Semi, "';'");
             d->fields.push_back(std::move(v));
             continue;
@@ -366,7 +513,7 @@ FuncPtr Parser::parseFuncRest(const TypeRef& ret, const Token& name, bool isCtor
         } while (accept(Tok::Comma));
     }
     expect(Tok::RParen, "')'");
-    if (prelude && accept(Tok::Semi)) return f;
+    if ((prelude || bodyless) && accept(Tok::Semi)) return f;
     if (at(Tok::Semi))
         fail(cur().loc, "Forge doesn't need function declarations - just write the function with its { body }",
              "functions can be used before or after the place they're written");
@@ -445,6 +592,36 @@ StmtPtr Parser::parseStmt() {
             expect(Tok::Semi, "';'");
             return s;
         }
+        case Tok::KwTry: {
+            // try { ... } catch (Error e) { ... }: a runtime error in the first part runs the second part instead of stopping the game.
+            p++;
+            auto s = std::make_unique<Stmt>(SK::Try, l);
+            if (!at(Tok::LBrace)) fail(cur().loc, "'try' needs { } around its code", "for example: try { ... } catch (Error e) { ... }");
+            s->then = parseBlock();
+            if (!at(Tok::KwCatch))
+                fail(cur().loc, "a 'try { ... }' needs 'catch (Error e) { ... }' after its closing }",
+                     "the catch part runs if something goes wrong in the try part");
+            p++;
+            if (!at(Tok::LParen)) fail(cur().loc, "catch needs '(Error e)' after it", "for example: catch (Error e) { print(e.message); }");
+            p++;
+            s->var = std::make_unique<VarDecl>();
+            s->var->typeRef = parseType();
+            const Token& name = expect(Tok::Ident, "a name for the error, like: catch (Error e)");
+            s->var->name = name.text;
+            s->var->loc = name.loc;
+            expect(Tok::RParen, "')'");
+            if (!at(Tok::LBrace)) fail(cur().loc, "'catch' needs { } around its code", "for example: catch (Error e) { print(e.message); }");
+            s->els = parseBlock();
+            return s;
+        }
+        case Tok::KwThrow: {
+            p++;
+            auto s = std::make_unique<Stmt>(SK::Throw, l);
+            s->expr = parseExpr();
+            expect(Tok::Semi, "';'");
+            return s;
+        }
+        case Tok::KwCatch: fail(l, "this 'catch' doesn't belong to a 'try'", "catch has to come right after the } of a try");
         case Tok::KwReturn: {
             p++;
             auto s = std::make_unique<Stmt>(SK::Return, l);
@@ -479,6 +656,7 @@ StmtPtr Parser::parseStmt() {
         case Tok::KwStruct:
         case Tok::KwClass:
         case Tok::KwEnum:
+        case Tok::KwInterface:
             fail(l, cur().text + " types have to be made outside of functions", "move it to the top level of the file");
         default: break;
     }
@@ -516,6 +694,7 @@ StmtPtr Parser::parseFor() {
             s->var->loc = name.loc;
             s->var->typeRef = type;
             s->expr = parseExpr();
+            if (accept(Tok::DotDot)) s->value = parseExpr();  // for (int i in 0..10): counts 0 to 10, both included
             expect(Tok::RParen, "')'");
             s->then = parseBody("for");
             return s;
@@ -963,6 +1142,7 @@ ExprPtr Parser::parsePrimary() {
             if (!at(Tok::Dot)) fail(k.loc, "super is used like super.method() or super(...) in a constructor");
             return std::make_unique<Expr>(EK::Super, k.loc);
         case Tok::LParen: {
+            if (lambdaAhead()) return parseLambda();
             p++;
             ExprPtr e = parseExpr();
             if (at(Tok::Assign)) fail(cur().loc, "'=' sets a variable - to compare two values, use '=='");

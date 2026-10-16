@@ -114,7 +114,7 @@ A [task](../language/11-tasks.md) can play a tween from start to end on its own:
 ```cpp
 float menuX = -300;
 
-task showMenu() {
+task showMenu(){
     Tween t = Tween(-300, 40, 0.5);
     while (!t.isDone()) {
         t.update(window.deltaTime());
@@ -126,4 +126,4 @@ task showMenu() {
 
 ## Why it works like this
 
-A tween is a value you update and read, like a [`Timer`](time.md). Forge doesn't have functions as values yet, so a tween can't run code by itself when it ends: check `isDone()` instead. That also means it works the same way in every kind of game loop, and in tasks.
+A tween is a value you update and read, like a [`Timer`](time.md). A tween doesn't run code by itself when it ends: check `isDone()` instead (or keep a [function value](../language/06-functions.md#functions-as-values) and call it when `isDone()` becomes true). That also means it works the same way in every kind of game loop, and in tasks.

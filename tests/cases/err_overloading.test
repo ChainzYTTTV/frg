@@ -1,0 +1,30 @@
+=== main.frg
+void show(int n) {
+}
+
+void show(int count) {
+}
+
+int pick(float x) {
+    return 1;
+}
+
+float pick(float y) {
+    return 2.0;
+}
+
+void hit(int n) {
+}
+
+void hit(string s) {
+}
+
+int main(){
+    hit(true);
+    return 0;
+}
+=== error
+'show' is written twice with the same parameter types (the first is on line 1)
+hint: functions can share a name only if their parameters are different, like show(int) and show(float)
+'pick' is written twice with the same parameter types
+none of the versions of hit() take these values

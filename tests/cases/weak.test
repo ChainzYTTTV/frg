@@ -1,0 +1,64 @@
+=== main.frg
+#include <stdio>
+
+class Player {
+    string name;
+
+    Player(string name) {
+        this.name = name;
+    }
+}
+
+class Enemy {
+    Weak<Player> target;      // starts empty
+
+    void chase() {
+        Player? p = target.get();
+        if (p != null) {
+            print("chasing {p.name}");
+        } else {
+            print("nobody to chase");
+        }
+    }
+}
+
+class Node {
+    string name;
+    list<Node> children = [];
+    Weak<Node> parent;
+
+    Node(string name) {
+        this.name = name;
+    }
+}
+
+int main(){
+    Enemy e = Enemy();
+    e.chase();
+    Player? hero = Player("Ana");
+    e.target = Weak(hero);
+    e.chase();
+    print(e.target);
+    hero = null;              // the last strong reference is gone
+    e.chase();
+    print(e.target);
+
+    Node root = Node("root");
+    Node leaf = Node("leaf");
+    leaf.parent = Weak(root);
+    root.children.add(leaf);
+    print(leaf.parent.get()?? Node("none"));
+    list<Weak<Player>> seen = [];
+    Player keep = Player("Bo");
+    seen.add(Weak(keep));
+    print(seen[0].get() != null);
+    return 0;
+}
+=== output
+nobody to chase
+chasing Ana
+Player(name: Ana)
+nobody to chase
+null
+Node(name: root, children: [<Node>], parent: null)
+true

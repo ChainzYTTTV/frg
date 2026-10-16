@@ -115,6 +115,36 @@ shout("hey", 1);      // hey
 
 Once a parameter has a default, every parameter after it needs one too.
 
+## Several functions with the same name
+
+Functions can share a name when their **parameters are different**: a different number of them, or different types. Forge picks the right one from the values you call it with:
+
+```cpp
+void drawHealth(int hp){
+    graphics2d.drawText("HP: {hp}", 10, 10, 20, color.WHITE);
+}
+
+void drawHealth(float fraction){
+    graphics2d.drawRect(10, 10, 200 * fraction, 20, color.GREEN);
+}
+
+drawHealth(75);      // the int version
+drawHealth(0.75);    // the float version
+```
+
+How Forge chooses:
+
+- Only the versions the values fit are considered.
+- Of those, the one whose parameter types match the values most exactly wins: `drawHealth(75)` uses the `int` version even though `75` would also fit a `float`.
+- If none fits, the error lists every version, so you can see what's possible.
+
+Rules:
+
+- Two versions with exactly the same parameter types are an error, even if they give back different types: a call couldn't tell them apart.
+- There's only one `main`.
+- Methods in a struct or class can't share a name (only constructors can).
+- When a function with several versions is used as a [function value](#functions-as-values), the version whose parameters match the `Function<...>` type is used.
+
 ## Order doesn't matter
 
 A function can be called from anywhere in the game, above or below where it's written, and from other files (with the file's name in front; see [Files and folders](07-files-and-folders.md)). Forge reads all the code before checking any of it.
@@ -136,10 +166,100 @@ Make sure there's always a way out (here, `n < 2`); otherwise it calls itself fo
 
 ## Rules
 
-- Each function name can be used only once per file. Two functions with the same name in one file is an error, even with different parameters.
+- Two functions in one file can only share a name if their parameters are different (see [Several functions with the same name](#several-functions-with-the-same-name)).
 - A function's name can't be a [reserved word](13-reserved-words.md), a built-in function name (`print`, `wait`), or the name of one of your top-level files.
 - Functions are always written at the top level of a file (or inside a struct or class, where they're called methods). You can't write a function inside another function.
-- Functions can't be stored in variables or passed to other functions.
+- To store a function in a variable or pass it to another function, use a [function value](#functions-as-values).
+
+## Functions as values
+
+A function can be kept in a variable, handed to another function, or stored in a field, like any other value. That's how you tell a list *how* to pick items, or tell a button *what to do* when it's clicked.
+
+### Writing one
+
+A **function value** is written like a function without a return type or a name: the parameters in `( )`, then the code in `{ }`:
+
+```cpp
+list<Enemy> alive = enemies.filter((Enemy e) { return e.hp > 0; });
+enemies.removeWhere((Enemy e) { return e.hp <= 0; });
+```
+
+Read `(Enemy e) { return e.hp <= 0; }` as "a function that takes an enemy `e` and says whether its hp is 0 or less". `removeWhere` calls it for every enemy, and removes the ones it says `true` for.
+
+A function with no parameters has empty brackets: `() { print("Clicked!"); }`.
+
+### Its type: Function<...>
+
+To keep a function value in a variable, a field or a parameter, its type is `Function<` the type it gives back `(` the types it takes `)>`:
+
+| Type | A function that... |
+|---|---|
+| `Function<void()>` | takes nothing and gives nothing back |
+| `Function<bool(Enemy)>` | takes an `Enemy`, gives back a `bool` |
+| `Function<int(int, int)>` | takes two `int`s, gives back an `int` |
+
+```cpp
+Function<bool(int)> isEven = (int n) { return n % 2 == 0; };
+print(isEven(4));      // true: call it like a function
+```
+
+The part inside `< >` reads like the first line of a function, without the names: `bool isEven(int n)` becomes `Function<bool(int)>`.
+
+A function you've written can be used as a value too: write its name **without** `()`.
+
+```cpp
+int twice(int n){
+    return n * 2;
+}
+
+Function<int(int)> f = twice;    // f is twice, not the result of calling it
+print(f(21));                    // 42
+```
+
+### Handing one to a function
+
+```cpp
+int applyTwice(Function<int(int)> f, int x){
+    return f(f(x));
+}
+
+print(applyTwice(twice, 5));                       // 20
+print(applyTwice((int n) { return n + 1; }, 5));   // 7
+```
+
+### In a field: code that runs later
+
+```cpp
+class Button {
+    string label;
+    Function<void()> onClick;
+}
+
+Button play = Button("Play", () { scenes.change(Playing()); });
+...
+play.onClick();      // runs the code
+```
+
+A field like `onClick` can be left empty until it's given a function. Calling an empty one stops the game with "this function value is empty". A variable needs a starting value, or can be optional (`Function<void()>? onClick = null;`).
+
+### Using the variables around it
+
+A function value can use the variables around the place it's written. It gets a **copy** of them, made when the function value is made:
+
+```cpp
+int bonus = 100;
+Function<int(int)> addBonus = (int n) { return n + bonus; };
+print(addBonus(1));     // 101
+```
+
+Because it's a copy, a function value **can't change** those local variables: `() { total++; }` is an error ("a function value can't change 'total'..."). It *can* change global variables, fields, and objects of a class (those are shared, not copied). So to count something from inside a function value, use a global variable or a field.
+
+### Things to know
+
+- The function value's parameters must have exactly the types of the `Function<...>` it goes into.
+- If the `Function<...>` gives something back, every way through the function value must `return` a value.
+- A task can't be a function value. Use a function value that starts it: `() { blink(); }`.
+- A function value always goes where a `Function<...>` is expected (a variable, a parameter, a list method). On its own, Forge can't tell what kind it is.
 
 ## Methods
 

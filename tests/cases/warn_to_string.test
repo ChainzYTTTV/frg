@@ -1,0 +1,19 @@
+=== main.frg
+#include <stdio>
+
+class Coin {
+    int value = 5;
+
+    string toString() {
+        return "coin worth {value}";
+    }
+}
+
+int main(){
+    print(Coin());
+    return 0;
+}
+=== output
+coin worth 5
+=== warning
+toString() is called toText() in Forge now

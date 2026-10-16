@@ -1,0 +1,18 @@
+=== main.frg
+interface Attacker {
+    int power;
+    int hit() {
+        return 1;
+    }
+}
+
+class Goblin {
+    abstract void attack();
+}
+
+int main(){
+    return 0;
+}
+=== error
+an interface can't have fields, only methods
+only an abstract class can have abstract methods

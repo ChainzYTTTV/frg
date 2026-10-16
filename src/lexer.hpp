@@ -9,8 +9,8 @@ enum class Tok {
     LParen, RParen, LBrace, RBrace, LBracket, RBracket, Comma, Semi, Dot, Colon, Question,
     Plus, Minus, Star, Slash, Percent, PlusPlus, MinusMinus,
     Assign, PlusEq, MinusEq, StarEq, SlashEq, PercentEq,
-    EqEq, NotEq, Lt, Gt, LtEq, GtEq, AndAnd, OrOr, Bang, Amp, Pipe, Caret, Tilde, Shl, Shr, QuestionQuestion,
-    KwIf, KwElse, KwWhile, KwDo, KwFor, KwReturn, KwBreak, KwContinue, KwTrue, KwFalse, KwNull,
+    DotDot, EqEq, NotEq, Lt, Gt, LtEq, GtEq, AndAnd, OrOr, Bang, Amp, Pipe, Caret, Tilde, Shl, Shr, QuestionQuestion,
+    KwIf, KwElse, KwWhile, KwDo, KwInterface, KwAbstract, KwTry, KwCatch, KwThrow, KwFor, KwReturn, KwBreak, KwContinue, KwTrue, KwFalse, KwNull,
     KwAnd, KwOr, KwNot, KwConst, KwVoid,
     KwStruct, KwClass, KwEnum, KwSwitch, KwCase, KwDefault, KwThis, KwSuper, KwIn, KwStatic, KwIs, KwAs, KwPrivate, KwPublic, KwNegative, KwBitNot,
     KwReserved,  // words saved for future versions (new, delete)

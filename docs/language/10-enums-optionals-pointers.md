@@ -24,7 +24,7 @@ print(s);                  // Running
 ```cpp
 enum Direction { Up, Down, Left, Right }
 
-vec2 step(Direction d) {
+vec2 step(Direction d){
     switch (d) {
         case Direction.Up:
             return vec2(0, -1);
@@ -98,7 +98,7 @@ If the backup is optional too, the result is optional: `a ?? b ?? 0`.
 ### Functions that might not find anything
 
 ```cpp
-int? findIndex(list<string> items, string wanted) {
+int? findIndex(list<string> items, string wanted){
     for (int i = 0; i < items.length; i++) {
         if (items[i] == wanted) {
             return i;
@@ -126,7 +126,7 @@ if (where != null) {
 A `Pointer<T>` points at a variable, so you can read and change that variable from somewhere else. `.value` is the variable it points at:
 
 ```cpp
-void addOne(Pointer<int> counter) {
+void addOne(Pointer<int> counter){
     counter.value += 1;
 }
 
@@ -169,7 +169,7 @@ If a pointer points at a list or a map, `p.remove(x)` **with** a value is still 
 Rarely. Class objects are already shared (a function that gets a `Player` can change it), so pointers are only needed to let a function change a caller's **number, bool, string, struct or list** variable. Often it's clearer to return the new value instead:
 
 ```cpp
-int addOne(int n) {
+int addOne(int n){
     return n + 1;
 }
 score = addOne(score);

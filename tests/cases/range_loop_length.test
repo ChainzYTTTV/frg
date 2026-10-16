@@ -1,0 +1,21 @@
+=== main.frg
+#include <stdio>
+
+int main(){
+    list<int> xs = [1, 2];
+    try {
+        for (int i in 0..xs.length) {
+            print(xs[i]);
+        }
+    } catch (Error e) {
+        print("too far");
+    }
+    return 0;
+}
+=== output
+1
+2
+too far
+=== warning
+this counts one past the last position, because both ends of a range are included
+0..xs.length - 1

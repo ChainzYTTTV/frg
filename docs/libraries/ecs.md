@@ -26,7 +26,7 @@ A component is a class that inherits from `Component`, filling in any of these m
 class Health : Component {
     int hp = 3;
 
-    void update(float dt) {
+    void update(float dt){
         if (hp <= 0) {
             entity().destroy();
         }
@@ -37,11 +37,11 @@ class Mover : Component {
     vec2 position = vec2.ZERO;
     vec2 velocity = vec2.ZERO;
 
-    void update(float dt) {
+    void update(float dt){
         position += velocity * dt;
     }
 
-    void draw() {
+    void draw(){
         graphics2d.drawCircle(position, 10, color.GOLD);
     }
 }
@@ -131,7 +131,7 @@ A component can find its siblings through its entity:
 
 ```cpp
 class Poison : Component {
-    void update(float dt) {
+    void update(float dt){
         Health? h = entity().get("Health") as Health;
         if (h != null) {
             h.hp -= 1;

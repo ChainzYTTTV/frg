@@ -197,13 +197,13 @@ This is what `print(x)` and `"{x}"` produce for each kind of value:
 | `vec2` / `color` / `rect` | `vec2(1.0, 2.0)`, `color(255, 0, 0, 255)`, `rect(0.0, 0.0, 10.0, 10.0)` |
 | task | `task (running)` / `task (done)` |
 
-A struct or class can choose how it's shown by having a method `string toString()`:
+A struct or class can choose how it's shown by having a method `string toText()`:
 
 ```cpp
 class Player {
     string name;
     int hp = 100;
-    string toString() {
+    string toText(){
         return "{name} ({hp} HP)";
     }
 }

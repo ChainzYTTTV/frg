@@ -1,6 +1,6 @@
 # Roadmap
 
-What's planned for Forge between now (0.7.0) and 1.0.0. The order and the version numbers can change. What's already done is in the [changelog](CHANGELOG.md).
+What's planned for Forge between now (0.8.0) and 1.0.0. The order and the version numbers can change. What's already done is in the [changelog](CHANGELOG.md).
 
 Sizes are rough: **S** is small, **M** medium, **L** large.
 
@@ -21,18 +21,18 @@ Sizes are rough: **S** is small, **M** medium, **L** large.
 
 These belong before 1.0, because they're harder to add once people rely on how Forge works.
 
-| Feature | Why | Size |
-|---|---|---|
-| Functions as values (lambdas) | `list.removeWhere(...)`, `list.sortBy(...)`, buttons that run code, events | L |
-| Several functions with the same name and different parameters | `drawHealth(int)` and `drawHealth(float)` | M |
-| `static` fields and methods in your own types | shared counters, helper functions on a class | M |
-| Interfaces and abstract classes | "every enemy must have `attack()`" | M |
-| Your own generic types (`class Box<T>`) | reusable containers | L |
-| Weak references | objects that point at each other get freed | M |
-| `try` / `catch` | handling errors like a missing file without the game stopping | M |
-| A short counting loop, `for (int i in 0..10)`, alongside the C-style one | easier for beginners to read | S |
-| Built-in info on every struct and class, with nothing to write (like Python's `__name__`, `__class__` and `vars()`): the type's name, its field names, each field's value as text, and the type it inherits from | look inside any object while debugging or printing, for free | M |
-| Operators for your own types, using Forge's operator words as method names (Forge's version of Python's dunder methods): a method `plus(Money other)` makes both `a + b` and `a plus b` work; `less(...)` makes `<` work and lets `list.sort()` sort your own structs; `equals(...)` replaces the automatic `==`; `toText()` chooses what `print` and `"{x}"` show | your types work with the same symbols and words as numbers | M |
+| Feature | Why | Size | Status |
+|---|---|---|---|
+| Functions as values (lambdas) | `list.removeWhere(...)`, `list.sortBy(...)`, buttons that run code, events | L | done |
+| Several functions with the same name and different parameters | `drawHealth(int)` and `drawHealth(float)` | M | done |
+| `static` fields and methods in your own types | shared counters, helper functions on a class | M | done |
+| Interfaces and abstract classes | "every enemy must have `attack()`" | M | done |
+| Your own generic types (`class Box<T>`) | reusable containers | L | done |
+| Weak references | objects that point at each other get freed | M | done |
+| `try` / `catch` | handling errors like a missing file without the game stopping | M | done |
+| A short counting loop, `for (int i in 0..10)`, alongside the C-style one | easier for beginners to read | S | done |
+| Built-in info on every struct and class, with nothing to write (like Python's `__name__`, `__class__` and `vars()`): the type's name, its field names, each field's value as text, and the type it inherits from | look inside any object while debugging or printing, for free | M | done |
+| Operators for your own types, using Forge's operator words as method names (Forge's version of Python's dunder methods): a method `plus(Money other)` makes both `a + b` and `a plus b` work; `less(...)` makes `<` work and lets `list.sort()` sort your own structs; `equals(...)` replaces the automatic `==`; `toText()` chooses what `print` and `"{x}"` show | your types work with the same symbols and words as numbers | M | done |
 
 ### Decided for 0.8.0
 

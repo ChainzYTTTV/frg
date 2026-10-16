@@ -2,6 +2,7 @@
 // Names the generated code uses end in '_' (Forge names) or contain '$' (Forge internals).
 #pragma once
 
+#include <functional>
 #include <algorithm>
 #include <charconv>
 #include <chrono>
@@ -36,15 +37,32 @@ extern "C" __declspec(dllimport) int __stdcall MessageBoxA(HWND__* window, const
 namespace frg {
 #endif
 
-[[noreturn]] inline void panic(const char* where, const std::string& msg) {
+namespace core {
+// A runtime error, as Forge's Error type: catch (Error e) gets one, with e.message and e.where.
+struct Error_ {
+    std::string message_;
+    std::string where_;
+    static Error_ frg$make() { return {}; }
+    static Error_ frg$make(std::string m, std::string w) { return {std::move(m), std::move(w)}; }
+    bool operator==(const Error_&) const = default;
+};
+}  // namespace core
+
+// Stops the game with the error's message (for an error that no try { } caught).
+[[noreturn]] inline void fatal(const core::Error_& e) {
     std::fflush(stdout);
-    std::fprintf(stderr, "\nRuntime error in %s: %s\n", where, msg.c_str());
+    std::fprintf(stderr, "\nRuntime error in %s: %s\n", e.where_.c_str(), e.message_.c_str());
 #ifdef FRG_NO_CONSOLE
-    std::string text = std::string("Runtime error in ") + where + ":\n\n" + msg;
+    std::string text = "Runtime error in " + e.where_ + ":\n\n" + e.message_;
     MessageBoxA(nullptr, text.c_str(), "The game stopped", 0x10 /* MB_ICONERROR */);
 #endif
     std::exit(1);
 }
+
+// Every runtime error goes through here. A try { } around the code catches it; otherwise main() stops the game with it.
+[[noreturn]] inline void panic(const char* where, const std::string& msg) { throw core::Error_{msg, where}; }
+// throw "message"; in Forge code.
+[[noreturn]] inline void raise(const char* where, const std::string& msg) { panic(where, msg); }
 
 // Libraries register cleanup to run when main returns (newest first), and work to do once per frame.
 inline std::vector<void (*)()>& shutdownHooks() {
@@ -256,7 +274,14 @@ struct Task {
             state->done = true;
             state->running = false;
         }
-        void unhandled_exception() { std::terminate(); }
+        void unhandled_exception() {
+            // An error inside a task that its own code didn't catch stops the game, like anywhere else.
+            try {
+                throw;
+            } catch (const core::Error_& e) {
+                fatal(e);
+            }
+        }
     };
 };
 
@@ -371,9 +396,35 @@ bool isNull(T* p) { return p == nullptr; }
 // Using a T? as a T: stops the game with a clear message if it's null.
 template <class O>
 decltype(auto) unwrap(O&& o, const char* where, const char* what) {
-    if (!o.has_value()) panic(where, std::string(what) + " is null");
-    return *std::forward<O>(o);
+    if constexpr (requires { o.has_value(); }) {
+        if (!o.has_value()) panic(where, std::string(what) + " is null");
+        return *std::forward<O>(o);
+    } else {
+        // A T? inside a generic type, where T turned out to be a class: it's already a shared_ptr.
+        if (o == nullptr) panic(where, std::string(what) + " is null");
+        return std::forward<O>(o);
+    }
 }
+
+// T? inside a generic type (class Box<T>): an optional for values, the class's own shared_ptr for classes.
+template <class T>
+struct OptOf {
+    using type = std::optional<T>;
+};
+template <class T>
+struct OptOf<std::shared_ptr<T>> {
+    using type = std::shared_ptr<T>;
+};
+template <class T>
+struct OptOf<std::optional<T>> {
+    using type = std::optional<T>;
+};
+template <class T>
+struct OptOf<T*> {
+    using type = T*;
+};
+template <class T>
+using Opt = typename OptOf<T>::type;
 template <class P>
 P&& nn(P&& p, const char* where, const char* what) {
     if (p == nullptr) panic(where, std::string(what) + " is null");
@@ -392,6 +443,14 @@ template <class T>
 void ptr_remove(T*& p, const char*) { p = nullptr; }
 template <class T>
 bool ptr_isRemoved(T* p, const char*) { return p == nullptr; }
+// Weak<T>: get() gives the object, or null once nothing else keeps it alive.
+template <class T>
+std::shared_ptr<T> weak_get(const std::weak_ptr<T>& w, const char*) { return w.lock(); }
+template <class T, class F>
+std::string strWeak(const std::weak_ptr<T>& w, F&& show) {
+    auto p = w.lock();
+    return p ? show(p) : std::string("null");
+}
 template <class T, class F>
 std::string strPtr(T* p, F&& show) { return p ? show(*p) : std::string("removed pointer"); }
 
@@ -403,6 +462,8 @@ template <class T, class B>
 T* orElse(T* o, B&& b) { return o ? o : static_cast<T*>(b); }
 template <class T>
 std::optional<T> orElseOpt(const std::optional<T>& o, const std::optional<T>& b) { return o ? o : b; }
+template <class T>
+std::shared_ptr<T> orElseOpt(const std::shared_ptr<T>& o, const std::shared_ptr<T>& b) { return o ? o : b; }
 
 template <class T, class F>
 std::string strOpt(const std::optional<T>& o, F f) { return o ? f(*o) : "null"; }
@@ -497,8 +558,52 @@ template <class L>
 void list_reverse(L& l, const char*) { std::reverse(l.begin(), l.end()); }
 template <class L>
 void list_sort(L& l, const char*) { std::sort(l.begin(), l.end()); }
+template <class L, class F>
+void list_sortWith(L& l, F less, const char*) { std::stable_sort(l.begin(), l.end(), less); }
 template <class L>
 std::decay_t<L> list_copy(const L& l, const char*) { return l; }
+// Calling a function value that was never given a function.
+template <class F>
+F& fn(F& f, const char* where) {
+    if (!f) panic(where, "this function value is empty - give it a function before calling it");
+    return f;
+}
+template <class F>
+const F& fn(const F& f, const char* where) {
+    if (!f) panic(where, "this function value is empty - give it a function before calling it");
+    return f;
+}
+
+// The list methods that take a function value. The list is copied first where the function could change it.
+template <class L, class F>
+void list_removeWhere(L& l, F f, const char*) {
+    std::decay_t<L> kept;
+    for (auto& x : std::decay_t<L>(l))
+        if (!f(x)) kept.push_back(x);
+    l = std::move(kept);
+}
+template <class L, class F>
+std::decay_t<L> list_filter(const L& l, F f, const char*) {
+    std::decay_t<L> out;
+    for (auto& x : std::decay_t<L>(l))
+        if (f(x)) out.push_back(x);
+    return out;
+}
+template <class L, class F>
+bool list_any(const L& l, F f, const char*) {
+    for (auto& x : std::decay_t<L>(l))
+        if (f(x)) return true;
+    return false;
+}
+template <class L, class F>
+void list_sortBy(L& l, F key, const char*) {
+    std::vector<std::pair<float, size_t>> keys;
+    for (size_t i = 0; i < l.size(); i++) keys.push_back({key(l[i]), i});
+    std::stable_sort(keys.begin(), keys.end(), [](const auto& a, const auto& b) { return a.first < b.first; });
+    std::decay_t<L> sorted;
+    for (auto& k : keys) sorted.push_back(l[k.second]);
+    l = std::move(sorted);
+}
 
 template <class L, class F>
 std::string strList(const L& l, F f) {
@@ -508,6 +613,65 @@ std::string strList(const L& l, F f) {
         s += f(l[i]);
     }
     return s + "]";
+}
+
+// The text form of a value whose type is a generic type's T: decided when the C++ code is made for each T.
+template <class T>
+struct IsVector : std::false_type {};
+template <class T, class A>
+struct IsVector<std::vector<T, A>> : std::true_type {};
+template <class T>
+struct IsStdMap : std::false_type {};
+template <class K, class V, class C, class A>
+struct IsStdMap<std::map<K, V, C, A>> : std::true_type {};
+template <class T>
+struct IsOptional : std::false_type {};
+template <class T>
+struct IsOptional<std::optional<T>> : std::true_type {};
+template <class T>
+struct IsSharedPtr : std::false_type {};
+template <class T>
+struct IsSharedPtr<std::shared_ptr<T>> : std::true_type {};
+template <class T>
+struct IsWeak : std::false_type {};
+template <class T>
+struct IsWeak<std::weak_ptr<T>> : std::true_type {};
+template <class T>
+struct IsFunction : std::false_type {};
+template <class T>
+struct IsFunction<std::function<T>> : std::true_type {};
+
+template <class T>
+std::string strAny(const T& x) {
+    if constexpr (std::is_same_v<T, std::string> || std::is_arithmetic_v<T> || std::is_same_v<T, Task>) {
+        return str(x);
+    } else if constexpr (std::is_same_v<T, Bool>) {
+        return str(static_cast<bool>(x));
+    } else if constexpr (IsVector<T>::value) {
+        return strList(x, [](const auto& e) { return strAny(e); });
+    } else if constexpr (IsStdMap<T>::value) {
+        std::string s = "{";
+        bool first = true;
+        for (auto& [k, v] : x) {
+            if (!first) s += ", ";
+            first = false;
+            s += strAny(k) + ": " + strAny(v);
+        }
+        return s + "}";
+    } else if constexpr (IsOptional<T>::value) {
+        return x ? strAny(*x) : std::string("null");
+    } else if constexpr (IsSharedPtr<T>::value) {
+        return x ? frg$str(x) : std::string("null");
+    } else if constexpr (IsWeak<T>::value) {
+        auto p = x.lock();
+        return p ? strAny(p) : std::string("null");
+    } else if constexpr (std::is_pointer_v<T>) {
+        return x ? strAny(*x) : std::string("removed pointer");
+    } else if constexpr (IsFunction<T>::value) {
+        return "function value";
+    } else {
+        return frg$str(x);
+    }
 }
 
 // ---------------------------------------------------------------- maps
@@ -756,6 +920,21 @@ struct rect_ {
     bool operator==(const rect_&) const = default;
 };
 
+// obj.describe: built-in info about a struct or class object. On its own, it's the text.
+struct Description_ {
+    std::string name_;
+    std::string parent_;
+    List<std::string> fields_;
+    Map<std::string, std::string> values_;
+    std::string text_;
+    static Description_ frg$make() { return {}; }
+    static Description_ frg$make(std::string n, std::string p, List<std::string> f, Map<std::string, std::string> v) {
+        return {n, p, f, v, n};
+    }
+    bool operator==(const Description_& o) const { return text_ == o.text_; }
+};
+inline std::string frg$str(const Description_& d) { return d.text_; }
+inline std::string frg$str(const Error_& e) { return "Error(message: " + e.message_ + ", where: " + e.where_ + ")"; }
 inline std::string frg$str(const vec2_& v) { return "vec2(" + str(v.x_) + ", " + str(v.y_) + ")"; }
 inline std::string frg$str(const vec3_& v) { return "vec3(" + str(v.x_) + ", " + str(v.y_) + ", " + str(v.z_) + ")"; }
 inline std::string frg$str(const vec4_& v) { return "vec4(" + str(v.x_) + ", " + str(v.y_) + ", " + str(v.z_) + ", " + str(v.w_) + ")"; }

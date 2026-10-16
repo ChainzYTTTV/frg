@@ -1,4 +1,4 @@
-# Forge Cheat Sheet (v0.7)
+# Forge Cheat Sheet (v0.8)
 
 The whole language on one page, for looking things up quickly. For full explanations, examples and every detail, see the [complete documentation](README.md). Planned features are listed at the end.
 
@@ -154,14 +154,22 @@ if (hp <= 0) {
     print("OK");
 }
 
-for (int i = 0; i < 10; i++) {
+for (int i in 0..10) {          // counts 0, 1, ... 10: both ends included
+    print(i);
+}
+
+for (int i = 0; i < 10; i++) {  // C-style: 0 ... 9
     print(i);
 }
 
 for (Enemy e in enemies) {      // goes through every item in a list
     e.update();
 }
+```
 
+A range (`0..10`, `1..n`) counts up one at a time and includes **both** ends, so going through every position of a list is `0..list.length - 1` (Forge warns about `0..list.length`). If the start is bigger than the end, it doesn't run.
+
+```cpp
 while (lives > 0) {
     lives--;
 }
@@ -199,6 +207,19 @@ void greet(string who, string greeting = "Hi"){   // greeting has a default valu
 ```
 
 **Order doesn't matter.** A function can be used above or below the place it's written. Forge reads every file before it runs anything.
+
+Functions can share a name if their parameters differ: `void drawHealth(int hp)` and `void drawHealth(float fraction)`. Forge uses the version whose parameter types match the values best.
+
+### Functions as values
+
+```cpp
+Function<bool(int)> isEven = (int n) { return n % 2 == 0; };   // Function<gives back(takes)>
+print(isEven(4));                                               // true
+enemies.removeWhere((Enemy e) { return e.hp <= 0; });          // a function value passed straight in
+Function<int(int)> f = twice;                                   // a named function, without ()
+```
+
+A function value gets a copy of the local variables it uses, so it can't change them (it can change globals and fields). List methods that take one: `removeWhere(f)` `filter(f)` `any(f)` `sortBy(f)`. See [Functions as values](language/06-functions.md#functions-as-values).
 
 ## Multiple files
 
@@ -249,7 +270,7 @@ if (ages.has("Zed")) { ... }
 
 | | Methods |
 |---|---|
-| `list<T>` | `.length` `add(x)` `addAll(otherList)` `insert(i, x)` `removeAt(i)` `remove(x)` `contains(x)` `indexOf(x)` `first()` `last()` `pop()` `clear()` `isEmpty()` `sort()` `reverse()` `copy()` |
+| `list<T>` | `.length` `add(x)` `addAll(otherList)` `insert(i, x)` `removeAt(i)` `remove(x)` `contains(x)` `indexOf(x)` `first()` `last()` `pop()` `clear()` `isEmpty()` `sort()` `reverse()` `copy()` `removeWhere(f)` `filter(f)` `any(f)` `sortBy(f)` (with a function value) |
 | `map<K, V>` | `.length` `has(key)` `get(key, backup)` `remove(key)` `keys()` `values()` `clear()` `isEmpty()` |
 
 Positions in a list start at 0. Using a position that isn't in the list, or a key that isn't in the map, stops the game with a clear message.
@@ -263,7 +284,7 @@ struct Point {
     float x;
     float y;
 
-    float length() {
+    float length(){
         return math.sqrt(x * x + y * y);
     }
 }
@@ -277,7 +298,7 @@ The difference between them is what happens when you copy one:
 
 - A **struct** is a value. `Point b = a;` makes a separate copy, so changing `b` doesn't change `a`. Use structs for small bits of data like positions and colors.
 - A **class** is shared. `Player b = a;` makes `b` another name for the *same* player. Use classes for game objects: players, enemies, items.
-- A class object is freed as soon as nothing refers to it any more. Two objects that refer to **each other** (`a.partner = b; b.partner = a;`) are never freed while the game runs. That rarely matters in small games, but if you make such pairs over and over, set one side to `null` when you're done with them (`a.partner = null;`). See [When class objects go away](language/09-structs-and-classes.md#when-class-objects-go-away).
+- A class object is freed as soon as nothing refers to it any more. Two objects that refer to **each other** (`a.partner = b; b.partner = a;`) are never freed while the game runs. That rarely matters in small games, but if you make such pairs over and over, set one side to `null` when you're done with them (`a.partner = null;`), or make one side weak: `Weak<Enemy> partner = Weak(b);` doesn't keep `b` alive, and `partner.get()` gives an `Enemy?` that is `null` once `b` is gone. See [When class objects go away](language/09-structs-and-classes.md#when-class-objects-go-away).
 
 Classes can **inherit** from another class. They get all its fields and methods, and can replace methods with their own version:
 
@@ -286,29 +307,29 @@ class Entity {
     string name;
     int hp = 100;
 
-    Entity(string name) {        // a constructor: runs when one is made
+    Entity(string name){        // a constructor: runs when one is made
         this.name = name;
     }
 
-    string describe() {
+    string info(){
         return "an entity";
     }
 }
 
 class Goblin : Entity {          // a Goblin is a kind of Entity
-    string describe() {
-        return "a goblin, not just " + super.describe();
+    string info(){
+        return "a goblin, not just " + super.info();
     }
 }
 
 Entity e = Goblin("Grok");       // a Goblin can go anywhere an Entity can
-print(e.describe());             // "a goblin, not just an entity"
+print(e.info());             // "a goblin, not just an entity"
 ```
 
 - A type can have **several constructors**, as long as each takes different types of values: `Size(float side)` and `Size(float w, float h)`. Forge picks the one that matches what you give it.
 - A type with no constructor is made with `Type()` or `Type(every field, in order)`.
 - A class without its own constructors uses the ones it inherits. In a constructor, `super(...)` runs the parent class's constructor.
-- `print` shows a struct or class as `Point(x: 3.0, y: 4.0)`. To show it differently, add a method `string toString()`.
+- `print` shows a struct or class as `Point(x: 3.0, y: 4.0)`. To show it differently, add a method `string toText()`.
 
 ### Checking what kind of object something is: `is` and `as`
 
@@ -321,6 +342,88 @@ for (Entity e in enemies) {
 }
 ```
 
+### Operators for your own types
+
+Methods named after the operator words make the symbols work: `plus` (`+`, `+=`), `minus`, `times`, `div`, `mod`; `bool less(T other)` gives `<`, `>`, `<=`, `>=` and lets `list.sort()` sort them; `bool equals(T other)` replaces the automatic `==` and `!=`; `string toText()` decides what `print` and `"{x}"` show. Your type has to be on the left (`a * 3`, not `3 * a`).
+
+```cpp
+struct Money {
+    int cents;
+    Money plus(Money other){
+        return Money(cents + other.cents);
+    }
+    bool less(Money other){
+        return cents < other.cents;
+    }
+}
+Money total = a + b;      // or: a plus b
+```
+
+### describe
+
+Every struct and class object has built-in info: `g.describe` is text like `Goblin (an Enemy): hp = 30, name = "Grub"`, and `g.describe.name`, `.parent` (`""` if none), `.fields` (`list<string>`) and `.values` (`map<string, string>`) give one part. Private fields are left out, and no field or method can be called `describe`.
+
+### static
+
+A `static` field or method belongs to the type, not to each object: there's one, shared by all.
+
+```cpp
+class Enemy {
+    static int count = 0;
+    Enemy(){
+        count++;
+    }
+    static Enemy boss(){
+        return Enemy();
+    }
+}
+print(Enemy.count);       // outside the type: TypeName.thing
+Enemy b = Enemy.boss();
+```
+
+A static method has no object, so it can't use normal fields, normal methods or `this`.
+
+### Interfaces and abstract classes
+
+An `interface` lists methods with no code; a class that has it must write them all. An `abstract class` is a class that can also have `abstract` methods (no code), which classes inheriting from it must write. Neither can be made directly.
+
+```cpp
+interface Attacker {
+    int power();
+}
+
+abstract class Enemy {
+    abstract int reward();
+}
+
+class Goblin : Enemy, Attacker {   // at most one class, then any number of interfaces
+    int reward(){
+        return 5;
+    }
+    int power(){
+        return 3;
+    }
+}
+
+list<Attacker> attackers = [Goblin()];
+```
+
+### Generic types
+
+```cpp
+class Box<T> {
+    T item;
+    Box(T item){
+        this.item = item;
+    }
+}
+
+Box<int> coins = Box(5);           // T is worked out from the type written on the left
+struct Pair<A, B> { A first; B second; }
+```
+
+Inside, a `T` can be stored, passed, returned, compared with `==` and printed, but its fields and methods can't be used. A `T` field must be set by every constructor (or be `T?`). Generic types can't inherit, have interfaces or have statics yet.
+
 ### private
 
 `private` hides something so only certain code can use it:
@@ -328,7 +431,7 @@ for (Entity e in enemies) {
 ```cpp
 class Safe {
     private int code = 1234;          // only Safe's own methods (and classes that inherit from Safe) can use it
-    bool tryOpen(int guess) {
+    bool tryOpen(int guess){
         return guess == code;
     }
 }
@@ -372,7 +475,7 @@ Variables of class type **without** a `?` must always hold an object, so they ne
 A `Pointer<T>` points at a variable, so you can change that variable from somewhere else. `.value` reads or changes the variable it points at:
 
 ```cpp
-void addOne(Pointer<int> counter) {
+void addOne(Pointer<int> counter){
     counter.value += 1;
 }
 
@@ -387,7 +490,7 @@ Don't keep a pointer to a function's local variable after that function ends. `p
 A function whose return type is **`task`** can call **`wait(seconds)`**. Only that task pauses; the rest of the game keeps running.
 
 ```cpp
-task flash() {
+task flash(){
     for (int i = 0; i < 5; i++) {
         tint = color.WHITE;
         wait(0.1);                    // this task pauses for 0.1 seconds
@@ -525,7 +628,7 @@ Each part of the game (menu, level, game over) is a class that inherits from `Sc
 
 ```cpp
 class Menu : Scene {
-    void draw() {
+    void draw(){
         if (ui.button(rect(380, 200, 200, 50), "Play")) {
             scenes.change(Level());
         }
@@ -543,7 +646,7 @@ The switch happens at the start of the next `scenes.update`, so the old scene's 
 ```cpp
 class Health : Component {
     int hp = 3;
-    void update(float dt) {
+    void update(float dt){
         if (hp <= 0) {
             entity().destroy();
         }
@@ -685,10 +788,22 @@ Problems that can only be found while the game runs stop it with the file and li
 Runtime error in main.frg:10: position 5 is outside the list (it has 3 items, at positions 0 to 2)
 ```
 
+Code that might fail for reasons outside your control (a missing file, a bad number typed in) can catch runtime errors instead of stopping:
+
+```cpp
+try {
+    level = int(file.read("save.txt"));
+} catch (Error e) {
+    print(e.message);       // e.where is the file and line, like "main.frg:12"
+    level = 1;
+}
+```
+
+Every runtime error can be caught, including from functions called inside the `try`. `throw "message";` makes your own error (it stops the game if nothing catches it), and `throw e;` inside a catch passes it on. `wait()` can't be used inside a `catch { }`, and a `try` doesn't catch errors from tasks it starts (put the `try` inside the task).
+
 If a file has several syntax mistakes, Forge reports all of them in one go.
 
 ## Coming next
 
 - **Networking:** a `<network>` library for multiplayer games
-- **Language:** generic types you write yourself (`class Box<T>`), functions as values
 - **Editor:** autocomplete for your own code (a language server)

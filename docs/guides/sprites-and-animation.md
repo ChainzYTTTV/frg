@@ -208,7 +208,7 @@ A hit flash with a [task](../language/11-tasks.md):
 ```cpp
 color shipTint = color.WHITE;
 
-task hitFlash() {
+task hitFlash(){
     shipTint = color.RED;
     wait(0.1);
     shipTint = color.WHITE;

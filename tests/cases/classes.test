@@ -14,7 +14,7 @@ class Entity {
         print("{name} takes {amount} damage, {hp} HP left");
     }
 
-    string describe() {
+    string info() {
         return "an entity";
     }
 
@@ -31,13 +31,13 @@ class Player : Entity {
         hp = 150;
     }
 
-    string describe() {
-        return "the player (was " + super.describe() + ")";
+    string info() {
+        return "the player (was " + super.info() + ")";
     }
 }
 
 class Goblin : Entity {
-    string describe() {
+    string info() {
         return "a goblin";
     }
 }
@@ -54,14 +54,14 @@ void hurtTwice(Entity e) {
 int main(){
     Player hero = Player("Hero");
     Goblin grok = Goblin("Grok");
-    print(hero.describe());
-    print(grok.describe());
+    print(hero.info());
+    print(grok.info());
 
     hurtTwice(hero);          // classes are shared, not copied
     print(hero.hp);
 
     Entity e = grok;          // a Goblin is a kind of Entity
-    print(e.describe());      // ...and it still acts like a Goblin
+    print(e.info());      // ...and it still acts like a Goblin
 
     Player alias = hero;
     alias.score += 5;
@@ -70,7 +70,7 @@ int main(){
 
     list<Entity> everyone = [hero, grok];
     for (Entity x in everyone) {
-        print("{x.name}: {x.describe()}, alive: {x.alive()}");
+        print("{x.name}: {x.info()}, alive: {x.alive()}");
     }
 
     Counter c = Counter(41);

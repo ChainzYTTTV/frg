@@ -19,25 +19,25 @@ Each scene is a class that inherits from `Scene` and fills in any of these metho
 
 ```cpp
 class Menu : Scene {
-    void update(float dt) {
+    void update(float dt){
         if (input.keyPressed(Key.ENTER)) {
             scenes.change(Level(1));
         }
     }
-    void draw() {
+    void draw(){
         graphics2d.drawText("Press Enter to play", 300, 200, 30, color.WHITE);
     }
 }
 
 class Level : Scene {
     int number;
-    Level(int number) {
+    Level(int number){
         this.number = number;
     }
-    void enter() {
+    void enter(){
         print("starting level {number}");
     }
-    void draw() {
+    void draw(){
         graphics2d.drawText("Level {number}", 20, 20, 30, color.WHITE);
     }
 }

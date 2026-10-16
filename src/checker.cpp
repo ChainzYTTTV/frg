@@ -97,7 +97,8 @@ bool containsBreak(const Stmt* s) {
             for (auto& c : s->body)
                 if (containsBreak(c.get())) return true;
             return false;
-        case SK::If: return containsBreak(s->then.get()) || containsBreak(s->els.get());
+        case SK::If:
+        case SK::Try: return containsBreak(s->then.get()) || containsBreak(s->els.get());
         default: return false;  // a break inside a nested loop belongs to that loop
     }
 }
@@ -106,7 +107,9 @@ bool containsBreak(const Stmt* s) {
 bool alwaysReturns(const Stmt* s) {
     if (!s) return false;
     switch (s->kind) {
-        case SK::Return: return true;
+        case SK::Return:
+        case SK::Throw: return true;
+        case SK::Try: return alwaysReturns(s->then.get()) && alwaysReturns(s->els.get());
         case SK::Block:
             for (auto& c : s->body)
                 if (alwaysReturns(c.get())) return true;
@@ -142,7 +145,7 @@ std::string folderDisplay(const Folder* f) {
 }
 
 std::string kindWord(const TypeDecl* d) {
-    return d->kind == DK::Struct ? "struct" : d->kind == DK::Class ? "class" : "enum";
+    return d->kind == DK::Struct ? "struct" : d->kind == DK::Class ? "class" : d->kind == DK::Interface ? "interface" : "enum";
 }
 
 bool isVec(const Type* t) {
@@ -188,6 +191,10 @@ const std::vector<BMethod>& bmethods() {
         {TK::List, "reverse", {}, "void"},
         {TK::List, "sort", {}, "void", true},
         {TK::List, "copy", {}, "list<E>"},
+        {TK::List, "removeWhere", {"Function<bool(E)>"}, "void"},
+        {TK::List, "filter", {"Function<bool(E)>"}, "list<E>"},
+        {TK::List, "any", {"Function<bool(E)>"}, "bool"},
+        {TK::List, "sortBy", {"Function<float(E)>"}, "void"},
         {TK::Map, "has", {"K"}, "bool"},
         {TK::Map, "remove", {"K"}, "bool"},
         {TK::Map, "get", {"K", "V"}, "V"},
@@ -213,6 +220,7 @@ const std::vector<BMethod>& bmethods() {
         {TK::Task, "isDone", {}, "bool"},
         {TK::Pointer, "remove", {}, "void"},
         {TK::Pointer, "isRemoved", {}, "bool"},
+        {TK::Weak, "get", {}, "E?"},
         {TK::Task, "stop", {}, "void"},
     };
     return t;
@@ -227,6 +235,9 @@ Type* bmType(const std::string& pat, Type* obj) {
     if (pat == "list<E>" || pat == "list<V>") return tList(obj->elem);
     if (pat == "list<K>") return tList(obj->key);
     if (pat == "list<string>") return tList(tString());
+    if (pat == "E?") return tOptional(obj->elem);
+    if (pat == "Function<bool(E)>") return tFunction(tBool(), {obj->elem});
+    if (pat == "Function<float(E)>") return tFunction(tFloat(32), {obj->elem});
     return tVoid();
 }
 
@@ -247,9 +258,18 @@ private:
     Module* cur = nullptr;
     FuncDecl* fn = nullptr;
     TypeDecl* curType = nullptr;
+    TypeDecl* genericScope = nullptr;
+    bool inCatch = false;              // checking the code in a catch { }  // the generic type whose fields and methods are being read (its T is a type there)
     std::vector<std::map<std::string, VarDecl*>> scopes;
     std::vector<char> breakables;  // 'l' for a loop, 's' for a switch
     size_t callArgs = SIZE_MAX;    // while checking the callee of a call: how many values it's called with
+    Type* wantFunction = nullptr;  // while checking a name where a Function<...> is expected
+    bool inStatic = false;         // checking a static method: there's no object, so no fields or `this`
+    void staticMisuse(Expr* e, const std::string& what) {
+        reportError(e->loc, "a static method belongs to the type, not to one object, so it can't use " + what,
+                    "make it a normal method (without static), or give it the object as a parameter");
+    }
+    size_t lambdaScope = SIZE_MAX; // inside a function value: the first scope that belongs to it
 
     // For warnings
     std::vector<VarDecl*> structLoopVars;  // the struct variables of the for (T x in list) loops we're inside
@@ -279,8 +299,11 @@ private:
     void registerDecls(Module* m);
     void resolveSignatures(Module* m);
     void resolveTypeDecl(TypeDecl* d);
+    Type* namedType(TypeDecl* d, const TypeRef& r);
+    void resolveTypeDeclParts(TypeDecl* d);
     void resolveFunc(FuncDecl* f);
     void checkOverrides(TypeDecl* d);
+    void checkAbstract(TypeDecl* d);
     void checkStructCycles();
     Type* resolveType(const TypeRef& r, bool allowVoid);
     TypeDecl* findTypeDecl(const std::string& name);
@@ -307,9 +330,12 @@ private:
     void valueMember(Expr* e, Expr* o);
     Type* finishRef(Expr* e, bool allowNonValue);
     Type* callExpr(Expr* e, Type* expected);
-    FuncDecl* resolveCall(Expr* e, const std::vector<FuncDecl*>& candidates, const std::string& name);
-    bool checkArgs(Expr* e, std::vector<ExprPtr>& args, FuncDecl* f, const std::string& name);
-    Type* construct(Expr* e, std::vector<ExprPtr>& args, TypeDecl* d);
+    FuncDecl* resolveCall(Expr* e, const std::vector<FuncDecl*>& candidates, const std::string& name, Type* inst = nullptr);
+    bool checkArgs(Expr* e, std::vector<ExprPtr>& args, FuncDecl* f, const std::string& name, Type* inst = nullptr);
+    Type* construct(Expr* e, std::vector<ExprPtr>& args, TypeDecl* d, Type* expected = nullptr);
+    Type* genericInstance(Expr* o);
+    FuncDecl* operatorMethod(Type* t, const std::string& name);
+    Type* userOperator(Expr* e, Expr* obj, Expr* arg, const std::string& name, const std::string& shown, bool swap, bool negate, bool wantBool);
     Type* builtinCall(Expr* e, const Builtin* b);
     Type* bmethodCall(Expr* e);
     Type* indexExpr(Expr* e);
@@ -323,6 +349,8 @@ private:
     Type* castExpr(Expr* e);
     Type* strExpr(Expr* e);
     Type* isAsExpr(Expr* e);
+    Type* lambdaExpr(Expr* e, Type* expected);
+    bool outerLocal(const VarDecl* v);
     bool privateBlocked(bool isPrivate, TypeDecl* owner, Module* module, const Loc& loc, const std::string& name);
     std::string unknownHint(const std::string& n);
     void checkRunCallbacks(const Loc& loc);
@@ -413,7 +441,13 @@ void Checker::registerDecls(Module* m) {
             continue;
         }
         if (f->name != "main") checkNewName(f->name, f->loc);
-        if (!duplicate(f->name, f->loc)) m->funcs[f->name] = f.get();
+        // Several functions can share a name if their parameters differ (checked once the types are known).
+        if (m->funcs.count(f->name)) {
+            m->overloads[f->name].push_back(f.get());
+        } else if (!duplicate(f->name, f->loc)) {
+            m->funcs[f->name] = f.get();
+            m->overloads[f->name].push_back(f.get());
+        }
     }
 }
 
@@ -441,6 +475,31 @@ std::string Checker::unknownTypeHint(const std::string& name) {
     std::string guess = suggestName(name, names);
     if (!guess.empty()) return "did you mean '" + guess + "'?";
     return "";
+}
+
+// A struct, class or enum named in a type: Box<int> gives each of Box's type names a type.
+Type* Checker::namedType(TypeDecl* d, const TypeRef& r) {
+    if (d->typeParams.empty()) {
+        if (!r.args.empty()) reportError(r.loc, "'" + d->name + "' doesn't take types inside < >");
+        return tNamed(d);
+    }
+    std::string example = d->name + "<";
+    for (size_t i = 0; i < d->typeParams.size(); i++) example += i ? ", int" : "int";
+    example += ">";
+    if (r.args.size() != d->typeParams.size()) {
+        reportError(r.loc,
+                    "'" + d->name + "' needs " + std::to_string(d->typeParams.size()) + " type" + (d->typeParams.size() == 1 ? "" : "s") +
+                        " inside < >, for " + joinNames(d->typeParams),
+                    "for example: " + example);
+        return nullptr;
+    }
+    std::vector<Type*> args;
+    for (const TypeRef& a : r.args) {
+        Type* t = resolveType(a, false);
+        if (t == tError()) return nullptr;
+        args.push_back(t);
+    }
+    return tGeneric(d, args);
 }
 
 Type* Checker::resolveType(const TypeRef& r, bool allowVoid) {
@@ -478,9 +537,41 @@ Type* Checker::resolveType(const TypeRef& r, bool allowVoid) {
             Type* target = resolveType(r.args[0], false);
             if (target == tError()) return tError();
             base = tPointer(target);
-        } else if (TypeDecl* d = findTypeDecl(name)) {
+        } else if (name == "Weak") {
+            if (!argCount(1, "Weak<Player>")) return tError();
+            Type* target = resolveType(r.args[0], false);
+            if (target == tError()) return tError();
+            if (target->kind != TK::Class) {
+                reportError(r.args[0].loc, "Weak only works with classes, but " + target->name + " isn't one",
+                            target->kind == TK::TypeParam ? "T could be any type here, so use T? instead"
+                                                          : "structs, numbers and text are copied, so there's nothing to point at");
+                return tError();
+            }
+            base = tWeak(target);
+        } else if (name == "Function") {
+            if (!r.isFunction) {
+                reportError(r.loc, "Function needs the kind of function inside < >",
+                            "for example: Function<bool(Enemy)> (gives back a bool, takes an Enemy) or Function<void()>");
+                return tError();
+            }
+            Type* ret = resolveType(r.args[0], true);
+            std::vector<Type*> params;
+            for (size_t i = 1; i < r.args.size(); i++) params.push_back(resolveType(r.args[i], false));
+            if (ret == tError() || std::find(params.begin(), params.end(), tError()) != params.end()) return tError();
+            if (ret == tTask()) {
+                reportError(r.args[0].loc, "a function value can't be a task", "make a normal task function, and call it from the function value");
+                return tError();
+            }
+            base = tFunction(ret, params);
+        } else if (TypeDecl* scope = genericScope ? genericScope : curType;
+                   scope && std::find(scope->typeParams.begin(), scope->typeParams.end(), name) != scope->typeParams.end()) {
+            // T inside class Box<T>
             if (!r.args.empty()) reportError(r.loc, "'" + name + "' doesn't take types inside < >");
-            base = tNamed(d);
+            tNamed(scope);
+            base = scope->paramTypes[std::find(scope->typeParams.begin(), scope->typeParams.end(), name) - scope->typeParams.begin()];
+        } else if (TypeDecl* d = findTypeDecl(name)) {
+            base = namedType(d, r);
+            if (!base) return tError();
         } else {
             reportError(r.loc, "unknown type '" + name + "'", unknownTypeHint(name));
             return tError();
@@ -515,8 +606,8 @@ Type* Checker::resolveType(const TypeRef& r, bool allowVoid) {
             return tError();
         }
         if (privateBlocked(d->isPrivate, nullptr, m, r.loc, d->name)) return tError();
-        if (!r.args.empty()) reportError(r.loc, "'" + d->name + "' doesn't take types inside < >");
-        base = tNamed(d);
+        base = namedType(d, r);
+        if (!base) return tError();
     }
 
     if (base == tVoid() && (!allowVoid || r.optional)) {
@@ -543,17 +634,58 @@ void Checker::resolveFunc(FuncDecl* f) {
 
 void Checker::resolveTypeDecl(TypeDecl* d) {
     if (d->kind == DK::Enum) return;
-    if (!d->baseRef.empty()) {
-        Type* bt = resolveType(d->baseRef, false);
-        if (bt != tError()) {
-            if (bt->kind != TK::Class) {
-                reportError(d->baseRef.loc, "a class can only inherit from another class, but '" + bt->name + "' is " +
-                                                (bt->decl ? "a " + kindWord(bt->decl) : aType(bt)));
-            } else if (inheritsFrom(bt->decl, d)) {
-                reportError(d->baseRef.loc, "'" + d->name + "' can't inherit from itself");
-            } else {
-                d->base = bt->decl;
-            }
+    genericScope = d;
+    resolveTypeDeclParts(d);
+    genericScope = nullptr;
+}
+
+void Checker::resolveTypeDeclParts(TypeDecl* d) {
+    for (size_t i = 0; i < d->typeParams.size(); i++) {
+        const std::string& n = d->typeParams[i];
+        if (std::find(d->typeParams.begin(), d->typeParams.begin() + i, n) != d->typeParams.begin() + i)
+            reportError(d->typeParamLocs[i], "'" + n + "' is inside the < > twice", "give each one its own name, like <K, V>");
+        else if (isBuiltinTypeName(n) || findTypeDecl(n))
+            reportError(d->typeParamLocs[i], "'" + n + "' is already a type, so it can't be the name inside < >",
+                        "use a short name that isn't a type yet, like T");
+    }
+    if (!d->typeParams.empty()) {
+        if (!d->baseRef.empty())
+            reportError(d->baseRef.loc, "a generic type can't inherit from another type or have interfaces yet",
+                        "remove the : part, or make " + d->name + " without < >");
+        for (auto& f : d->fields)
+            if (f->isStatic)
+                reportError(f->loc, "a generic type can't have static fields yet",
+                            "each " + d->name + "<...> would need its own, so put it in a global variable instead");
+        for (auto& m : d->methods)
+            if (m->isStatic)
+                reportError(m->loc, "a generic type can't have static methods yet", "make it a normal function outside " + d->name);
+    }
+    // class Goblin : Enemy, Attacker - at most one class to inherit from, and any number of interfaces.
+    std::vector<const TypeRef*> refs;
+    if (!d->baseRef.empty()) refs.push_back(&d->baseRef);
+    for (auto& r : d->moreBaseRefs) refs.push_back(&r);
+    if (!d->typeParams.empty()) refs.clear();  // already an error above
+    for (const TypeRef* ref : refs) {
+        Type* bt = resolveType(*ref, false);
+        if (bt == tError()) continue;
+        if (isGeneric(bt)) {
+            reportError(ref->loc, "a class can't inherit from a generic type like " + bt->name + " yet",
+                        "give " + d->name + " a field of type " + bt->name + " instead");
+        } else if (bt->kind != TK::Class) {
+            reportError(ref->loc, "a class can only inherit from another class or have an interface, but '" + bt->name + "' is " +
+                                      (bt->decl ? "a " + kindWord(bt->decl) : aType(bt)));
+        } else if (bt->decl == d || inheritsFrom(bt->decl, d)) {
+            reportError(ref->loc, "'" + d->name + "' can't inherit from itself");
+        } else if (bt->decl->kind == DK::Interface) {
+            if (std::find(d->interfaces.begin(), d->interfaces.end(), bt->decl) != d->interfaces.end())
+                reportError(ref->loc, "'" + bt->name + "' is listed twice");
+            else
+                d->interfaces.push_back(bt->decl);
+        } else if (d->base) {
+            reportError(ref->loc, "a class can only inherit from one class, but " + d->name + " already inherits from " + d->base->name,
+                        "the others after the : must be interfaces");
+        } else {
+            d->base = bt->decl;
         }
     }
     for (auto& f : d->fields) {
@@ -561,6 +693,9 @@ void Checker::resolveTypeDecl(TypeDecl* d) {
         f->module = d->module;
         f->isField = true;
         f->type = resolveType(f->typeRef, false);
+        if (f->name == "describe" && !d->builtin)
+            reportError(f->loc, "'describe' is built into every struct and class, so a field can't be called that",
+                        "x.describe already shows an object's fields - pick another name, like 'description'");
         if (d->fieldMap.count(f->name)) reportError(f->loc, "'" + f->name + "' is in " + d->name + " twice");
         d->fieldMap[f->name] = f.get();
     }
@@ -568,6 +703,13 @@ void Checker::resolveTypeDecl(TypeDecl* d) {
         m->owner = d;
         m->module = d->module;
         resolveFunc(m.get());
+        if (m->name == "toText" && !d->builtin && (!m->params.empty() || m->ret != tString() || m->isStatic))
+            reportError(m->loc, "toText() decides how a " + d->name + " is shown, so it has to be written as: string toText()");
+        if (m->name == "toString" && !d->builtin && m->params.empty() && m->ret == tString())
+            warn(m->loc, "toString() is called toText() in Forge now", "rename it to toText - toString still works for now");
+        if (m->name == "describe" && !d->builtin)
+            reportError(m->loc, "'describe' is built into every struct and class, so a method can't be called that",
+                        "x.describe already shows an object's fields - pick another name, like 'info'");
         if (d->methodMap.count(m->name) || d->fieldMap.count(m->name))
             reportError(m->loc, "'" + m->name + "' is in " + d->name + " twice",
                         "fields and methods each need their own name");
@@ -589,7 +731,40 @@ void Checker::resolveTypeDecl(TypeDecl* d) {
     }
 }
 
+// Every method an interface (or an abstract parent) names must be written, with the same types, in a normal class.
+void Checker::checkAbstract(TypeDecl* d) {
+    std::vector<FuncDecl*> required;
+    std::function<void(TypeDecl*)> collect = [&](TypeDecl* t) {
+        for (auto& m : t->methods)
+            if (m->isAbstract) required.push_back(m.get());
+        for (TypeDecl* i : t->interfaces) collect(i);
+        if (t->base) collect(t->base);
+    };
+    collect(d);
+    for (FuncDecl* req : required) {
+        // The method that a call would run: the nearest one, starting at d, that has code.
+        FuncDecl* impl = nullptr;
+        for (TypeDecl* t = d; t && !impl; t = t->base) {
+            auto it = t->methodMap.find(req->name);
+            if (it != t->methodMap.end() && !it->second->isAbstract) impl = it->second;
+        }
+        if (!impl) {
+            if (!d->isAbstract)
+                reportError(d->loc, d->name + " has to have the method '" + req->name + "', because " + req->owner->name +
+                                        (req->owner->kind == DK::Interface ? " (an interface it has)" : " (an abstract class it inherits from)") + " says so",
+                            "add it to " + d->name + ": " + signatureOf(req) + " { ... }");
+            continue;
+        }
+        bool same = impl->ret == req->ret && impl->params.size() == req->params.size();
+        for (size_t i = 0; same && i < req->params.size(); i++) same = impl->params[i]->type == req->params[i]->type;
+        if (!same)
+            reportError(impl->loc, "'" + impl->name + "' has to match the one in " + req->owner->name, "write it as: " + signatureOf(req));
+        if (impl->isStatic) reportError(impl->loc, "'" + impl->name + "' can't be static, because " + req->owner->name + " needs it on each object");
+    }
+}
+
 void Checker::checkOverrides(TypeDecl* d) {
+    if (d->kind == DK::Class) checkAbstract(d);
     if (d->kind != DK::Class || !d->base) return;
     for (auto& f : d->fields)
         if (VarDecl* bf = findField(d->base, f->name))
@@ -599,6 +774,11 @@ void Checker::checkOverrides(TypeDecl* d) {
         if (findField(d->base, m->name)) reportError(m->loc, "'" + m->name + "' is already a field of a base class");
         FuncDecl* bm = findMethod(d->base, m->name);
         if (!bm) continue;
+        if (m->isStatic || bm->isStatic) {
+            reportError(m->loc, "'" + m->name + "' is already a method of " + bm->owner->name + ", and static methods can't be replaced",
+                        "give it a different name");
+            continue;
+        }
         bool same = bm->ret == m->ret && bm->params.size() == m->params.size();
         for (size_t i = 0; same && i < m->params.size(); i++) same = bm->params[i]->type == m->params[i]->type;
         if (!same)
@@ -747,10 +927,10 @@ Type* Checker::checkInto(Expr* e, Type* T, const std::string& dest) {
 
 bool Checker::isLvalue(Expr* e) {
     switch (e->kind) {
-        case EK::Name: return e->res.kind == RK::Local || e->res.kind == RK::Global || e->res.kind == RK::Field;
+        case EK::Name: return e->res.kind == RK::Local || e->res.kind == RK::Global || e->res.kind == RK::Field || e->res.kind == RK::TypeStatic;
         case EK::Member:
             if (e->res.kind == RK::PointerValue) return true;
-            if (e->res.kind == RK::Global) return true;
+            if (e->res.kind == RK::Global || e->res.kind == RK::TypeStatic) return true;
             if (e->res.kind == RK::Field) {
                 Expr* o = e->a.get();
                 if (o->kind == EK::This || o->kind == EK::Super) return true;
@@ -769,11 +949,16 @@ bool Checker::isLvalue(Expr* e) {
 bool Checker::checkAssignTarget(Expr* e) {
     if (e->type == tError()) return false;
     VarDecl* v = e->res.var;
+    if (e->kind == EK::Name && e->res.kind == RK::Local && outerLocal(v)) {
+        reportError(e->loc, "a function value can't change '" + v->name + "', a local variable from outside it",
+                    "it only gets a copy of the variables around it. To share a value, use a global variable or a field");
+        return false;
+    }
     if ((e->res.kind == RK::Local || e->res.kind == RK::Global) && v->isConst) {
         reportError(e->loc, "'" + v->name + "' is const, so it can't be changed");
         return false;
     }
-    if (e->res.kind == RK::TypeStatic) {
+    if (e->res.kind == RK::TypeStatic && (!e->res.tdecl || e->res.tdecl->builtin)) {
         reportError(e->loc, "built-in constants like this can't be changed");
         return false;
     }
@@ -801,8 +986,17 @@ Type* Checker::expr(Expr* e, Type* expected, bool allowNonValue) {
         case EK::Bool: return e->type = tBool();
         case EK::Null: return e->type = tNull();
         case EK::Str: return strExpr(e);
-        case EK::Name: return nameExpr(e, allowNonValue);
-        case EK::Member: return memberExpr(e, allowNonValue);
+        case EK::Name:
+        case EK::Member: {
+            // Where a Function<...> is wanted, a function's name (without ()) is a function value.
+            Type* saved = wantFunction;
+            Type* want = expected && expected->kind == TK::Optional ? expected->elem : expected;
+            wantFunction = want && want->kind == TK::Function ? want : nullptr;
+            Type* t = e->kind == EK::Name ? nameExpr(e, allowNonValue) : memberExpr(e, allowNonValue);
+            wantFunction = saved;
+            return t;
+        }
+        case EK::Lambda: return lambdaExpr(e, expected);
         case EK::Call: return callExpr(e, expected);
         case EK::Unary: return unaryExpr(e);
         case EK::Binary: return binaryExpr(e, expected);
@@ -813,6 +1007,10 @@ Type* Checker::expr(Expr* e, Type* expected, bool allowNonValue) {
         case EK::BraceLit: return braceLit(e, expected);
         case EK::Ternary: return ternaryExpr(e, expected);
         case EK::This:
+            if (inStatic) {
+                staticMisuse(e, "'this'");
+                return e->type = tError();
+            }
             if (!curType) {
                 reportError(e->loc, "'this' only works inside the methods of a struct or class");
                 return e->type = tError();
@@ -828,6 +1026,62 @@ Type* Checker::expr(Expr* e, Type* expected, bool allowNonValue) {
 }
 
 // `enemy is Goblin` and `enemy as Goblin`: checking what kind of class an object really is.
+// Is `v` a local variable from outside the function value being checked?
+bool Checker::outerLocal(const VarDecl* v) {
+    if (lambdaScope == SIZE_MAX) return false;
+    for (size_t i = 0; i < lambdaScope && i < scopes.size(); i++)
+        for (auto& [name, var] : scopes[i])
+            if (var == v) return true;
+    return false;
+}
+
+// (Enemy e) { return e.hp <= 0; } - checked against the Function<...> type it's going into.
+Type* Checker::lambdaExpr(Expr* e, Type* expected) {
+    FuncDecl* f = e->lambda.get();
+    f->module = cur;
+    Type* ft = expected && expected->kind == TK::Optional ? expected->elem : expected;
+    if (!ft || ft->kind != TK::Function) {
+        reportError(e->loc, "Forge can't tell what kind of function value this is",
+                    "put it where a Function<...> is expected, like: Function<bool(Enemy)> isDead = (Enemy e) { ... };");
+        return e->type = tError();
+    }
+    bool ok = true;
+    if (f->params.size() != ft->params.size()) {
+        reportError(e->loc, "this function value takes " + std::to_string(f->params.size()) + " value" + (f->params.size() == 1 ? "" : "s") +
+                                ", but it has to be " + ft->name,
+                    "a " + ft->name + " takes " + std::to_string(ft->params.size()));
+        ok = false;
+    }
+    for (size_t i = 0; i < f->params.size(); i++) {
+        VarDecl* p = f->params[i].get();
+        p->type = resolveType(p->typeRef, false);
+        if (ok && p->type != tError() && p->type != ft->params[i]) {
+            reportError(p->typeRef.loc, "'" + p->name + "' has to be " + aType(ft->params[i]) + " here, because this is a " + ft->name,
+                        "write it as: " + ft->params[i]->name + " " + p->name);
+            ok = false;
+        }
+    }
+    f->ret = ft->elem;
+    // Its body is checked like a function's, inside the current one (it can use the variables around it).
+    FuncDecl* savedFn = fn;
+    size_t savedLambda = lambdaScope;
+    std::vector<char> savedBreak = breakables;
+    breakables.clear();
+    scopes.emplace_back();
+    lambdaScope = scopes.size() - 1;
+    for (auto& p : f->params) declareLocal(p.get());
+    fn = f;
+    stmt(f->body.get());
+    if (f->ret != tVoid() && f->ret != tError() && !alwaysReturns(f->body.get()))
+        reportError(e->loc, "this function value doesn't always return a value",
+                    "it's a " + ft->name + ", so every way through it needs a return");
+    fn = savedFn;
+    scopes.pop_back();
+    lambdaScope = savedLambda;
+    breakables = savedBreak;
+    return e->type = ok ? ft : tError();
+}
+
 Type* Checker::isAsExpr(Expr* e) {
     const char* word = e->kind == EK::Is ? "is" : "as";
     Type* S = value(e->a.get());
@@ -840,7 +1094,8 @@ Type* Checker::isAsExpr(Expr* e) {
                                 (T->kind != TK::Class ? " and " + T->name + " isn't a class" : ""));
         return e->type = tError();
     }
-    if (!inheritsFrom(T->decl, sc->decl) && !inheritsFrom(sc->decl, T->decl)) {
+    bool anInterface = T->decl->kind == DK::Interface || sc->decl->kind == DK::Interface;  // any class might have it
+    if (!anInterface && !inheritsFrom(T->decl, sc->decl) && !inheritsFrom(sc->decl, T->decl)) {
         reportError(e->loc, aType(sc) + " can never be " + aType(T), T->name + " doesn't inherit from " + sc->name + ", or the other way around");
         return e->type = tError();
     }
@@ -914,12 +1169,30 @@ Type* Checker::finishRef(Expr* e, bool allowNonValue) {
         case RK::TypeStatic: return e->type = e->res.var->type ? e->res.var->type : tError();
         case RK::EnumValue: return e->type = tNamed(e->res.tdecl);
         case RK::StdConst: e->litFloat = true; return e->type = tFloat(32);
-        case RK::PointerValue: return e->type;
+        case RK::PointerValue:
+        case RK::Describe: return e->type;
         case RK::None: return e->type = tError();
         case RK::BuiltinMethod:
             if (n == "length") return e->type = tInt(32, true);
             break;
         default: break;
+    }
+    if (wantFunction && e->res.kind == RK::Func && !e->res.func->module->isPrelude && !e->res.func->owner) {
+        FuncDecl* f = e->res.func;
+        // With several versions, the one whose parameters match the Function<...> is used.
+        for (FuncDecl* o : f->module->overloads[f->name]) {
+            bool same = o->params.size() == wantFunction->params.size();
+            for (size_t i = 0; same && i < o->params.size(); i++) same = o->params[i]->type == wantFunction->params[i];
+            if (same) f = e->res.func = o;
+        }
+        if (f->ret == tTask()) {
+            reportError(e->loc, "'" + n + "' is a task, so it can't be used as a function value",
+                        "use a function value that starts it: () { " + n + "(); }");
+            return e->type = tError();
+        }
+        std::vector<Type*> ps;
+        for (auto& p : f->params) ps.push_back(p->type ? p->type : tError());
+        return e->type = tFunction(f->ret ? f->ret : tError(), ps);
     }
     if (allowNonValue) return e->type = nullptr;
     switch (e->res.kind) {
@@ -994,9 +1267,21 @@ Type* Checker::nameExpr(Expr* e, bool allowNonValue) {
     } else if (VarDecl* f = curType ? findField(curType, n) : nullptr) {
         r.kind = RK::Field;
         r.var = f;
+        if (inStatic) staticMisuse(e, "the field '" + n + "'");
+    } else if (VarDecl* sf = curType ? findStaticField(curType, n) : nullptr) {
+        r.kind = RK::TypeStatic;  // a static field of this type, used inside it without the type's name
+        r.var = sf;
+        r.tdecl = sf->owner;
     } else if (FuncDecl* m = curType ? findMethod(curType, n) : nullptr) {
-        r.kind = RK::Method;
-        r.func = m;
+        if (m->isStatic) {
+            r.kind = RK::Func;  // a static method is called like a function (the code generator adds the type's name)
+            r.func = m;
+            r.module = m->module;
+        } else {
+            r.kind = RK::Method;
+            r.func = m;
+            if (inStatic) staticMisuse(e, "the method '" + n + "'");
+        }
     } else if (auto g = cur->globals.find(n); g != cur->globals.end()) {
         r.kind = RK::Global;
         r.var = g->second;
@@ -1046,6 +1331,20 @@ void Checker::valueMember(Expr* e, Expr* o) {
     const std::string& n = e->text;
     Resolved& r = e->res;
     Type* t = o->type;
+    if ((t->kind == TK::Optional ? t->elem : t)->kind == TK::TypeParam) {
+        Type* tp = t->kind == TK::Optional ? t->elem : t;
+        reportError(e->loc, tp->name + " could be any type, so Forge can't know it has '" + n + "'",
+                    "inside " + tp->decl->name + ", a " + tp->name + " can only be stored, passed on, given back, compared with == and printed");
+        return;
+    }
+    if (n == "describe") {
+        Type* d = derefType(t);
+        if ((d->kind == TK::Struct || d->kind == TK::Class) && d->decl && !d->decl->builtin) {
+            r.kind = RK::Describe;
+            e->type = P.core && P.core->types.count("Description") ? tNamed(P.core->types["Description"]) : tError();
+            return;
+        }
+    }
     if (t->kind == TK::Pointer && n == "value") {
         r.kind = RK::PointerValue;
         e->type = t->elem;
@@ -1084,8 +1383,8 @@ void Checker::valueMember(Expr* e, Expr* o) {
         }
         return;
     }
-    if (d->kind == TK::List || d->kind == TK::Map || d->kind == TK::String || d->kind == TK::Task) {
-        if (n == "length" && d->kind != TK::Task) {
+    if (d->kind == TK::List || d->kind == TK::Map || d->kind == TK::String || d->kind == TK::Task || d->kind == TK::Weak) {
+        if (n == "length" && d->kind != TK::Task && d->kind != TK::Weak) {
             r.kind = RK::BuiltinMethod;
             r.index = -1;
             return;
@@ -1098,7 +1397,7 @@ void Checker::valueMember(Expr* e, Expr* o) {
                 return;
             }
         }
-        std::string what = d->kind == TK::List ? "lists" : d->kind == TK::Map ? "maps" : d->kind == TK::Task ? "tasks" : "text";
+        std::string what = d->kind == TK::List ? "lists" : d->kind == TK::Map ? "maps" : d->kind == TK::Task ? "tasks" : d->kind == TK::Weak ? "Weak values" : "text";
         std::string guess = suggestName(n, memberNamesOf(d->kind));
         reportError(e->loc, what + " don't have anything called '" + n + "'", guess.empty() ? "" : "did you mean '" + guess + "'?");
         return;
@@ -1121,6 +1420,9 @@ Type* Checker::memberExpr(Expr* e, bool allowNonValue) {
         }
         o->type = tNamed(curType->base);
         if (FuncDecl* m = findMethod(curType->base, n)) {
+            if (m->isAbstract)
+                reportError(e->loc, "'" + n + "' is abstract in " + curType->base->name + ", so it has no code to call",
+                            "super." + n + "() only works when the parent class writes the method");
             r.kind = RK::Method;
             r.func = m;
         } else if (VarDecl* f = findField(curType->base, n)) {
@@ -1229,14 +1531,26 @@ Type* Checker::memberExpr(Expr* e, bool allowNonValue) {
                     reportError(e->loc, "the enum " + d->name + " has no value called '" + n + "'",
                                 guess.empty() ? "its values are: " + joinNames(d->enumValues) : "did you mean '" + guess + "'?");
                 }
-            } else if (auto it = d->fieldMap.find(n); it != d->fieldMap.end() && it->second->isStatic) {
+            } else if (VarDecl* sf = findStaticField(d, n)) {
                 r.kind = RK::TypeStatic;
-                r.var = it->second;
-                r.tdecl = d;
+                r.var = sf;
+                r.tdecl = sf->owner ? sf->owner : d;
+                privateBlocked(sf->isPrivate, sf->owner, nullptr, e->loc, n);
+            } else if (FuncDecl* m = findMethod(d, n); m && m->isStatic) {
+                r.kind = RK::Func;
+                r.func = m;
+                r.module = m->module;
+                privateBlocked(m->isPrivate, m->owner, nullptr, e->loc, n);
+            } else if (FuncDecl* m2 = findMethod(d, n)) {
+                (void)m2;
+                reportError(e->loc, "'" + n + "' is a normal method, so it needs an object: make a " + d->name + " first and call it on that",
+                            "or make it a static method, if it doesn't use the object's fields");
             } else {
                 std::vector<std::string> statics;
                 for (auto& [k, v] : d->fieldMap)
                     if (v->isStatic) statics.push_back(k);
+                for (auto& [k, m] : d->methodMap)
+                    if (m->isStatic) statics.push_back(k);
                 std::string guess = suggestName(n, statics);
                 reportError(e->loc, "'" + n + "' isn't something " + d->name + " has by itself",
                             guess.empty() ? "to use a field or method, make a " + d->name + " first and use that"
@@ -1255,7 +1569,11 @@ Type* Checker::memberExpr(Expr* e, bool allowNonValue) {
             if (o->type && o->type != tError()) valueMember(e, o);
             break;
     }
-    return finishRef(e, allowNonValue);
+    Type* t = finishRef(e, allowNonValue);
+    // box.item on a Box<int>: the field is a T inside Box, and an int here.
+    if (t && (e->res.kind == RK::Field) && o->kind != EK::This && o->kind != EK::Super)
+        if (Type* inst = genericInstance(o)) e->type = t = substType(t, inst->decl->paramTypes, inst->params);
+    return t;
 }
 
 void Checker::checkRunCallbacks(const Loc& loc) {
@@ -1275,8 +1593,71 @@ void Checker::checkRunCallbacks(const Loc& loc) {
         reportError(d->loc, "for window.run(), draw has to be written as: void draw()");
 }
 
-bool Checker::checkArgs(Expr* e, std::vector<ExprPtr>& args, FuncDecl* f, const std::string& name) {
+// The Box<int> that `o` is (following ? and pointers), or nullptr if it isn't a generic type.
+Type* Checker::genericInstance(Expr* o) {
+    Type* t = o->type;
+    while (t && (t->kind == TK::Optional || t->kind == TK::Pointer)) t = t->elem;
+    if (o->kind == EK::This || o->kind == EK::Super) t = curType ? tNamed(curType) : nullptr;
+    return t && isGeneric(t) ? t : nullptr;
+}
+
+// A parameter's type, with T filled in when it's called on a Box<int>.
+static Type* paramType(FuncDecl* f, size_t i, Type* inst) {
+    Type* t = f->params[i]->type;
+    return inst ? substType(t, inst->decl->paramTypes, inst->params) : t;
+}
+
+// The method a symbol uses on your own type (+ is plus, < is less, == is equals), or nullptr if it doesn't have one.
+FuncDecl* Checker::operatorMethod(Type* t, const std::string& name) {
+    if (!t || (t->kind != TK::Struct && t->kind != TK::Class) || !t->decl || t->decl->builtin) return nullptr;
+    FuncDecl* m = findMethod(t->decl, name);
+    return m && !m->isStatic ? m : nullptr;
+}
+
+static bool isUserType(const Type* t) {
+    return t && (t->kind == TK::Struct || t->kind == TK::Class) && t->decl && !t->decl->builtin;
+}
+
+static std::string arithWord(const std::string& op) {
+    return op == "+" ? "plus" : op == "-" ? "minus" : op == "*" ? "times" : op == "/" ? "div" : "mod";
+}
+
+// a + b on your own type is a.plus(b): checks the method fits, and records it for the code generator.
+Type* Checker::userOperator(Expr* e, Expr* obj, Expr* arg, const std::string& name, const std::string& shown, bool swap, bool negate,
+                            bool wantBool) {
+    FuncDecl* m = operatorMethod(obj->type, name);
+    std::string tn = obj->type->name;
+    std::string example = wantBool ? "bool " + name + "(" + tn + " other)" : tn + " " + name + "(" + tn + " other)";
+    if (m->params.size() != 1) {
+        reportError(e->loc, "to be used as '" + shown + "', " + name + "() has to take one value", "write it as: " + example + " { ... }");
+        return e->type = tError();
+    }
+    Type* inst = isGeneric(obj->type) ? obj->type : nullptr;
+    Type* pt = paramType(m, 0, inst);
+    Type* ret = inst ? substType(m->ret, inst->decl->paramTypes, inst->params) : m->ret;
+    if (!assignable(arg, pt, "the other side of " + shown)) return e->type = tError();
+    if (wantBool && ret != tBool()) {
+        reportError(e->loc, "to be used as '" + shown + "', " + name + "() has to give back a bool", "write it as: " + example + " { ... }");
+        return e->type = tError();
+    }
+    if (ret == tVoid() || ret == tTask()) {
+        reportError(e->loc, "to be used as '" + shown + "', " + name + "() has to give back a value", "write it as: " + example + " { ... }");
+        return e->type = tError();
+    }
+    e->opMethod = m;
+    e->opSwap = swap;
+    e->opNot = negate;
+    e->paramTypes = {pt};
+    e->opType = obj->type;
+    return e->type = ret;
+}
+
+bool Checker::checkArgs(Expr* e, std::vector<ExprPtr>& args, FuncDecl* f, const std::string& name, Type* inst) {
     size_t total = f->params.size(), required = f->requiredParams();
+    if (inst) {
+        e->paramTypes.clear();
+        for (size_t i = 0; i < total; i++) e->paramTypes.push_back(paramType(f, i, inst));
+    }
     if (args.size() < required || args.size() > total) {
         for (auto& a : args) value(a.get());
         std::string want = required == total ? std::to_string(total) : std::to_string(required) + " to " + std::to_string(total);
@@ -1285,25 +1666,46 @@ bool Checker::checkArgs(Expr* e, std::vector<ExprPtr>& args, FuncDecl* f, const 
                     "it's written as: " + signatureOf(f));
         return false;
     }
-    for (size_t i = 0; i < args.size(); i++) checkInto(args[i].get(), f->params[i]->type, "'" + f->params[i]->name + "' in " + name + "()");
+    for (size_t i = 0; i < args.size(); i++) checkInto(args[i].get(), paramType(f, i, inst), "'" + f->params[i]->name + "' in " + name + "()");
     for (size_t i = args.size(); i < total; i++) e->defaultArgs.push_back(f->params[i]->init.get());
     return true;
 }
 
-FuncDecl* Checker::resolveCall(Expr* e, const std::vector<FuncDecl*>& candidates, const std::string& name) {
+FuncDecl* Checker::resolveCall(Expr* e, const std::vector<FuncDecl*>& candidates, const std::string& name, Type* inst) {
     if (candidates.size() == 1) {
-        checkArgs(e, e->args, candidates[0], name);
+        checkArgs(e, e->args, candidates[0], name, inst);
         return candidates[0];
     }
     bool bad = false;
     for (auto& a : e->args) bad |= value(a.get()) == tError();
     if (bad) return candidates[0];
+    // Of the versions the values fit, the one whose parameter types match them most exactly wins:
+    // f(5) picks f(int) over f(float), and f(2.5) picks f(float).
+    FuncDecl* best = nullptr;
+    int bestScore = -1;
     for (FuncDecl* f : candidates) {
         if (e->args.size() < f->requiredParams() || e->args.size() > f->params.size()) continue;
         bool fits = true;
-        for (size_t i = 0; fits && i < e->args.size(); i++) fits = canAssignQuiet(e->args[i].get(), f->params[i]->type);
-        if (!fits) continue;
-        for (size_t i = 0; i < e->args.size(); i++) assignable(e->args[i].get(), f->params[i]->type, "");
+        int score = 0;
+        for (size_t i = 0; fits && i < e->args.size(); i++) {
+            Expr* a = e->args[i].get();
+            Type* T = paramType(f, i, inst);
+            fits = canAssignQuiet(a, T);
+            if (a->type == T || (a->litInt && T == tInt(32, true)) || (a->litFloat && T == tFloat(32))) score += 2;
+            else if ((a->litInt && T->kind == TK::Int) || (a->litFloat && T->kind == TK::Float)) score += 1;
+        }
+        if (fits && score > bestScore) {
+            best = f;
+            bestScore = score;
+        }
+    }
+    for (FuncDecl* f : candidates) {
+        if (f != best) continue;
+        if (inst) {
+            e->paramTypes.clear();
+            for (size_t i = 0; i < f->params.size(); i++) e->paramTypes.push_back(paramType(f, i, inst));
+        }
+        for (size_t i = 0; i < e->args.size(); i++) assignable(e->args[i].get(), paramType(f, i, inst), "");
         for (size_t i = e->args.size(); i < f->params.size(); i++) e->defaultArgs.push_back(f->params[i]->init.get());
         return f;
     }
@@ -1313,8 +1715,30 @@ FuncDecl* Checker::resolveCall(Expr* e, const std::vector<FuncDecl*>& candidates
     return nullptr;
 }
 
-Type* Checker::construct(Expr* e, std::vector<ExprPtr>& args, TypeDecl* d) {
+Type* Checker::construct(Expr* e, std::vector<ExprPtr>& args, TypeDecl* d, Type* expected) {
     e->builds = d;
+    Type* inst = nullptr;
+    if (!d->typeParams.empty()) {
+        // Box(5) is a Box<int> when that's what's wanted: Box<int> b = Box(5);
+        Type* want = expected && expected->kind == TK::Optional ? expected->elem : expected;
+        if (want && want->decl == d) inst = want;
+        else if (curType == d) inst = tNamed(d);
+        else {
+            for (auto& a : args) value(a.get());
+            std::string example = d->name + "<";
+            for (size_t i = 0; i < d->typeParams.size(); i++) example += i ? ", int" : "int";
+            reportError(e->loc, "Forge needs to know what " + joinNames(d->typeParams) + " " + (d->typeParams.size() == 1 ? "is" : "are") +
+                                    " for this " + d->name,
+                        "make it where its type is written, like: " + example + "> b = " + d->name + "(...);");
+            return e->type = tError();
+        }
+    }
+    if (d->kind == DK::Interface || d->isAbstract) {
+        for (auto& a : args) value(a.get());
+        reportError(e->loc, d->name + " is " + (d->kind == DK::Interface ? "an interface" : "an abstract class") + ", so it can't be made directly",
+                    "make one of the classes that " + std::string(d->kind == DK::Interface ? "have it" : "inherit from it") + " instead");
+        return e->type = tError();
+    }
     if (d->kind == DK::Enum) {
         if (args.size() == 1) {
             Type* t = value(args[0].get());
@@ -1329,7 +1753,7 @@ Type* Checker::construct(Expr* e, std::vector<ExprPtr>& args, TypeDecl* d) {
     }
     std::vector<FuncDecl*> ctors = findCtors(d);
     if (!ctors.empty()) {
-        FuncDecl* ctor = resolveCall(e, ctors, d->name);
+        FuncDecl* ctor = resolveCall(e, ctors, d->name, inst);
         if (!ctor) return e->type = tError();
         e->ctor = ctor;
         if (ctor->isPrivate && !(curType && inheritsFrom(curType, ctor->owner)))
@@ -1345,14 +1769,25 @@ Type* Checker::construct(Expr* e, std::vector<ExprPtr>& args, TypeDecl* d) {
                                     std::to_string(args.size()),
                         "its fields, in order, are: " + joinNames(names) + " - or give " + d->name + " a constructor");
         } else {
-            for (size_t i = 0; i < args.size(); i++) checkInto(args[i].get(), fields[i]->type, "'" + fields[i]->name + "' in " + d->name + "()");
+            if (inst) {
+                e->paramTypes.clear();
+                for (VarDecl* f : fields) e->paramTypes.push_back(substType(f->type, d->paramTypes, inst->params));
+            }
+            for (size_t i = 0; i < args.size(); i++)
+                checkInto(args[i].get(), inst ? e->paramTypes[i] : fields[i]->type, "'" + fields[i]->name + "' in " + d->name + "()");
+            if (inst && args.empty())
+                for (VarDecl* f : fields)
+                    if (f->type->kind == TK::TypeParam && !f->init) {
+                        reportError(e->loc, d->name + "() needs a value for '" + f->name + "', because " + f->type->name + " could be a class",
+                                    "give it all its fields: " + d->name + "(...), or give " + d->name + " a constructor");
+                        break;
+                    }
         }
     }
-    return e->type = tNamed(d);
+    return e->type = inst ? inst : tNamed(d);
 }
 
 Type* Checker::callExpr(Expr* e, Type* expected) {
-    (void)expected;
     Expr* callee = e->a.get();
     size_t outer = callArgs;
     callArgs = e->args.size();
@@ -1361,7 +1796,9 @@ Type* Checker::callExpr(Expr* e, Type* expected) {
     switch (callee->res.kind) {
         case RK::Func: {
             Module* m = callee->res.module ? callee->res.module : callee->res.func->module;
-            std::vector<FuncDecl*> candidates = m->isPrelude ? m->overloads[callee->res.func->name] : std::vector<FuncDecl*>{callee->res.func};
+            std::vector<FuncDecl*> candidates = !callee->res.func->owner && m->overloads.count(callee->res.func->name)
+                                                    ? m->overloads[callee->res.func->name]
+                                                    : std::vector<FuncDecl*>{callee->res.func};
             std::string name = m->isPrelude ? m->name + "." + callee->res.func->name : callee->res.func->name;
             FuncDecl* f = resolveCall(e, candidates, name);
             if (!f) return e->type = tError();
@@ -1375,8 +1812,10 @@ Type* Checker::callExpr(Expr* e, Type* expected) {
         }
         case RK::Method: {
             FuncDecl* f = callee->res.func;
-            checkArgs(e, e->args, f, f->name);
-            return e->type = f->ret ? f->ret : tError();
+            Type* inst = callee->kind == EK::Member ? genericInstance(callee->a.get()) : curType && !curType->typeParams.empty() ? tNamed(curType) : nullptr;
+            checkArgs(e, e->args, f, f->name, inst);
+            Type* ret = f->ret ? f->ret : tError();
+            return e->type = inst ? substType(ret, inst->decl->paramTypes, inst->params) : ret;
         }
         case RK::Builtin: return builtinCall(e, callee->res.builtin);
         case RK::BuiltinMethod:
@@ -1385,7 +1824,7 @@ Type* Checker::callExpr(Expr* e, Type* expected) {
                 return e->type = tError();
             }
             return bmethodCall(e);
-        case RK::Type: return construct(e, e->args, callee->res.tdecl);
+        case RK::Type: return construct(e, e->args, callee->res.tdecl, expected);
         case RK::None:
             for (auto& a : e->args) value(a.get());
             if (callee->type && callee->type != tError()) reportError(e->loc, "this is " + aType(callee->type) + ", not a function");
@@ -1394,10 +1833,23 @@ Type* Checker::callExpr(Expr* e, Type* expected) {
         case RK::Global:
         case RK::Field:
         case RK::StdConst:
-        case RK::TypeStatic:
+        case RK::TypeStatic: {
+            Type* ct = callee->type && callee->type->kind == TK::Optional ? callee->type->elem : callee->type;
+            if (ct && ct->kind == TK::Function) {  // calling a function value
+                if (e->args.size() != ct->params.size()) {
+                    for (auto& a : e->args) value(a.get());
+                    reportError(e->loc, "'" + callee->text + "' needs " + std::to_string(ct->params.size()) + " value" +
+                                            (ct->params.size() == 1 ? "" : "s") + ", but got " + std::to_string(e->args.size()),
+                                "it's a " + ct->name);
+                    return e->type = tError();
+                }
+                for (size_t i = 0; i < e->args.size(); i++) checkInto(e->args[i].get(), ct->params[i], "value " + std::to_string(i + 1) + " of " + callee->text + "()");
+                return e->type = ct->elem;
+            }
             for (auto& a : e->args) value(a.get());
             reportError(e->loc, "'" + callee->text + "' is a variable, not a function");
             return e->type = tError();
+        }
         default:
             for (auto& a : e->args) value(a.get());
             reportError(e->loc, "'" + callee->text + "' isn't a function, so it can't be called");
@@ -1417,8 +1869,15 @@ Type* Checker::bmethodCall(Expr* e) {
         return e->type = tError();
     }
     for (size_t i = 0; i < e->args.size(); i++) checkInto(e->args[i].get(), bmType(m.params[i], obj), "the value given to " + name + "()");
-    if (m.sortable && !isNumeric(obj->elem) && obj->elem->kind != TK::String)
-        reportError(e->loc, "sort() only works on lists of numbers or text");
+    if (m.sortable && !isNumeric(obj->elem) && obj->elem->kind != TK::String) {
+        FuncDecl* less = operatorMethod(obj->elem, "less");
+        if (less && less->params.size() == 1 && less->ret == tBool())
+            e->opMethod = less;  // sorts with the type's own less()
+        else
+            reportError(e->loc, "sort() only works on lists of numbers or text, or of a type with a less() method",
+                        isUserType(obj->elem) ? "give " + obj->elem->name + " a method: bool less(" + obj->elem->name + " other) { ... }, or use sortBy"
+                                              : "use sortBy with a function value that gives each item a number");
+    }
     return e->type = bmType(m.ret, obj);
 }
 
@@ -1458,10 +1917,26 @@ Type* Checker::builtinCall(Expr* e, const Builtin* b) {
                 reportError(args[0]->loc, "this doesn't give back a value to show");
             }
             return e->type = tVoid();
+        case BSig::Weak: {
+            if (!needCount(1, 1) || bad) return e->type = tError();
+            Type* t = args[0]->type;
+            if (t->kind == TK::Optional) t = t->elem;
+            if (t->kind != TK::Class) {
+                reportError(args[0]->loc, "Weak(...) needs a class object, but this is " + aType(args[0]->type),
+                            "structs, numbers and text are copied, so there's nothing to point at");
+                return e->type = tError();
+            }
+            return e->type = tWeak(t);
+        }
         case BSig::Input:
             if (needCount(0, 1) && args.size() == 1 && !bad) assignable(args[0], tString(), "the prompt of input()");
             return e->type = tString();
         case BSig::Wait:
+            if (inCatch) {
+                reportError(e->loc, "wait() can't be used inside a catch { }",
+                            "set a bool in the catch, and wait after it: catch (Error e) { failed = true; }  if (failed) { wait(1); }");
+                return e->type = tVoid();
+            }
             if (!fn || fn->ret != tTask()) {
                 reportError(e->loc, "wait() only works inside a task function",
                             fn && !fn->isCtor ? "change '" + fn->retRef.display() + " " + fn->name + "()' to 'task " + fn->name +
@@ -1581,7 +2056,7 @@ Type* Checker::mapLit(Expr* e, Type* expected) {
 
 Type* Checker::braceLit(Expr* e, Type* expected) {
     Type* want = expected && expected->kind == TK::Optional ? expected->elem : expected;
-    if (want && (want->kind == TK::Struct || want->kind == TK::Class)) return construct(e, e->args, want->decl);
+    if (want && (want->kind == TK::Struct || want->kind == TK::Class)) return construct(e, e->args, want->decl, want);
     if (want && want->kind == TK::Map && e->args.empty()) return e->type = want;
     if (want && want->kind == TK::List) {
         reportError(e->loc, "lists use [ ] instead of { }", "for example: [1, 2, 3]");
@@ -1692,8 +2167,16 @@ Type* Checker::equalityOp(Expr* e) {
             return ok(opt);
         }
     }
+    if (operatorMethod(L, "equals")) {
+        userOperator(e, a, b, "equals", e->opWord.empty() ? e->text : e->opWord, false, e->text == "!=", true);
+        return e->type == tError() ? e->type : e->type = tBool();
+    }
+    if (L->kind == TK::Weak || R->kind == TK::Weak) {
+        reportError(e->loc, "Weak values can't be compared directly", "compare what they point at: a.get() == b.get()");
+        return e->type = tError();
+    }
     if (L == R && L->kind != TK::Void) return ok(L);
-    if (L->kind == TK::Class && R->kind == TK::Class) {
+    if (L->kind == TK::Class && R->kind == TK::Class && !isGeneric(L) && !isGeneric(R)) {
         if (inheritsFrom(L->decl, R->decl)) return ok(R);
         if (inheritsFrom(R->decl, L->decl)) return ok(L);
     }
@@ -1734,6 +2217,13 @@ Type* Checker::binaryExpr(Expr* e, Type* expected) {
     if (L == tError() || R == tError()) return e->type = tError();
 
     if (isArith(op)) {
+        if (operatorMethod(L, arithWord(op))) return userOperator(e, a, b, arithWord(op), shown, false, false, false);
+        if (isUserType(L) || isUserType(R)) {
+            Type* U = isUserType(L) ? L : R;
+            return fail("can't use '" + shown + "' on " + aType(L) + " and " + aType(R),
+                        isUserType(L) ? "to make it work, give " + U->name + " a method: " + U->name + " " + arithWord(op) + "(" + U->name + " other) { ... }"
+                                      : "the " + U->name + " has to come first, and have a method " + arithWord(op) + "(...)");
+        }
         if (op == "+" && L->kind == TK::String && R->kind == TK::String) {
             e->opType = tString();
             return e->type = tString();
@@ -1772,6 +2262,18 @@ Type* Checker::binaryExpr(Expr* e, Type* expected) {
     }
     if (isEquality(op)) return equalityOp(e);
     if (isCompare(op)) {
+        if (isUserType(L) || isUserType(R)) {
+            // less(other) gives all four: a < b is a.less(b), a > b is b.less(a), a <= b is !b.less(a), a >= b is !a.less(b).
+            bool swap = op == ">" || op == "<=";
+            Expr* obj = swap ? b : a;
+            if (operatorMethod(obj->type, "less")) {
+                userOperator(e, obj, swap ? a : b, "less", shown, swap, op == "<=" || op == ">=", true);
+                return e->type == tError() ? e->type : e->type = tBool();
+            }
+            Type* U = isUserType(obj->type) ? obj->type : isUserType(L) ? L : R;
+            return fail("can't compare " + aType(L) + " with " + aType(R) + " using '" + shown + "'",
+                        "to make <, >, <= and >= work, give " + U->name + " a method: bool less(" + U->name + " other) { ... }");
+        }
         if (isNumeric(L) && isNumeric(R)) {
             e->opType = commonOf({a, b});
             if (e->opType->kind == TK::Float) {
@@ -1855,6 +2357,13 @@ void Checker::varStmt(VarDecl* v) {
         checkInto(v->init.get(), v->type, "'" + v->name + "'");
     } else if (v->isConst) {
         reportError(v->loc, "a const variable needs a value", "for example: const int MAX_HP = 100;");
+    } else if (v->type->kind == TK::Function) {
+        reportError(v->loc, "'" + v->name + "' needs a starting value",
+                    "give it a function, like: " + v->type->name + " " + v->name + " = (...) { ... };  - or make it optional: " +
+                        v->type->name + "? " + v->name + " = null;");
+    } else if (v->type->kind == TK::TypeParam) {
+        reportError(v->loc, "'" + v->name + "' needs a starting value, because " + v->type->name + " could be a class",
+                    "give it one, or make it optional: " + v->type->name + "? " + v->name + " = null;");
     } else if (v->type->kind == TK::Class || v->type->kind == TK::Pointer) {
         reportError(v->loc, "'" + v->name + "' needs a starting value",
                     v->type->kind == TK::Class ? "make one, like: " + v->type->name + " " + v->name + " = " + v->type->name +
@@ -1888,6 +2397,27 @@ void Checker::assignStmt(Stmt* s) {
             assignable(val, T, dest);
         else
             reportError(s->loc, "'" + s->op + "' doesn't work on text", "only += works on text");
+        return;
+    }
+    if (isUserType(T)) {
+        // score += bonus on your own type is score = score.plus(bonus).
+        std::string word = arithWord(s->op.substr(0, 1));
+        FuncDecl* m = operatorMethod(T, word);
+        if (!m) {
+            reportError(s->loc, "'" + s->op + "' can't be used on " + aType(T),
+                        "to make it work, give " + T->name + " a method: " + T->name + " " + word + "(" + T->name + " other) { ... }");
+            return;
+        }
+        Type* inst = isGeneric(T) ? T : nullptr;
+        if (m->params.size() != 1) {
+            reportError(s->loc, "to be used as '" + s->op + "', " + word + "() has to take one value");
+            return;
+        }
+        assignable(val, paramType(m, 0, inst), "the value after " + s->op);
+        Type* ret = inst ? substType(m->ret, inst->decl->paramTypes, inst->params) : m->ret;
+        if (ret != T && !implicitlyConverts(ret, T))
+            reportError(s->loc, "'" + s->op + "' needs " + word + "() to give back " + aType(T) + ", but it gives back " + aType(ret));
+        s->target = m;
         return;
     }
     if (isVec(T)) {
@@ -1991,6 +2521,34 @@ void Checker::stmt(Stmt* s) {
             stmt(s->then.get());
             breakables.pop_back();
             break;
+        case SK::Try: {
+            stmt(s->then.get());
+            VarDecl* v = s->var.get();
+            v->type = resolveType(v->typeRef, false);
+            Type* errType = P.core && P.core->types.count("Error") ? tNamed(P.core->types["Error"]) : tError();
+            if (v->type != tError() && v->type != errType) {
+                reportError(v->typeRef.loc, "catch takes an Error, like: catch (Error " + v->name + ")",
+                            v->type->decl && v->type->name == "Error" ? "your own type called Error hides Forge's - rename yours"
+                                                                      : "e.message is the error's text, and e.where is the file and line it happened on");
+                v->type = errType;
+            }
+            scopes.emplace_back();
+            declareLocal(v);
+            bool outer = inCatch;
+            inCatch = true;
+            stmt(s->els.get());
+            inCatch = outer;
+            scopes.pop_back();
+            break;
+        }
+        case SK::Throw: {
+            Type* t = value(s->expr.get());
+            Type* errType = P.core && P.core->types.count("Error") ? tNamed(P.core->types["Error"]) : tError();
+            if (t != tError() && t != tString() && t != errType)
+                reportError(s->expr->loc, "throw takes text (the error message), but this is " + aType(t),
+                            "for example: throw \"the save file is broken\";");
+            break;
+        }
         case SK::DoWhile:
             breakables.push_back('l');
             stmt(s->then.get());
@@ -2008,6 +2566,34 @@ void Checker::stmt(Stmt* s) {
             scopes.pop_back();
             break;
         case SK::ForEach: {
+            if (s->value) {
+                // for (int i in 0..10): counts from the start to the end, both included.
+                VarDecl* v = s->var.get();
+                v->type = resolveType(v->typeRef, false);
+                if (v->type != tError() && v->type->kind != TK::Int) {
+                    reportError(v->typeRef.loc, "a counting loop counts whole numbers, so '" + v->name + "' has to be an int",
+                                "write it as: for (int " + v->name + " in ...)");
+                    v->type = tError();
+                }
+                Type* T = v->type == tError() ? tInt(32, true) : v->type;
+                checkInto(s->expr.get(), T, "the start of the range");
+                checkInto(s->value.get(), T, "the end of the range");
+                Expr* end = s->value.get();
+                if (end->kind == EK::Member && end->text == "length" && end->res.kind == RK::BuiltinMethod) {
+                    std::string obj = end->a->kind == EK::Name ? end->a->text : "list";
+                    bool text = end->a->type && end->a->type->kind == TK::String;
+                    warn(end->loc, "this counts one past the last position, because both ends of a range are included",
+                         std::string(text ? "letters" : "lists") + " start at 0, so write: " +
+                             (s->expr->kind == EK::Int ? std::to_string((long long)s->expr->ival) : "...") + ".." + obj + ".length - 1");
+                }
+                scopes.emplace_back();
+                declareLocal(v);
+                breakables.push_back('l');
+                stmt(s->then.get());
+                breakables.pop_back();
+                scopes.pop_back();
+                break;
+            }
             Type* lt = value(s->expr.get());
             VarDecl* v = s->var.get();
             v->type = resolveType(v->typeRef, false);
@@ -2094,6 +2680,7 @@ void Checker::checkBody(FuncDecl* f, TypeDecl* owner) {
     cur = f->module;
     fn = f;
     curType = owner;
+    inStatic = f->isStatic;
     breakables.clear();
     scopes.clear();
     scopes.emplace_back();
@@ -2120,6 +2707,7 @@ void Checker::checkBody(FuncDecl* f, TypeDecl* owner) {
         reportError(f->loc, "'" + f->name + "' doesn't always return a value", "add a return at the end, like 'return " + example + ";'");
     }
     curType = nullptr;
+    inStatic = false;
 }
 
 bool Checker::run() {
@@ -2136,6 +2724,26 @@ bool Checker::run() {
     for (Module* m : modules)
         for (auto& d : m->ast.types) checkOverrides(d.get());
     checkStructCycles();
+    // Functions sharing a name need different parameter types, so every call can tell which one it means.
+    for (Module* m : P.allModules)
+        for (auto& [name, fs] : m->overloads) {
+            if (name == "main" && fs.size() > 1) {
+                reportError(fs[1]->loc, "there can only be one main function", "rename the other one");
+                continue;
+            }
+            for (size_t i = 1; i < fs.size(); i++)
+                for (size_t j = 0; j < i; j++) {
+                    bool same = fs[i]->params.size() == fs[j]->params.size();
+                    for (size_t k = 0; same && k < fs[i]->params.size(); k++) same = fs[i]->params[k]->type == fs[j]->params[k]->type;
+                    if (same) {
+                        reportError(fs[i]->loc, "'" + name + "' is written twice with the same parameter types (the first is on line " +
+                                                    std::to_string(fs[j]->loc.line) + ")",
+                                    "functions can share a name only if their parameters are different, like " + name + "(int) and " +
+                                        name + "(float) - change the parameters or the name");
+                        break;
+                    }
+                }
+        }
 
     // Pass 2: check values and bodies.
     for (Module* m : modules) {
@@ -2152,9 +2760,32 @@ bool Checker::run() {
             for (auto& meth : d->methods) checkDefaults(meth.get());
             for (auto& c : d->ctors) checkDefaults(c.get());
             for (auto& f : d->fields) {
+                if (f->isStatic && !m->isPrelude && f->init) {  // a static field's starting value
+                    checkInto(f->init.get(), f->type, "'" + f->name + "'");
+                    continue;
+                }
+                if (f->isStatic && !m->isPrelude && (f->type->kind == TK::Class || f->type->kind == TK::Pointer || f->type->kind == TK::Function)) {
+                    reportError(f->loc, "the static field '" + f->name + "' needs a starting value",
+                                "give it one, or make it optional: static " + f->typeRef.display() + "? " + f->name + " = null;");
+                    continue;
+                }
                 if (f->isStatic) continue;
                 if (f->init) {
                     checkInto(f->init.get(), f->type, "'" + f->name + "'");
+                } else if (f->type->kind == TK::TypeParam) {
+                    // T could be a class, which can't be empty: every constructor has to give it a value.
+                    for (auto& c : d->ctors) {
+                        bool set = false;
+                        for (auto& st : c->body->body)
+                            if (st->kind == SK::Assign && st->op == "=" &&
+                                ((st->expr->kind == EK::Name && st->expr->text == f->name) ||
+                                 (st->expr->kind == EK::Member && st->expr->a->kind == EK::This && st->expr->text == f->name)))
+                                set = true;
+                        if (!set)
+                            reportError(c->loc, "this constructor has to give '" + f->name + "' a value, because " + f->type->name + " could be a class",
+                                        "add this." + f->name + " = ...; to it (not inside an if or a loop), or make the field optional: " +
+                                            f->type->name + "? " + f->name + ";");
+                    }
                 } else if (!m->isPrelude && (f->type->kind == TK::Class || f->type->kind == TK::Pointer)) {
                     reportError(f->loc, "the field '" + f->name + "' needs a starting value",
                                 f->type->kind == TK::Class ? "give it one (" + f->typeRef.display() + " " + f->name + " = " + f->typeRef.display() +

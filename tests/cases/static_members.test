@@ -1,0 +1,72 @@
+=== main.frg
+#include <stdio>
+
+class Enemy {
+    static int count = 0;
+    static list<string> names = [];
+    string name;
+    int hp = 10;
+
+    Enemy(string name) {
+        this.name = name;
+        count++;                 // a static field, used inside the class without Enemy.
+        names.add(name);
+    }
+
+    static Enemy boss() {
+        Enemy b = Enemy("Boss");
+        b.hp = 100;
+        return b;
+    }
+
+    static int total() {
+        return count;
+    }
+}
+
+struct Point {
+    float x;
+    float y;
+    static Point origin = Point(0, 0);
+
+    static float distance(Point a, Point b) {
+        return math2.length(b.x - a.x, b.y - a.y);
+    }
+}
+
+int main(){
+    print(Enemy.count);
+    Enemy a = Enemy("Grub");
+    Enemy("Zog");
+    Enemy boss = Enemy.boss();
+    print(Enemy.count);
+    print(Enemy.total());
+    print(Enemy.names);
+    print(boss.hp);
+    Enemy.count = 0;
+    print(Enemy.count);
+    print(a);
+    print(Point.origin);
+    print(Point.distance(Point.origin, Point(3, 4)));
+    return 0;
+}
+=== math2.frg
+float length(float x, float y) {
+    float sq = x * x + y * y;
+    float guess = sq;
+    for (int i = 0; i < 20; i++) {
+        guess = (guess + sq / guess) / 2;
+    }
+    return guess;
+}
+=== output
+0
+3
+3
+[Grub, Zog, Boss]
+100
+0
+Enemy(name: Grub, hp: 10)
+Point(x: 0.0, y: 0.0)
+5.0
+=== no warnings

@@ -1,0 +1,157 @@
+=== main.frg
+#include <stdio>
+
+class Box<T> {
+    T item;
+    int opened = 0;
+
+    Box(T item) {
+        this.item = item;
+    }
+
+    T open() {
+        opened++;
+        return item;
+    }
+
+    void swap(T other) {
+        item = other;
+    }
+
+    bool holds(T thing) {
+        return item == thing;
+    }
+}
+
+struct Pair<A, B> {
+    A first;
+    B second;
+}
+
+class Stack<T> {
+    list<T> items = [];
+
+    void push(T x) {
+        items.add(x);
+    }
+
+    T? pop() {
+        if (items.length == 0) {
+            return null;
+        }
+        T last = items[items.length - 1];
+        items.removeAt(items.length - 1);
+        return last;
+    }
+
+    int size() {
+        return items.length;
+    }
+}
+
+class Registry<T> {
+    map<string, T> things = {};
+    T? last = null;
+
+    void put(string key, T thing) {
+        things[key] = thing;
+        last = thing;
+        print("added {key}: {thing}");
+    }
+
+    bool has(T thing) {
+        return things.values().contains(thing);
+    }
+
+    void show() {
+        print(things);
+        if (last != null) {
+            print(last);
+        }
+    }
+}
+
+class Player {
+    string name = "Ana";
+}
+
+int main(){
+    Box<int> coins = Box(5);
+    print(coins.open());
+    coins.swap(9);
+    print(coins.item + 1);
+    print(coins.holds(9));
+
+    Box<string> note = Box("hello");
+    print(note.open() + "!");
+
+    Box<Player> hero = Box(Player());
+    print(hero.open().name);
+
+    Pair<string, int> score = Pair("Ana", 30);
+    print("{score.first} has {score.second}");
+    print(score);
+
+    Stack<string> words = Stack();
+    words.push("a");
+    words.push("b");
+    print(words.size());
+    string? top = words.pop();
+    print(top ?? "none");
+    print(words.pop() ?? "none");
+    print(words.pop() ?? "none");
+
+    Stack<Player> party = Stack();
+    party.push(Player());
+    Player? p = party.pop();
+    print(p != null);
+    print(party.pop() == null);
+
+    list<Box<int>> boxes = [Box(1), Box(2)];
+    int total = 0;
+    for (Box<int> b in boxes) {
+        total += b.open();
+    }
+    print(total);
+    print(coins);
+    print("{score.first}: {score.second}");
+    Box<list<int>> nums = Box([1, 2, 3]);
+    print(nums.item.length);
+    print(nums);
+    Registry<int> reg = Registry();
+    reg.put("a", 1);
+    print(reg.has(1));
+    print(reg.has(2));
+    reg.show();
+    Registry<Player> people = Registry();
+    people.put("p", Player());
+    people.show();
+    return 0;
+}
+=== output
+5
+10
+true
+hello!
+Ana
+Ana has 30
+Pair(first: Ana, second: 30)
+2
+b
+a
+none
+true
+true
+3
+Box(item: 9, opened: 1)
+Ana: 30
+3
+Box(item: [1, 2, 3], opened: 0)
+added a: 1
+true
+false
+{a: 1}
+1
+added p: Player(name: Ana)
+{p: Player(name: Ana)}
+Player(name: Ana)

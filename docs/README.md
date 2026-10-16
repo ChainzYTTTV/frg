@@ -4,7 +4,7 @@ Forge (`.frg`) is a compiled programming language for making 2D and 3D games. It
 
 These docs are for **anyone using or learning Forge**, including people who have never programmed before. If you're new, read them in order. If you already know another language, skim [Getting Started](getting-started.md), then read [Things that surprise people from other languages](language/14-coming-from-other-languages.md).
 
-> Forge was designed by a person and written by an AI (see the main [README](../README.md)). These docs describe **Forge 0.7**. If something here disagrees with what the compiler does, the compiler is right; please report the mismatch.
+> Forge was designed by a person and written by an AI (see the main [README](../README.md)). These docs describe **Forge 0.8**. If something here disagrees with what the compiler does, the compiler is right; please report the mismatch.
 
 ## Start here
 

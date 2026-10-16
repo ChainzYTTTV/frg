@@ -1,0 +1,24 @@
+=== main.frg
+#include <stdio>
+
+task t() {
+    try {
+        wait(1);
+    } catch (Error e) {
+        wait(1);
+    }
+}
+
+int main(){
+    try {
+        print(1);
+    } catch (string e) {
+        print(e);
+    }
+    throw 5;
+    return 0;
+}
+=== error
+wait() can't be used inside a catch { }
+catch takes an Error, like: catch (Error e)
+throw takes text (the error message), but this is an int

@@ -164,7 +164,7 @@ Classes can inherit from `Body` to add their own fields and methods. They use `B
 ```cpp
 class Player : Body {
     int lives = 3;
-    void respawn() {
+    void respawn(){
         position = vec2(80, 300);
         velocity = vec2.ZERO;
     }

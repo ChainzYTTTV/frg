@@ -48,7 +48,7 @@
             }
         },
         "type-declaration": {
-            "match": "\\b(struct|class|enum)\\s+([A-Za-z_][A-Za-z0-9_]*)(?:\\s*(:)\\s*([A-Za-z_][A-Za-z0-9_.]*))?",
+            "match": "\\b(struct|class|enum|interface)\\s+([A-Za-z_][A-Za-z0-9_]*)(?:\\s*(:)\\s*([A-Za-z_][A-Za-z0-9_.]*))?",
             "captures": {
                 "1": { "name": "storage.type.forge" },
                 "2": { "name": "entity.name.type.forge" },
@@ -58,7 +58,7 @@
         },
         "keywords": {
             "patterns": [
-                { "name": "keyword.control.forge", "match": "\\b(if|else|while|do|for|in|switch|case|default|return|break|continue|wait)\\b" },
+                { "name": "keyword.control.forge", "match": "\\b(if|else|while|do|for|in|switch|case|default|return|break|continue|try|catch|throw|wait)\\b" },
                 { "name": "keyword.operator.logical.forge", "match": "\\b(and|or|not)\\b" },
                 { "name": "keyword.operator.type.forge", "match": "\\b(is|as)\\b" },
                 { "name": "keyword.operator.word.forge", "match": "(?<=[\\w\\)\\]\"]\\s{1,8})\\b(plus|minus|times|div|mod|equals|greater|less|otherwise|bitand|bitor|bitxor|shiftleft|shiftright)\\b(?!\\s*=(?!=))(?=\\s)" },
@@ -68,8 +68,8 @@
                     "captures": { "1": { "name": "keyword.operator.word.forge" } }
                 },
                 { "name": "keyword.operator.word.forge", "match": "(?<=[\\w\\)\\]]\\s{1,8})\\b(to|by)\\b(?=\\s)" },
-                { "name": "storage.type.forge", "match": "\\b(struct|class|enum)\\b" },
-                { "name": "storage.modifier.forge", "match": "\\b(const|static|private|public)\\b" },
+                { "name": "storage.type.forge", "match": "\\b(struct|class|enum|interface)\\b" },
+                { "name": "storage.modifier.forge", "match": "\\b(const|static|abstract|private|public)\\b" },
                 { "name": "variable.language.forge", "match": "\\b(this|super)\\b" },
                 { "name": "constant.language.forge", "match": "\\b(true|false|null)\\b" }
             ]
@@ -107,7 +107,7 @@
         },
         "builtin-types": {
             "name": "storage.type.built-in.forge",
-            "match": "\\b(void|task|bool|string|int|int8|int16|int32|int64|int128|uint|uint8|uint16|uint32|uint64|uint128|float|double|list|map|Pointer|vec2|vec3|vec4|color|rect)\\b"
+            "match": "\\b(void|task|bool|string|int|int8|int16|int32|int64|int128|uint|uint8|uint16|uint32|uint64|uint128|float|double|list|map|Pointer|Function|Weak|vec2|vec3|vec4|color|rect)\\b"
         },
         "libraries": {
             "name": "support.class.library.forge",

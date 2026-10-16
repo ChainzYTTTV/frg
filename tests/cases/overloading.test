@@ -1,0 +1,56 @@
+=== main.frg
+#include <stdio>
+
+void show(int n) {
+    print("int {n}");
+}
+
+void show(float f) {
+    print("float {f}");
+}
+
+void show(string s) {
+    print("text {s}");
+}
+
+void show(int a, int b) {
+    print("two ints {a} {b}");
+}
+
+int area(int w, int h) {
+    return w * h;
+}
+
+float area(float radius) {
+    return 3.0 * radius * radius;
+}
+
+int main(){
+    show(5);
+    show(2.5);
+    show("hi");
+    show(1, 2);
+    int8 small = 3;
+    show(small);
+    double d = 1.5;
+    show(float(d));
+    print(area(3, 4));
+    print(area(2.0));
+    Function<void(string)> f = show;
+    f("as a value");
+    Function<void(int)> g = show;
+    g(9);
+    return 0;
+}
+=== output
+int 5
+float 2.5
+text hi
+two ints 1 2
+int 3
+float 1.5
+12
+12.0
+text as a value
+int 9
+=== no warnings

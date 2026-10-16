@@ -62,6 +62,22 @@ That's handy when you need to do something before you can check it, like asking 
 
 `break` and `continue` work the same as in `while` (`continue` jumps to the check). Variables made inside the `{ }` are gone by the time the condition is checked, so make them before the `do` if the condition needs them, like `answer` above.
 
+## Counting: for (int i in 0..10)
+
+The easiest way to count is a **range**: a start, two dots, and an end.
+
+```cpp
+for (int i in 1..5) {
+    print(i);          // 1, 2, 3, 4, 5
+}
+```
+
+**Both ends are included**: `0..10` counts 0, 1, 2 ... 10, which is eleven numbers. The start and end can be any whole numbers, including variables and sums: `for (int i in 1..level * 2)`.
+
+- It always counts **up**, one at a time. If the start is bigger than the end (`5..4`), the loop doesn't run at all. To count down or in steps, use the `for` loop below.
+- Lists start at position 0, so the last position is `length - 1`. To go through every position: `for (int i in 0..names.length - 1)`. If you write `0..names.length`, Forge warns you, because that goes one past the end.
+- `break` and `continue` work as usual. Changing `i` inside the loop doesn't change how it counts.
+
 ## for
 
 `for` packs a counter into one line:
@@ -176,7 +192,7 @@ switch (command) {
 `return` leaves the current function immediately. See [Functions](06-functions.md). Inside a loop, it also leaves the loop.
 
 ```cpp
-int findFirstNegative(list<int> nums) {
+int findFirstNegative(list<int> nums){
     for (int i = 0; i < nums.length; i++) {
         if (nums[i] < 0) {
             return i;      // found it: stop looking

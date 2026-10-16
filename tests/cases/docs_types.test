@@ -18,7 +18,7 @@ class Singleton {
 }
 
 class Boss : enemies.goblin.Goblin {
-    string toString() {
+    string toText() {
         return "Boss with {gold} gold";
     }
 }

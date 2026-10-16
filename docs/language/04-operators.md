@@ -176,6 +176,59 @@ print(times times set);     // 6
 
 The statement words (`set`, `increase`, `decrease`, `multiply`, `divide`) only count at the start of a statement that has the matching `to` or `by`, so a function called `set(...)` still works. The only words fully reserved are `negative` and `bitnot`, plus `and`, `or`, `not`, `is` and `as`. See [Reserved words](13-reserved-words.md).
 
+## Operators for your own types
+
+Your own structs and classes can use the same symbols and words as numbers. Give the type a method named after the operator's word:
+
+| Method | Makes these work |
+|---|---|
+| `plus(other)` | `a + b`, `a plus b`, `a += b` |
+| `minus(other)` | `a - b`, `a minus b`, `a -= b` |
+| `times(other)` | `a * b`, `a times b`, `a *= b` |
+| `div(other)` | `a / b`, `a div b`, `a /= b` |
+| `mod(other)` | `a % b`, `a mod b`, `a %= b` |
+| `bool less(other)` | all four comparisons: `<`, `>`, `<=`, `>=` (and their words), and `list.sort()` |
+| `bool equals(other)` | `==` and `!=` (and `equals` / `not equals`), instead of the automatic comparison |
+| `string toText()` | what `print(x)` and `"{x}"` show |
+
+```cpp
+struct Money {
+    int cents;
+
+    Money plus(Money other){
+        return Money(cents + other.cents);
+    }
+
+    Money times(int n){             // the other side doesn't have to be the same type
+        return Money(cents * n);
+    }
+
+    bool less(Money other){
+        return cents < other.cents;
+    }
+
+    string toText(){
+        return "${cents / 100}.{cents % 100}";
+    }
+}
+
+Money a = Money(250);
+Money b = Money(175);
+print(a + b);          // $4.25
+print(a times 2);      // $5.0
+print(a > b);          // true: worked out as b.less(a)
+total += a;            // total = total.plus(a)
+prices.sort();         // a list<Money>, smallest first
+```
+
+Things to know:
+
+- Your type has to be on the **left**: `a * 3` uses `a.times(3)`, but `3 * a` is an error.
+- The method takes one value. `less` and `equals` have to give back a `bool`; the others can give back anything (usually the same type).
+- With `less`, `a > b` is `b.less(a)`, `a <= b` is "not `b.less(a)`", and `a >= b` is "not `a.less(b)`". So one method gives all four.
+- Without `equals`, `==` compares every field of a struct, and for classes it checks whether both sides are the **same object**. A struct's `equals` is also used by `contains`, `indexOf` and `remove` on its lists.
+- These are normal methods too: `a.plus(b)` works.
+
 ## What's next
 
 [Making decisions and repeating](05-control-flow.md): `if`, loops and `switch`.

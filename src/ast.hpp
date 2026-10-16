@@ -21,13 +21,18 @@ struct TypeRef {
     std::vector<std::string> path;  // {"entities", "Player"}; empty means "no type"
     std::vector<TypeRef> args;      // generic arguments
     bool optional = false;
+    bool isFunction = false;        // Function<ret(params)>: args[0] is the return type, the rest the parameters
     Loc loc;
 
     bool empty() const { return path.empty(); }
     std::string display() const {
         std::string s;
         for (size_t i = 0; i < path.size(); i++) s += (i ? "." : "") + path[i];
-        if (!args.empty()) {
+        if (isFunction) {
+            s += "<" + args[0].display() + "(";
+            for (size_t i = 1; i < args.size(); i++) s += (i > 1 ? ", " : "") + args[i].display();
+            s += ")>";
+        } else if (!args.empty()) {
             s += "<";
             for (size_t i = 0; i < args.size(); i++) s += (i ? ", " : "") + args[i].display();
             s += ">";
@@ -47,6 +52,7 @@ enum class EK {
     Super,
     Is,        // obj is Type
     As,        // obj as Type (null if it isn't one)
+    Lambda,    // (Enemy e) { return e.hp <= 0; } - a function value
 };
 
 // What a name (or a.b.c path) refers to. Filled in by the checker.
@@ -60,6 +66,7 @@ enum class RK {
     TypeStatic,    // color.RED (var = the static)
     BuiltinMethod, // list.add, map.keys, text.upper (name in `lib`)
     PointerValue,  // p.value
+    Describe,      // obj.describe: built-in info about any struct or class object
 };
 
 struct Resolved {
@@ -100,8 +107,13 @@ struct Expr {
     bool litFloat = false;   // a constant built from literals including a decimal one
     bool isWrite = false;    // Index: the target of an assignment (map[key] = ... creates the key)
     FuncDecl* ctor = nullptr;            // Call/BraceLit that builds an object: the constructor used (or null = field-by-field)
+    FuncDecl* opMethod = nullptr;        // Binary on your own type: the method it calls (a + b is a.plus(b)); list.sort(): less
+    bool opSwap = false;                 // a > b is b.less(a)
+    bool opNot = false;                  // a >= b is !a.less(b), a != b is !a.equals(b)
     TypeDecl* builds = nullptr;          // Call/BraceLit that builds an object: the type built
     std::vector<Expr*> defaultArgs;      // Call: default values filled in for missing arguments
+    std::vector<Type*> paramTypes;       // Call on a generic type (Box<int>): each parameter's type with T filled in
+    std::shared_ptr<FuncDecl> lambda;    // Lambda: its parameters and body (ret is filled in by the checker)
 
     Expr(EK k, Loc l) : kind(k), loc(l) {}
 };
@@ -115,7 +127,7 @@ struct VarDecl {
     bool isGlobal = false;
     bool isParam = false;
     bool isField = false;
-    bool isStatic = false;   // built-in constants like color.RED
+    bool isStatic = false;   // static fields: one shared by the whole type (Enemy.count), and built-in constants like color.RED
     bool isPrivate = false;  // only usable inside its class (fields) or its file (globals)
     Type* type = nullptr;
     Module* module = nullptr;
@@ -123,7 +135,7 @@ struct VarDecl {
 };
 using VarPtr = std::unique_ptr<VarDecl>;
 
-enum class SK { Block, Var, ExprStmt, Assign, IncDec, If, While, DoWhile, For, ForEach, Switch, Return, Break, Continue, SuperCall };
+enum class SK { Block, Var, ExprStmt, Assign, IncDec, If, While, DoWhile, For, ForEach, Switch, Return, Break, Continue, SuperCall, Try, Throw };
 
 struct Stmt;
 using StmtPtr = std::unique_ptr<Stmt>;
@@ -139,11 +151,11 @@ struct Stmt {
     SK kind;
     Loc loc;
     std::vector<StmtPtr> body;  // Block
-    VarPtr var;                 // Var, ForEach loop variable
+    VarPtr var;                 // Var, ForEach loop variable, Try: the Error in catch (Error e)
     ExprPtr expr;               // ExprStmt, Return value, If/While/For condition, Assign/IncDec target, ForEach list, Switch subject
-    ExprPtr value;              // Assign right-hand side
+    ExprPtr value;              // Assign right-hand side; ForEach over a range (0..10): the end, with expr the start
     std::string op;             // Assign ("=", "+=", ...), IncDec ("++", "--")
-    StmtPtr then, els;          // If branches; While/DoWhile/For/ForEach body is `then`
+    StmtPtr then, els;          // If branches; While/DoWhile/For/ForEach body is `then`; Try: then = try { }, els = catch { }
     StmtPtr init, step;         // For
     std::vector<SwitchCase> cases;
     std::vector<ExprPtr> args;  // SuperCall arguments
@@ -163,6 +175,8 @@ struct FuncDecl {
     TypeDecl* owner = nullptr;  // methods and constructors
     bool isCtor = false;
     bool isPrivate = false;     // only usable inside its class (methods) or its file (functions)
+    bool isStatic = false;      // a static method: belongs to the type, not to one object
+    bool isAbstract = false;    // an abstract method (or an interface's): no code, every class below must write it
     FuncDecl* overrides = nullptr;
 
     size_t requiredParams() const {
@@ -173,7 +187,7 @@ struct FuncDecl {
 };
 using FuncPtr = std::unique_ptr<FuncDecl>;
 
-enum class DK { Struct, Class, Enum };
+enum class DK { Struct, Class, Enum, Interface };
 
 struct TypeDecl {
     DK kind;
@@ -184,7 +198,13 @@ struct TypeDecl {
     bool isPrivate = false;  // only usable inside its own file
     std::string cpp;  // C++ name of the struct/class/enum itself, e.g. "::m_main::Player_"
     TypeRef baseRef;
-    TypeDecl* base = nullptr;
+    std::vector<TypeRef> moreBaseRefs;      // class Goblin : Enemy, Attacker - the names after the first
+    TypeDecl* base = nullptr;               // the class it inherits from
+    std::vector<TypeDecl*> interfaces;      // the interfaces it has
+    bool isAbstract = false;                // abstract class: can't be made directly
+    std::vector<std::string> typeParams;    // class Box<T>: {"T"}
+    std::vector<Loc> typeParamLocs;
+    std::vector<Type*> paramTypes;          // the type each of typeParams stands for inside the type
     std::vector<VarPtr> fields;     // includes `static` built-in constants
     std::vector<FuncPtr> methods;
     std::vector<FuncPtr> ctors;

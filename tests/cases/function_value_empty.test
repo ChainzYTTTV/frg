@@ -1,0 +1,12 @@
+=== main.frg
+class Button {
+    Function<void()> onClick;
+}
+
+int main(){
+    Button b = Button();
+    b.onClick();
+    return 0;
+}
+=== runtime error
+main.frg:7: this function value is empty - give it a function before calling it

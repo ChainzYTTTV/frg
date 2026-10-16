@@ -1,4 +1,4 @@
-# Forge Cheat Sheet (v0.8)
+# Forge Cheat Sheet (v0.9)
 
 The whole language on one page, for looking things up quickly. For full explanations, examples and every detail, see the [complete documentation](README.md). Planned features are listed at the end.
 

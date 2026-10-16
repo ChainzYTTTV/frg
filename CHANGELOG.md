@@ -2,6 +2,19 @@
 
 What changed in each version of Forge. Plans for later versions are in the [roadmap](ROADMAP.md).
 
+## 0.9.0 (2026-10-16)
+
+**Tools**
+- **Split builds.** A big game's C++ is split into parts that compile at the same time, one per processor core, and only the parts with changed files are compiled again. A build with no changes doesn't even link. On 12 threads: a one-file edit in a 1,000-file game takes 4 s (it took 103 s), and a full build 40 s. Small games stay one part, as fast as before.
+- **Autocomplete, hover help, go to definition, find all uses, rename and the outline for your own code** in VS Code, through the new `frg query`. Autocomplete works while you type, after a dot too (`player.body.`), and only offers what exists where the cursor is.
+- **A debugger.** `frg build --debug` makes a build where every line knows its `.frg` line, and VS Code's **Forge: Debug Game** (F6, or the bug button) runs it in gdb: breakpoints on `.frg` lines, the variables, stepping, and the call stack.
+- **`frg fmt`** tidies the layout of `.frg` files (indentation, `int main(){` braces, blank lines) without changing anything else, and VS Code's Format Document uses it.
+- **`frg test`** runs the tests in the game's `tests` folder: functions named `test...` that use the new `<testing>` library (`testing.check(h.hp == 15)` shows both values when it fails).
+
+**Runtime**
+- **Runtime errors show the calls that led to them**: "called from main.frg:6 (in main)", nearest first.
+- `list[i]` on an empty list says "the list is empty".
+
 ## 0.8.1 (2026-10-16)
 
 Two bug fixes, found by testing a big game spread across many files and folders.

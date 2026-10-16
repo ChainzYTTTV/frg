@@ -5,6 +5,7 @@
     "version": "0.8.0",
     "publisher": "forge-lang",
     "license": "MIT",
+    "icon": "icons/forge-128.png",
     "engines": {
         "vscode": "^1.75.0"
     },

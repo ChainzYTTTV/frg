@@ -1,0 +1,13 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 64 64">
+  <defs>
+    <linearGradient id="metal" x1="0" y1="0" x2="0" y2="1">
+      <stop offset="0" stop-color="#FFA94D"/>
+      <stop offset="1" stop-color="#E8590C"/>
+    </linearGradient>
+  </defs>
+  <!-- sparks -->
+  <path fill="#FFD43B" d="M44 3 L46.2 9.8 L53 12 L46.2 14.2 L44 21 L41.8 14.2 L35 12 L41.8 9.8 Z"/>
+  <path fill="#FFD43B" d="M56 17 L57.3 20.7 L61 22 L57.3 23.3 L56 27 L54.7 23.3 L51 22 L54.7 20.7 Z"/>
+  <!-- the anvil: horn on the left, flat top, narrow waist, wide foot -->
+  <path fill="url(#metal)" d="M2 27 C8 27 12 26 16 24 H56 V33 H48 C44 33 42 35 42 39 V44 H48 L52 52 H14 L18 44 H24 V39 C24 35 22 33 18 33 C12 33 6 31 2 27 Z"/>
+</svg>

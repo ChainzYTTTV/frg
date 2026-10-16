@@ -1987,6 +1987,16 @@ To install or update it, run `.\editors\vscode\package.ps1 -Install` from the Fo
 
 Settings: `forge.path` is the full path to `frg.exe` if VS Code can't find it. `forge.checkOnSave` turns checking on save on or off.
 
+#### The `.frg` icon in File Explorer
+
+Windows shows `.frg` files as blank pages until it's told about them. To give them Forge's icon (an orange anvil) and make double-clicking one open it in VS Code, run this once from the Forge folder:
+
+```
+.\editors\windows\register-frg-files.ps1
+```
+
+It only changes settings for your own Windows account. `-Remove` undoes it. The icon file is `art\frg-file.ico` inside the Forge folder, so run it again if you move Forge somewhere else.
+
 ### Troubleshooting
 
 | Problem | Fix |

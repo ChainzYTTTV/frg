@@ -118,7 +118,7 @@ These were decided by Forge's designer (2026-10-16). Build them this way.
 
 | Item | Why | Size |
 |---|---|---|
-| An installer that includes g++ | one-step setup | M |
+| An installer that includes g++, and gives `.frg` files their icon in File Explorer (`editors/windows/register-frg-files.ps1`) | one-step setup | M |
 | A final check of every name and rule | they can't change after 1.0 | M |
 | A full review of the docs and the teaching brief | the docs are how people learn Forge | M |
 | Testing on Windows 10 and 11, on several PCs | no surprises for new users | S |

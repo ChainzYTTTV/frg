@@ -16,7 +16,7 @@ $frg = [IO.Path]::GetFullPath((Join-Path $here "..\..\bin\frg.exe"))
 if (-not (Test-Path $frg)) { throw "Build Forge first: $frg doesn't exist" }
 
 $files = @("package.json", "extension.js", "language-configuration.json", "README.md",
-           "syntaxes/forge.tmLanguage.json", "snippets/forge.json", "icons/frg.svg")
+           "syntaxes/forge.tmLanguage.json", "snippets/forge.json", "icons/frg.svg", "icons/forge-128.png")
 
 $contentTypes = @'
 <?xml version="1.0" encoding="utf-8"?>
@@ -25,6 +25,7 @@ $contentTypes = @'
   <Default Extension=".js" ContentType="application/javascript"/>
   <Default Extension=".md" ContentType="text/markdown"/>
   <Default Extension=".svg" ContentType="image/svg+xml"/>
+  <Default Extension=".png" ContentType="image/png"/>
   <Default Extension=".txt" ContentType="text/plain"/>
   <Default Extension=".vsixmanifest" ContentType="text/xml"/>
 </Types>
@@ -40,6 +41,7 @@ $manifest = @"
     <Tags>forge,frg,game</Tags>
     <Categories>Programming Languages,Snippets</Categories>
     <GalleryFlags>Public</GalleryFlags>
+    <Icon>extension/icons/forge-128.png</Icon>
     <Properties>
       <Property Id="Microsoft.VisualStudio.Code.Engine" Value="$($pkg.engines.vscode)" />
       <Property Id="Microsoft.VisualStudio.Code.ExtensionDependencies" Value="" />
@@ -54,6 +56,7 @@ $manifest = @"
   <Dependencies />
   <Assets>
     <Asset Type="Microsoft.VisualStudio.Code.Manifest" Path="extension/package.json" Addressable="true" />
+    <Asset Type="Microsoft.VisualStudio.Services.Icons.Default" Path="extension/icons/forge-128.png" Addressable="true" />
   </Assets>
 </PackageManifest>
 "@

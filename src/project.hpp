@@ -47,7 +47,9 @@ struct Project {
 };
 
 // Reads and parses main.frg, the other files next to it, every included folder, and the built-in libraries.
-bool loadProject(Project& proj, const std::filesystem::path& root);
+// With `withTests`, the tests/ folder next to main.frg is read too (frg test, frg check, editors), even if no file
+// includes it: tests aren't part of the game itself.
+bool loadProject(Project& proj, const std::filesystem::path& root, bool withTests = false);
 
 // Makes loadProject use `text` for this file instead of what's on disk (an editor's unsaved changes).
 void setSourceOverride(const std::filesystem::path& path, const std::string& text);

@@ -77,7 +77,7 @@ Type* derefType(Type* t) {
 
 class Gen {
 public:
-    Gen(Project& p, bool debug) : P(p), debug(debug) {}
+    Gen(Project& p, bool debug, bool tests) : P(p), debug(debug), tests(tests) {}
     GeneratedCpp run();
 
 private:
@@ -90,6 +90,7 @@ private:
     bool globalScope = false;  // writing a global's or static field's starting value, outside any function
     bool debug = false;        // a debug build: each statement says which .frg line it came from (#line)
     bool framed = false;       // the code being written has a ::frg::Frame frg$frame (for runtime errors' "called from")
+    bool tests = false;        // frg test: main() runs the tests instead of the game
 
     // Runtime errors list the calls that led to them, so each function keeps a Frame saying where it's up to.
     void frameStart(const std::string& name, const Loc& l) {
@@ -149,6 +150,7 @@ private:
     std::string ordered(const std::vector<const Expr*>& exprs, const std::vector<std::string>& codes,
                         const std::function<std::string(const std::vector<std::string>&)>& build);
     std::string call(const Expr* e);
+    std::string testingCall(const Expr* e, const FuncDecl* f);
     std::string construct(const Expr* e, const std::vector<ExprPtr>& given);
     std::string binary(const Expr* e);
 
@@ -378,6 +380,32 @@ std::string Gen::construct(const Expr* e, const std::vector<ExprPtr>& given) {
     return ordered(exprs, codes, [&](const std::vector<std::string>& c) { return head + joinArgs(c) + ")"; });
 }
 
+// testing.check(ok) and testing.fail(): they get their place and the line as written, and a comparison like
+// testing.check(h.hp == 15) also shows both of its values when it fails.
+std::string Gen::testingCall(const Expr* e, const FuncDecl* f) {
+    std::vector<std::string> codes = argList(e, e->args, f);
+    std::string text = e->loc.file ? e->loc.file->getLine(e->loc.line) : "";
+    text.erase(0, text.find_first_not_of(" \t"));
+    while (!text.empty() && (text.back() == ' ' || text.back() == '\t')) text.pop_back();
+    if (f->name == "fail") return "::frg::testing::failAt(" + where(e->loc) + ", " + codes[0] + ")";
+    const Expr* cond = e->args[0].get();
+    static const std::set<std::string> comparisons = {"==", "!=", "<", ">", "<=", ">="};
+    const Type* T = cond->kind == EK::Binary ? cond->opType : nullptr;
+    bool simple = T && (T->kind == TK::Int || T->kind == TK::Float || T->kind == TK::String || T->kind == TK::Bool || T->kind == TK::Enum);
+    if (cond->kind == EK::Binary && comparisons.count(cond->text) && !cond->opMethod && simple && cond->a->type->kind != TK::Null &&
+        cond->b->type->kind != TK::Null && !awaits(cond)) {
+        std::string ok = "(frg$l " + cond->text + " frg$r)";
+        // Text values are shown in quotes, so spaces and empty text can be seen.
+        std::string q = T->kind == TK::String ? "\"\\\"\" + " : "";
+        std::string qEnd = T->kind == TK::String ? " + \"\\\"\"" : "";
+        std::string values = "::std::string(\"left side: \") + " + q + strCode("frg$l", T) + qEnd + " + \", right side: \" + " + q + strCode("frg$r", T) + qEnd;
+        return std::string(globalScope ? "[]" : "[&]") + "() { auto&& frg$l = " + conv(cond->a.get(), T) + "; auto&& frg$r = " +
+               conv(cond->b.get(), T) + "; ::frg::testing::checkAt(" + ok + ", " + where(e->loc) + ", " + cppString(text) + ", " +
+               codes[1] + ", " + values + "); }()";
+    }
+    return "::frg::testing::checkAt(" + codes[0] + ", " + where(e->loc) + ", " + cppString(text) + ", " + codes[1] + ", \"\")";
+}
+
 std::string Gen::call(const Expr* e) {
     const Expr* callee = e->a.get();
     std::vector<const Expr*> argExprs;
@@ -389,6 +417,7 @@ std::string Gen::call(const Expr* e) {
                 return "::frg::window::run_([](float dt) { " + qual(P.mainModule, "update") + "(dt); }, []() { " +
                        qual(P.mainModule, "draw") + "(); })";
             }
+            if (f->module->isPrelude && f->module->name == "testing") return testingCall(e, f);
             std::string name = ref(callee);
             return ordered(argExprs, argList(e, e->args, f), [&](const std::vector<std::string>& c) { return name + "(" + joinArgs(c) + ")"; });
         }
@@ -1249,6 +1278,27 @@ GeneratedCpp Gen::run() {
         out += "\n";
     }
     globalScope = false;
+    if (tests) {
+        // frg test: every function in the tests folder whose name starts with "test" (and that takes nothing and
+        // gives nothing back) is run, one after another. A failed check or a runtime error fails only that test.
+        std::vector<std::string> calls;
+        for (Module* m : P.allModules) {
+            if (!m->folder || (m->folder->qualName != "tests" && m->folder->qualName.rfind("tests.", 0) != 0)) continue;
+            for (auto& f : m->ast.funcs)
+                if (f->name.rfind("test", 0) == 0 && f->params.empty() && f->ret == tVoid())
+                    calls.push_back("::frg::testing::run(" + cppString(m->src->displayPath) + ", " + cppString(f->name) + ", &" +
+                                    qual(m, f->name) + ");");
+        }
+        line("int main() {");
+        line("    ::frg::init();");
+        for (const std::string& c : calls) line("    " + c);
+        line("    int code = ::frg::testing::summary(" + std::to_string(calls.size()) + ");");
+        line("    ::frg::shutdown();");
+        line("    return code;");
+        line("}");
+        result.mainCode = std::move(out);
+        return result;
+    }
     line("int main() {");
     line("    ::frg::init();");
     line("    try {");
@@ -1265,7 +1315,7 @@ GeneratedCpp Gen::run() {
 
 }  // namespace
 
-GeneratedCpp generateCpp(Project& proj, bool debug) {
-    Gen g(proj, debug);
+GeneratedCpp generateCpp(Project& proj, bool debug, bool tests) {
+    Gen g(proj, debug, tests);
     return g.run();
 }

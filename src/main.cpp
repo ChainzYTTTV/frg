@@ -462,6 +462,7 @@ struct BuildOptions {
     bool release = false;
     bool console = true;
     bool debug = false;  // --debug: not optimized, with debug information and each line of C++ marked with its .frg line
+    bool test = false;   // frg test: with the tests/ folder, and a main() that runs the tests, in build/tests/
 };
 
 static bool build(const fs::path& dir, fs::path& exeOut, const BuildOptions& opt) {
@@ -477,7 +478,7 @@ static bool build(const fs::path& dir, fs::path& exeOut, const BuildOptions& opt
     }
 
     Project proj;
-    if (!loadProject(proj, dir) || !checkProject(proj)) {
+    if (!loadProject(proj, dir, opt.test) || !checkProject(proj)) {
         int n = errorCount();
         std::fprintf(stderr, "Build failed: %d error%s.\n", n, n == 1 ? "" : "s");
         return false;
@@ -486,7 +487,7 @@ static bool build(const fs::path& dir, fs::path& exeOut, const BuildOptions& opt
     printStatus("Compiling", proj.name + " (" + std::to_string(proj.allModules.size()) + " file" +
                                  (proj.allModules.size() == 1 ? "" : "s") + ")");
 
-    fs::path buildDir = proj.root / "build";
+    fs::path buildDir = opt.test ? proj.root / "build" / "tests" : proj.root / "build";
     std::error_code ec;
     fs::create_directories(buildDir, ec);
     // FRG_VERBOSE=1 shows how long each step of the build takes.
@@ -498,9 +499,9 @@ static bool build(const fs::path& dir, fs::path& exeOut, const BuildOptions& opt
         phaseStart = now;
     };
     phase("reading and checking");
-    GeneratedCpp gen = generateCpp(proj, opt.debug);
+    GeneratedCpp gen = generateCpp(proj, opt.debug, opt.test);
     phase("generating C++");
-    fs::path exe = buildDir / (proj.name + ".exe");
+    fs::path exe = buildDir / (proj.name + (opt.test ? "_tests.exe" : ".exe"));
 
     fs::path runtime = exeDir() / "runtime";
     if (!fs::exists(runtime / "forge.hpp")) {
@@ -740,11 +741,34 @@ static bool build(const fs::path& dir, fs::path& exeOut, const BuildOptions& opt
     char timeBuf[32];
     std::snprintf(timeBuf, sizeof timeBuf, "%.2fs", secs);
     std::string note = !linked ? " (nothing changed)" : all.size() > 2 ? " (" + std::to_string(jobs.size()) + " of " + std::to_string(all.size()) + " parts compiled)" : "";
-    printStatus("Finished", "build/" + exe.filename().string() + (opt.debug ? " (debug)" : "") + (opt.console ? "" : " (no console)") + note + " in " + timeBuf);
+    printStatus("Finished", fs::relative(exe, proj.root, ec).generic_string() + (opt.debug ? " (debug)" : "") + (opt.console ? "" : " (no console)") + note + " in " + timeBuf);
     if (!opt.console && !gen.needsRaylib)
         std::fprintf(stderr, "    note: this game doesn't open a window, so without a console nothing will show when it runs\n");
     exeOut = exe;
     return true;
+}
+
+// frg test: builds the game with its tests/ folder (into build/tests/) and runs every test function in there.
+static int cmdTest(const fs::path& dir, BuildOptions opt) {
+    std::error_code ec;
+    if (fs::is_directory(dir, ec) && !fs::is_directory(dir / "tests", ec)) {
+        reportPlainError("there's no tests folder in " + fs::absolute(dir).string(),
+                         "make a folder called tests next to main.frg, with files like tests/player_test.frg holding functions "
+                         "like void testJump(){ ... } that use testing.check(...) (they need #include <testing>)");
+        return 1;
+    }
+    opt.test = true;
+    opt.release = false;
+    fs::path exe;
+    if (!build(dir, exe, opt)) return 1;
+    printStatus("Testing", exe.filename().string());
+    std::fflush(stderr);
+    int code = runProcess(quote(exe), fs::absolute(dir));
+    if (code == -1) {
+        reportPlainError("couldn't start " + exe.string());
+        return 1;
+    }
+    return code;
 }
 
 static int cmdRun(const fs::path& dir, const BuildOptions& opt) {
@@ -886,6 +910,7 @@ static void printHelp() {
         "  frg build [folder]  compile the game into build/<name>.exe\n"
         "  frg run [folder]    compile the game, then run it\n"
         "  frg check [folder]  look for errors without building\n"
+        "  frg test [folder]   run the tests in the game's tests folder\n"
         "  frg package [folder]  make a finished build and zip it, ready to share: dist/<name>.zip\n"
         "  frg cache           show how big the build cache is (frg cache clear deletes it)\n"
         "  frg version         show the Forge version\n\n"
@@ -911,7 +936,7 @@ int main(int argc, char** argv) {
         std::printf("Forge %s\n", kVersion);
         return 0;
     }
-    if (cmd == "build" || cmd == "run" || cmd == "package") {
+    if (cmd == "build" || cmd == "run" || cmd == "package" || cmd == "test") {
         BuildOptions opt;
         int consoleChoice = -1;  // -1: not chosen, 0: --no-console, 1: --console
         std::vector<std::string> rest;
@@ -946,6 +971,7 @@ int main(int argc, char** argv) {
         opt.console = consoleChoice == -1 ? !opt.release : consoleChoice == 1;
         fs::path dir = rest.empty() ? fs::current_path() : fs::path(rest[0]);
         if (cmd == "run") return cmdRun(dir, opt);
+        if (cmd == "test") return cmdTest(dir, opt);
         if (cmd == "package") {
             if (!opt.release) {
                 opt.release = true;  // a package is always a finished build
@@ -1069,7 +1095,7 @@ int main(int argc, char** argv) {
             return 1;
         }
         Project proj;
-        bool ok = loadProject(proj, dir) && checkProject(proj);
+        bool ok = loadProject(proj, dir, true) && checkProject(proj);  // the tests folder too
         int warnings = flushWarnings();
         if (!ok) {
             int n = errorCount();

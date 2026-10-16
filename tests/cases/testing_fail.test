@@ -1,0 +1,33 @@
+=== main.frg
+int main(){
+    return 0;
+}
+=== tests/math_test.frg
+#include <testing>
+
+void testAddition(){
+    int x = 2 + 2;
+    testing.check(x == 5, "two and two");
+    testing.check("ab" == "ab");
+}
+
+void testCrash(){
+    list<int> empty = [];
+    int y = empty[0];
+}
+
+void testFail(){
+    testing.fail("not written yet");
+}
+=== command
+test {game}
+=== error
+FAIL  testAddition  (tests/math_test.frg)
+tests/math_test.frg:5: testing.check(x == 5, "two and two");
+left side: 4, right side: 5
+two and two
+FAIL  testCrash  (tests/math_test.frg)
+a runtime error stopped this test: tests/math_test.frg:11: position 0 is outside the list: the list is empty
+FAIL  testFail  (tests/math_test.frg)
+tests/math_test.frg:15: not written yet
+0 tests passed, 3 failed (2 checks).

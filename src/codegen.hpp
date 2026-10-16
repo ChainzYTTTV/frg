@@ -30,4 +30,5 @@ struct GeneratedCpp {
 // macro, and every file becomes its own namespace. Forge's own helpers use '$' in their names, which Forge code can't,
 // so they never collide either.
 // With `debug`, every statement is marked with the .frg file and line it came from (#line), for the debugger.
-GeneratedCpp generateCpp(Project& proj, bool debug = false);
+// With `tests`, main() runs the test functions in the tests/ folder (frg test) instead of the game's main().
+GeneratedCpp generateCpp(Project& proj, bool debug = false, bool tests = false);

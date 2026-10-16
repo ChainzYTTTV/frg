@@ -827,7 +827,7 @@ int runQuery(const std::string& what, const fs::path& folder, const fs::path& fi
 
     Project P;
     try {
-        loadProject(P, folder);
+        loadProject(P, folder, true);
         if (P.mainModule) checkProject(P);
     } catch (...) {
     }

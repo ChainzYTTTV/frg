@@ -93,6 +93,7 @@ Run these in a terminal. `[folder]` is the game's top folder (the one with `main
 | `frg build [folder]` | Checks and compiles into `build/<folder name>.exe`, without running it |
 | `frg check [folder]` | Only looks for errors (fast, makes no `.exe`) |
 | `frg fmt [folder or files]` | Tidies the layout of your `.frg` files (see below) |
+| `frg test [folder]` | Runs the tests in the game's `tests` folder ([`<testing>`](libraries/testing.md)) |
 | `frg package [folder]` | Makes the finished game and zips it, ready to share: `dist/<name>.zip` (see [Sharing your game](#sharing-your-game)) |
 | `frg cache` | Shows how big the build cache is ([why there is one](#why-the-first-build-is-slower)). `frg cache clear` deletes it |
 | `frg version` | Shows the Forge version |

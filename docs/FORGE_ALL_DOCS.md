@@ -13,7 +13,7 @@ Where the parts disagree, the detailed pages (B to F) are more precise, and the 
 - **Part A: The teaching brief (for an AI tutor)**: Teaching Brief: the Forge Programming Language
 - **Part B: Start here**: Forge Documentation - Getting Started
 - **Part C: The language**: 1. The Basics - 2. Variables and Types - 3. Text - 4. Operators - 5. Making Decisions and Repeating - 6. Functions - 7. Files and Folders - 8. Lists and Maps - 9. Structs and Classes - 10. Enums, Optionals and Pointers - 11. Tasks - 12. Errors - 13. Reserved Words - 14. Coming From Other Languages
-- **Part D: The libraries**: Library Overview - Built-in Types: vec2, vec3, vec4, color, rect - <stdio>: Console Input and Output - <math>: Math Functions - <random>: Random Numbers - <window>: The Game Window - <input>: Keyboard, Mouse and Controllers - <graphics2d>: 2D Drawing - <graphics3d>: 3D Drawing - <assets>: Images, Animations and Fonts - <audio>: Sounds and Music - <physics>: Boxes, Gravity and Collisions - <time>: Clock, Date and Timers - <file>: Reading and Writing Text Files - <save>: Remembering Things Between Runs - <tween>: Smooth Changes Over Time - <particles>: Dust, Sparks and Explosions - <tilemap>: Levels Drawn as Text - <scenes>: Menus, Levels and Game Over - <ui>: Buttons, Checkboxes, Sliders and Text Boxes - <ECS>: Entities and Components - <tasks>: Tasks Without a Window - Low-Level Toolkits: OpenGL, DirectX and Vulkan - <OpenGL>: Drawing with OpenGL Yourself - <DirectX>: Drawing with Direct3D 11 Yourself - <Vulkan>: Drawing with Vulkan Yourself
+- **Part D: The libraries**: Library Overview - Built-in Types: vec2, vec3, vec4, color, rect - <stdio>: Console Input and Output - <math>: Math Functions - <random>: Random Numbers - <window>: The Game Window - <input>: Keyboard, Mouse and Controllers - <graphics2d>: 2D Drawing - <graphics3d>: 3D Drawing - <assets>: Images, Animations and Fonts - <audio>: Sounds and Music - <physics>: Boxes, Gravity and Collisions - <time>: Clock, Date and Timers - <file>: Reading and Writing Text Files - <save>: Remembering Things Between Runs - <tween>: Smooth Changes Over Time - <particles>: Dust, Sparks and Explosions - <tilemap>: Levels Drawn as Text - <scenes>: Menus, Levels and Game Over - <ui>: Buttons, Checkboxes, Sliders and Text Boxes - <ECS>: Entities and Components - <tasks>: Tasks Without a Window - <testing>: Testing Your Game's Code - Low-Level Toolkits: OpenGL, DirectX and Vulkan - <OpenGL>: Drawing with OpenGL Yourself - <DirectX>: Drawing with Direct3D 11 Yourself - <Vulkan>: Drawing with Vulkan Yourself
 - **Part E: Guides**: The Game Loop - Sprites and Animation - Platformer Walkthrough
 - **Part F: Under the hood**: How Forge Works
 - **Part G: The cheat sheet (everything on one page)**: Forge Cheat Sheet (v0.8)
@@ -103,6 +103,7 @@ Commands, typed in a terminal inside the game's folder:
 | `frg build` | compiles into `build/<folder name>.exe` without running it |
 | `frg check` | only looks for errors |
 | `frg fmt` | tidies the layout (indentation, `int main(){` braces, blank lines). In VS Code: **Shift+Alt+F** |
+| `frg test` | runs the game's tests (the `tests` folder). In VS Code: **Forge: Run Tests** |
 | `frg package` | the finished game, with every file it needs (but not the `.frg` files or `save.txt`), zipped into `dist/<name>.zip` to share. If the game is in git, add `build/`, `dist/` and `save.txt` to `.gitignore` |
 | `frg build --release` | the finished game: no console window, smaller `.exe` |
 | `--no-console` / `--console` | add to `run` or `build` to turn the console window off or on |
@@ -545,6 +546,7 @@ Library functions are reached through the library name (`window.open(...)`). Lib
 | `<particles>` | dust, sparks, smoke, explosions: `Emitter sparks = Emitter(vec2(x, y));`, then `sparks.burst(30);` (all at once) or `sparks.rate = 50;` (a steady stream per second), and each frame `sparks.update(dt);` and `sparks.draw();`. Fields to set: `position`, `lifetime` (seconds), `speed`, `direction` (degrees: 0 right, -90 up), `spread` (degrees around it: 360 every way), `startColor`/`endColor` (an end color with alpha 0 fades them out), `startSize`/`endSize`, `gravity` (a vec2). Also `count()` and `clear()`. It draws in 2D, through the 2D camera |
 | `<tween>` | smooth changes over time: `Tween slide = Tween(-300, 40, 0.5, Ease.OUT);` (from, to, seconds, easing), then `slide.update(dt);` and use `slide.value()`. Also `progress()` (0 to 1, with `lerp` for positions and colors: `a.lerp(b, t.progress())`), `isDone()`, `restart()`, `reverse()` (go back from where it is), fields `looping` and `pingPong`. `Ease.LINEAR` (steady), `IN` (slow start), `OUT` (slow end, the default), `IN_OUT`, `BOUNCE`. There are no callbacks: check `isDone()` |
 | `<save>` | `save.setInt(key, n)` / `getInt(key, backup)`, the same for `Float`, `String` and `Bool`, `has(key)`, `remove(key)`, `clear()`. Kept in `save.txt` in the game's folder |
+| `<testing>` | `testing.check(ok, message)`, `testing.fail(message)`: in tests, which are functions named `test...` in the game's `tests` folder (next to main.frg, not #included). `frg test` runs them and shows PASS/FAIL, with both values of a failed comparison |
 | `<file>` | `file.read(path)`, `write(path, text)`, `append(path, text)`, `exists(path)`, `remove(path)`, `readLines(path)`, `writeLines(path, list)`, `files(folder)` |
 | `<scenes>` | the `Scene` class, `scenes.change(scene)`, `update(dt)`, `draw()`, `current()` |
 | `<ui>` | `ui.button(rect, "text")` (true when clicked), `ui.checkbox(rect, "text", checked)` (new value), `ui.slider(rect, value, min, max)` (new value), `ui.textBox(rect, text, maxLength = 0)` (a box to type in: `name = ui.textBox(rect(20, 20, 240, 40), name, 12);` gives the new text; click to type, Backspace deletes, Enter or a click elsewhere finishes), `ui.isTyping()` (true while typing, so the game can skip its key shortcuts), `ui.label(text, x, y, size, color)`, `ui.panel(rect)`, `ui.setTheme(bg, accent, text)` |
@@ -1741,6 +1743,7 @@ Everything that isn't the core language lives in a library you `#include`. See t
 | `<physics>` (see “`<physics>`: Boxes, Gravity and Collisions”) | Gravity and collisions for boxes |
 | `<time>` (see “`<time>`: Clock, Date and Timers”) | The clock, the date, and timers |
 | `<save>` (see “`<save>`: Remembering Things Between Runs”) | Remembering values between runs: high scores, settings, progress |
+| `<testing>` (see “`<testing>`: Testing Your Game's Code”) | Checking your game's code with `frg test` |
 | `<tilemap>` (see “`<tilemap>`: Levels Drawn as Text”) | Levels drawn as text: walls, coins and the start from characters |
 | `<particles>` (see “`<particles>`: Dust, Sparks and Explosions”) | Dust, sparks, smoke and explosions |
 | `<tween>` (see “`<tween>`: Smooth Changes Over Time”) | Smooth changes over time: sliding, bouncing, fading |
@@ -1872,6 +1875,7 @@ Run these in a terminal. `[folder]` is the game's top folder (the one with `main
 | `frg build [folder]` | Checks and compiles into `build/<folder name>.exe`, without running it |
 | `frg check [folder]` | Only looks for errors (fast, makes no `.exe`) |
 | `frg fmt [folder or files]` | Tidies the layout of your `.frg` files (see below) |
+| `frg test [folder]` | Runs the tests in the game's `tests` folder (`<testing>` (see “`<testing>`: Testing Your Game's Code”)) |
 | `frg package [folder]` | Makes the finished game and zips it, ready to share: `dist/<name>.zip` (see Sharing your game (see “Sharing your game”)) |
 | `frg cache` | Shows how big the build cache is (why there is one (see “Why the first build is slower”)). `frg cache clear` deletes it |
 | `frg version` | Shows the Forge version |
@@ -5004,7 +5008,7 @@ These words have special meanings, so they can't be used as names for variables,
 
 ### Library names
 
-`stdio` `math` `random` `window` `input` `graphics2d` `graphics3d` `assets` `audio` `physics` `time` `file` `save` `tween` `particles` `tilemap` `scenes` `ui` `ECS` `tasks` `OpenGL` `DirectX` `Vulkan`, plus `network`, which is planned.
+`stdio` `math` `random` `window` `input` `graphics2d` `graphics3d` `assets` `audio` `physics` `time` `file` `save` `tween` `particles` `tilemap` `scenes` `ui` `ECS` `tasks` `testing` `OpenGL` `DirectX` `Vulkan`, plus `network`, which is planned.
 
 Types that come from a library (`Key`, `MouseButton`, `GamepadButton`, `Body`, `Texture`, `Animation`, `Font`, `Sound`, `Music`, `Camera`, `Camera2D`, `Model`, `Timer`, `Tween`, `Ease`, `Emitter`, `TileMap`, `Scene`, `Entity`, `Component`) can't be reused as names of your own types **in a file that includes that library**.
 
@@ -5153,6 +5157,7 @@ How libraries work:
 | `<physics>` (see “`<physics>`: Boxes, Gravity and Collisions”) | Box bodies with gravity and collisions | no |
 | `<time>` (see “`<time>`: Clock, Date and Timers”) | The clock and date, `sleep`, and the `Timer` class | no |
 | `<save>` (see “`<save>`: Remembering Things Between Runs”) | Remembering values (high scores, settings) between runs | no |
+| `<testing>` (see “`<testing>`: Testing Your Game's Code”) | `testing.check(...)` in tests that `frg test` runs | no |
 | `<tilemap>` (see “`<tilemap>`: Levels Drawn as Text”) | Levels drawn as text, turned into physics bodies and drawn as tiles (`TileMap`) | to draw them |
 | `<particles>` (see “`<particles>`: Dust, Sparks and Explosions”) | Dust, sparks, smoke and explosions (`Emitter`) | yes |
 | `<tween>` (see “`<tween>`: Smooth Changes Over Time”) | Smooth changes over time: sliding, bouncing, fading, with easing | no |
@@ -7471,6 +7476,86 @@ Notes:
 - A task that loops forever (`while (true) { wait(1); }`) makes `runAll` run forever. Stop it first, or use `update`.
 - In a windowed game, don't call `tasks.update` yourself; the window already does, and calling it too would move time forward twice.
 
+<!-- docs/libraries/testing.md -->
+
+## `<testing>`: Testing Your Game's Code
+
+```cpp
+#include <testing>
+```
+
+**Tests** are small functions that use your game's code and check that it gives the right answers: "after healing 5, the hero has 15 hp". `frg test` runs them all and says which ones passed. They catch mistakes without playing the game, and they keep catching them after you change something.
+
+### Where tests go
+
+Tests live in a folder called **`tests`** next to `main.frg`. Folders only join a game when a file `#include`s them, so the tests are never part of the game itself; `frg test` adds them when it runs.
+
+```
+mygame/
+  main.frg
+  hero.frg
+  tests/
+    hero_test.frg
+```
+
+Inside `tests/`, every function whose name starts with `test` (and takes nothing and gives nothing back) is a test. Other functions there are ordinary helpers. Test files reach the game's code the usual way, with the file's name first: `hero.Hero`, `level.build()`.
+
+```cpp
+// tests/hero_test.frg
+#include <testing>
+
+void testHealAddsHp(){
+    hero.Hero h = hero.Hero();
+    h.heal(5);
+    testing.check(h.hp == 15);
+}
+
+void testHealStopsAtTwenty(){
+    hero.Hero h = hero.Hero();
+    h.heal(50);
+    testing.check(h.hp == 20, "hp should never go over 20");
+}
+```
+
+A folder inside `tests/` joins the tests the same way as anywhere in Forge: a file next to it writes `#include <"folder">`.
+
+### Running them
+
+```
+frg test
+```
+
+In VS Code: **Forge: Run Tests** (Ctrl+Shift+P). The game's own `main()` doesn't run; the tests do, one after another:
+
+```
+  PASS  testHealAddsHp  (tests/hero_test.frg)
+  FAIL  testHealStopsAtTwenty  (tests/hero_test.frg)
+        tests/hero_test.frg:12: testing.check(h.hp == 20, "hp should never go over 20");
+          left side: 25, right side: 20
+          hp should never go over 20
+
+1 test passed, 1 failed (2 checks).
+```
+
+- A failed check doesn't stop its test, so one run shows every check that failed.
+- A runtime error stops only that test (it fails, with the error and the calls that led to it); the next test still runs.
+- `frg test` finishes with exit code 1 if anything failed, and 0 if everything passed.
+- The test program is built in `build/tests/`, so the game's own `.exe` isn't touched.
+
+### Functions
+
+| Function | What it does |
+|---|---|
+| `testing.check(bool ok, string message = "")` | the test fails if `ok` is false. It shows the line as written, and for a comparison (`==`, `!=`, `<`, `>`, `<=`, `>=` between numbers, text, `bool`s or enum values) both values too. The message is shown under it. |
+| `testing.fail(string message = "")` | the test fails here, with the message (for code that should never be reached, or a test that isn't finished) |
+
+### Tips
+
+- **One idea per test**, named after it: `testJumpNeedsGround`, `testCoinAddsScore`. When one fails, its name says what broke.
+- **Make fresh objects in each test.** Global variables keep their values from one test to the next, because the tests run one after another in the same program.
+- **Test the rules, not the drawing.** Code that needs the window (drawing, input) can't run in a test, but the rules of the game (scores, health, inventories, levels made from text) can.
+- `frg check` and VS Code's error underlines check the test files too.
+
 <!-- docs/libraries/toolkits.md -->
 
 ## Low-Level Toolkits: OpenGL, DirectX and Vulkan
@@ -9280,6 +9365,7 @@ int main(){
 | `frg run` | builds, then runs the game |
 | `frg check` | only looks for errors |
 | `frg fmt` | tidies the layout of the game's `.frg` files (indentation, braces, blank lines) |
+| `frg test` | runs the tests in the game's `tests` folder (details (see “`<testing>`: Testing Your Game's Code”)) |
 | `frg cache` / `frg cache clear` | show how big the build cache is (kept under about 400 MB) / delete it |
 | `frg package` | makes the finished game and zips it into `dist/<name>.zip`, ready to share |
 | `--release` (after build or run) | the finished game: no console window, smaller `.exe` |
@@ -9802,6 +9888,7 @@ Each file includes the libraries it uses. Functions are reached through the libr
 | `<particles>` | `Emitter e = Emitter(vec2(x, y));`, then `e.burst(30)` (all at once) or `e.rate = 50` (per second); `e.update(dt)` and `e.draw()` each frame. Fields: `position` `rate` `lifetime` `speed` `direction` (degrees, -90 is up) `spread` (degrees, 360 is every way) `startColor` `endColor` `startSize` `endSize` `gravity`; `count()` `clear()` |
 | `<tween>` | `Tween t = Tween(from, to, seconds, Ease.OUT);` then `t.update(dt)` and `t.value()` each frame; `progress()` (0 to 1, for `lerp`), `isDone()`, `restart()`, `reverse()`, fields `looping` `pingPong`. Easing: `Ease.LINEAR` `IN` `OUT` `IN_OUT` `BOUNCE`; `tween.ease(Ease.OUT, t)` |
 | `<save>` | `save.setInt(key, n)` and `save.getInt(key, backup)`, also `setFloat`/`getFloat`, `setString`/`getString`, `setBool`/`getBool`, and `has(key)` `remove(key)` `clear()`. Kept in `save.txt` in the game's folder, written straight away. |
+| `<testing>` | `testing.check(ok, message)` and `testing.fail(message)`, in tests: functions named `test...` in the `tests` folder, run by `frg test` |
 | `<file>` | `file.read(path)` `write(path, text)` `append(path, text)` `exists(path)` `remove(path)` `readLines(path)` `writeLines(path, lines)` `files(folder)`. Paths are relative to the game's folder. |
 | `<scenes>` | the `Scene` class and `scenes.change(scene)` `update(dt)` `draw()` `current()` (see below) |
 | `<ui>` | `ui.button(rect, "text")` (true when clicked), `ui.checkbox(rect, "text", checked)` (gives the new value), `ui.slider(rect, value, min, max)` (gives the new value), `ui.textBox(rect, text, maxLength = 0)` (a box to type in; gives the new text), `ui.isTyping()`, `ui.label(text, x, y, size, color)`, `ui.panel(rect)`, `ui.setTheme(background, accent, text)` |

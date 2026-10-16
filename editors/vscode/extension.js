@@ -198,6 +198,10 @@ const LIBRARIES = {
         ['count', 'int count()', 'How many tasks are waiting.'],
         ['stopAll', 'void stopAll()', 'Stops every task.'],
     ],
+    testing: [
+        ['check', 'void check(bool ok, string message = "")', 'In a test: fails the test if ok is false. A comparison (h.hp == 15) also shows both values. frg test runs the tests.'],
+        ['fail', 'void fail(string message = "")', 'In a test: fails the test here, with the message.'],
+    ],
     physics: [
         ['add', 'void add(Body body)', 'Adds a body to the world so step() moves it. A Body has position, size, velocity, isStatic, solid, oneWay (a platform you can jump up through), gravityScale, and onGround / onCeiling / onWall.'],
         ['remove', 'void remove(Body body)', 'Takes a body out of the world.'],
@@ -516,7 +520,7 @@ function check(doc, announce = false) {
 
 let gameTerminal = null;
 
-// command is 'run', 'build' or 'package'. Unless extraArgs says otherwise, the forge.console setting decides the console.
+// command is 'run', 'build', 'package' or 'test'. Unless extraArgs says otherwise, the forge.console setting decides the console.
 async function runCommand(command, extraArgs) {
     const editor = vscode.window.activeTextEditor;
     const file = editor ? editor.document.fileName : null;
@@ -824,6 +828,7 @@ function activate(context) {
         vscode.commands.registerCommand('forge.run', () => runCommand('run')),
         vscode.commands.registerCommand('forge.build', () => runCommand('build')),
         vscode.commands.registerCommand('forge.debug', debugGame),
+        vscode.commands.registerCommand('forge.test', () => runCommand('test', [])),
         vscode.commands.registerCommand('forge.buildRelease', () => runCommand('build', ['--release'])),
         vscode.commands.registerCommand('forge.package', () => runCommand('package', [])),
         vscode.commands.registerCommand('forge.toggleConsole', async () => {

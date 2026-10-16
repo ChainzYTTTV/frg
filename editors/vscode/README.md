@@ -9,6 +9,7 @@ Support for the Forge (`.frg`) game language.
 - **Autocomplete** for your own code and the libraries: your variables, functions, types and files, and after a dot what's inside (`player.`, `enemies.goblin.`, `window.`, `color.`, `Key.`). **Ctrl+Space** shows it any time.
 - **Hover help**: what a name is, and how a library function is used
 - **Go to definition** (F12 or Ctrl+click), **find all uses** (Shift+F12), **rename everywhere** (F2), and the **Outline** panel
+- **Forge: Run Tests** runs the tests in the game's `tests` folder (`frg test`)
 - **Format Document** (Shift+Alt+F) tidies the file with `frg fmt`: indentation, `int main(){` braces, blank lines. Turn on `editor.formatOnSave` to tidy as you save.
 - **Debugging**: the bug button (or **F6**) runs the game in the debugger. Put breakpoints on `.frg` lines, pause, look at variables, and go on line by line. It uses gdb (from w64devkit) through Microsoft's C/C++ extension.
 - **Snippets**: `main`, `game`, `gameloop`, `class`, `struct`, `enum`, `foreach`, `switch`, `body`, and more

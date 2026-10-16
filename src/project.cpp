@@ -197,13 +197,25 @@ static void checkEngineAndToolkits(Project& proj) {
                         toolkitUse->name + " has its own window, keyboard and mouse functions");
 }
 
-bool loadProject(Project& proj, const fs::path& root) {
+bool loadProject(Project& proj, const fs::path& root, bool withTests) {
     loadPrelude(proj);
     proj.root = fs::weakly_canonical(fs::absolute(root));
     proj.name = proj.root.filename().string();
     if (proj.name.empty()) proj.name = "game";
     proj.rootFolder.dir = proj.root;
     loadFolder(proj, proj.rootFolder);
+    fs::path tests = proj.root / "tests";
+    std::error_code ec;
+    if (withTests && fs::is_directory(tests, ec) && !proj.rootFolder.folders.count("tests") && !proj.rootFolder.modules.count("tests")) {
+        auto f = std::make_unique<Folder>();
+        f->name = "tests";
+        f->qualName = "tests";
+        f->dir = tests;
+        f->parent = &proj.rootFolder;
+        Folder* raw = f.get();
+        proj.rootFolder.folders["tests"] = std::move(f);
+        loadFolder(proj, *raw);
+    }
     checkEngineAndToolkits(proj);
 
     auto it = proj.rootFolder.modules.find("main");

@@ -60,6 +60,11 @@
                 "icon": "$(debug-alt)"
             },
             {
+                "command": "forge.test",
+                "title": "Forge: Run Tests (the game's tests folder)",
+                "icon": "$(beaker)"
+            },
+            {
                 "command": "forge.build",
                 "title": "Forge: Build Game",
                 "icon": "$(tools)"

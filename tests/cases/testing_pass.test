@@ -1,0 +1,29 @@
+=== main.frg
+int main(){
+    return 0;
+}
+=== hero.frg
+class Hero {
+    int hp = 10;
+    void heal(int amount){
+        hp += amount;
+    }
+}
+=== tests/hero_test.frg
+#include <testing>
+
+void testHeal(){
+    hero.Hero h = hero.Hero();
+    h.heal(5);
+    testing.check(h.hp == 15);
+    testing.check(h.hp greater 10, "healing adds hp");
+}
+
+void helperNotATest(){
+    testing.fail("this isn't run: its name doesn't start with test");
+}
+=== command
+test {game}
+=== prints
+PASS  testHeal  (tests/hero_test.frg)
+1 test passed, 0 failed (2 checks).

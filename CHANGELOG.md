@@ -2,6 +2,23 @@
 
 What changed in each version of Forge. Plans for later versions are in the [roadmap](ROADMAP.md).
 
+## 0.8.0 (2026-10-16)
+
+**Language**
+- Functions as values: `(Enemy e) { return e.hp <= 0; }`, typed `Function<bool(Enemy)>`. Lists get `removeWhere`, `filter`, `any` and `sortBy`.
+- Several top-level functions can share a name when their parameters differ: `drawHealth(int)` and `drawHealth(float)`.
+- `static` fields and methods in your own structs and classes: `Enemy.count`, `Enemy.boss()`.
+- Interfaces and abstract classes: `interface Attacker { int power(); }`, `abstract class Enemy { abstract int reward(); }`, `class Goblin : Enemy, Attacker`.
+- Generic structs and classes: `class Box<T> { T item; }`, used as `Box<int> b = Box(5);`.
+- Weak references: `Weak<Player> target = Weak(player);` and `target.get()`, which is `null` once the player is gone.
+- `try { ... } catch (Error e) { print(e.message); }` catches every runtime error, and `throw "message";` makes your own. `try`, `catch` and `throw` are now keywords.
+- A counting loop: `for (int i in 0..10)` counts 0 to 10, both ends included. `0..list.length` warns.
+- `describe` on every struct and class: `g.describe`, `.name`, `.parent`, `.fields`, `.values`. `describe` is now a reserved member name.
+- Operators for your own types, with methods named after the operator words: `plus`, `minus`, `times`, `div`, `mod`, `less` (gives `<`, `>`, `<=`, `>=` and `list.sort()`), `equals` and `toText` (what `print` shows). `toString()` still works, with a warning to rename it.
+
+**Docs**
+- The designer's brace style, `int main(){`, is used for functions and methods everywhere in the docs and examples.
+
 ## 0.7.0 (2026-10-16)
 
 **Language and compiler**

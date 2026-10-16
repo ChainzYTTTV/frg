@@ -1644,4 +1644,4 @@ Then build version 1, play it, and only then add more.
 
 ---
 
-*Forge v0.7. If the learner reports that something in this file doesn't work, believe the compiler over this file and tell them to report it to whoever maintains Forge.*
+*Forge v0.8. If the learner reports that something in this file doesn't work, believe the compiler over this file and tell them to report it to whoever maintains Forge.*

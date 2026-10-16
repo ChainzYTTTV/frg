@@ -95,7 +95,7 @@ int shown = best ?? 0;
 int shown2 = best otherwise 0;                          // the same thing
 ```
 
-Both choices must be the same type, or types that fit together (like `int` and `float`, giving a `float`). For `if ... else`, the word `if` must be on the same line as the value before it. See [Optionals](10-enums-optionals-pointers.md) for more about `null`.
+Both choices must be the same type, or types that fit together (like `int` and `float`, giving a `float`). For `if ... else`, the word `if` must be on the same line as the value before it. See [Optionals](10-enums-and-optionals.md) for more about `null`.
 
 ## Changing variables
 

@@ -1,4 +1,4 @@
-# 10. Enums, Optionals and Pointers
+# 10. Enums and Optionals
 
 ## Enums
 
@@ -121,63 +121,32 @@ if (where != null) {
 - `obj as Type` gives an optional (see [is and as](09-structs-and-classes.md#is-and-as-what-kind-of-object-is-it)).
 - Fields of class type are often optional: `Enemy? target;` (otherwise they need a starting value).
 
-## Pointers
+## Changing a caller's number: return it
 
-A `Pointer<T>` points at a variable, so you can read and change that variable from somewhere else. `.value` is the variable it points at:
-
-```cpp
-void addOne(Pointer<int> counter){
-    counter.value += 1;
-}
-
-int score = 10;
-addOne(score);              // score is now 11
-
-Pointer<int> p = score;     // p points at score
-p.value = 50;               // score is now 50
-print(score);               // 50
-```
-
-- Making a pointer from a variable is automatic: write the variable, and Forge points at it.
-- A pointer can point at a variable, a field (`player.hp`) or a list item (`scores[0]`), but not at a calculated value like `score + 1`.
-- For a pointer to a struct, fields can be used directly: `Pointer<Point> pp = p; pp.x = 5;`.
-- A `Pointer<T>` must start pointing at something. `Pointer<T>?` can be `null`.
-
-### Throwing a pointer away: remove()
-
-`p.remove()` makes the pointer point at nothing. The thing it pointed at isn't changed; only the pointer lets go of it. After that, `p.isRemoved()` is `true`, and using `p` stops the game with a clear message instead of doing something strange:
-
-```cpp
-int score = 10;
-Pointer<int> p = score;
-p.remove();
-print(p.isRemoved());    // true
-print(score);            // 10 - score itself is fine
-p.value = 5;             // stops the game: "this pointer was removed (with remove()), so it doesn't point at anything any more"
-p = score;               // pointing it at something again makes it usable again
-```
-
-| | What it does |
-|---|---|
-| `p.remove()` | makes `p` point at nothing |
-| `p.isRemoved()` | `true` after `remove()`, until `p` is pointed at something again |
-
-If a pointer points at a list or a map, `p.remove(x)` **with** a value is still the list's (or map's) own `remove`. Only `p.remove()` with nothing in the brackets is the pointer's.
-
-### When to use pointers
-
-Rarely. Class objects are already shared (a function that gets a `Player` can change it), so pointers are only needed to let a function change a caller's **number, bool, string, struct or list** variable. Often it's clearer to return the new value instead:
+Forge has no pointers. When a function should change a number, a bool, text, a struct or a list for whoever called it, **return the new value**:
 
 ```cpp
 int addOne(int n){
     return n + 1;
 }
+
 score = addOne(score);
 ```
 
-### Danger: don't keep pointers to things that go away
+Class objects are already shared, so a function that gets a `Player` can change it directly. To change several values at once, keep them together in a class:
 
-A pointer to a function's local variable stops being valid when that function ends, and the same goes for a pointer to a list item once the list grows or shrinks. Forge can't always catch this. Using such a pointer gives garbage values or a crash. Keep pointers short-lived: pass them into a function, and don't store them. When you do keep one and you're done with it, `p.remove()` it, so using it by mistake gives a clear error.
+```cpp
+class Stats {
+    int hp = 100;
+    int coins = 0;
+}
+
+void pickUpCoin(Stats s){
+    s.coins += 1;           // changes the caller's Stats
+}
+```
+
+(Forge 0.9.0 and earlier had a `Pointer<T>` type. It was removed, because a pointer to a list item or to a field of an object could quietly change the wrong memory once the list grew or the object was freed.)
 
 ## What's next
 

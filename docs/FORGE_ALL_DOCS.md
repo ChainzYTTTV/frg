@@ -12,7 +12,7 @@ Where the parts disagree, the detailed pages (B to F) are more precise, and the 
 
 - **Part A: The teaching brief (for an AI tutor)**: Teaching Brief: the Forge Programming Language
 - **Part B: Start here**: Forge Documentation - Getting Started
-- **Part C: The language**: 1. The Basics - 2. Variables and Types - 3. Text - 4. Operators - 5. Making Decisions and Repeating - 6. Functions - 7. Files and Folders - 8. Lists and Maps - 9. Structs and Classes - 10. Enums, Optionals and Pointers - 11. Tasks - 12. Errors - 13. Reserved Words - 14. Coming From Other Languages
+- **Part C: The language**: 1. The Basics - 2. Variables and Types - 3. Text - 4. Operators - 5. Making Decisions and Repeating - 6. Functions - 7. Files and Folders - 8. Lists and Maps - 9. Structs and Classes - 10. Enums and Optionals - 11. Tasks - 12. Errors - 13. Reserved Words - 14. Coming From Other Languages
 - **Part D: The libraries**: Library Overview - Built-in Types: vec2, vec3, vec4, color, rect - <stdio>: Console Input and Output - <math>: Math Functions - <random>: Random Numbers - <window>: The Game Window - <input>: Keyboard, Mouse and Controllers - <graphics2d>: 2D Drawing - <graphics3d>: 3D Drawing - <assets>: Images, Animations and Fonts - <audio>: Sounds and Music - <physics>: Boxes, Gravity and Collisions - <time>: Clock, Date and Timers - <file>: Reading and Writing Text Files - <save>: Remembering Things Between Runs - <tween>: Smooth Changes Over Time - <particles>: Dust, Sparks and Explosions - <tilemap>: Levels Drawn as Text - <scenes>: Menus, Levels and Game Over - <ui>: Buttons, Checkboxes, Sliders and Text Boxes - <ECS>: Entities and Components - <tasks>: Tasks Without a Window - <testing>: Testing Your Game's Code - Low-Level Toolkits: OpenGL, DirectX and Vulkan - <OpenGL>: Drawing with OpenGL Yourself - <DirectX>: Drawing with Direct3D 11 Yourself - <Vulkan>: Drawing with Vulkan Yourself
 - **Part E: Guides**: The Game Loop - Sprites and Animation - Platformer Walkthrough
 - **Part F: Under the hood**: How Forge Works
@@ -498,20 +498,9 @@ int shown = bestScore ?? 0;
 - An optional can be used where its plain type is needed. If it's null at that moment, the game stops with `Runtime error in main.frg:12: 'target' is null`. Teach the learner to check with `!= null` first.
 - `if (target)` is an error. Write `if (target != null)`.
 
-#### Pointers
+#### No pointers
 
-```cpp
-void addOne(Pointer<int> counter){
-    counter.value += 1;       // .value is the variable it points at
-}
-
-int score = 10;
-addOne(score);                // score is now 11
-Pointer<int> p = score;       // points at score
-p.value = 50;                 // score is now 50
-```
-
-A pointer must point at a variable, field or list item. Don't keep one pointing at a function's local variable after that function ends. `p.remove()` throws a pointer away (the variable it pointed at is untouched): afterwards `p.isRemoved()` is true, and using `p` stops the game with "this pointer was removed (with remove()) ..." until it's pointed at something again with `p = someVariable;`. With a pointer to a list or map, `p.remove(x)` (with a value) is still the list's own remove. Pointers are rarely needed, since classes are already shared, so teach them late.
+Forge has no pointers (`Pointer<T>` existed up to 0.9.0 and was removed). To let a function change a caller's number, bool, text, struct or list, return the new value: `score = addOne(score);`. Class objects are shared, so a function can change one it's given; teach "keep values that change together in a class". If the learner writes `Pointer<int>`, the error explains this.
 
 #### Built-in types (always available, no include)
 
@@ -1718,7 +1707,7 @@ Read these in order the first time.
 | 7 | Files and folders (see “7. Files and Folders”) | Splitting a game into files, the file-name prefix rule, folders, `#include` |
 | 8 | Lists and maps (see “8. Lists and Maps”) | `list<T>`, `map<K, V>` and every method they have |
 | 9 | Structs and classes (see “9. Structs and Classes”) | Your own types: fields, methods, constructors, inheritance, `is`/`as`, `private` |
-| 10 | Enums, optionals and pointers (see “10. Enums, Optionals and Pointers”) | `enum`, `Type?` and `null`, `Pointer<T>` |
+| 10 | Enums and optionals (see “10. Enums and Optionals”) | `enum`, `Type?` and `null`, changing a caller's value |
 | 11 | Tasks (see “11. Tasks”) | `task` functions and `wait()`: timed events without freezing the game |
 | 12 | Errors (see “12. Errors”) | How to read error messages, and a list of common ones with fixes |
 | 13 | Reserved words (see “13. Reserved Words”) | Every keyword, built-in name and word operator |
@@ -2278,7 +2267,7 @@ A variable made without a value starts at the "zero" of its type:
 | optional (`Type?`) | `null` |
 | `task` | a finished task |
 
-**Classes and pointers have no zero**, so a variable of a class type must be given a value: `Enemy e = Enemy();`. If it should start empty, make it optional instead: `Enemy? e = null;`. See Structs and classes (see “9. Structs and Classes”).
+**Classes have no zero**, so a variable of a class type must be given a value: `Enemy e = Enemy();`. If it should start empty, make it optional instead: `Enemy? e = null;`. See Structs and classes (see “9. Structs and Classes”).
 
 ### Where variables live
 
@@ -2398,8 +2387,8 @@ string greeting = "Hi {name}!";
 | Type | Chapter |
 |---|---|
 | `list<T>`, `map<K, V>` | Lists and maps (see “8. Lists and Maps”) |
-| your own `struct`, `class`, `enum` | Structs and classes (see “9. Structs and Classes”), Enums (see “10. Enums, Optionals and Pointers”) |
-| `Type?` (optional), `Pointer<T>` | Enums, optionals and pointers (see “10. Enums, Optionals and Pointers”) |
+| your own `struct`, `class`, `enum` | Structs and classes (see “9. Structs and Classes”), Enums (see “10. Enums and Optionals”) |
+| `Type?` (optional) | Enums and optionals (see “10. Enums and Optionals”) |
 | `task` | Tasks (see “11. Tasks”) |
 | `vec2`, `vec3`, `vec4`, `color`, `rect` | Built-in types (see “Built-in Types: vec2, vec3, vec4, color, rect”) |
 
@@ -2820,7 +2809,7 @@ int shown = best ?? 0;
 int shown2 = best otherwise 0;                          // the same thing
 ```
 
-Both choices must be the same type, or types that fit together (like `int` and `float`, giving a `float`). For `if ... else`, the word `if` must be on the same line as the value before it. See Optionals (see “10. Enums, Optionals and Pointers”) for more about `null`.
+Both choices must be the same type, or types that fit together (like `int` and `float`, giving a `float`). For `if ... else`, the word `if` must be on the same line as the value before it. See Optionals (see “10. Enums and Optionals”) for more about `null`.
 
 ### Changing variables
 
@@ -3283,7 +3272,6 @@ What happens when a function changes a parameter depends on its type:
 |---|---|---|
 | numbers, bools, strings, structs, lists, maps | its own **copy** | no |
 | classes | the **same object** | yes |
-| `Pointer<T>` | a pointer to the caller's variable | yes, through `.value` |
 
 ```cpp
 void tryToChange(int n, list<int> xs, Enemy e){
@@ -3293,7 +3281,7 @@ void tryToChange(int n, list<int> xs, Enemy e){
 }
 ```
 
-To change a number or a list for the caller, either return the new value, or pass a `Pointer`. See Pointers (see “10. Enums, Optionals and Pointers” › “Pointers”).
+To change a number or a list for the caller, return the new value: `score = addOne(score);`. To change several values, keep them in a class. See Changing a caller's number (see “10. Enums and Optionals” › “Changing a caller's number: return it”).
 
 #### Default values
 
@@ -4389,11 +4377,11 @@ class Boss : enemies.goblin.Goblin { ... }
 
 ### What's next
 
-Enums, optionals and pointers (see “10. Enums, Optionals and Pointers”).
+Enums and optionals (see “10. Enums and Optionals”).
 
-<!-- docs/language/10-enums-optionals-pointers.md -->
+<!-- docs/language/10-enums-and-optionals.md -->
 
-## 10. Enums, Optionals and Pointers
+## 10. Enums and Optionals
 
 ### Enums
 
@@ -4516,63 +4504,32 @@ if (where != null) {
 - `obj as Type` gives an optional (see is and as (see “9. Structs and Classes” › “is and as: what kind of object is it?”)).
 - Fields of class type are often optional: `Enemy? target;` (otherwise they need a starting value).
 
-### Pointers
+### Changing a caller's number: return it
 
-A `Pointer<T>` points at a variable, so you can read and change that variable from somewhere else. `.value` is the variable it points at:
-
-```cpp
-void addOne(Pointer<int> counter){
-    counter.value += 1;
-}
-
-int score = 10;
-addOne(score);              // score is now 11
-
-Pointer<int> p = score;     // p points at score
-p.value = 50;               // score is now 50
-print(score);               // 50
-```
-
-- Making a pointer from a variable is automatic: write the variable, and Forge points at it.
-- A pointer can point at a variable, a field (`player.hp`) or a list item (`scores[0]`), but not at a calculated value like `score + 1`.
-- For a pointer to a struct, fields can be used directly: `Pointer<Point> pp = p; pp.x = 5;`.
-- A `Pointer<T>` must start pointing at something. `Pointer<T>?` can be `null`.
-
-#### Throwing a pointer away: remove()
-
-`p.remove()` makes the pointer point at nothing. The thing it pointed at isn't changed; only the pointer lets go of it. After that, `p.isRemoved()` is `true`, and using `p` stops the game with a clear message instead of doing something strange:
-
-```cpp
-int score = 10;
-Pointer<int> p = score;
-p.remove();
-print(p.isRemoved());    // true
-print(score);            // 10 - score itself is fine
-p.value = 5;             // stops the game: "this pointer was removed (with remove()), so it doesn't point at anything any more"
-p = score;               // pointing it at something again makes it usable again
-```
-
-| | What it does |
-|---|---|
-| `p.remove()` | makes `p` point at nothing |
-| `p.isRemoved()` | `true` after `remove()`, until `p` is pointed at something again |
-
-If a pointer points at a list or a map, `p.remove(x)` **with** a value is still the list's (or map's) own `remove`. Only `p.remove()` with nothing in the brackets is the pointer's.
-
-#### When to use pointers
-
-Rarely. Class objects are already shared (a function that gets a `Player` can change it), so pointers are only needed to let a function change a caller's **number, bool, string, struct or list** variable. Often it's clearer to return the new value instead:
+Forge has no pointers. When a function should change a number, a bool, text, a struct or a list for whoever called it, **return the new value**:
 
 ```cpp
 int addOne(int n){
     return n + 1;
 }
+
 score = addOne(score);
 ```
 
-#### Danger: don't keep pointers to things that go away
+Class objects are already shared, so a function that gets a `Player` can change it directly. To change several values at once, keep them together in a class:
 
-A pointer to a function's local variable stops being valid when that function ends, and the same goes for a pointer to a list item once the list grows or shrinks. Forge can't always catch this. Using such a pointer gives garbage values or a crash. Keep pointers short-lived: pass them into a function, and don't store them. When you do keep one and you're done with it, `p.remove()` it, so using it by mistake gives a clear error.
+```cpp
+class Stats {
+    int hp = 100;
+    int coins = 0;
+}
+
+void pickUpCoin(Stats s){
+    s.coins += 1;           // changes the caller's Stats
+}
+```
+
+(Forge 0.9.0 and earlier had a `Pointer<T>` type. It was removed, because a pointer to a list item or to a field of an object could quietly change the wrong memory once the list grew or the object was freed.)
 
 ### What's next
 
@@ -4959,7 +4916,7 @@ If anything inside `try` has a runtime error, the rest of the `try` part is skip
 - A `try` around starting a task doesn't catch errors inside the task: put the `try` **inside** the task instead. `wait()` works inside `try { }`, but not inside `catch { }`.
 - Don't use `try` to hide mistakes: a list position that's outside the list is better fixed than caught. `try` is for things your game can't control, like files and what the player types.
 
-Crashes that don't give a message (`[game.exe crashed (code 0xC0000005)]`) usually mean a pointer (see “10. Enums, Optionals and Pointers” › “Pointers”) was used after the thing it pointed at went away, or a function called itself forever.
+Crashes that don't give a message (`[game.exe crashed (code 0xC0000005)]`) usually mean a function called itself forever (or a bug in Forge or a library: please report it).
 
 ### The C++ compiler rejected Forge's output
 
@@ -4996,7 +4953,7 @@ These words have special meanings, so they can't be used as names for variables,
 
 ### Built-in type names
 
-`void` `bool` `string` `task` `int` `int8` `int16` `int32` `int64` `int128` `uint` `uint8` `uint16` `uint32` `uint64` `uint128` `float` `double` `list` `map` `Pointer` `Function` `Weak` `vec2` `vec3` `vec4` `color` `rect` `Error`
+`void` `bool` `string` `task` `int` `int8` `int16` `int32` `int64` `int128` `uint` `uint8` `uint16` `uint32` `uint64` `uint128` `float` `double` `list` `map` `Function` `Weak` `vec2` `vec3` `vec4` `color` `rect` `Error`
 
 ### Built-in member names
 
@@ -5692,7 +5649,7 @@ if (input.keyPressed(Key.SPACE) and onGround) {
 | Modifiers | `Key.LEFT_SHIFT` `Key.RIGHT_SHIFT` `Key.LEFT_CONTROL` `Key.RIGHT_CONTROL` `Key.LEFT_ALT` `Key.RIGHT_ALT` |
 | Function keys | `Key.F1` … `Key.F12` |
 
-`Key` is an enum (see “10. Enums, Optionals and Pointers” › “Enums”), so keys can be stored in variables and lists: `Key jumpKey = Key.SPACE;`.
+`Key` is an enum (see “10. Enums and Optionals” › “Enums”), so keys can be stored in variables and lists: `Key jumpKey = Key.SPACE;`.
 
 Escape also closes the window by default.
 
@@ -9411,7 +9368,7 @@ Each question starts `frg` again and reads the whole game, which takes a fractio
 
 The whole language on one page, for looking things up quickly. For full explanations, examples and every detail, see the complete documentation (see “Forge Documentation”). Planned features are listed at the end.
 
-**Contents:** A Forge game (see “A Forge game”) · Variables (see “Variables and types”) · Text (see “Text”) · Operators (see “Operators”) · If and loops (see “If, loops and switch”) · Functions (see “Functions”) · Files and folders (see “Multiple files”) · Lists and maps (see “Lists and maps”) · Structs and classes (see “Structs and classes”) · Enums (see “Enums”) · Optional values and null (see “Optional values and null”) · Pointers (see “Pointers”) · Tasks (see “Tasks: waiting without freezing the game”) · Built-in types (see “Built-in types: vec2, color, rect”) · Libraries (see “Libraries”) · Making a game (see “Making a game”) · Errors (see “Errors”)
+**Contents:** A Forge game (see “A Forge game”) · Variables (see “Variables and types”) · Text (see “Text”) · Operators (see “Operators”) · If and loops (see “If, loops and switch”) · Functions (see “Functions”) · Files and folders (see “Multiple files”) · Lists and maps (see “Lists and maps”) · Structs and classes (see “Structs and classes”) · Enums (see “Enums”) · Optional values and null (see “Optional values and null”) · Tasks (see “Tasks: waiting without freezing the game”) · Built-in types (see “Built-in types: vec2, color, rect”) · Libraries (see “Libraries”) · Making a game (see “Making a game”) · Errors (see “Errors”)
 
 ### A Forge game
 
@@ -9884,20 +9841,9 @@ int shown = bestScore ?? 0;   // 0 when there's no best score yet
 
 Variables of class type **without** a `?` must always hold an object, so they need a starting value. You can use an optional anywhere its plain type is needed. If it turns out to be null, the game stops and tells you exactly where.
 
-### Pointers
+#### Changing a caller's value
 
-A `Pointer<T>` points at a variable, so you can change that variable from somewhere else. `.value` reads or changes the variable it points at:
-
-```cpp
-void addOne(Pointer<int> counter){
-    counter.value += 1;
-}
-
-int score = 10;
-addOne(score);        // score is now 11
-```
-
-Don't keep a pointer to a function's local variable after that function ends. `p.remove()` makes a pointer point at nothing: `p.isRemoved()` is then true, and using `p` stops the game with a clear message ("this pointer was removed ...") until it's pointed at something again (`p = score;`).
+Forge has no pointers. To change a caller's number, return the new value (`score = addOne(score);`). Class objects are shared, so a function can change a class object it's given; keep values that change together in a class.
 
 ### Tasks: waiting without freezing the game
 

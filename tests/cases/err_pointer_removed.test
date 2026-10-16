@@ -1,0 +1,10 @@
+=== main.frg
+void addOne(Pointer<int> counter){
+}
+
+int main(){
+    return 0;
+}
+=== error
+Forge doesn't have pointers (Pointer<T> was removed)
+return the new value

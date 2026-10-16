@@ -29,7 +29,7 @@ Read these in order the first time.
 | 7 | [Files and folders](language/07-files-and-folders.md) | Splitting a game into files, the file-name prefix rule, folders, `#include` |
 | 8 | [Lists and maps](language/08-lists-and-maps.md) | `list<T>`, `map<K, V>` and every method they have |
 | 9 | [Structs and classes](language/09-structs-and-classes.md) | Your own types: fields, methods, constructors, inheritance, `is`/`as`, `private` |
-| 10 | [Enums, optionals and pointers](language/10-enums-optionals-pointers.md) | `enum`, `Type?` and `null`, `Pointer<T>` |
+| 10 | [Enums and optionals](language/10-enums-and-optionals.md) | `enum`, `Type?` and `null`, changing a caller's value |
 | 11 | [Tasks](language/11-tasks.md) | `task` functions and `wait()`: timed events without freezing the game |
 | 12 | [Errors](language/12-errors.md) | How to read error messages, and a list of common ones with fixes |
 | 13 | [Reserved words](language/13-reserved-words.md) | Every keyword, built-in name and word operator |

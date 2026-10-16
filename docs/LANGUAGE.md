@@ -2,7 +2,7 @@
 
 The whole language on one page, for looking things up quickly. For full explanations, examples and every detail, see the [complete documentation](README.md). Planned features are listed at the end.
 
-**Contents:** [A Forge game](#a-forge-game) · [Variables](#variables-and-types) · [Text](#text) · [Operators](#operators) · [If and loops](#if-loops-and-switch) · [Functions](#functions) · [Files and folders](#multiple-files) · [Lists and maps](#lists-and-maps) · [Structs and classes](#structs-and-classes) · [Enums](#enums) · [Optional values and null](#optional-values-and-null) · [Pointers](#pointers) · [Tasks](#tasks-waiting-without-freezing-the-game) · [Built-in types](#built-in-types-vec2-color-rect) · [Libraries](#libraries) · [Making a game](#making-a-game) · [Errors](#errors)
+**Contents:** [A Forge game](#a-forge-game) · [Variables](#variables-and-types) · [Text](#text) · [Operators](#operators) · [If and loops](#if-loops-and-switch) · [Functions](#functions) · [Files and folders](#multiple-files) · [Lists and maps](#lists-and-maps) · [Structs and classes](#structs-and-classes) · [Enums](#enums) · [Optional values and null](#optional-values-and-null) · [Tasks](#tasks-waiting-without-freezing-the-game) · [Built-in types](#built-in-types-vec2-color-rect) · [Libraries](#libraries) · [Making a game](#making-a-game) · [Errors](#errors)
 
 ## A Forge game
 
@@ -475,20 +475,9 @@ int shown = bestScore ?? 0;   // 0 when there's no best score yet
 
 Variables of class type **without** a `?` must always hold an object, so they need a starting value. You can use an optional anywhere its plain type is needed. If it turns out to be null, the game stops and tells you exactly where.
 
-## Pointers
+### Changing a caller's value
 
-A `Pointer<T>` points at a variable, so you can change that variable from somewhere else. `.value` reads or changes the variable it points at:
-
-```cpp
-void addOne(Pointer<int> counter){
-    counter.value += 1;
-}
-
-int score = 10;
-addOne(score);        // score is now 11
-```
-
-Don't keep a pointer to a function's local variable after that function ends. `p.remove()` makes a pointer point at nothing: `p.isRemoved()` is then true, and using `p` stops the game with a clear message ("this pointer was removed ...") until it's pointed at something again (`p = score;`).
+Forge has no pointers. To change a caller's number, return the new value (`score = addOne(score);`). Class objects are shared, so a function can change a class object it's given; keep values that change together in a class.
 
 ## Tasks: waiting without freezing the game
 

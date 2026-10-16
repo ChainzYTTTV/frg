@@ -69,9 +69,7 @@ const char* bmethodPrefix(TK kind) {
 }
 
 Type* derefType(Type* t) {
-    if (t->kind == TK::Pointer) t = t->elem;
     if (t->kind == TK::Optional) t = t->elem;
-    if (t->kind == TK::Pointer) t = t->elem;
     return t;
 }
 
@@ -184,7 +182,6 @@ std::string Gen::conv(const Expr* e, const Type* T) {
         std::string v = unwrap(ex(e), S, e->loc, e->kind == EK::Name || e->kind == EK::Member ? e->text : "");
         return S->elem == T ? v : "static_cast<" + T->cpp + ">(" + v + ")";
     }
-    if (T->kind == TK::Pointer && S == T->elem) return "(&" + ex(e) + ")";
     if (T->kind == TK::String && S->kind == TK::Struct && S->decl && S->decl->builtin && S->decl->name == "Description")
         return "::frg::core::frg$str(" + ex(e) + ")";
     if (S->kind == TK::Class && T->kind == TK::Class) return "static_cast<" + T->cpp + ">(" + ex(e) + ")";
@@ -200,16 +197,8 @@ std::string Gen::objRef(const Expr* o, std::string& sep) {
     }
     std::string code = ex(o);
     const Type* t = o->type;
-    if (t->kind == TK::Pointer) {
-        code = "(*::frg::live(" + code + ", " + where(o->loc) + "))";
-        t = t->elem;
-    }
     if (t->kind == TK::Optional) {
         code = unwrap(code, t, o->loc, o->kind == EK::Name || o->kind == EK::Member ? o->text : "");
-        t = t->elem;
-    }
-    if (t->kind == TK::Pointer) {
-        code = "(*::frg::live(" + code + ", " + where(o->loc) + "))";
         t = t->elem;
     }
     sep = t->kind == TK::Class ? "->" : ".";
@@ -248,7 +237,6 @@ std::string Gen::strCode(const std::string& code, const Type* t, bool shallow) {
         case TK::Optional:
             return "::frg::strOpt(" + code + ", [](const auto& x) { return " + strCode("x", t->elem, shallow) + "; })";
         case TK::Weak: return "::frg::strWeak(" + code + ", [](const auto& x) { return " + strCode("x", t->elem, shallow) + "; })";
-        case TK::Pointer: return "::frg::strPtr(" + code + ", [](const auto& x) { return " + strCode("x", t->elem, shallow) + "; })";
         default: return "::std::string(\"?\")";
     }
 }
@@ -283,7 +271,6 @@ std::string Gen::ref(const Expr* e) {
                 std::string obj = objRef(e->a.get(), sep);
                 return obj + sep + id(e->text);
             }
-        case RK::PointerValue: return "(*::frg::live(" + ex(e->a.get()) + ", " + where(e->loc) + "))";
         case RK::Describe: {
             std::string sep;
             std::string obj = objRef(e->a.get(), sep);
@@ -451,8 +438,6 @@ std::string Gen::call(const Expr* e) {
             return ordered(argExprs, codes, [&](const std::vector<std::string>& c) { return head + joinArgs(c) + ")"; });
         }
         case RK::BuiltinMethod: {
-            if (callee->a->type->kind == TK::Pointer && (callee->text == "remove" || callee->text == "isRemoved") && e->args.empty())
-                return "::frg::ptr_" + callee->text + "(" + ex(callee->a.get()) + ", " + where(e->loc) + ")";
             Type* obj = derefType(callee->a->type);
             if (callee->text == "sort" && e->opMethod) {  // a list of your own type, sorted with its less()
                 std::string less = obj->elem->kind == TK::Class ? "x->" + id(e->opMethod->name) + "(y)"

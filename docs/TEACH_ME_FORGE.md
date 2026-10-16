@@ -472,20 +472,9 @@ int shown = bestScore ?? 0;
 - An optional can be used where its plain type is needed. If it's null at that moment, the game stops with `Runtime error in main.frg:12: 'target' is null`. Teach the learner to check with `!= null` first.
 - `if (target)` is an error. Write `if (target != null)`.
 
-### Pointers
+### No pointers
 
-```cpp
-void addOne(Pointer<int> counter){
-    counter.value += 1;       // .value is the variable it points at
-}
-
-int score = 10;
-addOne(score);                // score is now 11
-Pointer<int> p = score;       // points at score
-p.value = 50;                 // score is now 50
-```
-
-A pointer must point at a variable, field or list item. Don't keep one pointing at a function's local variable after that function ends. `p.remove()` throws a pointer away (the variable it pointed at is untouched): afterwards `p.isRemoved()` is true, and using `p` stops the game with "this pointer was removed (with remove()) ..." until it's pointed at something again with `p = someVariable;`. With a pointer to a list or map, `p.remove(x)` (with a value) is still the list's own remove. Pointers are rarely needed, since classes are already shared, so teach them late.
+Forge has no pointers (`Pointer<T>` existed up to 0.9.0 and was removed). To let a function change a caller's number, bool, text, struct or list, return the new value: `score = addOne(score);`. Class objects are shared, so a function can change one it's given; teach "keep values that change together in a class". If the learner writes `Pointer<int>`, the error explains this.
 
 ### Built-in types (always available, no include)
 

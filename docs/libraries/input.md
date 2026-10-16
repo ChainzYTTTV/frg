@@ -36,7 +36,7 @@ if (input.keyPressed(Key.SPACE) and onGround) {
 | Modifiers | `Key.LEFT_SHIFT` `Key.RIGHT_SHIFT` `Key.LEFT_CONTROL` `Key.RIGHT_CONTROL` `Key.LEFT_ALT` `Key.RIGHT_ALT` |
 | Function keys | `Key.F1` … `Key.F12` |
 
-`Key` is an [enum](../language/10-enums-optionals-pointers.md#enums), so keys can be stored in variables and lists: `Key jumpKey = Key.SPACE;`.
+`Key` is an [enum](../language/10-enums-and-optionals.md#enums), so keys can be stored in variables and lists: `Key jumpKey = Key.SPACE;`.
 
 Escape also closes the window by default.
 

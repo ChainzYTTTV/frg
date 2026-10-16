@@ -88,7 +88,6 @@ What happens when a function changes a parameter depends on its type:
 |---|---|---|
 | numbers, bools, strings, structs, lists, maps | its own **copy** | no |
 | classes | the **same object** | yes |
-| `Pointer<T>` | a pointer to the caller's variable | yes, through `.value` |
 
 ```cpp
 void tryToChange(int n, list<int> xs, Enemy e){
@@ -98,7 +97,7 @@ void tryToChange(int n, list<int> xs, Enemy e){
 }
 ```
 
-To change a number or a list for the caller, either return the new value, or pass a `Pointer`. See [Pointers](10-enums-optionals-pointers.md#pointers).
+To change a number or a list for the caller, return the new value: `score = addOne(score);`. To change several values, keep them in a class. See [Changing a caller's number](10-enums-and-optionals.md#changing-a-callers-number-return-it).
 
 ### Default values
 

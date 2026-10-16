@@ -16,7 +16,7 @@ struct TypeDecl;
 struct Builtin;
 struct BuiltinConst;
 
-// A type as written in the source: `int`, `list<Enemy>`, `entities.Player?`, `Pointer<int>`.
+// A type as written in the source: `int`, `list<Enemy>`, `entities.Player?`, `map<string, int>`.
 struct TypeRef {
     std::vector<std::string> path;  // {"entities", "Player"}; empty means "no type"
     std::vector<TypeRef> args;      // generic arguments
@@ -65,7 +65,6 @@ enum class RK {
     EnumValue,     // State.Idle (tdecl, index)
     TypeStatic,    // color.RED (var = the static)
     BuiltinMethod, // list.add, map.keys, text.upper (name in `lib`)
-    PointerValue,  // p.value
     Describe,      // obj.describe: built-in info about any struct or class object
 };
 

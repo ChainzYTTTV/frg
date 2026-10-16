@@ -156,11 +156,9 @@ bool isMapKey(const Type* t) {
     return t->kind == TK::Int || t->kind == TK::String || t->kind == TK::Enum || t->kind == TK::Bool;
 }
 
-// Strips Pointer<T> and T? so `p.x` works on the thing they point at.
+// Strips T? so `p.x` works on the thing it holds.
 Type* derefType(Type* t) {
-    if (t->kind == TK::Pointer) t = t->elem;
     if (t->kind == TK::Optional) t = t->elem;
-    if (t->kind == TK::Pointer) t = t->elem;
     return t;
 }
 
@@ -218,8 +216,6 @@ const std::vector<BMethod>& bmethods() {
         {TK::String, "isInt", {}, "bool"},
         {TK::String, "isFloat", {}, "bool"},
         {TK::Task, "isDone", {}, "bool"},
-        {TK::Pointer, "remove", {}, "void"},
-        {TK::Pointer, "isRemoved", {}, "bool"},
         {TK::Weak, "get", {}, "E?"},
         {TK::Task, "stop", {}, "void"},
     };
@@ -533,10 +529,9 @@ Type* Checker::resolveType(const TypeRef& r, bool allowVoid) {
             }
             base = tMap(k, v);
         } else if (name == "Pointer") {
-            if (!argCount(1, "Pointer<int>")) return tError();
-            Type* target = resolveType(r.args[0], false);
-            if (target == tError()) return tError();
-            base = tPointer(target);
+            reportError(r.loc, "Forge doesn't have pointers (Pointer<T> was removed)",
+                        "to let a function change a number, return the new value: score = addOne(score); - or keep the value in a class object, which functions can change");
+            return tError();
         } else if (name == "Weak") {
             if (!argCount(1, "Weak<Player>")) return tError();
             Type* target = resolveType(r.args[0], false);
@@ -863,8 +858,6 @@ bool Checker::canAssignQuiet(Expr* e, Type* T) {
     if (implicitlyConverts(S, T)) return true;
     // An optional value can be used as a plain one; it's checked for null when the game runs.
     if (S->kind == TK::Optional && T->kind != TK::Optional && implicitlyConverts(S->elem, T)) return true;
-    // Pointer<int> p = score;  points p at the variable `score`.
-    if (T->kind == TK::Pointer && S == T->elem && isLvalue(e)) return true;
     return false;
 }
 
@@ -909,8 +902,6 @@ bool Checker::assignable(Expr* e, Type* T, const std::string& dest) {
         hint = T->name + " can't hold every " + S->name + " value - use " + T->name + "(...) to convert it anyway";
     else if (S->kind == TK::Float && T->kind == TK::Float)
         hint = "use float(...) to convert it (it loses some precision)";
-    else if (T->kind == TK::Pointer && S == T->elem)
-        hint = "a Pointer has to point at a variable, a field or a list item";
     else if (S->kind == TK::Class && T->kind == TK::Class)
         hint = "a " + S->name + " isn't a kind of " + T->name;
     else if (S->kind == TK::List && T->kind == TK::List)
@@ -929,12 +920,11 @@ bool Checker::isLvalue(Expr* e) {
     switch (e->kind) {
         case EK::Name: return e->res.kind == RK::Local || e->res.kind == RK::Global || e->res.kind == RK::Field || e->res.kind == RK::TypeStatic;
         case EK::Member:
-            if (e->res.kind == RK::PointerValue) return true;
             if (e->res.kind == RK::Global || e->res.kind == RK::TypeStatic) return true;
             if (e->res.kind == RK::Field) {
                 Expr* o = e->a.get();
                 if (o->kind == EK::This || o->kind == EK::Super) return true;
-                if (o->type && (o->type->kind == TK::Class || o->type->kind == TK::Pointer ||
+                if (o->type && (o->type->kind == TK::Class ||
                                 (o->type->kind == TK::Optional && isNullableRef(o->type->elem))))
                     return true;
                 return isLvalue(o);
@@ -1169,7 +1159,6 @@ Type* Checker::finishRef(Expr* e, bool allowNonValue) {
         case RK::TypeStatic: return e->type = e->res.var->type ? e->res.var->type : tError();
         case RK::EnumValue: return e->type = tNamed(e->res.tdecl);
         case RK::StdConst: e->litFloat = true; return e->type = tFloat(32);
-        case RK::PointerValue:
         case RK::Describe: return e->type;
         case RK::None: return e->type = tError();
         case RK::BuiltinMethod:
@@ -1345,21 +1334,6 @@ void Checker::valueMember(Expr* e, Expr* o) {
             return;
         }
     }
-    if (t->kind == TK::Pointer && n == "value") {
-        r.kind = RK::PointerValue;
-        e->type = t->elem;
-        return;
-    }
-    // The pointer's own methods. p.remove(x) with a value still goes to a list or map it points at.
-    if (t->kind == TK::Pointer && (n == "isRemoved" || (n == "remove" && callArgs == 0))) {
-        auto& tbl = bmethods();
-        for (size_t i = 0; i < tbl.size(); i++)
-            if (tbl[i].on == TK::Pointer && n == tbl[i].name) r.index = (int)i;
-        r.kind = RK::BuiltinMethod;
-        if (n == "remove" && !isLvalue(o))
-            reportError(o->loc, "only a Pointer variable or field can be removed", "store the pointer in a variable first");
-        return;
-    }
     Type* d = derefType(t);
     if (d->kind == TK::Struct || d->kind == TK::Class) {
         if (VarDecl* f = findField(d->decl, n)) {
@@ -1402,10 +1376,7 @@ void Checker::valueMember(Expr* e, Expr* o) {
         reportError(e->loc, what + " don't have anything called '" + n + "'", guess.empty() ? "" : "did you mean '" + guess + "'?");
         return;
     }
-    if (t->kind == TK::Pointer)
-        reportError(e->loc, "a Pointer<" + t->elem->name + "> only has '.value', remove() and isRemoved()", "use p.value to read or change what it points at");
-    else
-        reportError(e->loc, "'" + o->text + "' is " + aType(t) + ", which has nothing inside it to reach with '.'");
+    reportError(e->loc, "'" + o->text + "' is " + aType(t) + ", which has nothing inside it to reach with '.'");
 }
 
 Type* Checker::memberExpr(Expr* e, bool allowNonValue) {
@@ -1596,7 +1567,7 @@ void Checker::checkRunCallbacks(const Loc& loc) {
 // The Box<int> that `o` is (following ? and pointers), or nullptr if it isn't a generic type.
 Type* Checker::genericInstance(Expr* o) {
     Type* t = o->type;
-    while (t && (t->kind == TK::Optional || t->kind == TK::Pointer)) t = t->elem;
+    while (t && t->kind == TK::Optional) t = t->elem;
     if (o->kind == EK::This || o->kind == EK::Super) t = curType ? tNamed(curType) : nullptr;
     return t && isGeneric(t) ? t : nullptr;
 }
@@ -2364,12 +2335,10 @@ void Checker::varStmt(VarDecl* v) {
     } else if (v->type->kind == TK::TypeParam) {
         reportError(v->loc, "'" + v->name + "' needs a starting value, because " + v->type->name + " could be a class",
                     "give it one, or make it optional: " + v->type->name + "? " + v->name + " = null;");
-    } else if (v->type->kind == TK::Class || v->type->kind == TK::Pointer) {
+    } else if (v->type->kind == TK::Class) {
         reportError(v->loc, "'" + v->name + "' needs a starting value",
-                    v->type->kind == TK::Class ? "make one, like: " + v->type->name + " " + v->name + " = " + v->type->name +
-                                                     "(...);  - or if it can be empty, make it optional: " + v->type->name + "? " +
-                                                     v->name + " = null;"
-                                               : "point it at a variable, like: Pointer<int> p = score;");
+                    "make one, like: " + v->type->name + " " + v->name + " = " + v->type->name + "(...);  - or if it can be empty, make it optional: " +
+                        v->type->name + "? " + v->name + " = null;");
     }
     declareLocal(v);
     newLocals.push_back(v);
@@ -2764,7 +2733,7 @@ bool Checker::run() {
                     checkInto(f->init.get(), f->type, "'" + f->name + "'");
                     continue;
                 }
-                if (f->isStatic && !m->isPrelude && (f->type->kind == TK::Class || f->type->kind == TK::Pointer || f->type->kind == TK::Function)) {
+                if (f->isStatic && !m->isPrelude && (f->type->kind == TK::Class || f->type->kind == TK::Function)) {
                     reportError(f->loc, "the static field '" + f->name + "' needs a starting value",
                                 "give it one, or make it optional: static " + f->typeRef.display() + "? " + f->name + " = null;");
                     continue;
@@ -2786,11 +2755,10 @@ bool Checker::run() {
                                         "add this." + f->name + " = ...; to it (not inside an if or a loop), or make the field optional: " +
                                             f->type->name + "? " + f->name + ";");
                     }
-                } else if (!m->isPrelude && (f->type->kind == TK::Class || f->type->kind == TK::Pointer)) {
+                } else if (!m->isPrelude && f->type->kind == TK::Class) {
                     reportError(f->loc, "the field '" + f->name + "' needs a starting value",
-                                f->type->kind == TK::Class ? "give it one (" + f->typeRef.display() + " " + f->name + " = " + f->typeRef.display() +
-                                                                 "(...);) or make it optional (" + f->typeRef.display() + "? " + f->name + ";)"
-                                                           : "make it optional: Pointer<...>? " + f->name + ";");
+                                "give it one (" + f->typeRef.display() + " " + f->name + " = " + f->typeRef.display() + "(...);) or make it optional (" +
+                                    f->typeRef.display() + "? " + f->name + ";)");
                 }
             }
         }
@@ -2799,7 +2767,7 @@ bool Checker::run() {
                 checkInto(g->init.get(), g->type, "'" + g->name + "'");
             } else if (g->isConst) {
                 reportError(g->loc, "a const variable needs a value", "for example: const int MAX_HP = 100;");
-            } else if (g->type->kind == TK::Class || g->type->kind == TK::Pointer) {
+            } else if (g->type->kind == TK::Class) {
                 reportError(g->loc, "'" + g->name + "' needs a starting value", "or make it optional: " + g->type->name + "? " + g->name + " = null;");
             }
         }

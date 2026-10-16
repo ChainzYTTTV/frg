@@ -1172,11 +1172,10 @@ ExprPtr Parser::parsePrimary() {
                 expect(Tok::RParen, "')'");
                 return e;
             }
-            if (k.text == "list" || k.text == "map" || k.text == "Pointer")
+            if (k.text == "list" || k.text == "map")
                 fail(k.loc, "'" + k.text + "' is a type, not a value",
                      k.text == "list" ? "make a list like this: list<int> numbers = [1, 2, 3];"
-                     : k.text == "map" ? "make a map like this: map<string, int> ages = {\"Ana\": 12};"
-                                       : "make a pointer like this: Pointer<int> p = score;");
+                                      : "make a map like this: map<string, int> ages = {\"Ana\": 12};");
             p++;
             auto e = std::make_unique<Expr>(EK::Name, k.loc);
             e->text = k.text;

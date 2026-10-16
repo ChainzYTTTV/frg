@@ -376,14 +376,14 @@ Enemy(name: Grok, hp: 100, speed: 2.5, loot: [], target: null)
 
 Inside a class's output, other class objects show as `<Name>` (so two objects pointing at each other don't print forever).
 
-To choose what's shown, add a method `string toString()`:
+To choose what's shown, add a method `string toText()`:
 
 ```cpp
 class Enemy {
     string name;
     int hp = 100;
 
-    string toString() {
+    string toText() {
         return "{name} ({hp} HP)";
     }
 }
@@ -415,6 +415,8 @@ print(g.describe.values);       // {hp: 30, name: Grub}  (a map<string, string>)
 - It describes the real object: an `Enemy e` that holds a `Goblin` says `Goblin`.
 - `private` and `static` fields are left out.
 - `describe` is a reserved member name, so your own field or method can't be called `describe`.
+
+Structs and classes can also use `+`, `<`, `==` and the other operators, with methods named after the operator's word (`plus`, `less`, `equals`, ...). See [Operators for your own types](04-operators.md#operators-for-your-own-types).
 
 ## static: shared by the whole type
 

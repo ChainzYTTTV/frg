@@ -1,0 +1,46 @@
+=== main.frg
+#include <stdio>
+
+struct Point {
+    int x;
+
+    int less(Point other) {
+        return 1;
+    }
+
+    Point plus(Point a, Point b) {
+        return a;
+    }
+
+    int toText(int n) {
+        return n;
+    }
+}
+
+struct Size {
+    int w;
+}
+
+int main(){
+    Point p = Point(1);
+    Point q = Point(2);
+    print(p < q);
+    print(p + q);
+    Size s = Size(1);
+    print(s * 2);
+    print(s > s);
+    s += s;
+    list<Size> sizes = [s];
+    sizes.sort();
+    print(2 + s);
+    return 0;
+}
+=== error
+toText() decides how a Point is shown, so it has to be written as: string toText()
+to be used as '<', less() has to give back a bool
+to be used as '+', plus() has to take one value
+can't use '*' on a Size and an int
+can't compare a Size with a Size using '>'
+'+=' can't be used on a Size
+sort() only works on lists of numbers or text, or of a type with a less() method
+can't use '+' on an int and a Size

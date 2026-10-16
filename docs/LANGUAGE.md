@@ -329,7 +329,7 @@ print(e.info());             // "a goblin, not just an entity"
 - A type can have **several constructors**, as long as each takes different types of values: `Size(float side)` and `Size(float w, float h)`. Forge picks the one that matches what you give it.
 - A type with no constructor is made with `Type()` or `Type(every field, in order)`.
 - A class without its own constructors uses the ones it inherits. In a constructor, `super(...)` runs the parent class's constructor.
-- `print` shows a struct or class as `Point(x: 3.0, y: 4.0)`. To show it differently, add a method `string toString()`.
+- `print` shows a struct or class as `Point(x: 3.0, y: 4.0)`. To show it differently, add a method `string toText()`.
 
 ### Checking what kind of object something is: `is` and `as`
 
@@ -340,6 +340,23 @@ for (Entity e in enemies) {
         g.cackle();
     }
 }
+```
+
+### Operators for your own types
+
+Methods named after the operator words make the symbols work: `plus` (`+`, `+=`), `minus`, `times`, `div`, `mod`; `bool less(T other)` gives `<`, `>`, `<=`, `>=` and lets `list.sort()` sort them; `bool equals(T other)` replaces the automatic `==` and `!=`; `string toText()` decides what `print` and `"{x}"` show. Your type has to be on the left (`a * 3`, not `3 * a`).
+
+```cpp
+struct Money {
+    int cents;
+    Money plus(Money other) {
+        return Money(cents + other.cents);
+    }
+    bool less(Money other) {
+        return cents < other.cents;
+    }
+}
+Money total = a + b;      // or: a plus b
 ```
 
 ### describe

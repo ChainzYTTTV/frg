@@ -52,7 +52,7 @@ Runtime error in main.frg:9: position 5 is outside the list (it has 3 items, at 
 | `pop()` | the item | takes out the last item and gives it back |
 | `clear()` | — | removes everything |
 | `isEmpty()` | `bool` | true if there are no items |
-| `sort()` | — | puts the items in order, smallest first (lists of numbers or text only) |
+| `sort()` | — | puts the items in order, smallest first (lists of numbers, text, or a type with a [`less` method](04-operators.md#operators-for-your-own-types)) |
 | `reverse()` | — | flips the order |
 | `copy()` | a list | a separate copy of the list |
 | `removeWhere(f)` | — | removes every item that the [function value](06-functions.md#functions-as-values) `f` says `true` for: `enemies.removeWhere((Enemy e) { return e.hp <= 0; });` |

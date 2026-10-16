@@ -304,7 +304,7 @@ print(ages["Ana"]);
 if (ages.has("Zed")) { print("found"); }
 ```
 
-- **List methods:** `.length`, `add(x)`, `addAll(otherList)` (adds every item of another list to the end), `insert(i, x)`, `removeAt(i)` (gives back the removed item), `remove(x)` (removes the first match and gives true/false), `contains(x)`, `indexOf(x)`, `first()`, `last()`, `pop()` (removes and gives back the last item), `clear()`, `isEmpty()`, `sort()` (numbers or text only), `reverse()`, `copy()`, and with a function value: `removeWhere(f)`, `filter(f)` (a new list), `any(f)` (bool), `sortBy(f)` (by the number `f` gives).
+- **List methods:** `.length`, `add(x)`, `addAll(otherList)` (adds every item of another list to the end), `insert(i, x)`, `removeAt(i)` (gives back the removed item), `remove(x)` (removes the first match and gives true/false), `contains(x)`, `indexOf(x)`, `first()`, `last()`, `pop()` (removes and gives back the last item), `clear()`, `isEmpty()`, `sort()` (numbers, text, or a type with a `less` method), `reverse()`, `copy()`, and with a function value: `removeWhere(f)`, `filter(f)` (a new list), `any(f)` (bool), `sortBy(f)` (by the number `f` gives).
 - **Map methods:** `.length`, `has(key)`, `get(key, backup)`, `remove(key)`, `keys()` (a list), `values()` (a list), `clear()`, `isEmpty()`.
 - Map keys can be numbers, text, bools or enums.
 - An empty list or map needs its type written out: `list<int> xs = [];` or `map<string, int> m = {};`.
@@ -383,7 +383,7 @@ Rules:
 - **Structs can't inherit.** Only classes can.
 - A variable or field whose type is a class must start with a value: `Enemy e = Enemy(...);`. To start empty, make it optional: `Enemy? e = null;`.
 - A struct can't contain itself (a list of itself is fine).
-- `print(obj)` shows something like `Point(x: 3.0, y: 4.0)`. Adding a method `string toString()` changes what's shown.
+- `print(obj)` shows something like `Point(x: 3.0, y: 4.0)`. Adding a method `string toText()` changes what's shown.
 - `==` on structs compares every field, and `==` on classes checks whether both are **the same object**.
 - In `for (Point p in points)`, `p` is a **copy** of a struct, so changing it doesn't change the list. Use `points[i].x = ...` instead. With classes, the loop variable is the real object.
 
@@ -397,6 +397,8 @@ for (Entity e in all) {
     }
 }
 ```
+
+**Operators for your own types.** Methods named after operator words: `plus`/`minus`/`times`/`div`/`mod` make `+ - * / %` (and the words, and `+=` etc.) work, as `a.plus(b)`; `bool less(T other)` gives `<`, `>` (`b.less(a)`), `<=`, `>=` and lets `list.sort()` sort the type; `bool equals(T other)` replaces the automatic `==`/`!=` (structs compare every field by default, classes compare identity) and a struct's equals is used by `contains`/`indexOf`/`remove`; `string toText()` chooses what `print(x)` and `"{x}"` show (`toString()` still works but warns). The type must be on the left: `a * 3` works, `3 * a` doesn't.
 
 **`describe`.** Every struct and class object has it built in: `print(g.describe)` shows `Goblin (an Enemy): hp = 30, name = "Grub"` (the real object's type, its parent, every non-private field). Parts: `g.describe.name` (`"Goblin"`), `.parent` (`""` if none), `.fields` (`list<string>`), `.values` (`map<string, string>`). On its own it's text (`string s = g.describe;` works). No field or method may be called `describe`. Great for debugging.
 
@@ -869,7 +871,7 @@ Runtime error in main.frg:10: position 5 is outside the list (it has 3 items, at
 **Things Forge does not have yet.** Don't teach or use these. Say "not in Forge yet" and work around them:
 
 - `char` (single letters are one-letter strings), fixed-size arrays (use `list`), tuples
-- Two methods with the same name (only constructors and top-level functions can share a name), operator overloading for your own types
+- Two methods with the same name (only constructors and top-level functions can share a name)
 - `protected` (`private` already includes classes that inherit)
 - Labeled breaks, `finally`, `goto`
 - Networking, shaders in the engine, 3D lighting
@@ -1277,7 +1279,7 @@ Steps:
 
 Hints:
 
-- `sort()` only sorts lists of numbers or text, which is why step 3 keeps the list in order by hand.
+- Step 3 keeps the list in order by hand, which is good practice. (Later, giving `Entry` a method `bool less(Entry other)` lets `sort()` do it.)
 - Loading: `file.readLines("scores.txt")` gives a list of lines. For each line, `line.split(",")` gives `["Ana", "120"]`, and `int(parts[1])` is the score.
 - Another way to save: the `<save>` library keeps values by name, so there's no file format to write. Save entry `i` as `save.setString("name{i}", e.name)` and `save.setInt("score{i}", e.score)`, plus `save.setInt("count", entries.length)`, and read them back with `save.getString` and `save.getInt`. Doing it by hand with `<file>` first is good practice, though.
 

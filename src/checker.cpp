@@ -334,6 +334,8 @@ private:
     bool checkArgs(Expr* e, std::vector<ExprPtr>& args, FuncDecl* f, const std::string& name, Type* inst = nullptr);
     Type* construct(Expr* e, std::vector<ExprPtr>& args, TypeDecl* d, Type* expected = nullptr);
     Type* genericInstance(Expr* o);
+    FuncDecl* operatorMethod(Type* t, const std::string& name);
+    Type* userOperator(Expr* e, Expr* obj, Expr* arg, const std::string& name, const std::string& shown, bool swap, bool negate, bool wantBool);
     Type* builtinCall(Expr* e, const Builtin* b);
     Type* bmethodCall(Expr* e);
     Type* indexExpr(Expr* e);
@@ -701,6 +703,10 @@ void Checker::resolveTypeDeclParts(TypeDecl* d) {
         m->owner = d;
         m->module = d->module;
         resolveFunc(m.get());
+        if (m->name == "toText" && !d->builtin && (!m->params.empty() || m->ret != tString() || m->isStatic))
+            reportError(m->loc, "toText() decides how a " + d->name + " is shown, so it has to be written as: string toText()");
+        if (m->name == "toString" && !d->builtin && m->params.empty() && m->ret == tString())
+            warn(m->loc, "toString() is called toText() in Forge now", "rename it to toText - toString still works for now");
         if (m->name == "describe" && !d->builtin)
             reportError(m->loc, "'describe' is built into every struct and class, so a method can't be called that",
                         "x.describe already shows an object's fields - pick another name, like 'info'");
@@ -1601,6 +1607,51 @@ static Type* paramType(FuncDecl* f, size_t i, Type* inst) {
     return inst ? substType(t, inst->decl->paramTypes, inst->params) : t;
 }
 
+// The method a symbol uses on your own type (+ is plus, < is less, == is equals), or nullptr if it doesn't have one.
+FuncDecl* Checker::operatorMethod(Type* t, const std::string& name) {
+    if (!t || (t->kind != TK::Struct && t->kind != TK::Class) || !t->decl || t->decl->builtin) return nullptr;
+    FuncDecl* m = findMethod(t->decl, name);
+    return m && !m->isStatic ? m : nullptr;
+}
+
+static bool isUserType(const Type* t) {
+    return t && (t->kind == TK::Struct || t->kind == TK::Class) && t->decl && !t->decl->builtin;
+}
+
+static std::string arithWord(const std::string& op) {
+    return op == "+" ? "plus" : op == "-" ? "minus" : op == "*" ? "times" : op == "/" ? "div" : "mod";
+}
+
+// a + b on your own type is a.plus(b): checks the method fits, and records it for the code generator.
+Type* Checker::userOperator(Expr* e, Expr* obj, Expr* arg, const std::string& name, const std::string& shown, bool swap, bool negate,
+                            bool wantBool) {
+    FuncDecl* m = operatorMethod(obj->type, name);
+    std::string tn = obj->type->name;
+    std::string example = wantBool ? "bool " + name + "(" + tn + " other)" : tn + " " + name + "(" + tn + " other)";
+    if (m->params.size() != 1) {
+        reportError(e->loc, "to be used as '" + shown + "', " + name + "() has to take one value", "write it as: " + example + " { ... }");
+        return e->type = tError();
+    }
+    Type* inst = isGeneric(obj->type) ? obj->type : nullptr;
+    Type* pt = paramType(m, 0, inst);
+    Type* ret = inst ? substType(m->ret, inst->decl->paramTypes, inst->params) : m->ret;
+    if (!assignable(arg, pt, "the other side of " + shown)) return e->type = tError();
+    if (wantBool && ret != tBool()) {
+        reportError(e->loc, "to be used as '" + shown + "', " + name + "() has to give back a bool", "write it as: " + example + " { ... }");
+        return e->type = tError();
+    }
+    if (ret == tVoid() || ret == tTask()) {
+        reportError(e->loc, "to be used as '" + shown + "', " + name + "() has to give back a value", "write it as: " + example + " { ... }");
+        return e->type = tError();
+    }
+    e->opMethod = m;
+    e->opSwap = swap;
+    e->opNot = negate;
+    e->paramTypes = {pt};
+    e->opType = obj->type;
+    return e->type = ret;
+}
+
 bool Checker::checkArgs(Expr* e, std::vector<ExprPtr>& args, FuncDecl* f, const std::string& name, Type* inst) {
     size_t total = f->params.size(), required = f->requiredParams();
     if (inst) {
@@ -1818,8 +1869,15 @@ Type* Checker::bmethodCall(Expr* e) {
         return e->type = tError();
     }
     for (size_t i = 0; i < e->args.size(); i++) checkInto(e->args[i].get(), bmType(m.params[i], obj), "the value given to " + name + "()");
-    if (m.sortable && !isNumeric(obj->elem) && obj->elem->kind != TK::String)
-        reportError(e->loc, "sort() only works on lists of numbers or text");
+    if (m.sortable && !isNumeric(obj->elem) && obj->elem->kind != TK::String) {
+        FuncDecl* less = operatorMethod(obj->elem, "less");
+        if (less && less->params.size() == 1 && less->ret == tBool())
+            e->opMethod = less;  // sorts with the type's own less()
+        else
+            reportError(e->loc, "sort() only works on lists of numbers or text, or of a type with a less() method",
+                        isUserType(obj->elem) ? "give " + obj->elem->name + " a method: bool less(" + obj->elem->name + " other) { ... }, or use sortBy"
+                                              : "use sortBy with a function value that gives each item a number");
+    }
     return e->type = bmType(m.ret, obj);
 }
 
@@ -2109,6 +2167,10 @@ Type* Checker::equalityOp(Expr* e) {
             return ok(opt);
         }
     }
+    if (operatorMethod(L, "equals")) {
+        userOperator(e, a, b, "equals", e->opWord.empty() ? e->text : e->opWord, false, e->text == "!=", true);
+        return e->type == tError() ? e->type : e->type = tBool();
+    }
     if (L->kind == TK::Weak || R->kind == TK::Weak) {
         reportError(e->loc, "Weak values can't be compared directly", "compare what they point at: a.get() == b.get()");
         return e->type = tError();
@@ -2155,6 +2217,13 @@ Type* Checker::binaryExpr(Expr* e, Type* expected) {
     if (L == tError() || R == tError()) return e->type = tError();
 
     if (isArith(op)) {
+        if (operatorMethod(L, arithWord(op))) return userOperator(e, a, b, arithWord(op), shown, false, false, false);
+        if (isUserType(L) || isUserType(R)) {
+            Type* U = isUserType(L) ? L : R;
+            return fail("can't use '" + shown + "' on " + aType(L) + " and " + aType(R),
+                        isUserType(L) ? "to make it work, give " + U->name + " a method: " + U->name + " " + arithWord(op) + "(" + U->name + " other) { ... }"
+                                      : "the " + U->name + " has to come first, and have a method " + arithWord(op) + "(...)");
+        }
         if (op == "+" && L->kind == TK::String && R->kind == TK::String) {
             e->opType = tString();
             return e->type = tString();
@@ -2193,6 +2262,18 @@ Type* Checker::binaryExpr(Expr* e, Type* expected) {
     }
     if (isEquality(op)) return equalityOp(e);
     if (isCompare(op)) {
+        if (isUserType(L) || isUserType(R)) {
+            // less(other) gives all four: a < b is a.less(b), a > b is b.less(a), a <= b is !b.less(a), a >= b is !a.less(b).
+            bool swap = op == ">" || op == "<=";
+            Expr* obj = swap ? b : a;
+            if (operatorMethod(obj->type, "less")) {
+                userOperator(e, obj, swap ? a : b, "less", shown, swap, op == "<=" || op == ">=", true);
+                return e->type == tError() ? e->type : e->type = tBool();
+            }
+            Type* U = isUserType(obj->type) ? obj->type : isUserType(L) ? L : R;
+            return fail("can't compare " + aType(L) + " with " + aType(R) + " using '" + shown + "'",
+                        "to make <, >, <= and >= work, give " + U->name + " a method: bool less(" + U->name + " other) { ... }");
+        }
         if (isNumeric(L) && isNumeric(R)) {
             e->opType = commonOf({a, b});
             if (e->opType->kind == TK::Float) {
@@ -2316,6 +2397,27 @@ void Checker::assignStmt(Stmt* s) {
             assignable(val, T, dest);
         else
             reportError(s->loc, "'" + s->op + "' doesn't work on text", "only += works on text");
+        return;
+    }
+    if (isUserType(T)) {
+        // score += bonus on your own type is score = score.plus(bonus).
+        std::string word = arithWord(s->op.substr(0, 1));
+        FuncDecl* m = operatorMethod(T, word);
+        if (!m) {
+            reportError(s->loc, "'" + s->op + "' can't be used on " + aType(T),
+                        "to make it work, give " + T->name + " a method: " + T->name + " " + word + "(" + T->name + " other) { ... }");
+            return;
+        }
+        Type* inst = isGeneric(T) ? T : nullptr;
+        if (m->params.size() != 1) {
+            reportError(s->loc, "to be used as '" + s->op + "', " + word + "() has to take one value");
+            return;
+        }
+        assignable(val, paramType(m, 0, inst), "the value after " + s->op);
+        Type* ret = inst ? substType(m->ret, inst->decl->paramTypes, inst->params) : m->ret;
+        if (ret != T && !implicitlyConverts(ret, T))
+            reportError(s->loc, "'" + s->op + "' needs " + word + "() to give back " + aType(T) + ", but it gives back " + aType(ret));
+        s->target = m;
         return;
     }
     if (isVec(T)) {

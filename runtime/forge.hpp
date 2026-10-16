@@ -558,6 +558,8 @@ template <class L>
 void list_reverse(L& l, const char*) { std::reverse(l.begin(), l.end()); }
 template <class L>
 void list_sort(L& l, const char*) { std::sort(l.begin(), l.end()); }
+template <class L, class F>
+void list_sortWith(L& l, F less, const char*) { std::stable_sort(l.begin(), l.end(), less); }
 template <class L>
 std::decay_t<L> list_copy(const L& l, const char*) { return l; }
 // Calling a function value that was never given a function.

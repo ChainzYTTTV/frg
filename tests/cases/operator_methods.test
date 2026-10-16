@@ -1,0 +1,125 @@
+=== main.frg
+#include <stdio>
+
+struct Money {
+    int cents;
+
+    Money plus(Money other) {
+        return Money(cents + other.cents);
+    }
+
+    Money minus(Money other) {
+        return Money(cents - other.cents);
+    }
+
+    Money times(int n) {
+        return Money(cents * n);
+    }
+
+    Money div(int n) {
+        return Money(cents / n);
+    }
+
+    Money mod(int n) {
+        return Money(cents % n);
+    }
+
+    bool less(Money other) {
+        return cents < other.cents;
+    }
+
+    bool equals(Money other) {
+        return cents == other.cents;
+    }
+
+    string toText() {
+        return "${cents / 100}.{cents % 100}";
+    }
+}
+
+class Card {
+    string name;
+    int power;
+
+    Card(string name, int power) {
+        this.name = name;
+        this.power = power;
+    }
+
+    bool less(Card other) {
+        return power < other.power;
+    }
+
+    bool equals(Card other) {
+        return name == other.name;
+    }
+
+    string toText() {
+        return "{name}({power})";
+    }
+}
+
+int main(){
+    Money a = Money(250);
+    Money b = Money(175);
+    print(a + b);
+    print(a plus b);
+    print(a - b);
+    print(a * 3);
+    print(a times 2);
+    print(a / 2);
+    print(a % 100);
+    print(a < b);
+    print(a > b);
+    print(a <= b);
+    print(a >= b);
+    print(a less b);
+    print(a greater or equal b);
+    print(a == Money(250));
+    print(a != b);
+    print(a not equals b);
+    print("I have {a}");
+    Money total = Money(0);
+    total += a;
+    total += b;
+    total *= 2;
+    print(total);
+
+    list<Money> prices = [Money(300), Money(100), Money(200)];
+    prices.sort();
+    print(prices);
+    print(prices.contains(Money(100)));
+    print(prices.indexOf(Money(200)));
+
+    list<Card> hand = [Card("Ogre", 7), Card("Imp", 2), Card("Elf", 5)];
+    hand.sort();
+    print(hand);
+    print(hand[0] < hand[1]);
+    print(Card("Imp", 99) == hand[0]);
+    return 0;
+}
+=== output
+$4.25
+$4.25
+$0.75
+$7.50
+$5.0
+$1.25
+$0.50
+false
+true
+false
+true
+false
+true
+true
+true
+true
+I have $2.50
+$8.50
+[$1.0, $2.0, $3.0]
+true
+1
+[Imp(2), Elf(5), Ogre(7)]
+true
+true

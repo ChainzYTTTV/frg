@@ -203,7 +203,7 @@ std::string Gen::strCode(const std::string& code, const Type* t, bool shallow) {
         case TK::Struct:
         case TK::Class: {
             TypeDecl* d = t->decl;
-            bool hasToString = d->kind != DK::Enum && findMethod(d, "toString");
+            bool hasToString = d->kind != DK::Enum && (findMethod(d, "toText") || findMethod(d, "toString"));
             if (t->kind == TK::Class && shallow && !hasToString) return "::std::string(" + cppString("<" + d->name + ">") + ")";
             return "::" + d->module->cppNs + "::frg$str(" + code + ")";
         }
@@ -322,6 +322,12 @@ std::string Gen::call(const Expr* e) {
             if (callee->a->type->kind == TK::Pointer && (callee->text == "remove" || callee->text == "isRemoved") && e->args.empty())
                 return "::frg::ptr_" + callee->text + "(" + ex(callee->a.get()) + ", " + where(e->loc) + ")";
             Type* obj = derefType(callee->a->type);
+            if (callee->text == "sort" && e->opMethod) {  // a list of your own type, sorted with its less()
+                std::string less = obj->elem->kind == TK::Class ? "x->" + id(e->opMethod->name) + "(y)"
+                                                                : "const_cast<" + obj->elem->cpp + "&>(x)." + id(e->opMethod->name) + "(y)";
+                return "::frg::list_sortWith(" + objValue(callee->a.get()) + ", [](const auto& x, const auto& y) { return " + less + "; }, " +
+                       where(e->loc) + ")";
+            }
             std::string s = bmethodPrefix(obj->kind) + callee->text + "(" + objValue(callee->a.get());
             for (auto& a : e->args) {
                 // The element/key type the method expects, so literals are converted correctly.
@@ -365,6 +371,14 @@ std::string Gen::binary(const Expr* e) {
     const Expr* b = e->b.get();
     const Type* T = e->opType;
 
+    if (e->opMethod) {
+        // Your own type's operator method: a + b is a.plus(b), a > b is b.less(a), a != b is !a.equals(b).
+        const Expr* obj = e->opSwap ? b : a;
+        const Expr* arg = e->opSwap ? a : b;
+        std::string call = "(" + ex(obj) + ")" + (obj->type->kind == TK::Class ? "->" : ".") + id(e->opMethod->name) + "(" +
+                           conv(arg, e->paramTypes.empty() ? e->opMethod->params[0]->type : e->paramTypes[0]) + ")";
+        return e->opNot ? "(!" + call + ")" : call;
+    }
     if (op == "&&" || op == "||") return "(" + ex(a) + " " + op + " " + ex(b) + ")";
     if (op == "??") {
         bool valueOpt = e->type->kind == TK::Optional && !isNullableRef(e->type->elem);
@@ -502,6 +516,11 @@ std::string Gen::simple(const Stmt* s) {
             const Type* T = s->expr->type;
             std::string target = ex(s->expr.get());
             if (s->op == "=") return target + " = " + conv(s->value.get(), T);
+            if (s->target) {  // score += bonus on your own type: score = score.plus(bonus)
+                Type* pt = s->target->params[0]->type;
+                if (isGeneric(T)) pt = substType(pt, T->decl->paramTypes, T->params);
+                return target + " = (" + target + ")" + (T->kind == TK::Class ? "->" : ".") + id(s->target->name) + "(" + conv(s->value.get(), pt) + ")";
+            }
             char base = s->op[0];
             if (T->kind == TK::Struct) {  // vector math
                 const Expr* v = s->value.get();
@@ -808,7 +827,14 @@ void Gen::emitTypeDef(TypeDecl* d) {
         line(std::string(m->isStatic ? "static " : d->kind == DK::Class ? "virtual " : "") + m->ret->cpp + " " + id(m->name) + "(" +
              params(m.get()) + ")" + (m->isAbstract ? " = 0" : "") + ";");
     line(std::string(d->kind == DK::Class ? "virtual " : "") + "::frg::core::Description_ frg$describe();");
-    if (d->kind == DK::Struct) line("bool operator==(const " + name + "&) const = default;");
+    if (d->kind == DK::Struct) {
+        // == on a struct compares every field, unless it has its own equals(): then list.contains() and friends use that too.
+        FuncDecl* eq = findMethod(d, "equals");
+        if (eq && eq->params.size() == 1 && eq->params[0]->type == tNamed(d) && eq->ret == tBool())
+            line("bool operator==(const " + name + "& o) const { return const_cast<" + name + "*>(this)->" + id(eq->name) + "(o); }");
+        else
+            line("bool operator==(const " + name + "&) const = default;");
+    }
     if (d->kind == DK::Class) {
         // Lets the runtime ask an object "are you a <type name>?" (used by ECS's entity.get("Health")).
         bool chain = d->base && (!d->base->builtin || (d->base->name == "Component" && d->base->module->name == "ECS"));
@@ -953,9 +979,11 @@ void Gen::emitTypeFuncs(TypeDecl* d) {
     // Text form, used by print() and "{...}".
     line(strFuncProto(d) + " {");
     ind++;
-    FuncDecl* toString = findMethod(d, "toString");
+    FuncDecl* toString = findMethod(d, "toText");  // toText() chooses what print and "{x}" show (toString is its old name)
+    if (!toString || !toString->params.empty() || toString->ret != tString()) toString = findMethod(d, "toString");
     if (toString && toString->params.empty() && toString->ret == tString()) {
-        line(isClass ? "return v->toString_();" : "return const_cast<" + q + "&>(v).toString_();");
+        std::string m = id(toString->name) + "()";
+        line(isClass ? "return v->" + m + ";" : "return const_cast<" + q + "&>(v)." + m + ";");
     } else {
         std::string acc = isClass ? "v->" : "v.";
         std::string s = "::std::string(" + cppString(d->name + "(") + ")";

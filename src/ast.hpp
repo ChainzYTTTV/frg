@@ -107,6 +107,9 @@ struct Expr {
     bool litFloat = false;   // a constant built from literals including a decimal one
     bool isWrite = false;    // Index: the target of an assignment (map[key] = ... creates the key)
     FuncDecl* ctor = nullptr;            // Call/BraceLit that builds an object: the constructor used (or null = field-by-field)
+    FuncDecl* opMethod = nullptr;        // Binary on your own type: the method it calls (a + b is a.plus(b)); list.sort(): less
+    bool opSwap = false;                 // a > b is b.less(a)
+    bool opNot = false;                  // a >= b is !a.less(b), a != b is !a.equals(b)
     TypeDecl* builds = nullptr;          // Call/BraceLit that builds an object: the type built
     std::vector<Expr*> defaultArgs;      // Call: default values filled in for missing arguments
     std::vector<Type*> paramTypes;       // Call on a generic type (Box<int>): each parameter's type with T filled in

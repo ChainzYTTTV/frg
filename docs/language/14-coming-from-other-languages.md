@@ -44,6 +44,7 @@ If you already know C++, C#, Java, JavaScript or Python, Forge will feel familia
 | `protected` | `private` | `private` already includes classes that inherit |
 | `static` members | `static int count = 0;` and `static Enemy boss() { ... }` | reached as `Enemy.count`, `Enemy.boss()` |
 | overloading `void f(int)` / `void f(float)` | the same: `void f(int)` and `void f(float)` | top-level functions and constructors can share a name; methods can't |
+| operator overloading, `__add__`, `__lt__`, `__eq__`, `__str__`, `toString()` | methods `plus`, `minus`, `times`, `div`, `mod`, `less`, `equals`, `toText` | `less` gives all four comparisons and `list.sort()`. Your type goes on the left. See [Operators for your own types](04-operators.md#operators-for-your-own-types) |
 | `class B extends A` / `class B : public A` | `class B : A` | |
 | `interface I` / `implements I` / abstract classes | `interface Attacker { int power(); }`, `class Goblin : Enemy, Attacker`, `abstract class Enemy { abstract int reward(); }` | at most one class after the `:`, then interfaces. See [Interfaces and abstract classes](09-structs-and-classes.md#interfaces-and-abstract-classes) |
 | `@Override` / `override` | nothing | a method with the same name and types replaces the parent's |

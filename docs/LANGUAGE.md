@@ -284,7 +284,7 @@ struct Point {
     float x;
     float y;
 
-    float length() {
+    float length(){
         return math.sqrt(x * x + y * y);
     }
 }
@@ -307,17 +307,17 @@ class Entity {
     string name;
     int hp = 100;
 
-    Entity(string name) {        // a constructor: runs when one is made
+    Entity(string name){        // a constructor: runs when one is made
         this.name = name;
     }
 
-    string info() {
+    string info(){
         return "an entity";
     }
 }
 
 class Goblin : Entity {          // a Goblin is a kind of Entity
-    string info() {
+    string info(){
         return "a goblin, not just " + super.info();
     }
 }
@@ -349,10 +349,10 @@ Methods named after the operator words make the symbols work: `plus` (`+`, `+=`)
 ```cpp
 struct Money {
     int cents;
-    Money plus(Money other) {
+    Money plus(Money other){
         return Money(cents + other.cents);
     }
-    bool less(Money other) {
+    bool less(Money other){
         return cents < other.cents;
     }
 }
@@ -370,10 +370,10 @@ A `static` field or method belongs to the type, not to each object: there's one,
 ```cpp
 class Enemy {
     static int count = 0;
-    Enemy() {
+    Enemy(){
         count++;
     }
-    static Enemy boss() {
+    static Enemy boss(){
         return Enemy();
     }
 }
@@ -397,10 +397,10 @@ abstract class Enemy {
 }
 
 class Goblin : Enemy, Attacker {   // at most one class, then any number of interfaces
-    int reward() {
+    int reward(){
         return 5;
     }
-    int power() {
+    int power(){
         return 3;
     }
 }
@@ -413,7 +413,7 @@ list<Attacker> attackers = [Goblin()];
 ```cpp
 class Box<T> {
     T item;
-    Box(T item) {
+    Box(T item){
         this.item = item;
     }
 }
@@ -431,7 +431,7 @@ Inside, a `T` can be stored, passed, returned, compared with `==` and printed, b
 ```cpp
 class Safe {
     private int code = 1234;          // only Safe's own methods (and classes that inherit from Safe) can use it
-    bool tryOpen(int guess) {
+    bool tryOpen(int guess){
         return guess == code;
     }
 }
@@ -475,7 +475,7 @@ Variables of class type **without** a `?` must always hold an object, so they ne
 A `Pointer<T>` points at a variable, so you can change that variable from somewhere else. `.value` reads or changes the variable it points at:
 
 ```cpp
-void addOne(Pointer<int> counter) {
+void addOne(Pointer<int> counter){
     counter.value += 1;
 }
 
@@ -490,7 +490,7 @@ Don't keep a pointer to a function's local variable after that function ends. `p
 A function whose return type is **`task`** can call **`wait(seconds)`**. Only that task pauses; the rest of the game keeps running.
 
 ```cpp
-task flash() {
+task flash(){
     for (int i = 0; i < 5; i++) {
         tint = color.WHITE;
         wait(0.1);                    // this task pauses for 0.1 seconds
@@ -628,7 +628,7 @@ Each part of the game (menu, level, game over) is a class that inherits from `Sc
 
 ```cpp
 class Menu : Scene {
-    void draw() {
+    void draw(){
         if (ui.button(rect(380, 200, 200, 50), "Play")) {
             scenes.change(Level());
         }
@@ -646,7 +646,7 @@ The switch happens at the start of the next `scenes.update`, so the old scene's 
 ```cpp
 class Health : Component {
     int hp = 3;
-    void update(float dt) {
+    void update(float dt){
         if (hp <= 0) {
             entity().destroy();
         }

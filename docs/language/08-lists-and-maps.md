@@ -164,7 +164,7 @@ Lists and maps can hold anything, including other lists and maps, structs and cl
 ```cpp
 class Inventory {
     map<string, int> items = {};
-    void addItem(string name) {
+    void addItem(string name){
         items[name] += 1;
     }
 }

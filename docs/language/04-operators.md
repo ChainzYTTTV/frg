@@ -195,19 +195,19 @@ Your own structs and classes can use the same symbols and words as numbers. Give
 struct Money {
     int cents;
 
-    Money plus(Money other) {
+    Money plus(Money other){
         return Money(cents + other.cents);
     }
 
-    Money times(int n) {             // the other side doesn't have to be the same type
+    Money times(int n){             // the other side doesn't have to be the same type
         return Money(cents * n);
     }
 
-    bool less(Money other) {
+    bool less(Money other){
         return cents < other.cents;
     }
 
-    string toText() {
+    string toText(){
         return "${cents / 100}.{cents % 100}";
     }
 }

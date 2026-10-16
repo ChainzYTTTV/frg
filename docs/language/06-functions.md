@@ -120,11 +120,11 @@ Once a parameter has a default, every parameter after it needs one too.
 Functions can share a name when their **parameters are different**: a different number of them, or different types. Forge picks the right one from the values you call it with:
 
 ```cpp
-void drawHealth(int hp) {
+void drawHealth(int hp){
     graphics2d.drawText("HP: {hp}", 10, 10, 20, color.WHITE);
 }
 
-void drawHealth(float fraction) {
+void drawHealth(float fraction){
     graphics2d.drawRect(10, 10, 200 * fraction, 20, color.GREEN);
 }
 
@@ -208,7 +208,7 @@ The part inside `< >` reads like the first line of a function, without the names
 A function you've written can be used as a value too: write its name **without** `()`.
 
 ```cpp
-int twice(int n) {
+int twice(int n){
     return n * 2;
 }
 
@@ -219,7 +219,7 @@ print(f(21));                    // 42
 ### Handing one to a function
 
 ```cpp
-int applyTwice(Function<int(int)> f, int x) {
+int applyTwice(Function<int(int)> f, int x){
     return f(f(x));
 }
 

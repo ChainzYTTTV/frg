@@ -192,7 +192,7 @@ switch (command) {
 `return` leaves the current function immediately. See [Functions](06-functions.md). Inside a loop, it also leaves the loop.
 
 ```cpp
-int findFirstNegative(list<int> nums) {
+int findFirstNegative(list<int> nums){
     for (int i = 0; i < nums.length; i++) {
         if (nums[i] < 0) {
             return i;      // found it: stop looking

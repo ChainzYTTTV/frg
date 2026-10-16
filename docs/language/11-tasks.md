@@ -5,7 +5,7 @@ Games are full of things that happen **over time**: flash for half a second, wai
 ## A first task
 
 ```cpp
-task flash() {
+task flash(){
     tint = color.WHITE;
     wait(0.2);              // this task pauses for 0.2 seconds...
     tint = color.ORANGE;    // ...then carries on from here
@@ -17,7 +17,7 @@ A function whose return type is **`task`** can call **`wait(seconds)`**. Only th
 **Calling a task starts it.** It runs straight away until its first `wait`, then the call returns and your code carries on. The task picks up where it left off once the time has passed:
 
 ```cpp
-void respawn() {
+void respawn(){
     position = START;
     flash();                // starts flashing, and returns immediately
     print("respawned");     // runs right away, while the flash is still going
@@ -57,7 +57,7 @@ A `task` variable made without a value counts as already done. `print(t)` shows 
 ### Countdown
 
 ```cpp
-task countdown() {
+task countdown(){
     for (int i = 3; i > 0; i--) {
         message = "{i}";
         wait(1);
@@ -71,7 +71,7 @@ task countdown() {
 ### Spawning waves forever
 
 ```cpp
-task spawnWaves() {
+task spawnWaves(){
     int wave = 1;
     while (true) {
         for (int i = 0; i < wave * 3; i++) {
@@ -89,7 +89,7 @@ A task that never ends is fine; it just keeps going alongside the game. Keep the
 ### One task waiting for another
 
 ```cpp
-task bossIntro() {
+task bossIntro(){
     task text = showText("A wild boss appears!");
     wait(text);                 // carry on when showText has finished
     bossActive = true;
@@ -104,7 +104,7 @@ Methods of a **class** can be tasks. The object stays alive while its task runs,
 class Player : Body {
     color tint = color.ORANGE;
 
-    task flash() {
+    task flash(){
         for (int i = 0; i < 5; i++) {
             tint = color.WHITE;
             wait(0.08);
@@ -136,7 +136,7 @@ Struct methods can't be tasks, because a struct gets copied around, so there's n
 #include <stdio>
 #include <tasks>
 
-task hello() {
+task hello(){
     print("Hello...");
     wait(1);
     print("...world!");

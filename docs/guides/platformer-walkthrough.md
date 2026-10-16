@@ -129,7 +129,7 @@ class Player : Body {
 `Player` **inherits** from the physics `Body`, so a player *is* a body: it has `position`, `size`, `velocity`, `onGround` and the rest. It adds its own `tint` and `deaths`.
 
 ```cpp
-    void respawn() {
+    void respawn(){
         position = start;
         velocity = vec2.ZERO;
         deaths++;
@@ -140,7 +140,7 @@ class Player : Body {
 Inside a method, `position` and `velocity` are the player's own fields (inherited from `Body`). `flash()` starts a task.
 
 ```cpp
-    task flash() {
+    task flash(){
         for (int i = 0; i < 5; i++) {
             tint = color.WHITE;
             wait(0.08);

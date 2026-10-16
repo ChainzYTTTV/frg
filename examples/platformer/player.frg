@@ -14,7 +14,7 @@ class Player : Body {
     color tint = color.ORANGE;
     int deaths = 0;
 
-    void respawn() {
+    void respawn(){
         position = start;
         velocity = vec2.ZERO;
         deaths++;
@@ -22,7 +22,7 @@ class Player : Body {
     }
 
     // A task: it runs alongside the game, and wait() pauses just this task, not the game.
-    task flash() {
+    task flash(){
         for (int i = 0; i < 5; i++) {
             tint = color.WHITE;
             wait(0.08);

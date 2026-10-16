@@ -203,7 +203,7 @@ A struct or class can choose how it's shown by having a method `string toText()`
 class Player {
     string name;
     int hp = 100;
-    string toText() {
+    string toText(){
         return "{name} ({hp} HP)";
     }
 }

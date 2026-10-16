@@ -114,7 +114,7 @@ A [task](../language/11-tasks.md) can play a tween from start to end on its own:
 ```cpp
 float menuX = -300;
 
-task showMenu() {
+task showMenu(){
     Tween t = Tween(-300, 40, 0.5);
     while (!t.isDone()) {
         t.update(window.deltaTime());

@@ -348,7 +348,7 @@ struct Point {
     float x;
     float y;
 
-    float length() {
+    float length(){
         return math.sqrt(x * x + y * y);   // needs #include <math>
     }
 }
@@ -368,32 +368,32 @@ class Entity {
     string name;
     int hp = 100;                 // field with a starting value
 
-    Entity(string name) {         // constructor: same name as the class, no return type
+    Entity(string name){         // constructor: same name as the class, no return type
         this.name = name;         // this.name is the field, name is the parameter
     }
 
-    void takeHit(int amount) {
+    void takeHit(int amount){
         hp -= amount;
     }
 
-    string info() {
+    string info(){
         return "an entity";
     }
 }
 
 class Goblin : Entity {           // inheritance: a Goblin is a kind of Entity
-    string info() {           // replaces Entity's version (must match it exactly)
+    string info(){           // replaces Entity's version (must match it exactly)
         return "a goblin";
     }
 }
 
 class Player : Entity {
     int score = 0;
-    Player(string name) {
+    Player(string name){
         super(name);              // runs Entity's constructor
         hp = 150;
     }
-    string info() {
+    string info(){
         return "the player, " + super.info();   // calls Entity's version
     }
 }
@@ -449,7 +449,7 @@ private int attempts = 0;           // only this file can see it
 A function whose return type is **`task`** can call **`wait(seconds)`**. Only that task pauses; the game keeps running.
 
 ```cpp
-task flash() {
+task flash(){
     for (int i = 0; i < 5; i++) {
         tint = color.WHITE;
         wait(0.1);
@@ -497,7 +497,7 @@ int shown = bestScore ?? 0;
 #### Pointers
 
 ```cpp
-void addOne(Pointer<int> counter) {
+void addOne(Pointer<int> counter){
     counter.value += 1;       // .value is the variable it points at
 }
 
@@ -654,7 +654,7 @@ void draw(){
 class Health : Component {
     int hp = 3;
     void start() { print("{entity().name} is ready"); }   // runs once, before the first update
-    void update(float dt) {
+    void update(float dt){
         if (hp <= 0) { entity().destroy(); }
     }
 }
@@ -899,6 +899,7 @@ Runtime error in main.frg:10: position 5 is outside the list (it has 3 items, at
 - `char` (single letters are one-letter strings), fixed-size arrays (use `list`), tuples
 - Two methods with the same name (only constructors and top-level functions can share a name)
 - `protected` (`private` already includes classes that inherit)
+- Generic functions (only structs and classes can be generic), and generic types that inherit or have interfaces
 - Labeled breaks, `finally`, `goto`
 - Networking, shaders in the engine, 3D lighting
 - `<network>` is planned but **doesn't exist yet**.
@@ -992,7 +993,7 @@ class Player : Body {
     color tint = color.ORANGE;
     int deaths = 0;
 
-    void respawn() {
+    void respawn(){
         position = start;
         velocity = vec2.ZERO;
         deaths++;
@@ -1000,7 +1001,7 @@ class Player : Body {
     }
 
     // A task: it runs alongside the game, and wait() pauses just this task, not the game.
-    task flash() {
+    task flash(){
         for (int i = 0; i < 5; i++) {
             tint = color.WHITE;
             wait(0.08);
@@ -2640,7 +2641,7 @@ A struct or class can choose how it's shown by having a method `string toText()`
 class Player {
     string name;
     int hp = 100;
-    string toText() {
+    string toText(){
         return "{name} ({hp} HP)";
     }
 }
@@ -2862,19 +2863,19 @@ Your own structs and classes can use the same symbols and words as numbers. Give
 struct Money {
     int cents;
 
-    Money plus(Money other) {
+    Money plus(Money other){
         return Money(cents + other.cents);
     }
 
-    Money times(int n) {             // the other side doesn't have to be the same type
+    Money times(int n){             // the other side doesn't have to be the same type
         return Money(cents * n);
     }
 
-    bool less(Money other) {
+    bool less(Money other){
         return cents < other.cents;
     }
 
-    string toText() {
+    string toText(){
         return "${cents / 100}.{cents % 100}";
     }
 }
@@ -3096,7 +3097,7 @@ switch (command) {
 `return` leaves the current function immediately. See Functions (see “6. Functions”). Inside a loop, it also leaves the loop.
 
 ```cpp
-int findFirstNegative(list<int> nums) {
+int findFirstNegative(list<int> nums){
     for (int i = 0; i < nums.length; i++) {
         if (nums[i] < 0) {
             return i;      // found it: stop looking
@@ -3234,11 +3235,11 @@ Once a parameter has a default, every parameter after it needs one too.
 Functions can share a name when their **parameters are different**: a different number of them, or different types. Forge picks the right one from the values you call it with:
 
 ```cpp
-void drawHealth(int hp) {
+void drawHealth(int hp){
     graphics2d.drawText("HP: {hp}", 10, 10, 20, color.WHITE);
 }
 
-void drawHealth(float fraction) {
+void drawHealth(float fraction){
     graphics2d.drawRect(10, 10, 200 * fraction, 20, color.GREEN);
 }
 
@@ -3322,7 +3323,7 @@ The part inside `< >` reads like the first line of a function, without the names
 A function you've written can be used as a value too: write its name **without** `()`.
 
 ```cpp
-int twice(int n) {
+int twice(int n){
     return n * 2;
 }
 
@@ -3333,7 +3334,7 @@ print(f(21));                    // 42
 #### Handing one to a function
 
 ```cpp
-int applyTwice(Function<int(int)> f, int x) {
+int applyTwice(Function<int(int)> f, int x){
     return f(f(x));
 }
 
@@ -3693,7 +3694,7 @@ Lists and maps can hold anything, including other lists and maps, structs and cl
 ```cpp
 class Inventory {
     map<string, int> items = {};
-    void addItem(string name) {
+    void addItem(string name){
         items[name] += 1;
     }
 }
@@ -3755,11 +3756,11 @@ struct Point {
     float x;
     float y;
 
-    float length() {
+    float length(){
         return math.sqrt(x * x + y * y);
     }
 
-    void moveBy(float dx, float dy) {
+    void moveBy(float dx, float dy){
         x += dx;
         y += dy;
     }
@@ -3775,7 +3776,7 @@ p.moveBy(1, 1);
 Inside a method, **`this`** means "the value this method was called on". You usually don't need it, since `x` already means this point's `x`. It's needed when a parameter has the same name as a field:
 
 ```cpp
-void setX(float x) {
+void setX(float x){
     this.x = x;          // the field = the parameter
 }
 ```
@@ -3803,7 +3804,7 @@ class Enemy {
     string name;
     int hp = 100;
 
-    Enemy(string name) {
+    Enemy(string name){
         this.name = name;
     }
 }
@@ -3822,12 +3823,12 @@ struct Size {
     float w;
     float h;
 
-    Size(float side) {          // a square
+    Size(float side){          // a square
         w = side;
         h = side;
     }
 
-    Size(float w, float h) {
+    Size(float w, float h){
         this.w = w;
         this.h = h;
     }
@@ -3917,7 +3918,7 @@ The other way to avoid the loop is a **weak** link. A `Weak<Player>` points at a
 class Enemy {
     Weak<Player> target;              // starts empty
 
-    void chase() {
+    void chase(){
         Player? p = target.get();     // the player, or null if it's gone
         if (p != null) {
             print("chasing {p.name}");
@@ -3949,15 +3950,15 @@ class Entity {
     string name;
     int hp = 100;
 
-    Entity(string name) {
+    Entity(string name){
         this.name = name;
     }
 
-    void takeHit(int amount) {
+    void takeHit(int amount){
         hp -= amount;
     }
 
-    string info() {
+    string info(){
         return "an entity";
     }
 }
@@ -3965,7 +3966,7 @@ class Entity {
 class Goblin : Entity {
     int gold = 5;              // extra field
 
-    string info() {        // replaces Entity's version
+    string info(){        // replaces Entity's version
         return "a goblin carrying {gold} gold";
     }
 }
@@ -3997,12 +3998,12 @@ print(g.info());           // a goblin carrying 5 gold
 class Player : Entity {
     int score = 0;
 
-    Player(string name) {
+    Player(string name){
         super(name);                   // run Entity's constructor
         hp = 150;
     }
 
-    string info() {
+    string info(){
         return "the player, " + super.info();    // Entity's info()
     }
 }
@@ -4056,13 +4057,13 @@ if (e is Goblin) {
 class BankAccount {
     private int balance = 0;
 
-    void deposit(int amount) {
+    void deposit(int amount){
         if (amount > 0) {
             balance += amount;
         }
     }
 
-    int getBalance() {
+    int getBalance(){
         return balance;
     }
 }
@@ -4093,7 +4094,7 @@ class Enemy {
     string name;
     int hp = 100;
 
-    string toText() {
+    string toText(){
         return "{name} ({hp} HP)";
     }
 }
@@ -4137,12 +4138,12 @@ class Enemy {
     static int count = 0;        // one counter for all enemies
     string name;
 
-    Enemy(string name) {
+    Enemy(string name){
         this.name = name;
         count++;                 // inside the class, no "Enemy." is needed
     }
 
-    static Enemy boss() {        // makes a special enemy
+    static Enemy boss(){        // makes a special enemy
         Enemy b = Enemy("Boss");
         return b;
     }
@@ -4178,11 +4179,11 @@ interface Attacker {
 }
 
 class Trap : Attacker {
-    int power() {
+    int power(){
         return 7;
     }
 
-    void attack(string target) {
+    void attack(string target){
         print("the trap snaps at {target}");
     }
 }
@@ -4195,32 +4196,32 @@ abstract class Enemy {
     string name;
     int hp = 10;
 
-    Enemy(string name) {
+    Enemy(string name){
         this.name = name;
     }
 
     abstract int reward();          // no code: each kind of enemy says how much it's worth
 
-    void hurt(int amount) {
+    void hurt(int amount){
         hp -= amount;
         print("{name} is worth {reward()} gold");
     }
 }
 
 class Goblin : Enemy, Attacker {    // one class first, then any number of interfaces
-    Goblin(string name) {
+    Goblin(string name){
         super(name);
     }
 
-    int reward() {
+    int reward(){
         return 5;
     }
 
-    int power() {
+    int power(){
         return 3;
     }
 
-    void attack(string target) {
+    void attack(string target){
         print("{name} pokes {target}");
     }
 }
@@ -4256,11 +4257,11 @@ Things to know:
 class Box<T> {
     T item;
 
-    Box(T item) {
+    Box(T item){
         this.item = item;
     }
 
-    T open() {
+    T open(){
         return item;
     }
 }
@@ -4338,7 +4339,7 @@ print(s);                  // Running
 ```cpp
 enum Direction { Up, Down, Left, Right }
 
-vec2 step(Direction d) {
+vec2 step(Direction d){
     switch (d) {
         case Direction.Up:
             return vec2(0, -1);
@@ -4412,7 +4413,7 @@ If the backup is optional too, the result is optional: `a ?? b ?? 0`.
 #### Functions that might not find anything
 
 ```cpp
-int? findIndex(list<string> items, string wanted) {
+int? findIndex(list<string> items, string wanted){
     for (int i = 0; i < items.length; i++) {
         if (items[i] == wanted) {
             return i;
@@ -4440,7 +4441,7 @@ if (where != null) {
 A `Pointer<T>` points at a variable, so you can read and change that variable from somewhere else. `.value` is the variable it points at:
 
 ```cpp
-void addOne(Pointer<int> counter) {
+void addOne(Pointer<int> counter){
     counter.value += 1;
 }
 
@@ -4483,7 +4484,7 @@ If a pointer points at a list or a map, `p.remove(x)` **with** a value is still 
 Rarely. Class objects are already shared (a function that gets a `Player` can change it), so pointers are only needed to let a function change a caller's **number, bool, string, struct or list** variable. Often it's clearer to return the new value instead:
 
 ```cpp
-int addOne(int n) {
+int addOne(int n){
     return n + 1;
 }
 score = addOne(score);
@@ -4506,7 +4507,7 @@ Games are full of things that happen **over time**: flash for half a second, wai
 ### A first task
 
 ```cpp
-task flash() {
+task flash(){
     tint = color.WHITE;
     wait(0.2);              // this task pauses for 0.2 seconds...
     tint = color.ORANGE;    // ...then carries on from here
@@ -4518,7 +4519,7 @@ A function whose return type is **`task`** can call **`wait(seconds)`**. Only th
 **Calling a task starts it.** It runs straight away until its first `wait`, then the call returns and your code carries on. The task picks up where it left off once the time has passed:
 
 ```cpp
-void respawn() {
+void respawn(){
     position = START;
     flash();                // starts flashing, and returns immediately
     print("respawned");     // runs right away, while the flash is still going
@@ -4558,7 +4559,7 @@ A `task` variable made without a value counts as already done. `print(t)` shows 
 #### Countdown
 
 ```cpp
-task countdown() {
+task countdown(){
     for (int i = 3; i > 0; i--) {
         message = "{i}";
         wait(1);
@@ -4572,7 +4573,7 @@ task countdown() {
 #### Spawning waves forever
 
 ```cpp
-task spawnWaves() {
+task spawnWaves(){
     int wave = 1;
     while (true) {
         for (int i = 0; i < wave * 3; i++) {
@@ -4590,7 +4591,7 @@ A task that never ends is fine; it just keeps going alongside the game. Keep the
 #### One task waiting for another
 
 ```cpp
-task bossIntro() {
+task bossIntro(){
     task text = showText("A wild boss appears!");
     wait(text);                 // carry on when showText has finished
     bossActive = true;
@@ -4605,7 +4606,7 @@ Methods of a **class** can be tasks. The object stays alive while its task runs,
 class Player : Body {
     color tint = color.ORANGE;
 
-    task flash() {
+    task flash(){
         for (int i = 0; i < 5; i++) {
             tint = color.WHITE;
             wait(0.08);
@@ -4637,7 +4638,7 @@ Struct methods can't be tasks, because a struct gets copied around, so there's n
 #include <stdio>
 #include <tasks>
 
-task hello() {
+task hello(){
     print("Hello...");
     wait(1);
     print("...world!");
@@ -4860,7 +4861,7 @@ If anything inside `try` has a runtime error, the rest of the `try` part is skip
 - Your own code can make an error with `throw "message";`. If nothing catches it, the game stops with that message, like any runtime error:
 
   ```cpp
-  int loadLevel(string name) {
+  int loadLevel(string name){
       if (name == "") {
           throw "the level needs a name";
       }
@@ -6388,7 +6389,7 @@ Classes can inherit from `Body` to add their own fields and methods. They use `B
 ```cpp
 class Player : Body {
     int lives = 3;
-    void respawn() {
+    void respawn(){
         position = vec2(80, 300);
         velocity = vec2.ZERO;
     }
@@ -6771,7 +6772,7 @@ A task (see “11. Tasks”) can play a tween from start to end on its own:
 ```cpp
 float menuX = -300;
 
-task showMenu() {
+task showMenu(){
     Tween t = Tween(-300, 40, 0.5);
     while (!t.isDone()) {
         t.update(window.deltaTime());
@@ -7026,25 +7027,25 @@ Each scene is a class that inherits from `Scene` and fills in any of these metho
 
 ```cpp
 class Menu : Scene {
-    void update(float dt) {
+    void update(float dt){
         if (input.keyPressed(Key.ENTER)) {
             scenes.change(Level(1));
         }
     }
-    void draw() {
+    void draw(){
         graphics2d.drawText("Press Enter to play", 300, 200, 30, color.WHITE);
     }
 }
 
 class Level : Scene {
     int number;
-    Level(int number) {
+    Level(int number){
         this.number = number;
     }
-    void enter() {
+    void enter(){
         print("starting level {number}");
     }
-    void draw() {
+    void draw(){
         graphics2d.drawText("Level {number}", 20, 20, 30, color.WHITE);
     }
 }
@@ -7220,7 +7221,7 @@ A component is a class that inherits from `Component`, filling in any of these m
 class Health : Component {
     int hp = 3;
 
-    void update(float dt) {
+    void update(float dt){
         if (hp <= 0) {
             entity().destroy();
         }
@@ -7231,11 +7232,11 @@ class Mover : Component {
     vec2 position = vec2.ZERO;
     vec2 velocity = vec2.ZERO;
 
-    void update(float dt) {
+    void update(float dt){
         position += velocity * dt;
     }
 
-    void draw() {
+    void draw(){
         graphics2d.drawCircle(position, 10, color.GOLD);
     }
 }
@@ -7325,7 +7326,7 @@ A component can find its siblings through its entity:
 
 ```cpp
 class Poison : Component {
-    void update(float dt) {
+    void update(float dt){
         Health? h = entity().get("Health") as Health;
         if (h != null) {
             h.hp -= 1;
@@ -7357,7 +7358,7 @@ Tasks (see “11. Tasks”) (functions returning `task` that call `wait`) are pa
 #include <stdio>
 #include <tasks>
 
-task countdown() {
+task countdown(){
     for (int i = 3; i > 0; i--) {
         print(i);
         wait(1);
@@ -8599,7 +8600,7 @@ A hit flash with a task (see “11. Tasks”):
 ```cpp
 color shipTint = color.WHITE;
 
-task hitFlash() {
+task hitFlash(){
     shipTint = color.RED;
     wait(0.1);
     shipTint = color.WHITE;
@@ -8743,7 +8744,7 @@ class Player : Body {
 `Player` **inherits** from the physics `Body`, so a player *is* a body: it has `position`, `size`, `velocity`, `onGround` and the rest. It adds its own `tint` and `deaths`.
 
 ```cpp
-    void respawn() {
+    void respawn(){
         position = start;
         velocity = vec2.ZERO;
         deaths++;
@@ -8754,7 +8755,7 @@ class Player : Body {
 Inside a method, `position` and `velocity` are the player's own fields (inherited from `Body`). `flash()` starts a task.
 
 ```cpp
-    task flash() {
+    task flash(){
         for (int i = 0; i < 5; i++) {
             tint = color.WHITE;
             wait(0.08);
@@ -9403,7 +9404,7 @@ struct Point {
     float x;
     float y;
 
-    float length() {
+    float length(){
         return math.sqrt(x * x + y * y);
     }
 }
@@ -9426,17 +9427,17 @@ class Entity {
     string name;
     int hp = 100;
 
-    Entity(string name) {        // a constructor: runs when one is made
+    Entity(string name){        // a constructor: runs when one is made
         this.name = name;
     }
 
-    string info() {
+    string info(){
         return "an entity";
     }
 }
 
 class Goblin : Entity {          // a Goblin is a kind of Entity
-    string info() {
+    string info(){
         return "a goblin, not just " + super.info();
     }
 }
@@ -9468,10 +9469,10 @@ Methods named after the operator words make the symbols work: `plus` (`+`, `+=`)
 ```cpp
 struct Money {
     int cents;
-    Money plus(Money other) {
+    Money plus(Money other){
         return Money(cents + other.cents);
     }
-    bool less(Money other) {
+    bool less(Money other){
         return cents < other.cents;
     }
 }
@@ -9489,10 +9490,10 @@ A `static` field or method belongs to the type, not to each object: there's one,
 ```cpp
 class Enemy {
     static int count = 0;
-    Enemy() {
+    Enemy(){
         count++;
     }
-    static Enemy boss() {
+    static Enemy boss(){
         return Enemy();
     }
 }
@@ -9516,10 +9517,10 @@ abstract class Enemy {
 }
 
 class Goblin : Enemy, Attacker {   // at most one class, then any number of interfaces
-    int reward() {
+    int reward(){
         return 5;
     }
-    int power() {
+    int power(){
         return 3;
     }
 }
@@ -9532,7 +9533,7 @@ list<Attacker> attackers = [Goblin()];
 ```cpp
 class Box<T> {
     T item;
-    Box(T item) {
+    Box(T item){
         this.item = item;
     }
 }
@@ -9550,7 +9551,7 @@ Inside, a `T` can be stored, passed, returned, compared with `==` and printed, b
 ```cpp
 class Safe {
     private int code = 1234;          // only Safe's own methods (and classes that inherit from Safe) can use it
-    bool tryOpen(int guess) {
+    bool tryOpen(int guess){
         return guess == code;
     }
 }
@@ -9594,7 +9595,7 @@ Variables of class type **without** a `?` must always hold an object, so they ne
 A `Pointer<T>` points at a variable, so you can change that variable from somewhere else. `.value` reads or changes the variable it points at:
 
 ```cpp
-void addOne(Pointer<int> counter) {
+void addOne(Pointer<int> counter){
     counter.value += 1;
 }
 
@@ -9609,7 +9610,7 @@ Don't keep a pointer to a function's local variable after that function ends. `p
 A function whose return type is **`task`** can call **`wait(seconds)`**. Only that task pauses; the rest of the game keeps running.
 
 ```cpp
-task flash() {
+task flash(){
     for (int i = 0; i < 5; i++) {
         tint = color.WHITE;
         wait(0.1);                    // this task pauses for 0.1 seconds
@@ -9747,7 +9748,7 @@ Each part of the game (menu, level, game over) is a class that inherits from `Sc
 
 ```cpp
 class Menu : Scene {
-    void draw() {
+    void draw(){
         if (ui.button(rect(380, 200, 200, 50), "Play")) {
             scenes.change(Level());
         }
@@ -9765,7 +9766,7 @@ The switch happens at the start of the next `scenes.update`, so the old scene's 
 ```cpp
 class Health : Component {
     int hp = 3;
-    void update(float dt) {
+    void update(float dt){
         if (hp <= 0) {
             entity().destroy();
         }

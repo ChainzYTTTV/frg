@@ -45,11 +45,11 @@ struct Point {
     float x;
     float y;
 
-    float length() {
+    float length(){
         return math.sqrt(x * x + y * y);
     }
 
-    void moveBy(float dx, float dy) {
+    void moveBy(float dx, float dy){
         x += dx;
         y += dy;
     }
@@ -65,7 +65,7 @@ p.moveBy(1, 1);
 Inside a method, **`this`** means "the value this method was called on". You usually don't need it, since `x` already means this point's `x`. It's needed when a parameter has the same name as a field:
 
 ```cpp
-void setX(float x) {
+void setX(float x){
     this.x = x;          // the field = the parameter
 }
 ```
@@ -93,7 +93,7 @@ class Enemy {
     string name;
     int hp = 100;
 
-    Enemy(string name) {
+    Enemy(string name){
         this.name = name;
     }
 }
@@ -112,12 +112,12 @@ struct Size {
     float w;
     float h;
 
-    Size(float side) {          // a square
+    Size(float side){          // a square
         w = side;
         h = side;
     }
 
-    Size(float w, float h) {
+    Size(float w, float h){
         this.w = w;
         this.h = h;
     }
@@ -207,7 +207,7 @@ The other way to avoid the loop is a **weak** link. A `Weak<Player>` points at a
 class Enemy {
     Weak<Player> target;              // starts empty
 
-    void chase() {
+    void chase(){
         Player? p = target.get();     // the player, or null if it's gone
         if (p != null) {
             print("chasing {p.name}");
@@ -239,15 +239,15 @@ class Entity {
     string name;
     int hp = 100;
 
-    Entity(string name) {
+    Entity(string name){
         this.name = name;
     }
 
-    void takeHit(int amount) {
+    void takeHit(int amount){
         hp -= amount;
     }
 
-    string info() {
+    string info(){
         return "an entity";
     }
 }
@@ -255,7 +255,7 @@ class Entity {
 class Goblin : Entity {
     int gold = 5;              // extra field
 
-    string info() {        // replaces Entity's version
+    string info(){        // replaces Entity's version
         return "a goblin carrying {gold} gold";
     }
 }
@@ -287,12 +287,12 @@ print(g.info());           // a goblin carrying 5 gold
 class Player : Entity {
     int score = 0;
 
-    Player(string name) {
+    Player(string name){
         super(name);                   // run Entity's constructor
         hp = 150;
     }
 
-    string info() {
+    string info(){
         return "the player, " + super.info();    // Entity's info()
     }
 }
@@ -346,13 +346,13 @@ if (e is Goblin) {
 class BankAccount {
     private int balance = 0;
 
-    void deposit(int amount) {
+    void deposit(int amount){
         if (amount > 0) {
             balance += amount;
         }
     }
 
-    int getBalance() {
+    int getBalance(){
         return balance;
     }
 }
@@ -383,7 +383,7 @@ class Enemy {
     string name;
     int hp = 100;
 
-    string toText() {
+    string toText(){
         return "{name} ({hp} HP)";
     }
 }
@@ -427,12 +427,12 @@ class Enemy {
     static int count = 0;        // one counter for all enemies
     string name;
 
-    Enemy(string name) {
+    Enemy(string name){
         this.name = name;
         count++;                 // inside the class, no "Enemy." is needed
     }
 
-    static Enemy boss() {        // makes a special enemy
+    static Enemy boss(){        // makes a special enemy
         Enemy b = Enemy("Boss");
         return b;
     }
@@ -468,11 +468,11 @@ interface Attacker {
 }
 
 class Trap : Attacker {
-    int power() {
+    int power(){
         return 7;
     }
 
-    void attack(string target) {
+    void attack(string target){
         print("the trap snaps at {target}");
     }
 }
@@ -485,32 +485,32 @@ abstract class Enemy {
     string name;
     int hp = 10;
 
-    Enemy(string name) {
+    Enemy(string name){
         this.name = name;
     }
 
     abstract int reward();          // no code: each kind of enemy says how much it's worth
 
-    void hurt(int amount) {
+    void hurt(int amount){
         hp -= amount;
         print("{name} is worth {reward()} gold");
     }
 }
 
 class Goblin : Enemy, Attacker {    // one class first, then any number of interfaces
-    Goblin(string name) {
+    Goblin(string name){
         super(name);
     }
 
-    int reward() {
+    int reward(){
         return 5;
     }
 
-    int power() {
+    int power(){
         return 3;
     }
 
-    void attack(string target) {
+    void attack(string target){
         print("{name} pokes {target}");
     }
 }
@@ -546,11 +546,11 @@ Things to know:
 class Box<T> {
     T item;
 
-    Box(T item) {
+    Box(T item){
         this.item = item;
     }
 
-    T open() {
+    T open(){
         return item;
     }
 }

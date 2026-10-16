@@ -322,7 +322,7 @@ struct Point {
     float x;
     float y;
 
-    float length() {
+    float length(){
         return math.sqrt(x * x + y * y);   // needs #include <math>
     }
 }
@@ -342,32 +342,32 @@ class Entity {
     string name;
     int hp = 100;                 // field with a starting value
 
-    Entity(string name) {         // constructor: same name as the class, no return type
+    Entity(string name){         // constructor: same name as the class, no return type
         this.name = name;         // this.name is the field, name is the parameter
     }
 
-    void takeHit(int amount) {
+    void takeHit(int amount){
         hp -= amount;
     }
 
-    string info() {
+    string info(){
         return "an entity";
     }
 }
 
 class Goblin : Entity {           // inheritance: a Goblin is a kind of Entity
-    string info() {           // replaces Entity's version (must match it exactly)
+    string info(){           // replaces Entity's version (must match it exactly)
         return "a goblin";
     }
 }
 
 class Player : Entity {
     int score = 0;
-    Player(string name) {
+    Player(string name){
         super(name);              // runs Entity's constructor
         hp = 150;
     }
-    string info() {
+    string info(){
         return "the player, " + super.info();   // calls Entity's version
     }
 }
@@ -423,7 +423,7 @@ private int attempts = 0;           // only this file can see it
 A function whose return type is **`task`** can call **`wait(seconds)`**. Only that task pauses; the game keeps running.
 
 ```cpp
-task flash() {
+task flash(){
     for (int i = 0; i < 5; i++) {
         tint = color.WHITE;
         wait(0.1);
@@ -471,7 +471,7 @@ int shown = bestScore ?? 0;
 ### Pointers
 
 ```cpp
-void addOne(Pointer<int> counter) {
+void addOne(Pointer<int> counter){
     counter.value += 1;       // .value is the variable it points at
 }
 
@@ -628,7 +628,7 @@ void draw(){
 class Health : Component {
     int hp = 3;
     void start() { print("{entity().name} is ready"); }   // runs once, before the first update
-    void update(float dt) {
+    void update(float dt){
         if (hp <= 0) { entity().destroy(); }
     }
 }
@@ -873,6 +873,7 @@ Runtime error in main.frg:10: position 5 is outside the list (it has 3 items, at
 - `char` (single letters are one-letter strings), fixed-size arrays (use `list`), tuples
 - Two methods with the same name (only constructors and top-level functions can share a name)
 - `protected` (`private` already includes classes that inherit)
+- Generic functions (only structs and classes can be generic), and generic types that inherit or have interfaces
 - Labeled breaks, `finally`, `goto`
 - Networking, shaders in the engine, 3D lighting
 - `<network>` is planned but **doesn't exist yet**.
@@ -966,7 +967,7 @@ class Player : Body {
     color tint = color.ORANGE;
     int deaths = 0;
 
-    void respawn() {
+    void respawn(){
         position = start;
         velocity = vec2.ZERO;
         deaths++;
@@ -974,7 +975,7 @@ class Player : Body {
     }
 
     // A task: it runs alongside the game, and wait() pauses just this task, not the game.
-    task flash() {
+    task flash(){
         for (int i = 0; i < 5; i++) {
             tint = color.WHITE;
             wait(0.08);

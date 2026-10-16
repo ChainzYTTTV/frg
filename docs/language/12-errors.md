@@ -191,7 +191,7 @@ If anything inside `try` has a runtime error, the rest of the `try` part is skip
 - Your own code can make an error with `throw "message";`. If nothing catches it, the game stops with that message, like any runtime error:
 
   ```cpp
-  int loadLevel(string name) {
+  int loadLevel(string name){
       if (name == "") {
           throw "the level needs a name";
       }

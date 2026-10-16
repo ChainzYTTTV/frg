@@ -102,6 +102,7 @@ Commands, typed in a terminal inside the game's folder:
 | `frg run` | checks the code, compiles it, and runs the game |
 | `frg build` | compiles into `build/<folder name>.exe` without running it |
 | `frg check` | only looks for errors |
+| `frg fmt` | tidies the layout (indentation, `int main(){` braces, blank lines). In VS Code: **Shift+Alt+F** |
 | `frg package` | the finished game, with every file it needs (but not the `.frg` files or `save.txt`), zipped into `dist/<name>.zip` to share. If the game is in git, add `build/`, `dist/` and `save.txt` to `.gitignore` |
 | `frg build --release` | the finished game: no console window, smaller `.exe` |
 | `--no-console` / `--console` | add to `run` or `build` to turn the console window off or on |
@@ -1866,6 +1867,7 @@ Run these in a terminal. `[folder]` is the game's top folder (the one with `main
 | `frg run [folder]` | Checks, compiles and runs the game |
 | `frg build [folder]` | Checks and compiles into `build/<folder name>.exe`, without running it |
 | `frg check [folder]` | Only looks for errors (fast, makes no `.exe`) |
+| `frg fmt [folder or files]` | Tidies the layout of your `.frg` files (see below) |
 | `frg package [folder]` | Makes the finished game and zips it, ready to share: `dist/<name>.zip` (see Sharing your game (see “Sharing your game”)) |
 | `frg cache` | Shows how big the build cache is (why there is one (see “Why the first build is slower”)). `frg cache clear` deletes it |
 | `frg version` | Shows the Forge version |
@@ -1995,6 +1997,18 @@ To install or update it, run `.\editors\vscode\package.ps1 -Install` from the Fo
 Settings: `forge.path` is the full path to `frg.exe` if VS Code can't find it. `forge.checkOnSave` turns checking on save on or off.
 
 Autocomplete, hover help, go to definition and rename all read your game the same way a build does, including what you've typed but not saved yet in the file you're in. Other files are read as they are on disk, so save them first if you've changed them.
+
+#### Tidying your code: frg fmt
+
+`frg fmt` tidies the layout of every `.frg` file in the game (or just the files you name), without changing what the code does:
+
+- each line is indented 4 spaces for each `{ }` level it's inside, and in a `switch`, the `case`s go one level in and their code one more;
+- a function's or method's opening brace goes straight after the `)`: `int main(){` (an `if`, `while` or `for` keeps its space: `if (x) {`);
+- spaces at the ends of lines go, and several blank lines in a row become one.
+
+It never touches what's inside ` ``` ` comments or `"""raw text"""`. A line that carries on a statement (like the second line of a long list) keeps how you lined it up, moved along with the statement. After tidying, Forge reads the file again, and if anything except spaces would change, it leaves the file as it was and says so.
+
+`frg fmt --check` only lists the files that aren't tidy, and `frg fmt main.frg --print` shows the tidied file without saving it. In VS Code, **Format Document** (**Shift+Alt+F**) does the same for the open file; turn on the `editor.formatOnSave` setting to tidy every time you save.
 
 #### Debugging: pausing the game to look inside
 
@@ -9185,6 +9199,17 @@ The other kinds are `=== error` (the build must fail with these messages) and `=
 
 When you save, the extension runs `frg check <game folder> --machine`. In machine mode, each error is printed as one tab-separated line (`E`, file, line, column, length, message, hint), which the extension turns into red underlines. Warnings are the same, but start with `W` and become yellow underlines.
 
+### How frg fmt tidies code
+
+`format.cpp` goes through the file once, marking which characters are code and which are inside strings and comments (strings are read the same way the lexer reads them, including `"...{value}..."` with code inside). Then for each line:
+
+- a line that starts inside a ` ``` ` comment or `"""raw text"""` is kept exactly, and so are the spaces at the end of a line that ends inside raw text, because they're part of the text;
+- a line that starts a statement gets 4 spaces for each `{ }` it's inside (counting only braces in code), with one more for the code under a `case`, and one less when it starts with `}`;
+- a line that carries on a statement (inside `( )` or `[ ]`, or after a line that didn't end with `;`, `{` or `}`) moves by as much as the statement's first line did, so its own lining-up stays, but it's always at least one level further in;
+- a function's first line ending in `) {` becomes `){`, Forge's style; `if`, `while`, `for`, `switch`, `catch` and anything with `=` (a function value) keep `) {`.
+
+Then both versions go through the lexer, and the result is only used if every token is the same. So `frg fmt` can only ever change spaces and line breaks between tokens.
+
 ### How the VS Code extension understands your code
 
 Autocomplete, hover help, go to definition, find all uses, rename and the outline all come from one command, `query.cpp`:
@@ -9239,6 +9264,7 @@ int main(){
 | `frg build` | compiles the game into `build/<folder name>.exe` |
 | `frg run` | builds, then runs the game |
 | `frg check` | only looks for errors |
+| `frg fmt` | tidies the layout of the game's `.frg` files (indentation, braces, blank lines) |
 | `frg cache` / `frg cache clear` | show how big the build cache is (kept under about 400 MB) / delete it |
 | `frg package` | makes the finished game and zips it into `dist/<name>.zip`, ready to share |
 | `--release` (after build or run) | the finished game: no console window, smaller `.exe` |

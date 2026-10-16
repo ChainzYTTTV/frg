@@ -76,6 +76,7 @@ Commands, typed in a terminal inside the game's folder:
 | `frg run` | checks the code, compiles it, and runs the game |
 | `frg build` | compiles into `build/<folder name>.exe` without running it |
 | `frg check` | only looks for errors |
+| `frg fmt` | tidies the layout (indentation, `int main(){` braces, blank lines). In VS Code: **Shift+Alt+F** |
 | `frg package` | the finished game, with every file it needs (but not the `.frg` files or `save.txt`), zipped into `dist/<name>.zip` to share. If the game is in git, add `build/`, `dist/` and `save.txt` to `.gitignore` |
 | `frg build --release` | the finished game: no console window, smaller `.exe` |
 | `--no-console` / `--console` | add to `run` or `build` to turn the console window off or on |

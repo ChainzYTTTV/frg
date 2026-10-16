@@ -7,6 +7,7 @@
 #include "common.hpp"
 #include "project.hpp"
 #include "query.hpp"
+#include "format.hpp"
 #include "templates.hpp"
 
 #include <algorithm>
@@ -17,6 +18,9 @@
 #include <cstdio>
 #include <filesystem>
 #include <fstream>
+#include <fcntl.h>
+#include <io.h>
+#include <iostream>
 #include <iterator>
 #include <string>
 #include <vector>
@@ -951,6 +955,87 @@ int main(int argc, char** argv) {
         }
         fs::path exe;
         return build(dir, exe, opt) ? 0 : 1;
+    }
+    if (cmd == "fmt") {
+        // frg fmt [folders or files] [--check] [--print] [--stdin]: tidies the layout of .frg files (see format.cpp).
+        bool check = false, print = false, fromStdin = false;
+        std::vector<fs::path> targets;
+        for (size_t i = 1; i < args.size(); i++) {
+            if (args[i] == "--check") check = true;
+            else if (args[i] == "--print") print = true;
+            else if (args[i] == "--stdin") fromStdin = true;
+            else if (args[i].starts_with("--")) {
+                reportPlainError("there's no option called " + args[i], "the options are --check, --print and --stdin");
+                return 1;
+            } else targets.push_back(args[i]);
+        }
+        if (fromStdin) {  // for editors: the text on standard input, tidied, on standard output
+            std::string text((std::istreambuf_iterator<char>(std::cin)), std::istreambuf_iterator<char>());
+            FormatResult r = formatSource(text);
+            if (!r.ok) {
+                std::fprintf(stderr, "%s\n", r.error.c_str());
+                return 1;
+            }
+            _setmode(_fileno(stdout), _O_BINARY);  // the text exactly: Windows would turn each line ending into two characters
+            std::fwrite(r.text.data(), 1, r.text.size(), stdout);
+            return 0;
+        }
+        if (targets.empty()) targets.push_back(fs::current_path());
+        std::vector<fs::path> files;
+        std::error_code ec;
+        for (const fs::path& t : targets) {
+            if (fs::is_directory(t, ec)) {
+                for (auto it = fs::recursive_directory_iterator(t, ec); it != fs::recursive_directory_iterator(); it.increment(ec)) {
+                    std::string name = it->path().filename().string();
+                    if (it->is_directory() && (name == "build" || name == "dist" || name.starts_with("."))) {
+                        it.disable_recursion_pending();
+                        continue;
+                    }
+                    if (it->is_regular_file() && it->path().extension() == ".frg") files.push_back(it->path());
+                }
+            } else if (fs::is_regular_file(t, ec)) {
+                files.push_back(t);
+            } else {
+                reportPlainError("there's no file or folder called '" + t.string() + "'");
+                return 1;
+            }
+        }
+        std::sort(files.begin(), files.end());
+        int changed = 0, failed = 0;
+        for (const fs::path& f : files) {
+            std::ifstream in(f, std::ios::binary);
+            std::string text((std::istreambuf_iterator<char>(in)), std::istreambuf_iterator<char>());
+            in.close();
+            FormatResult r = formatSource(text);
+            std::string shown = fs::relative(f, fs::current_path(), ec).string();
+            if (ec || shown.empty()) shown = f.string();
+            if (!r.ok) {
+                reportPlainError("couldn't tidy " + shown + ": " + r.error);
+                failed++;
+                continue;
+            }
+            if (print) {
+                std::fwrite(r.text.data(), 1, r.text.size(), stdout);
+                continue;
+            }
+            if (!r.changed) continue;
+            changed++;
+            if (check) {
+                printStatus("Untidy", shown);
+                continue;
+            }
+            std::ofstream out(f, std::ios::binary);
+            out << r.text;
+            printStatus("Tidied", shown);
+        }
+        if (print) return failed ? 1 : 0;
+        if (check) {
+            if (changed) std::fprintf(stderr, "%d of %zu files would be tidied by frg fmt.\n", changed, files.size());
+            else printStatus("Tidy", std::to_string(files.size()) + " file" + (files.size() == 1 ? " is" : "s are") + " already tidy");
+            return changed || failed ? 1 : 0;
+        }
+        if (!changed && !failed) printStatus("Tidy", std::to_string(files.size()) + " file" + (files.size() == 1 ? " was" : "s were") + " already tidy");
+        return failed ? 1 : 0;
     }
     if (cmd == "query") {
         // frg query <question> <folder> <file> <line> <column> [--stdin] [new name]: for the VS Code extension.

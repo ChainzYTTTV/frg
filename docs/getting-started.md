@@ -92,6 +92,7 @@ Run these in a terminal. `[folder]` is the game's top folder (the one with `main
 | `frg run [folder]` | Checks, compiles and runs the game |
 | `frg build [folder]` | Checks and compiles into `build/<folder name>.exe`, without running it |
 | `frg check [folder]` | Only looks for errors (fast, makes no `.exe`) |
+| `frg fmt [folder or files]` | Tidies the layout of your `.frg` files (see below) |
 | `frg package [folder]` | Makes the finished game and zips it, ready to share: `dist/<name>.zip` (see [Sharing your game](#sharing-your-game)) |
 | `frg cache` | Shows how big the build cache is ([why there is one](#why-the-first-build-is-slower)). `frg cache clear` deletes it |
 | `frg version` | Shows the Forge version |
@@ -221,6 +222,18 @@ To install or update it, run `.\editors\vscode\package.ps1 -Install` from the Fo
 Settings: `forge.path` is the full path to `frg.exe` if VS Code can't find it. `forge.checkOnSave` turns checking on save on or off.
 
 Autocomplete, hover help, go to definition and rename all read your game the same way a build does, including what you've typed but not saved yet in the file you're in. Other files are read as they are on disk, so save them first if you've changed them.
+
+### Tidying your code: frg fmt
+
+`frg fmt` tidies the layout of every `.frg` file in the game (or just the files you name), without changing what the code does:
+
+- each line is indented 4 spaces for each `{ }` level it's inside, and in a `switch`, the `case`s go one level in and their code one more;
+- a function's or method's opening brace goes straight after the `)`: `int main(){` (an `if`, `while` or `for` keeps its space: `if (x) {`);
+- spaces at the ends of lines go, and several blank lines in a row become one.
+
+It never touches what's inside ` ``` ` comments or `"""raw text"""`. A line that carries on a statement (like the second line of a long list) keeps how you lined it up, moved along with the statement. After tidying, Forge reads the file again, and if anything except spaces would change, it leaves the file as it was and says so.
+
+`frg fmt --check` only lists the files that aren't tidy, and `frg fmt main.frg --print` shows the tidied file without saving it. In VS Code, **Format Document** (**Shift+Alt+F**) does the same for the open file; turn on the `editor.formatOnSave` setting to tidy every time you save.
 
 ### Debugging: pausing the game to look inside
 

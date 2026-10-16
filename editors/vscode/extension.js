@@ -766,6 +766,29 @@ const renameProvider = {
     },
 };
 
+// Format Document (Shift+Alt+F, or on save with editor.formatOnSave): frg fmt --stdin tidies the text.
+const formattingProvider = {
+    provideDocumentFormattingEdits(document, options, token) {
+        return new Promise(resolve => {
+            const child = cp.execFile(frgPath(), ['fmt', '--stdin'], { windowsHide: true, maxBuffer: 64 * 1024 * 1024 }, (err, stdout, stderr) => {
+                if (err) {
+                    if (err.code === 'ENOENT') showMissingFrg();
+                    else if (stderr) vscode.window.showWarningMessage(`Forge couldn't tidy this file: ${stderr.trim()}`);
+                    return resolve([]);
+                }
+                const text = document.getText();
+                const tidy = document.eol === vscode.EndOfLine.CRLF ? stdout.replace(/\n/g, '\r\n') : stdout;
+                if (tidy === text) return resolve([]);
+                const all = new vscode.Range(document.positionAt(0), document.positionAt(text.length));
+                resolve([vscode.TextEdit.replace(all, tidy)]);
+            });
+            if (token) token.onCancellationRequested(() => { try { child.kill(); } catch (e) { /* already finished */ } });
+            child.stdin.on('error', () => {});
+            child.stdin.end(document.getText());
+        });
+    },
+};
+
 const symbolProvider = {
     async provideDocumentSymbols(document, token) {
         const r = await query('symbols', document, new vscode.Position(0, 0), null, token);
@@ -829,6 +852,7 @@ function activate(context) {
         vscode.languages.registerReferenceProvider('forge', referenceProvider),
         vscode.languages.registerRenameProvider('forge', renameProvider),
         vscode.languages.registerDocumentSymbolProvider('forge', symbolProvider),
+        vscode.languages.registerDocumentFormattingEditProvider('forge', formattingProvider),
     );
     for (const doc of vscode.workspace.textDocuments) if (doc.languageId === 'forge') check(doc);
 }

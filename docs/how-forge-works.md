@@ -163,6 +163,17 @@ The other kinds are `=== error` (the build must fail with these messages) and `=
 
 When you save, the extension runs `frg check <game folder> --machine`. In machine mode, each error is printed as one tab-separated line (`E`, file, line, column, length, message, hint), which the extension turns into red underlines. Warnings are the same, but start with `W` and become yellow underlines.
 
+## How frg fmt tidies code
+
+`format.cpp` goes through the file once, marking which characters are code and which are inside strings and comments (strings are read the same way the lexer reads them, including `"...{value}..."` with code inside). Then for each line:
+
+- a line that starts inside a ` ``` ` comment or `"""raw text"""` is kept exactly, and so are the spaces at the end of a line that ends inside raw text, because they're part of the text;
+- a line that starts a statement gets 4 spaces for each `{ }` it's inside (counting only braces in code), with one more for the code under a `case`, and one less when it starts with `}`;
+- a line that carries on a statement (inside `( )` or `[ ]`, or after a line that didn't end with `;`, `{` or `}`) moves by as much as the statement's first line did, so its own lining-up stays, but it's always at least one level further in;
+- a function's first line ending in `) {` becomes `){`, Forge's style; `if`, `while`, `for`, `switch`, `catch` and anything with `=` (a function value) keep `) {`.
+
+Then both versions go through the lexer, and the result is only used if every token is the same. So `frg fmt` can only ever change spaces and line breaks between tokens.
+
 ## How the VS Code extension understands your code
 
 Autocomplete, hover help, go to definition, find all uses, rename and the outline all come from one command, `query.cpp`:

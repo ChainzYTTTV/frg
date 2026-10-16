@@ -1,0 +1,40 @@
+=== main.frg
+#include <stdio>
+
+int main() {
+  int x = 3;
+      if (x > 1) {
+print(x);   
+  }
+
+
+
+  switch (x) {
+  case 3:
+  print("three");
+  default:
+  print("other");
+  }
+  return 0;
+    }
+
+void helper(int a) {
+        print(a);
+}
+=== command
+fmt {game}/main.frg --print
+=== prints
+int main(){
+    int x = 3;
+    if (x > 1) {
+        print(x);
+    }
+
+    switch (x) {
+        case 3:
+            print("three");
+        default:
+    return 0;
+}
+void helper(int a){
+    print(a);

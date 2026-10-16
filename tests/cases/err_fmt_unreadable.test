@@ -1,0 +1,9 @@
+=== main.frg
+int main(){
+    string s = "never closed;
+    return 0;
+}
+=== command
+fmt {game}/main.frg
+=== error
+couldn't tidy

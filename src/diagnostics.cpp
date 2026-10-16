@@ -46,8 +46,10 @@ std::string SourceFile::getLine(int line) const {
 }
 
 static bool g_machine = false;
+static bool g_quiet = false;
 
 void setMachineOutput(bool on) { g_machine = on; }
+void setQuietOutput(bool on) { g_quiet = on; }
 
 static std::string machineEscape(const std::string& s) {
     std::string out;
@@ -62,6 +64,7 @@ static std::string machineEscape(const std::string& s) {
 
 // Prints one error or warning: the message, where it is (with the line and ^^^ under the spot), and the hint.
 static void printDiagnostic(bool warning, const Loc& loc, const std::string& msg, const std::string& hint) {
+    if (g_quiet) return;
     if (g_machine) {
         std::string path = loc.file ? loc.file->fullPath : "";
         std::printf("%s\t%s\t%d\t%d\t%d\t%s\t%s\n", warning ? "W" : "E", machineEscape(path).c_str(), loc.line, loc.col, loc.len,

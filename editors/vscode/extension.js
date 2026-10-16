@@ -575,6 +575,150 @@ function libraryHover(document, position) {
     return new vscode.Hover(md, range);
 }
 
+// ---------------------------------------------------------------- your own code: definitions, hover, autocomplete, rename
+//
+// Each question runs `frg query`, which reads the whole game (with this file's unsaved text, sent on its standard input)
+// exactly as a build would, and answers in JSON. Positions go to frg as lines and byte columns starting at 1.
+
+const COMPLETION_KINDS = {
+    variable: vscode.CompletionItemKind.Variable, constant: vscode.CompletionItemKind.Constant,
+    function: vscode.CompletionItemKind.Function, method: vscode.CompletionItemKind.Method,
+    field: vscode.CompletionItemKind.Field, property: vscode.CompletionItemKind.Property,
+    class: vscode.CompletionItemKind.Class, struct: vscode.CompletionItemKind.Struct,
+    enum: vscode.CompletionItemKind.Enum, enumMember: vscode.CompletionItemKind.EnumMember,
+    interface: vscode.CompletionItemKind.Interface, module: vscode.CompletionItemKind.Module,
+    folder: vscode.CompletionItemKind.Folder, keyword: vscode.CompletionItemKind.Keyword,
+};
+
+const SYMBOL_KINDS = {
+    struct: vscode.SymbolKind.Struct, class: vscode.SymbolKind.Class, 'abstract class': vscode.SymbolKind.Class,
+    enum: vscode.SymbolKind.Enum, interface: vscode.SymbolKind.Interface, enumMember: vscode.SymbolKind.EnumMember,
+    field: vscode.SymbolKind.Field, method: vscode.SymbolKind.Method, constructor: vscode.SymbolKind.Constructor,
+    function: vscode.SymbolKind.Function, variable: vscode.SymbolKind.Variable, constant: vscode.SymbolKind.Constant,
+};
+
+function query(question, document, position, extra, token) {
+    return new Promise(resolve => {
+        const root = projectRoot(document.fileName);
+        if (!root) return resolve(null);
+        const lineText = document.lineAt(position.line).text;
+        const col = Buffer.byteLength(lineText.slice(0, position.character), 'utf8') + 1;
+        const args = ['query', question, root, document.fileName, String(position.line + 1), String(col), '--stdin'];
+        if (extra) args.push(extra);
+        const child = cp.execFile(frgPath(), args, { cwd: root, windowsHide: true, maxBuffer: 32 * 1024 * 1024 }, (err, stdout) => {
+            if (err && err.code === 'ENOENT') {
+                showMissingFrg();
+                return resolve(null);
+            }
+            try {
+                const lines = stdout.trim().split(/\r?\n/);
+                resolve(JSON.parse(lines[lines.length - 1] || '{}'));
+            } catch (e) {
+                resolve(null);
+            }
+        });
+        if (token) token.onCancellationRequested(() => { try { child.kill(); } catch (e) { /* already finished */ } });
+        child.stdin.on('error', () => {});
+        child.stdin.end(document.getText());
+    });
+}
+
+// A place frg names ({file, line, col, len}, byte columns) as a VS Code location.
+function toLocation(loc, cache) {
+    const text = fileLines(loc.file, cache)[loc.line - 1] || '';
+    const start = byteColToChar(text, loc.col - 1);
+    const end = byteColToChar(text, loc.col - 1 + loc.len);
+    return new vscode.Location(vscode.Uri.file(loc.file), new vscode.Range(loc.line - 1, start, loc.line - 1, Math.max(end, start)));
+}
+
+const definitionProvider = {
+    async provideDefinition(document, position, token) {
+        const r = await query('definition', document, position, null, token);
+        return r && r.location ? toLocation(r.location, new Map()) : undefined;
+    },
+};
+
+const referenceProvider = {
+    async provideReferences(document, position, context, token) {
+        const r = await query('references', document, position, null, token);
+        if (!r || !r.locations) return [];
+        const cache = new Map();
+        return r.locations.map(l => toLocation(l, cache));
+    },
+};
+
+const hoverProvider = {
+    async provideHover(document, position, token) {
+        const library = libraryHover(document, position);  // the built-in libraries have longer descriptions
+        if (library) return library;
+        const r = await query('hover', document, position, null, token);
+        if (!r || !r.text) return undefined;
+        return new vscode.Hover(new vscode.MarkdownString(r.text), document.getWordRangeAtPosition(position));
+    },
+};
+
+const completionProvider = {
+    async provideCompletionItems(document, position, token) {
+        const library = libraryCompletions(document, position);
+        if (library) return library;
+        const r = await query('complete', document, position, null, token);
+        if (!r || !r.items) return undefined;
+        return r.items.map(i => {
+            const item = new vscode.CompletionItem(i.label, COMPLETION_KINDS[i.kind] ?? vscode.CompletionItemKind.Text);
+            if (i.detail) item.detail = i.detail;
+            return item;
+        });
+    },
+};
+
+const renameProvider = {
+    async prepareRename(document, position, token) {
+        const range = document.getWordRangeAtPosition(position, /[A-Za-z_][A-Za-z0-9_]*/);
+        if (!range) throw new Error('Put the cursor on a name to rename it.');
+        const r = await query('rename', document, position, document.getText(range), token);
+        if (!r || (!r.edits && !r.error)) throw new Error("Forge doesn't know what this name is, so it can't rename it.");
+        if (r.error) throw new Error(r.error);
+        return range;
+    },
+    async provideRenameEdits(document, position, newName, token) {
+        const r = await query('rename', document, position, newName, token);
+        if (!r) throw new Error("Forge couldn't work out what to rename.");
+        if (r.error) throw new Error(r.error);
+        const edit = new vscode.WorkspaceEdit();
+        const cache = new Map();
+        for (const l of r.edits || []) {
+            const loc = toLocation(l, cache);
+            edit.replace(loc.uri, loc.range, newName);
+        }
+        return edit;
+    },
+};
+
+const symbolProvider = {
+    async provideDocumentSymbols(document, token) {
+        const r = await query('symbols', document, new vscode.Position(0, 0), null, token);
+        if (!r || !r.symbols) return [];
+        const lastLine = document.lineCount - 1;
+        // Each symbol reaches down to the line before the next one (the outline only needs a rough end).
+        const make = (list, endLine) => {
+            const sorted = [...list].sort((a, b) => a.line - b.line || a.col - b.col);
+            return sorted.map((s, i) => {
+                const start = Math.min(Math.max(s.line - 1, 0), lastLine);
+                const next = i + 1 < sorted.length ? sorted[i + 1].line - 2 : endLine;
+                const end = Math.min(Math.max(start, next), lastLine);
+                const text = document.lineAt(start).text;
+                const startCh = byteColToChar(text, s.col - 1);
+                const range = new vscode.Range(start, 0, end, document.lineAt(end).text.length);
+                const selection = new vscode.Range(start, startCh, start, Math.min(startCh + s.name.length, text.length));
+                const sym = new vscode.DocumentSymbol(s.name, s.detail || '', SYMBOL_KINDS[s.kind] ?? vscode.SymbolKind.Variable, range, selection);
+                sym.children = make(s.children || [], end);
+                return sym;
+            });
+        };
+        return make(r.symbols, lastLine);
+    },
+};
+
 // ---------------------------------------------------------------- activation
 
 function activate(context) {
@@ -606,8 +750,12 @@ function activate(context) {
         vscode.workspace.onDidChangeConfiguration(e => {
             if (e.affectsConfiguration('forge.path')) warnedMissing = false;
         }),
-        vscode.languages.registerCompletionItemProvider('forge', { provideCompletionItems: libraryCompletions }, '.'),
-        vscode.languages.registerHoverProvider('forge', { provideHover: libraryHover }),
+        vscode.languages.registerCompletionItemProvider('forge', completionProvider, '.'),
+        vscode.languages.registerHoverProvider('forge', hoverProvider),
+        vscode.languages.registerDefinitionProvider('forge', definitionProvider),
+        vscode.languages.registerReferenceProvider('forge', referenceProvider),
+        vscode.languages.registerRenameProvider('forge', renameProvider),
+        vscode.languages.registerDocumentSymbolProvider('forge', symbolProvider),
     );
     for (const doc of vscode.workspace.textDocuments) if (doc.languageId === 'forge') check(doc);
 }

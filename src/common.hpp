@@ -29,6 +29,8 @@ void initConsole();
 //   E (or W for a warning) <tab> full path <tab> line <tab> column <tab> length <tab> message <tab> hint
 // with \, tabs and newlines inside fields escaped as \\, \t and \n. Columns count bytes.
 void setMachineOutput(bool on);
+// Quiet mode (for editor queries like "where is this defined?"): errors are counted but never printed.
+void setQuietOutput(bool on);
 void reportError(const Loc& loc, const std::string& msg, const std::string& hint = "");
 // Warnings never stop a build. They're collected, and printed (in yellow) by flushWarnings.
 void reportWarning(const Loc& loc, const std::string& msg, const std::string& hint = "");

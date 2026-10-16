@@ -1,0 +1,13 @@
+=== main.frg
+#include <stdio>
+
+int main(){
+    list<string> names = ["Ana"];
+    names[0].up
+    return 0;
+}
+=== query
+complete main.frg 5 16
+=== prints
+"label":"upper"
+"label":"length"

@@ -84,7 +84,7 @@ A picture called `icon.png` in the game's top folder becomes the `.exe`'s icon a
 
 The **console window** (the black window next to the game) shows `print` output and errors. It's on while testing. Turn it off with `--no-console` to see the game as players will, and `--release` turns it off for the finished game. Without a console, runtime errors pop up in a box titled "The game stopped". Text-only programs need the console: without it nothing shows. In VS Code, **Forge: Turn the Console On/Off** switches it for the ▶ button, and **Forge: Build Release** builds the finished game.
 
-In **VS Code** (with the Forge extension): errors are underlined when you save, the **▶ button** at the top right (or **F5**) runs the game, typing `window.` or `color.` shows autocomplete, and snippets like `game`, `class` and `foreach` insert templates.
+In **VS Code** (with the Forge extension): errors are underlined when you save, the **▶ button** at the top right (or **F5**) runs the game, and snippets like `game`, `class` and `foreach` insert templates. Autocomplete suggests the learner's own variables, functions and files as well as the libraries (`player.` lists a player's fields and methods). Hovering over a name shows what it is, **F12** jumps to where something is written, **Shift+F12** finds everywhere it's used, and **F2** renames it everywhere.
 
 Forge is **compiled**. The whole program is checked before it runs, so most mistakes are caught before the game starts.
 

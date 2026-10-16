@@ -6,7 +6,9 @@ Support for the Forge (`.frg`) game language.
 - **Errors and warnings when you save**: errors are underlined in red and warnings in yellow, with Forge's hint attached
 - **Run button** (▶ in the editor's title bar, or **F5**) builds and runs the game. **Ctrl+Shift+B** only builds it.
 - **Console on/off**: **Forge: Turn the Console On/Off** (from Ctrl+Shift+P) chooses whether games run with a console window for `print` output and errors. **Forge: Build Release** builds the finished game, which never has one, and **Forge: Package Game** makes it and zips it with everything it needs (`frg package`).
-- **Autocomplete and hover help** for the libraries: type `window.`, `graphics2d.`, `color.` or `Key.` (and `OpenGL.`, `DirectX.`, `Vulkan.` for the low-level toolkits)
+- **Autocomplete** for your own code and the libraries: your variables, functions, types and files, and after a dot what's inside (`player.`, `enemies.goblin.`, `window.`, `color.`, `Key.`). **Ctrl+Space** shows it any time.
+- **Hover help**: what a name is, and how a library function is used
+- **Go to definition** (F12 or Ctrl+click), **find all uses** (Shift+F12), **rename everywhere** (F2), and the **Outline** panel
 - **Snippets**: `main`, `game`, `gameloop`, `class`, `struct`, `enum`, `foreach`, `switch`, `body`, and more
 
 ## Settings

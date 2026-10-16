@@ -162,6 +162,22 @@ The other kinds are `=== error` (the build must fail with these messages) and `=
 
 When you save, the extension runs `frg check <game folder> --machine`. In machine mode, each error is printed as one tab-separated line (`E`, file, line, column, length, message, hint), which the extension turns into red underlines. Warnings are the same, but start with `W` and become yellow underlines.
 
+## How the VS Code extension understands your code
+
+Autocomplete, hover help, go to definition, find all uses, rename and the outline all come from one command, `query.cpp`:
+
+```
+frg query <question> <game folder> <file> <line> <column> --stdin
+```
+
+The extension sends the file's text (with any unsaved changes) on standard input. Forge reads and checks the whole game exactly as for a build, with that text in place of the saved file, and prints one line of JSON. The questions are `definition`, `references`, `hover`, `complete`, `rename` (with the new name after the column) and `symbols`.
+
+- **Definition, uses, hover and rename** use what the checker worked out: every name in the code knows what it refers to (a local variable, a field, a function in another file...). The query collects every place each thing is written, then answers from that list.
+- **Autocomplete** first takes the unfinished word (and the `.` before it) out of the line, so the rest of the file still reads cleanly. Then it works out the chain before the dot itself: `player.body.velocity.` means the variable `player`, then its field `body`, then that type's field `velocity`, and it lists what that type has. Without a dot, it lists what exists at that spot: the variables of every `{ }` block the cursor is inside, the fields of the class you're in, the file's own names, the other files and folders, and the included libraries.
+- **Rename** refuses names that aren't allowed (keywords, type names), things built into Forge, files and folders (their names come from the files), and methods that replace a parent class's method.
+
+Each question starts `frg` again and reads the whole game, which takes a fraction of a second for most games.
+
 ## Adding a library
 
 1. Write the Forge declarations (functions, and classes with their methods) in `src/prelude.cpp`, as a new entry in `preludeLibs()`.

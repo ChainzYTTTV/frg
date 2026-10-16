@@ -206,14 +206,20 @@ The Forge extension adds:
 | Errors while you work | Saving a file checks the whole game; mistakes are underlined in red, with the hint attached. The Problems panel (Ctrl+Shift+M) lists them all. |
 | Run the game | The ▶ button at the top-right of the editor, or **F5** |
 | Build only | **Ctrl+Shift+B** |
-| Autocomplete | Type a library name and a dot (`window.`, `graphics2d.`, `color.`, `Key.`) to see what's in it |
-| Hover help | Hold the mouse over a library function to see how it's used |
+| Autocomplete | Suggests what fits where you're typing: your variables, functions, types and files, and after a dot, what's inside (`player.` shows its fields and methods, `enemies.goblin.` what that file has, `window.` the library's functions). **Ctrl+Space** shows the list any time. |
+| Hover help | Hold the mouse over a name to see what it is: a variable's type, a function's parameters, a library function's description |
+| Go to definition | **F12** (or Ctrl+click) on a name jumps to where it's written, even in another file |
+| Find all uses | **Shift+F12** on a name lists everywhere it's used |
+| Rename | **F2** on a name renames it everywhere it's used, in every file. Forge says so if the new name isn't allowed. |
+| Outline | The Outline panel (and **Ctrl+Shift+O**) lists the file's types, functions and variables |
 | Snippets | Type `main`, `game`, `gameloop`, `class`, `struct`, `enum`, `func`, `if`, `for`, `foreach`, `while`, `switch`, `task`, `scene`, `component` or `body`, then press Tab |
 | Comments | **Ctrl+/** toggles `//` comments; **Shift+Alt+A** wraps a selection in a ` ``` ` comment |
 
 To install or update it, run `.\editors\vscode\package.ps1 -Install` from the Forge folder, then in VS Code run **Developer: Reload Window**.
 
 Settings: `forge.path` is the full path to `frg.exe` if VS Code can't find it. `forge.checkOnSave` turns checking on save on or off.
+
+Autocomplete, hover help, go to definition and rename all read your game the same way a build does, including what you've typed but not saved yet in the file you're in. Other files are read as they are on disk, so save them first if you've changed them.
 
 ### The `.frg` icon in File Explorer
 

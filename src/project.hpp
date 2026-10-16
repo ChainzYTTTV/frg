@@ -48,3 +48,8 @@ struct Project {
 
 // Reads and parses main.frg, the other files next to it, every included folder, and the built-in libraries.
 bool loadProject(Project& proj, const std::filesystem::path& root);
+
+// Makes loadProject use `text` for this file instead of what's on disk (an editor's unsaved changes).
+void setSourceOverride(const std::filesystem::path& path, const std::string& text);
+// A path in a form that's the same for every spelling of it (absolute, lowercase, backslashes), for comparing.
+std::string normalPath(const std::filesystem::path& p);

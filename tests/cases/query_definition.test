@@ -1,0 +1,28 @@
+=== main.frg
+#include <stdio>
+
+int main(){
+    hero.Hero h = hero.Hero();
+    h.heal(5);
+    print(h.hp);
+    for (int i in 1..3) {
+        h.heal(i);
+    }
+    int after = h.hp;
+    print(after);
+    return 0;
+}
+=== hero.frg
+class Hero {
+    int hp = 10;
+
+    void heal(int amount){
+        hp += amount;
+    }
+}
+=== query
+definition main.frg 5 8
+=== prints
+hero.frg"
+"line":4
+"col":10

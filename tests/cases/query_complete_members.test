@@ -1,0 +1,26 @@
+=== main.frg
+#include <stdio>
+
+int main(){
+    hero.Hero h = hero.Hero();
+    list<string> names = ["Ana"];
+    print(names[0].upper());
+    h.
+    return 0;
+}
+=== hero.frg
+class Hero {
+    int hp = 10;
+    private int secret = 3;
+
+    void heal(int amount){
+        hp += amount;
+    }
+}
+=== query
+complete main.frg 7 7
+=== prints
+"label":"hp","kind":"field"
+"label":"heal","kind":"method"
+"label":"describe"
+!"label":"secret"

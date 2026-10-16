@@ -6,6 +6,7 @@
 #include "codegen.hpp"
 #include "common.hpp"
 #include "project.hpp"
+#include "query.hpp"
 #include "templates.hpp"
 
 #include <algorithm>
@@ -941,6 +942,23 @@ int main(int argc, char** argv) {
         }
         fs::path exe;
         return build(dir, exe, opt) ? 0 : 1;
+    }
+    if (cmd == "query") {
+        // frg query <question> <folder> <file> <line> <column> [--stdin] [new name]: for the VS Code extension.
+        std::vector<std::string> rest;
+        bool fromStdin = false;
+        for (size_t i = 1; i < args.size(); i++) {
+            if (args[i] == "--stdin")
+                fromStdin = true;
+            else
+                rest.push_back(args[i]);
+        }
+        if (rest.size() < 5) {
+            std::printf("{\"error\":\"usage: frg query <question> <folder> <file> <line> <column> [--stdin] [new name]\"}\n");
+            return 1;
+        }
+        int line = std::atoi(rest[3].c_str()), col = std::atoi(rest[4].c_str());
+        return runQuery(rest[0], rest[1], rest[2], line, col, fromStdin, rest.size() > 5 ? rest[5] : "");
     }
     if (cmd == "check") {
         // frg check [folder] [--machine]: find errors without building anything.

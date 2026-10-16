@@ -110,7 +110,7 @@ A picture called `icon.png` in the game's top folder becomes the `.exe`'s icon a
 
 The **console window** (the black window next to the game) shows `print` output and errors. It's on while testing. Turn it off with `--no-console` to see the game as players will, and `--release` turns it off for the finished game. Without a console, runtime errors pop up in a box titled "The game stopped". Text-only programs need the console: without it nothing shows. In VS Code, **Forge: Turn the Console On/Off** switches it for the ▶ button, and **Forge: Build Release** builds the finished game.
 
-In **VS Code** (with the Forge extension): errors are underlined when you save, the **▶ button** at the top right (or **F5**) runs the game, typing `window.` or `color.` shows autocomplete, and snippets like `game`, `class` and `foreach` insert templates.
+In **VS Code** (with the Forge extension): errors are underlined when you save, the **▶ button** at the top right (or **F5**) runs the game, and snippets like `game`, `class` and `foreach` insert templates. Autocomplete suggests the learner's own variables, functions and files as well as the libraries (`player.` lists a player's fields and methods). Hovering over a name shows what it is, **F12** jumps to where something is written, **Shift+F12** finds everywhere it's used, and **F2** renames it everywhere.
 
 Forge is **compiled**. The whole program is checked before it runs, so most mistakes are caught before the game starts.
 
@@ -1979,14 +1979,20 @@ The Forge extension adds:
 | Errors while you work | Saving a file checks the whole game; mistakes are underlined in red, with the hint attached. The Problems panel (Ctrl+Shift+M) lists them all. |
 | Run the game | The ▶ button at the top-right of the editor, or **F5** |
 | Build only | **Ctrl+Shift+B** |
-| Autocomplete | Type a library name and a dot (`window.`, `graphics2d.`, `color.`, `Key.`) to see what's in it |
-| Hover help | Hold the mouse over a library function to see how it's used |
+| Autocomplete | Suggests what fits where you're typing: your variables, functions, types and files, and after a dot, what's inside (`player.` shows its fields and methods, `enemies.goblin.` what that file has, `window.` the library's functions). **Ctrl+Space** shows the list any time. |
+| Hover help | Hold the mouse over a name to see what it is: a variable's type, a function's parameters, a library function's description |
+| Go to definition | **F12** (or Ctrl+click) on a name jumps to where it's written, even in another file |
+| Find all uses | **Shift+F12** on a name lists everywhere it's used |
+| Rename | **F2** on a name renames it everywhere it's used, in every file. Forge says so if the new name isn't allowed. |
+| Outline | The Outline panel (and **Ctrl+Shift+O**) lists the file's types, functions and variables |
 | Snippets | Type `main`, `game`, `gameloop`, `class`, `struct`, `enum`, `func`, `if`, `for`, `foreach`, `while`, `switch`, `task`, `scene`, `component` or `body`, then press Tab |
 | Comments | **Ctrl+/** toggles `//` comments; **Shift+Alt+A** wraps a selection in a ` ``` ` comment |
 
 To install or update it, run `.\editors\vscode\package.ps1 -Install` from the Forge folder, then in VS Code run **Developer: Reload Window**.
 
 Settings: `forge.path` is the full path to `frg.exe` if VS Code can't find it. `forge.checkOnSave` turns checking on save on or off.
+
+Autocomplete, hover help, go to definition and rename all read your game the same way a build does, including what you've typed but not saved yet in the file you're in. Other files are read as they are on disk, so save them first if you've changed them.
 
 #### The `.frg` icon in File Explorer
 
@@ -9159,6 +9165,22 @@ The other kinds are `=== error` (the build must fail with these messages) and `=
 ### How the VS Code extension finds errors
 
 When you save, the extension runs `frg check <game folder> --machine`. In machine mode, each error is printed as one tab-separated line (`E`, file, line, column, length, message, hint), which the extension turns into red underlines. Warnings are the same, but start with `W` and become yellow underlines.
+
+### How the VS Code extension understands your code
+
+Autocomplete, hover help, go to definition, find all uses, rename and the outline all come from one command, `query.cpp`:
+
+```
+frg query <question> <game folder> <file> <line> <column> --stdin
+```
+
+The extension sends the file's text (with any unsaved changes) on standard input. Forge reads and checks the whole game exactly as for a build, with that text in place of the saved file, and prints one line of JSON. The questions are `definition`, `references`, `hover`, `complete`, `rename` (with the new name after the column) and `symbols`.
+
+- **Definition, uses, hover and rename** use what the checker worked out: every name in the code knows what it refers to (a local variable, a field, a function in another file...). The query collects every place each thing is written, then answers from that list.
+- **Autocomplete** first takes the unfinished word (and the `.` before it) out of the line, so the rest of the file still reads cleanly. Then it works out the chain before the dot itself: `player.body.velocity.` means the variable `player`, then its field `body`, then that type's field `velocity`, and it lists what that type has. Without a dot, it lists what exists at that spot: the variables of every `{ }` block the cursor is inside, the fields of the class you're in, the file's own names, the other files and folders, and the included libraries.
+- **Rename** refuses names that aren't allowed (keywords, type names), things built into Forge, files and folders (their names come from the files), and methods that replace a parent class's method.
+
+Each question starts `frg` again and reads the whole game, which takes a fraction of a second for most games.
 
 ### Adding a library
 

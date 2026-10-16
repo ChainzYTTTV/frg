@@ -545,6 +545,7 @@ StmtPtr Parser::parseBlock() {
             syncStatement();  // skip the broken statement and keep checking the rest
         }
     }
+    b->end = cur().loc;
     p++;
     return b;
 }

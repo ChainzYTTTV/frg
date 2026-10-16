@@ -18,11 +18,33 @@ static bool isIdentifier(const std::string& s) {
     return std::all_of(s.begin(), s.end(), [](char c) { return std::isalnum((unsigned char)c) || c == '_'; });
 }
 
+// Files whose text comes from somewhere else than the disk: an editor's unsaved changes (frg query --stdin).
+static std::map<std::string, std::string>& sourceOverrides() {
+    static std::map<std::string, std::string> m;
+    return m;
+}
+
+// Two spellings of the same file compare equal: Windows paths don't care about case or / versus \.
+std::string normalPath(const fs::path& p) {
+    std::error_code ec;
+    std::string s = fs::weakly_canonical(fs::absolute(p), ec).string();
+    for (char& c : s) c = c == '/' ? '\\' : (char)std::tolower((unsigned char)c);
+    return s;
+}
+
+void setSourceOverride(const fs::path& path, const std::string& text) { sourceOverrides()[normalPath(path)] = text; }
+
 static std::unique_ptr<SourceFile> readSource(const fs::path& path, const std::string& displayPath) {
-    std::ifstream in(path, std::ios::binary);
-    std::stringstream ss;
-    ss << in.rdbuf();
-    std::string text = ss.str();
+    std::string text;
+    auto over = sourceOverrides().find(normalPath(path));
+    if (over != sourceOverrides().end()) {
+        text = over->second;
+    } else {
+        std::ifstream in(path, std::ios::binary);
+        std::stringstream ss;
+        ss << in.rdbuf();
+        text = ss.str();
+    }
     if (text.compare(0, 3, "\xEF\xBB\xBF") == 0) text.erase(0, 3);  // UTF-8 byte order mark
     text.erase(std::remove(text.begin(), text.end(), '\r'), text.end());
 

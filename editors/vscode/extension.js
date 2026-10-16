@@ -72,6 +72,9 @@ const LIBRARIES = {
         ['mouseX', 'float mouseX()', 'Mouse x position.'],
         ['mouseY', 'float mouseY()', 'Mouse y position.'],
         ['mouseWheel', 'float mouseWheel()', 'How far the mouse wheel moved this frame.'],
+        ['mouseDelta', 'vec2 mouseDelta()', 'How far the mouse moved since the last frame - for turning a 3D camera.'],
+        ['lockMouse', 'void lockMouse(bool locked)', 'true hides the mouse and keeps it in the window (for looking around in 3D); false gives it back.'],
+        ['isMouseLocked', 'bool isMouseLocked()', 'Whether the mouse is locked.'],
         ['gamepadConnected', 'bool gamepadConnected(int gamepad = 0)', 'True if a controller is plugged in. gamepad is 0 for the first one, 1 for the second...'],
         ['gamepadName', 'string gamepadName(int gamepad = 0)', 'The controller\'s name, or "" if there isn\'t one.'],
         ['gamepadDown', 'bool gamepadDown(GamepadButton button, int gamepad = 0)', 'True while a controller button is held, like GamepadButton.A.'],
@@ -123,6 +126,7 @@ const LIBRARIES = {
         ['drawLine', 'void drawLine(vec3 from, vec3 to, color c)', 'A line in 3D.'],
         ['toScreen', 'vec2 toScreen(vec3 point)', 'Where a 3D point shows up on screen - for 2D labels over 3D things.'],
         ['loadModel', 'Model loadModel(string path)', 'Loads a 3D model (.obj .gltf .glb .iqm .vox .m3d). Then: model.draw(position, scale, tint), drawRotated(position, axis, degrees, scale, tint).'],
+        ['makeMesh', 'Mesh makeMesh(list<float> positions, list<float> uvs, list<float> shades, Texture texture)', 'Your own triangles, sent to the graphics card once: x, y, z per corner (counter-clockwise on the front), u, v per corner, a brightness per corner (or []). Then: mesh.draw(position), vertexCount().'],
     ],
     time: [
         ['now', 'double now()', 'Seconds since the game started.'],

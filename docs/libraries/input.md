@@ -51,6 +51,9 @@ Escape also closes the window by default.
 | `input.mousePressed(MouseButton b)` | `bool` | the button was just pressed (one frame) |
 | `input.mouseReleased(MouseButton b)` | `bool` | the button was just let go (one frame) |
 | `input.mouseWheel()` | `float` | how far the wheel moved this frame (positive = away from you) |
+| `input.mouseDelta()` | `vec2` | how far the mouse moved since the last frame, in pixels (right and down are positive) |
+| `input.lockMouse(bool locked)` | | `true` hides the pointer and keeps it in the window, so it can move forever (for looking around in 3D); `false` gives it back |
+| `input.isMouseLocked()` | `bool` | whether it's locked |
 
 Buttons: `MouseButton.LEFT`, `MouseButton.RIGHT`, `MouseButton.MIDDLE`.
 
@@ -62,6 +65,28 @@ if (input.mousePressed(MouseButton.LEFT)) {
     }
 }
 ```
+
+### Looking around with the mouse
+
+First-person 3D games lock the mouse and turn the camera by how far it moved. `mouseDelta()` keeps working when the pointer would have hit the edge of the screen:
+
+```cpp
+float yaw = 0;     // left and right, in radians
+float pitch = 0;   // up and down
+
+void update(float dt){
+    if (input.isMouseLocked()) {
+        vec2 d = input.mouseDelta();
+        yaw -= d.x * 0.0025;
+        pitch = math.clamp(pitch - d.y * 0.0025, -1.5, 1.5);
+    }
+    if (input.keyPressed(Key.TAB)) {
+        input.lockMouse(!input.isMouseLocked());   // let go of the mouse, to click on a menu
+    }
+}
+```
+
+The direction the player looks is then `vec3(math.cos(pitch) * math.sin(yaw), math.sin(pitch), math.cos(pitch) * math.cos(yaw))`. See [examples/voxel](../../examples/voxel/player.frg).
 
 ## Controllers (gamepads)
 

@@ -192,6 +192,9 @@ vec2 mousePosition();
 float mouseX();
 float mouseY();
 float mouseWheel();
+vec2 mouseDelta();
+void lockMouse(bool locked);
+bool isMouseLocked();
 )FRG";
 
 static const char* kGraphics2d = R"FRG(
@@ -395,6 +398,11 @@ class Model {
     void drawRotated(vec3 position, vec3 axis, float degrees, float scale = 1, color tint = color.WHITE);
 }
 
+class Mesh {
+    void draw(vec3 position, color tint = color.WHITE);
+    int vertexCount();
+}
+
 void setCamera(Camera camera);
 Camera camera();
 void drawCube(vec3 position, vec3 size, color c);
@@ -407,6 +415,7 @@ void drawGrid(int slices, float spacing);
 void drawLine(vec3 from, vec3 to, color c);
 vec2 toScreen(vec3 point);
 Model loadModel(string path);
+Mesh makeMesh(list<float> positions, list<float> uvs, list<float> shades, Texture texture);
 )FRG";
 
 static const char* kEcs = R"FRG(
@@ -763,7 +772,7 @@ const std::vector<PreludeLib>& preludeLibs() {
         {"tilemap", kTilemap, true, "forge_tilemap.hpp", K::Engine, {}, {}, {"physics", "assets"}},
         {"scenes", kScenes, false, "forge_scenes.hpp"},
         {"ui", kUi, true, "forge_ui.hpp", K::Engine},
-        {"graphics3d", kGraphics3d, true, "forge_graphics3d.hpp", K::Engine},
+        {"graphics3d", kGraphics3d, true, "forge_graphics3d.hpp", K::Engine, {}, {}, {"assets"}},
         {"ECS", kEcs, false, "forge_ecs.hpp"},
         {"OpenGL", kOpenGL, true, "forge_opengl.hpp", K::Toolkit, {"forge_opengl_impl.cpp"}, {"-lopengl32", "-lgdi32"}},
         {"DirectX", kDirectX, true, "forge_directx.hpp", K::Toolkit, {"forge_directx_impl.cpp"}, {"-ld3d11", "-ldxgi", "-ld3dcompiler_47"}},

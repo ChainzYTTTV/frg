@@ -1,0 +1,48 @@
+=== main.frg
+#include <window>
+#include <graphics3d>
+#include <input>
+#include <assets>
+#include <math>
+#include <stdio>
+
+``` A mesh of one textured square, and a camera turned with the locked mouse. ```
+Texture tiles = assets.loadTexture("tiles.png");
+Mesh? floor = null;
+float yaw = 0;
+float pitch = 0;
+
+int main(){
+    window.open(960, 540, "Mesh");
+    list<float> positions = [0, 0, 0,  0, 0, 4,  4, 0, 4,    0, 0, 0,  4, 0, 4,  4, 0, 0];
+    list<float> uvs = [0, 0,  0, 1,  1, 1,   0, 0,  1, 1,  1, 0];
+    floor = graphics3d.makeMesh(positions, uvs, [1, 1, 1, 0.5, 0.5, 0.5], tiles);
+    input.lockMouse(true);
+    window.run();
+    return 0;
+}
+
+void update(float dt){
+    if (input.isMouseLocked()) {
+        vec2 d = input.mouseDelta();
+        yaw -= d.x * 0.0025;
+        pitch = math.clamp(pitch - d.y * 0.0025, -1.5, 1.5);
+    }
+    if (input.keyPressed(Key.TAB)) {
+        input.lockMouse(!input.isMouseLocked());
+    }
+    vec3 eye = vec3(2, 3, -4);
+    vec3 look = vec3(math.cos(pitch) * math.sin(yaw), math.sin(pitch), math.cos(pitch) * math.cos(yaw));
+    graphics3d.setCamera(Camera(eye, eye + look));
+}
+
+void draw(){
+    if (floor != null) {
+        floor.draw(vec3.ZERO, color.WHITE);
+        print("{floor.vertexCount()} corners, {floor}");
+    }
+}
+=== tiles.png (base64)
+iVBORw0KGgoAAAANSUhEUgAAAEAAAAAQCAYAAACm53kpAAAAOElEQVR4nO3QwQAAIAAEsAMLJ4jAgsiqIO7ZHhNYMs9tjNIq7VIECBAgQIAAAQIECBAgQICA/wIew7sUlxJp2dYAAAAASUVORK5CYII=
+=== build
+=== no warnings

@@ -4,7 +4,7 @@
 #include <graphics3d>
 ```
 
-Draws 3D shapes and models through a camera. See [examples/world3d](../../examples/world3d/main.frg) for a working scene.
+Draws 3D shapes and models through a camera. See [examples/world3d](../../examples/world3d/main.frg) for a working scene, and [examples/voxel](../../examples/voxel/main.frg) for a block world built from meshes.
 
 ## 3D coordinates
 
@@ -86,6 +86,50 @@ Model ship = graphics3d.loadModel("ship.glb");
 | `drawRotated(vec3 position, vec3 axis, float degrees, float scale = 1, color tint = color.WHITE)` | draws it turned `degrees` around `axis` (for example `vec3(0, 1, 0)` spins around the up axis) |
 
 Like [textures](assets.md), the file is found when it's loaded (a missing file is reported straight away), but it's only sent to the graphics card when it's first drawn, so loading as a global variable works. Models that include their own textures and colors (`.glb`, `.gltf`) are drawn with them; `tint` multiplies them.
+
+## Meshes: shapes you build yourself
+
+A `Mesh` is a set of triangles your game makes, sent to the graphics card once. Drawing it is one quick call however many triangles it has, so a whole chunk of a block world (thousands of faces) costs about the same to draw as one cube. Make the triangles once (or again when something changes), not every frame.
+
+| Function | Gives back | What it does |
+|---|---|---|
+| `graphics3d.makeMesh(list<float> positions, list<float> uvs, list<float> shades, Texture texture)` | `Mesh` | makes a mesh out of triangles, painted with a [texture](assets.md) |
+
+- `positions`: `x, y, z` for each corner, 3 corners for each triangle (so 9 numbers per triangle). The front of a triangle is the side where its corners go **counter-clockwise**; the back isn't drawn.
+- `uvs`: `u, v` for each corner: where in the texture it is, from `0` to `1` (`v = 0` is the top of the image). A [sprite sheet](assets.md) works: give each face the corners of its own tile.
+- `shades`: one brightness per corner, from `0` (black) to `1` (the texture's own colors), or `[]` for 1 everywhere. Darker sides make blocks look solid without lighting.
+- Pixels of the texture that are mostly see-through (alpha under half) are cut out and not drawn at all, so leaves, glass and fences can have holes, in any order.
+
+| `Mesh` method | What it does |
+|---|---|
+| `draw(vec3 position, color tint = color.WHITE)` | draws it moved by `position` (`vec3.ZERO` to draw it where its corners say) |
+| `vertexCount()` | how many corners it has (3 per triangle) |
+
+```cpp
+Texture tiles = assets.loadTexture("tiles.png");
+Mesh? floor = null;   // made once the window is open
+
+int main(){
+    window.open(960, 540, "A floor");
+    // one square, as two triangles, seen from above
+    list<float> positions = [0, 0, 0,  0, 0, 4,  4, 0, 4,    0, 0, 0,  4, 0, 4,  4, 0, 0];
+    list<float> uvs =       [0, 0,     0, 1,     1, 1,       0, 0,     1, 1,     1, 0];
+    floor = graphics3d.makeMesh(positions, uvs, [], tiles);
+    window.run();
+    return 0;
+}
+
+void update(float dt){
+}
+
+void draw(){
+    if (floor != null) {
+        floor.draw(vec3.ZERO);
+    }
+}
+```
+
+Meshes are made on the graphics card, so the window has to be open first. To change one, make a new mesh and put it in the old one's place; the old one is freed when nothing uses it.
 
 ## 3D points on the 2D screen
 

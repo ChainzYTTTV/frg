@@ -29,6 +29,8 @@ int main(){
 | The example platformer (`examples/platformer`) | 3D shapes and a moving camera (`examples/world3d`) |
 | ![A main menu made with the ui library](docs/images/menu.png) | ![A spinning cube drawn with the Vulkan toolkit](docs/images/vulkan.png) |
 | A menu with buttons and sliders (`examples/menu`) | Drawing with Vulkan yourself (`examples/vulkan`) |
+| ![A block world with hills, trees and a hotbar](docs/images/voxel.png) | ![The block world's creative menu](docs/images/voxel_menu.png) |
+| A creative-mode block world: break and place blocks (`examples/voxel`) | Its creative menu, drawn with `graphics2d` over the 3D world |
 
 ## How it works
 
@@ -68,7 +70,7 @@ runtime/
   vulkan/               Vulkan-Headers 1.3.296 (Apache 2.0 / MIT license)
   tools/glslang.exe     glslang 16, compiles <Vulkan> shaders to SPIR-V (licenses in tools/glslang-LICENSE.txt)
 tests/             .\tests\run_tests.ps1
-examples/          hello, tour, shapes, platformer, sprites, menu, world3d, gamepad, opengl, directx, vulkan
+examples/          hello, tour, shapes, platformer, sprites, menu, world3d, voxel, gamepad, opengl, directx, vulkan
 ```
 
 Games that use the window, graphics, input, assets, audio or UI libraries are linked with raylib. Everything is linked statically, so the `.exe` runs on any Windows PC.

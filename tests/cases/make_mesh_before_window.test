@@ -1,0 +1,14 @@
+=== main.frg
+#include <graphics3d>
+#include <assets>
+
+int main(){
+    Texture tiles = assets.loadTexture("tiles.png");
+    Mesh m = graphics3d.makeMesh([0, 0, 0, 1, 0, 0, 0, 1, 0], [0, 0, 1, 0, 0, 1], [], tiles);
+    return 0;
+}
+=== tiles.png (base64)
+iVBORw0KGgoAAAANSUhEUgAAAEAAAAAQCAYAAACm53kpAAAAOElEQVR4nO3QwQAAIAAEsAMLJ4jAgsiqIO7ZHhNYMs9tjNIq7VIECBAgQIAAAQIECBAgQICA/wIew7sUlxJp2dYAAAAASUVORK5CYII=
+=== runtime error
+graphics3d.makeMesh()
+the window isn't open yet - meshes are made on the graphics card, so open it first

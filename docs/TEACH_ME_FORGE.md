@@ -183,6 +183,7 @@ string full = "Game" + " Over";         // + joins two pieces of text
 
 - The words `plus`, `times`, `greater` and so on only act as operators between two values, so they can still be used as names. Only `negative` and `bitnot` are reserved.
 - `not a == b` means `not (a == b)`, the same as in Python.
+- Things are always worked out **left to right**: in `a() + b()`, `add(a(), b())` and `"{a()} {b()}"`, `a()` runs first. (Forge versions before 0.8.1 sometimes went right to left. If the learner's older Forge seems to do things backwards, they should update.)
 - There's **no power operator**; `^` is bitwise xor. Use `x * x` or `math.pow(x, 2)`.
 - `++`, `--`, `increase x;` and `decrease x;` are statements only (`y = x++;` doesn't work).
 - The order of operations follows C: `* / %`, then `+ -`, then comparisons, then `==`, then `and`, then `or`. Note that the bit operators come after `==`, so `(x & 1) == 0` needs its parentheses.

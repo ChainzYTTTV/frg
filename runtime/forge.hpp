@@ -784,6 +784,17 @@ inline bool str_isFloat(const std::string& s, const char*) {
     float v;
     return parseInto(s, v) == 0;
 }
+// Text with {values} in it: the pieces in order. They come in a { } list because C++ works those out left to
+// right, so "{a()} {b()}" calls a() first ("x" + y + z has no fixed order in C++).
+inline std::string cat(std::initializer_list<std::string> pieces) {
+    size_t n = 0;
+    for (const std::string& p : pieces) n += p.size();
+    std::string s;
+    s.reserve(n);
+    for (const std::string& p : pieces) s += p;
+    return s;
+}
+
 // "{value:.2}": a decimal number shown with a fixed number of decimals.
 inline std::string fixed(double v, int decimals) {
     char buf[512];

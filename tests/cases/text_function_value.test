@@ -1,0 +1,14 @@
+=== main.frg
+#include <stdio>
+
+int main(){
+    list<int> numbers = [1, 2, 3, 4, 5, 6];
+    print("evens: {numbers.filter((int n) { return n % 2 == 0; })}");
+    print("any big: {numbers.any((int n) { if (n > 5) { return true; } return false; })}, count {numbers.length}");
+    print("{{literal}} and {numbers.filter((int n) { return n > 4; }).length} big");
+    return 0;
+}
+=== output
+evens: [2, 4, 6]
+any big: true, count 6
+{literal} and 2 big

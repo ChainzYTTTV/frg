@@ -2,6 +2,13 @@
 
 What changed in each version of Forge. Plans for later versions are in the [roadmap](ROADMAP.md).
 
+## 0.8.1 (2026-10-16)
+
+Two bug fixes, found by testing a big game spread across many files and folders.
+
+- **Things now happen left to right.** In a call like `add(next(), next())`, in text like `"{a()} {b()}"`, and on the two sides of operators like `+` and `==`, Forge used to let C++ choose the order, and g++ often went right to left. So code whose parts *do* something (count, put into a list, read input) could quietly give the wrong answer. Now the left part always happens first. Code whose parts only read values didn't change, and isn't any slower.
+- **Function values work inside `{ }` in text.** `"{numbers.filter((int n) { return n > 0; })}"` used to fail with "this '{' is never closed".
+
 ## 0.8.0 (2026-10-16)
 
 **Language**

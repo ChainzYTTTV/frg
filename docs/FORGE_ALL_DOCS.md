@@ -1,4 +1,4 @@
-# Forge 0.8.0: the complete documentation
+# Forge 0.8.1: the complete documentation
 
 This one file holds everything written about the Forge programming language, so it can be uploaded in one go:
 
@@ -209,6 +209,7 @@ string full = "Game" + " Over";         // + joins two pieces of text
 
 - The words `plus`, `times`, `greater` and so on only act as operators between two values, so they can still be used as names. Only `negative` and `bitnot` are reserved.
 - `not a == b` means `not (a == b)`, the same as in Python.
+- Things are always worked out **left to right**: in `a() + b()`, `add(a(), b())` and `"{a()} {b()}"`, `a()` runs first. (Forge versions before 0.8.1 sometimes went right to left. If the learner's older Forge seems to do things backwards, they should update.)
 - There's **no power operator**; `^` is bitwise xor. Use `x * x` or `math.pow(x, 2)`.
 - `++`, `--`, `increase x;` and `decrease x;` are statements only (`y = x++;` doesn't work).
 - The order of operations follows C: `* / %`, then `+ -`, then comparisons, then `==`, then `and`, then `or`. Note that the bit operators come after `==`, so `(x & 1) == 0` needs its parentheses.
@@ -1790,7 +1791,7 @@ frg version
 g++ --version
 ```
 
-The first should print `Forge 0.8.0` and the second should print a GCC version. If `frg` isn't found, add Forge's `bin` folder to your PATH and restart the terminal.
+The first should print `Forge 0.8.1` and the second should print a GCC version. If `frg` isn't found, add Forge's `bin` folder to your PATH and restart the terminal.
 
 #### Building Forge from source
 
@@ -2841,6 +2842,29 @@ When an expression has several operators, some happen before others, as in schoo
 Operators on the same row are worked out left to right: `10 - 3 - 2` is `5`.
 
 **Parentheses always win.** If you're unsure, add them: `(a + b) * c`. One common trap: the bit operators come *after* `==`, so `x & 1 == 0` means `x & (1 == 0)`, which is an error. Write `(x & 1) == 0`.
+
+#### Left side first
+
+The table says which operator wins. A different question is which **side** is worked out first, and that matters when both sides *do* something, like calling a function that changes a variable. Forge always works things out **left to right**:
+
+- in `a() + b()`, `a()` runs before `b()`, and the same goes for every operator;
+- in a call like `add(a(), b(), c())`, the values are worked out from the first to the last;
+- in `obj().method(a())`, the object comes first, then the values;
+- in text, `"{a()} and {b()}"` runs `a()` first.
+
+```cpp
+int count = 0;
+
+int next(){
+    count++;
+    return count;
+}
+
+print(next() * 10 + next());     // 12: the left next() gives 1, the right one 2
+print("{next()} {next()}");      // 3 4
+```
+
+(Some languages, like C and C++, don't promise an order, so the same code can give different answers there. Forge does promise it.)
 
 ### The word versions and names
 
@@ -9270,6 +9294,8 @@ string label2 = "healthy" if hp greater 50 else "hurt";
 ```
 
 There's no power operator: `^` is bitwise xor. Use `x * x` or `math.pow(x, 2)`.
+
+Things are always worked out **left to right**: in `a() + b()`, `add(a(), b())` and `"{a()} {b()}"`, `a()` runs first. (Details (see “4. Operators” › “Left side first”).)
 
 ### If, loops and switch
 

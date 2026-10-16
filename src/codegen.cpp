@@ -117,6 +117,11 @@ private:
     std::string strCode(const std::string& code, const Type* t, bool shallow = false);
     std::string ref(const Expr* e);
     std::string args(const Expr* e, const std::vector<ExprPtr>& given, const FuncDecl* f);
+    std::vector<std::string> argList(const Expr* e, const std::vector<ExprPtr>& given, const FuncDecl* f);
+    bool effects(const Expr* e);
+    bool awaits(const Expr* e);
+    std::string ordered(const std::vector<const Expr*>& exprs, const std::vector<std::string>& codes,
+                        const std::function<std::string(const std::vector<std::string>&)>& build);
     std::string call(const Expr* e);
     std::string construct(const Expr* e, const std::vector<ExprPtr>& given);
     std::string binary(const Expr* e);
@@ -262,38 +267,97 @@ std::string Gen::ref(const Expr* e) {
     }
 }
 
-std::string Gen::args(const Expr* e, const std::vector<ExprPtr>& given, const FuncDecl* f) {
-    std::string s;
+// Each argument's code: the given values first, then the default values filled in for the rest.
+std::vector<std::string> Gen::argList(const Expr* e, const std::vector<ExprPtr>& given, const FuncDecl* f) {
+    std::vector<std::string> list;
     // With several versions of a function, every value gets its exact type, so C++ picks the same version Forge did.
     bool overloaded = !f->owner && f->module && !f->module->isPrelude && f->module->overloads.count(f->name) &&
                       f->module->overloads.at(f->name).size() > 1;
     for (size_t i = 0; i < given.size(); i++) {
         const Type* pt = e->paramTypes.empty() ? f->params[i]->type : e->paramTypes[i];  // with a Box<int>'s T filled in
         std::string v = conv(given[i].get(), pt);
-        s += (i ? ", " : "") + (overloaded ? "static_cast<" + pt->cpp + ">(" + v + ")" : v);
+        list.push_back(overloaded ? "static_cast<" + pt->cpp + ">(" + v + ")" : v);
     }
     for (size_t i = 0; i < e->defaultArgs.size(); i++) {
         size_t pi = given.size() + i;
-        s += (pi ? ", " : "") + conv(e->defaultArgs[i], e->paramTypes.empty() ? f->params[pi]->type : e->paramTypes[pi]);
+        list.push_back(conv(e->defaultArgs[i], e->paramTypes.empty() ? f->params[pi]->type : e->paramTypes[pi]));
     }
+    return list;
+}
+
+std::string joinArgs(const std::vector<std::string>& codes, size_t from = 0) {
+    std::string s;
+    for (size_t i = from; i < codes.size(); i++) s += (i > from ? ", " : "") + codes[i];
     return s;
+}
+
+std::string Gen::args(const Expr* e, const std::vector<ExprPtr>& given, const FuncDecl* f) { return joinArgs(argList(e, given, f)); }
+
+// Whether working out this value could do something (call a function), so the order it happens in matters.
+bool Gen::effects(const Expr* e) {
+    if (!e || e->kind == EK::Lambda) return false;  // making a function value doesn't run it
+    if (e->kind == EK::Call || e->opMethod) return true;
+    for (auto& x : e->args)
+        if (effects(x.get())) return true;
+    for (auto& x : e->keys)
+        if (effects(x.get())) return true;
+    return effects(e->a.get()) || effects(e->b.get()) || effects(e->c.get());
+}
+
+// Whether this value contains a wait(), which is a C++ co_await: it can't be moved into a helper function.
+bool Gen::awaits(const Expr* e) {
+    if (!e || e->kind == EK::Lambda) return false;
+    if (e->kind == EK::Call && e->a && e->a->res.kind == RK::Builtin && e->a->res.builtin->sig == BSig::Wait) return true;
+    for (auto& x : e->args)
+        if (awaits(x.get())) return true;
+    for (auto& x : e->keys)
+        if (awaits(x.get())) return true;
+    return awaits(e->a.get()) || awaits(e->b.get()) || awaits(e->c.get());
+}
+
+// Forge works out the parts of a call or an operator left to right, but C++ doesn't promise any order (g++ often
+// goes right to left). When two or more parts do something, they're worked out one by one into temporaries first.
+// `exprs` are the parts in Forge's order, `codes` their C++ (it can have extra codes at the end, like default
+// values, which are left where they are), and `build` puts the call or operator together from the codes.
+std::string Gen::ordered(const std::vector<const Expr*>& exprs, const std::vector<std::string>& codes,
+                         const std::function<std::string(const std::vector<std::string>&)>& build) {
+    int doing = 0;
+    for (const Expr* x : exprs) {
+        if (awaits(x)) return build(codes);
+        if (effects(x)) doing++;
+    }
+    if (doing < 2) return build(codes);
+    // Outside any function (a global's starting value), a lambda can't capture anything, and doesn't need to.
+    std::string s = std::string(fn ? "[&]" : "[]") + "() -> auto { ";
+    std::vector<std::string> names = codes;
+    for (size_t i = 0; i < exprs.size(); i++) {
+        std::string t = "frg$t" + std::to_string(tmp++);
+        s += "auto&& " + t + " = " + codes[i] + "; ";
+        names[i] = "static_cast<decltype(" + t + ")&&>(" + t + ")";
+    }
+    return s + "return " + build(names) + "; }()";
 }
 
 std::string Gen::construct(const Expr* e, const std::vector<ExprPtr>& given) {
     TypeDecl* d = e->builds;
     if (d->kind == DK::Enum) return "static_cast<" + d->cpp + ">(" + ex(given[0].get()) + ")";
-    std::string a;
+    std::vector<std::string> codes;
     if (e->ctor) {
-        a = args(e, given, e->ctor);
+        codes = argList(e, given, e->ctor);
     } else {
         std::vector<VarDecl*> fields = allFields(d);
-        for (size_t i = 0; i < given.size(); i++) a += (i ? ", " : "") + conv(given[i].get(), e->paramTypes.empty() ? fields[i]->type : e->paramTypes[i]);
+        for (size_t i = 0; i < given.size(); i++) codes.push_back(conv(given[i].get(), e->paramTypes.empty() ? fields[i]->type : e->paramTypes[i]));
     }
-    return classOf(e->type) + (d->kind == DK::Class ? "::frg$new(" : "::frg$make(") + a + ")";
+    std::vector<const Expr*> exprs;
+    for (auto& g : given) exprs.push_back(g.get());
+    std::string head = classOf(e->type) + (d->kind == DK::Class ? "::frg$new(" : "::frg$make(");
+    return ordered(exprs, codes, [&](const std::vector<std::string>& c) { return head + joinArgs(c) + ")"; });
 }
 
 std::string Gen::call(const Expr* e) {
     const Expr* callee = e->a.get();
+    std::vector<const Expr*> argExprs;
+    for (auto& x : e->args) argExprs.push_back(x.get());
     switch (callee->res.kind) {
         case RK::Func: {
             const FuncDecl* f = callee->res.func;
@@ -301,22 +365,37 @@ std::string Gen::call(const Expr* e) {
                 return "::frg::window::run_([](float dt) { " + qual(P.mainModule, "update") + "(dt); }, []() { " +
                        qual(P.mainModule, "draw") + "(); })";
             }
-            return ref(callee) + "(" + args(e, e->args, f) + ")";
+            std::string name = ref(callee);
+            return ordered(argExprs, argList(e, e->args, f), [&](const std::vector<std::string>& c) { return name + "(" + joinArgs(c) + ")"; });
         }
         case RK::Method: {
             const FuncDecl* f = callee->res.func;
-            if (callee->kind == EK::Member && callee->a->kind == EK::Super)
-                return f->owner->cpp + "::" + id(f->name) + "(" + args(e, e->args, f) + ")";
-            return ref(callee) + "(" + args(e, e->args, f) + ")";
+            if (callee->kind == EK::Member && callee->a->kind == EK::Super) {
+                std::string name = f->owner->cpp + "::" + id(f->name);
+                return ordered(argExprs, argList(e, e->args, f), [&](const std::vector<std::string>& c) { return name + "(" + joinArgs(c) + ")"; });
+            }
+            if (callee->kind == EK::Member) {
+                // obj.method(args): the object is worked out first, then the arguments.
+                std::string sep;
+                std::string obj = objRef(callee->a.get(), sep);
+                std::vector<const Expr*> exprs = {callee->a.get()};
+                exprs.insert(exprs.end(), argExprs.begin(), argExprs.end());
+                std::vector<std::string> codes = {obj};
+                for (auto& c : argList(e, e->args, f)) codes.push_back(c);
+                return ordered(exprs, codes, [&](const std::vector<std::string>& c) { return c[0] + sep + id(callee->text) + "(" + joinArgs(c, 1) + ")"; });
+            }
+            std::string name = ref(callee);
+            return ordered(argExprs, argList(e, e->args, f), [&](const std::vector<std::string>& c) { return name + "(" + joinArgs(c) + ")"; });
         }
         case RK::Type: return construct(e, e->args);
         case RK::Local:
         case RK::Global:
         case RK::Field: {  // calling a function value
             const Type* ft = callee->type->kind == TK::Optional ? callee->type->elem : callee->type;
-            std::string s = "::frg::fn(" + conv(callee, ft) + ", " + where(e->loc) + ")(";
-            for (size_t i = 0; i < e->args.size(); i++) s += (i ? ", " : "") + conv(e->args[i].get(), ft->params[i]);
-            return s + ")";
+            std::string head = "::frg::fn(" + conv(callee, ft) + ", " + where(e->loc) + ")(";
+            std::vector<std::string> codes;
+            for (size_t i = 0; i < e->args.size(); i++) codes.push_back(conv(e->args[i].get(), ft->params[i]));
+            return ordered(argExprs, codes, [&](const std::vector<std::string>& c) { return head + joinArgs(c) + ")"; });
         }
         case RK::BuiltinMethod: {
             if (callee->a->type->kind == TK::Pointer && (callee->text == "remove" || callee->text == "isRemoved") && e->args.empty())
@@ -328,7 +407,8 @@ std::string Gen::call(const Expr* e) {
                 return "::frg::list_sortWith(" + objValue(callee->a.get()) + ", [](const auto& x, const auto& y) { return " + less + "; }, " +
                        where(e->loc) + ")";
             }
-            std::string s = bmethodPrefix(obj->kind) + callee->text + "(" + objValue(callee->a.get());
+            std::vector<const Expr*> exprs = {callee->a.get()};
+            std::vector<std::string> codes = {objValue(callee->a.get())};
             for (auto& a : e->args) {
                 // The element/key type the method expects, so literals are converted correctly.
                 const Type* want = a->type;
@@ -337,9 +417,12 @@ std::string Gen::call(const Expr* e) {
                     want = obj->elem;
                 if (obj->kind == TK::List && callee->text == "insert" && &a == &e->args[1]) want = obj->elem;
                 if (obj->kind == TK::Map) want = &a == &e->args[0] ? obj->key : obj->elem;
-                s += ", " + conv(a.get(), want);
+                exprs.push_back(a.get());
+                codes.push_back(conv(a.get(), want));
             }
-            return s + ", " + where(e->loc) + ")";
+            std::string head = bmethodPrefix(obj->kind) + callee->text + "(";
+            std::string tail = ", " + where(e->loc) + ")";
+            return ordered(exprs, codes, [&](const std::vector<std::string>& c) { return head + joinArgs(c) + tail; });
         }
         case RK::Builtin: {
             const Builtin* b = callee->res.builtin;
@@ -354,12 +437,12 @@ std::string Gen::call(const Expr* e) {
                 if (e->args[0]->type == tTask()) return "co_await ::frg::tasks::WaitFor{" + ex(e->args[0].get()) + "}";
                 return "co_await ::frg::tasks::Wait{" + conv(e->args[0].get(), tFloat(64)) + "}";
             }
-            std::string a;
-            for (size_t i = 0; i < e->args.size(); i++) a += (i ? ", " : "") + conv(e->args[i].get(), e->type);
+            std::vector<std::string> codes;
+            for (size_t i = 0; i < e->args.size(); i++) codes.push_back(conv(e->args[i].get(), e->type));
             std::string name = b->cpp;
             if (b->sig == BSig::Generic1 || b->sig == BSig::Generic2 || b->sig == BSig::Generic3 || b->sig == BSig::Float3)
                 name += "<" + e->type->cpp + ">";
-            return name + "(" + a + ")";
+            return ordered(argExprs, codes, [&](const std::vector<std::string>& c) { return name + "(" + joinArgs(c) + ")"; });
         }
         default: return "/*?*/";
     }
@@ -373,10 +456,19 @@ std::string Gen::binary(const Expr* e) {
 
     if (e->opMethod) {
         // Your own type's operator method: a + b is a.plus(b), a > b is b.less(a), a != b is !a.equals(b).
+        // a is still worked out before b, even when the method is called on b.
         const Expr* obj = e->opSwap ? b : a;
         const Expr* arg = e->opSwap ? a : b;
-        std::string call = "(" + ex(obj) + ")" + (obj->type->kind == TK::Class ? "->" : ".") + id(e->opMethod->name) + "(" +
-                           conv(arg, e->paramTypes.empty() ? e->opMethod->params[0]->type : e->paramTypes[0]) + ")";
+        std::string objCode = ex(obj);
+        std::string argCode = conv(arg, e->paramTypes.empty() ? e->opMethod->params[0]->type : e->paramTypes[0]);
+        std::string sep = obj->type->kind == TK::Class ? "->" : ".";
+        std::string method = id(e->opMethod->name);
+        std::vector<std::string> codes = e->opSwap ? std::vector<std::string>{argCode, objCode} : std::vector<std::string>{objCode, argCode};
+        std::string call = ordered({a, b}, codes, [&](const std::vector<std::string>& c) {
+            const std::string& o = e->opSwap ? c[1] : c[0];
+            const std::string& v = e->opSwap ? c[0] : c[1];
+            return "(" + o + ")" + sep + method + "(" + v + ")";
+        });
         return e->opNot ? "(!" + call + ")" : call;
     }
     if (op == "&&" || op == "||") return "(" + ex(a) + " " + op + " " + ex(b) + ")";
@@ -390,26 +482,25 @@ std::string Gen::binary(const Expr* e) {
             const Expr* other = a->type->kind == TK::Null ? b : a;
             return std::string(op == "==" ? "" : "!") + "::frg::isNull(" + ex(other) + ")";
         }
-        return "(" + conv(a, T) + " " + op + " " + conv(b, T) + ")";
+        return ordered({a, b}, {conv(a, T), conv(b, T)}, [&](const std::vector<std::string>& c) { return "(" + c[0] + " " + op + " " + c[1] + ")"; });
     }
     if (op == "<<" || op == ">>") {
-        std::string r = "(" + ex(a) + " " + op + " " + ex(b) + ")";
-        return isNarrowInt(e->type) ? "static_cast<" + e->type->cpp + ">" + r : r;
+        std::string r = ordered({a, b}, {ex(a), ex(b)}, [&](const std::vector<std::string>& c) { return "(" + c[0] + " " + op + " " + c[1] + ")"; });
+        return isNarrowInt(e->type) ? "static_cast<" + e->type->cpp + ">(" + r + ")" : r;
     }
     if (T->kind == TK::Struct) {  // vector math
         auto side = [&](const Expr* x) { return isNumeric(x->type) ? conv(x, tFloat(32)) : ex(x); };
-        return "(" + side(a) + " " + op + " " + side(b) + ")";
+        return ordered({a, b}, {side(a), side(b)}, [&](const std::vector<std::string>& c) { return "(" + c[0] + " " + op + " " + c[1] + ")"; });
     }
-    std::string A = conv(a, T), B = conv(b, T);
-    std::string r;
-    if (T->kind == TK::Int && (op == "/" || op == "%"))
-        r = std::string(op == "/" ? "::frg::idiv" : "::frg::imod") + "<" + T->cpp + ">(" + A + ", " + B + ", " + where(e->loc) + ")";
-    else if (T->kind == TK::Float && op == "%")
-        r = "::std::fmod(" + A + ", " + B + ")";
-    else
-        r = "(" + A + " " + op + " " + B + ")";
+    std::string r = ordered({a, b}, {conv(a, T), conv(b, T)}, [&](const std::vector<std::string>& c) {
+        const std::string &A = c[0], &B = c[1];
+        if (T->kind == TK::Int && (op == "/" || op == "%"))
+            return std::string(op == "/" ? "::frg::idiv" : "::frg::imod") + "<" + T->cpp + ">(" + A + ", " + B + ", " + where(e->loc) + ")";
+        if (T->kind == TK::Float && op == "%") return "::std::fmod(" + A + ", " + B + ")";
+        return "(" + A + " " + op + " " + B + ")";
+    });
     // int8/int16 math happens in C++'s int, so wrap the answer back into the smaller type.
-    if (isNarrowInt(e->type)) r = "static_cast<" + e->type->cpp + ">" + (r[0] == '(' ? r : "(" + r + ")");
+    if (isNarrowInt(e->type)) r = "static_cast<" + e->type->cpp + ">(" + r + ")";
     return r;
 }
 
@@ -423,15 +514,16 @@ std::string Gen::ex(const Expr* e) {
         case EK::Null: return "nullptr";
         case EK::Str: {
             if (e->args.empty()) return "::std::string(" + cppString(e->parts[0]) + ")";
-            std::string s = "(::std::string(" + cppString(e->parts[0]) + ")";
+            // The pieces go in a { } list, which C++ always works out left to right ("a + b" has no fixed order).
+            std::string s = "::frg::cat({::std::string(" + cppString(e->parts[0]) + ")";
             for (size_t i = 0; i < e->args.size(); i++) {
                 if (i < e->decimals.size() && e->decimals[i] >= 0)
-                    s += " + ::frg::fixed(static_cast<double>(" + ex(e->args[i].get()) + "), " + std::to_string(e->decimals[i]) + ")";
+                    s += ", ::frg::fixed(static_cast<double>(" + ex(e->args[i].get()) + "), " + std::to_string(e->decimals[i]) + ")";
                 else
-                    s += " + " + strCode(ex(e->args[i].get()), e->args[i]->type);
-                if (!e->parts[i + 1].empty()) s += " + " + cppString(e->parts[i + 1]);
+                    s += ", " + strCode(ex(e->args[i].get()), e->args[i]->type);
+                if (!e->parts[i + 1].empty()) s += ", ::std::string(" + cppString(e->parts[i + 1]) + ")";
             }
-            return s + ")";
+            return s + "})";
         }
         case EK::Name:
         case EK::Member: return ref(e);
@@ -455,7 +547,9 @@ std::string Gen::ex(const Expr* e) {
         case EK::Index: {
             const Type* t = derefType(e->a->type);
             std::string obj = objValue(e->a.get());
-            if (t->kind == TK::List) return "::frg::at(" + obj + ", static_cast<int64_t>(" + ex(e->b.get()) + "), " + where(e->loc) + ")";
+            if (t->kind == TK::List)
+                return ordered({e->a.get(), e->b.get()}, {obj, "static_cast<int64_t>(" + ex(e->b.get()) + ")"},
+                               [&](const std::vector<std::string>& c) { return "::frg::at(" + c[0] + ", " + c[1] + ", " + where(e->loc) + ")"; });
             if (e->isWrite) return obj + "[" + conv(e->b.get(), t->key) + "]";
             return "::frg::mapGet(" + obj + ", " + conv(e->b.get(), t->key) + ", " + where(e->loc) + ")";
         }

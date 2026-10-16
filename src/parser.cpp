@@ -1219,15 +1219,22 @@ ExprPtr Parser::parseString(const Token& tok) {
                 i += 2;
                 continue;
             }
+            // The matching }, skipping text in quotes and { } pairs inside, like a function value's body:
+            // "{list.filter((int n) { return n > 0; })}".
             size_t close = i + 1;
-            for (; close < raw.size() && raw[close] != '}'; close++) {
-                if (raw[close] == '\\') {
+            for (int depth = 0; close < raw.size(); close++) {
+                char ch = raw[close];
+                if (ch == '\\') {
                     close++;
-                    continue;
+                } else if (ch == '"') {
+                    for (close++; close < raw.size() && raw[close] != '"'; close++)
+                        if (raw[close] == '\\') close++;
+                } else if (ch == '{') {
+                    depth++;
+                } else if (ch == '}') {
+                    if (depth == 0) break;
+                    depth--;
                 }
-                if (raw[close] != '"') continue;
-                for (close++; close < raw.size() && raw[close] != '"'; close++)
-                    if (raw[close] == '\\') close++;
             }
             if (close >= raw.size()) close = std::string::npos;
             if (close == std::string::npos)

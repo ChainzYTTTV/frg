@@ -164,6 +164,29 @@ Operators on the same row are worked out left to right: `10 - 3 - 2` is `5`.
 
 **Parentheses always win.** If you're unsure, add them: `(a + b) * c`. One common trap: the bit operators come *after* `==`, so `x & 1 == 0` means `x & (1 == 0)`, which is an error. Write `(x & 1) == 0`.
 
+### Left side first
+
+The table says which operator wins. A different question is which **side** is worked out first, and that matters when both sides *do* something, like calling a function that changes a variable. Forge always works things out **left to right**:
+
+- in `a() + b()`, `a()` runs before `b()`, and the same goes for every operator;
+- in a call like `add(a(), b(), c())`, the values are worked out from the first to the last;
+- in `obj().method(a())`, the object comes first, then the values;
+- in text, `"{a()} and {b()}"` runs `a()` first.
+
+```cpp
+int count = 0;
+
+int next(){
+    count++;
+    return count;
+}
+
+print(next() * 10 + next());     // 12: the left next() gives 1, the right one 2
+print("{next()} {next()}");      // 3 4
+```
+
+(Some languages, like C and C++, don't promise an order, so the same code can give different answers there. Forge does promise it.)
+
 ## The word versions and names
 
 Most word operators only count as operators when they sit **between two values**, which is a place where a plain name can never be. So you can still use these words as names:

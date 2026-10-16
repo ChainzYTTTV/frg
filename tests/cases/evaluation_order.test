@@ -1,0 +1,116 @@
+=== main.frg
+#include <stdio>
+
+int step = 0;
+string trail = "";
+
+int next(string name){
+    step++;
+    trail = trail + name;
+    return step;
+}
+
+int add3(int a, int b, int c){
+    return a * 100 + b * 10 + c;
+}
+
+struct Score {
+    int value;
+    bool less(Score other){
+        return value < other.value;
+    }
+    Score plus(Score other){
+        return Score(value + other.value);
+    }
+}
+
+Score score(string name, int v){
+    next(name);
+    return Score(v);
+}
+
+class Counter {
+    int total = 0;
+    int add(int a, int b){
+        total += a + b;
+        return total;
+    }
+}
+
+Counter make(string name){
+    next(name);
+    return Counter();
+}
+
+class Bag {
+    list<string> items = [];
+    bool put(string item){
+        if (items.length >= 2) {
+            return false;
+        }
+        items.add(item);
+        return true;
+    }
+}
+
+void reset(){
+    step = 0;
+    trail = "";
+}
+
+int main(){
+    // text with values
+    print("{next("a")} {next("b")} {next("c")}");
+    print(trail);
+    reset();
+
+    // function arguments
+    print(add3(next("x"), next("y"), next("z")));
+    print(trail);
+    reset();
+
+    // the object, then the arguments
+    print(make("m").add(next("p"), next("q")));
+    print(trail);
+    reset();
+
+    // operators, including your own type's: a > b is worked out as b.less(a), but a still comes first
+    print(score("L", 5) > score("R", 3));
+    print((score("1", 1) + score("2", 2)).value);
+    print(next("l") * 10 + next("r"));
+    print(next("e") == next("f"));
+    print(trail);
+    reset();
+
+    // built-in methods, list positions and making objects
+    list<int> nums = [10, 20, 30];
+    nums.insert(next("i") - 1, next("v"));
+    print(nums);
+    print(nums[next("n") - 1] + next("k"));
+    Score s = Score(next("s"));
+    print(s.value);
+    print(trail);
+    reset();
+
+    // the bag from the multi-file test: three puts in one line
+    Bag bag = Bag();
+    print("put: {bag.put("sword")} {bag.put("shield")} {bag.put("potion")}, holding {bag.items.length}");
+    return 0;
+}
+=== output
+1 2 3
+abc
+123
+xyz
+5
+mpq
+true
+3
+56
+false
+LR12lref
+[2, 10, 20, 30]
+24
+5
+ivnks
+put: true true false, holding 2

@@ -141,6 +141,8 @@ string label2 = "healthy" if hp greater 50 else "hurt";
 
 There's no power operator: `^` is bitwise xor. Use `x * x` or `math.pow(x, 2)`.
 
+Things are always worked out **left to right**: in `a() + b()`, `add(a(), b())` and `"{a()} {b()}"`, `a()` runs first. ([Details](language/04-operators.md#left-side-first).)
+
 ## If, loops and switch
 
 `{ }` braces are always required. Indentation is just for readability.

@@ -1,6 +1,6 @@
 # Roadmap
 
-What's planned for Forge between now (0.9.0) and 1.0.0. The order and the version numbers can change. What's already done is in the [changelog](CHANGELOG.md).
+What's planned for Forge between now (0.9.1) and 1.0.0. The order and the version numbers can change. What's already done is in the [changelog](CHANGELOG.md).
 
 Sizes are rough: **S** is small, **M** medium, **L** large.
 
@@ -101,6 +101,17 @@ These were decided by Forge's designer (2026-10-16). Build them this way.
 | `frg fmt` | tidies spacing and indentation automatically | M | done |
 | Runtime errors show which function calls led there | easier crash fixing | M | done |
 | `frg test`: tests for your own games | checking game logic without playing | M | done (`<testing>`, the `tests` folder) |
+
+## 0.9.1: Trustworthy foundations
+
+| Item | Why | Status |
+|---|---|---|
+| Remove `Pointer<T>` | a pointer to a list item or an object's field could quietly change freed memory | done |
+| Physics the same at every frame rate | a jump went 5% higher at 144 FPS than at 30 FPS | done (equal parts of at most 1/240 s) |
+| No C++ errors from comparing things that can't be compared | `==`, `contains`... on function values passed Forge's checks, then failed in g++ | done |
+| Run every example in CI, not only build it | drawing, input and game code could break without a test failing | done (Linux, Wine, software drawing) |
+| Docs that match Forge | `<ECS>` described honestly, and wrong claims fixed | done |
+| Call a function value from anywhere: `fs[0]()` | only variables and fields could be called | done |
 
 ## 0.9.x: Engine extras
 

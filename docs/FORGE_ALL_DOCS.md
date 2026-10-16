@@ -1,4 +1,4 @@
-# Forge 0.9.0: the complete documentation
+# Forge 0.9.1: the complete documentation
 
 This one file holds everything written about the Forge programming language, so it can be uploaded in one go:
 
@@ -1789,7 +1789,7 @@ frg version
 g++ --version
 ```
 
-The first should print `Forge 0.9.0` and the second should print a GCC version. If `frg` isn't found, add Forge's `bin` folder to your PATH and restart the terminal.
+The first should print `Forge 0.9.1` and the second should print a GCC version. If `frg` isn't found, add Forge's `bin` folder to your PATH and restart the terminal.
 
 #### Building Forge from source
 

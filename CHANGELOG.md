@@ -2,7 +2,7 @@
 
 What changed in each version of Forge. Plans for later versions are in the [roadmap](ROADMAP.md).
 
-## Unreleased
+## 0.9.1 (2026-10-16)
 
 **Language**
 - **Comparing things that can't be compared is now a Forge error.** `==`, `!=`, `contains`, `indexOf` and `remove` on function values, `Weak` values, tasks, or structs and lists holding them used to pass Forge's checks and then fail with hundreds of lines of C++ errors. Now Forge says which field is the problem and suggests an `equals` method. The same goes for a generic type that compares its `T` (like `items.contains(x)`) when it's made with such a `T`.

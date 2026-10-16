@@ -642,7 +642,7 @@ void draw(){
 
 **UI** (`<ui>`). UI is drawn every frame like everything else: `if (ui.button(rect(380, 200, 200, 50), "Play")) { ... }` draws the button and is true on the frame it's clicked. `volume = ui.slider(rect(...), volume, 0, 1);` and `showFps = ui.checkbox(rect(...), "Show FPS", showFps);` give back the new value.
 
-**ECS** (`<ECS>`): entities made of components.
+**ECS** (`<ECS>`): entities made of components. Despite the name, it's the entities-and-components style (Unity's GameObjects), not a data-oriented ECS: an entity is an object with a list of component objects, each with its own `update`/`draw`, and `get("Health")` checks each component's class name. Fine for hundreds of objects; for thousands of identical things (bullets), teach a plain `list` of structs instead.
 
 ```cpp
 class Health : Component {
@@ -7316,7 +7316,13 @@ See examples/menu (the file `examples/menu/main.frg` in the Forge folder) for a 
 
 An alternative way to organize a game. Instead of one big class per kind of thing (a `Player` class, a `Goblin` class...), every game object is an **Entity**: a named container. You give it **Components**: small, reusable pieces of behavior like `Health`, `Mover` or `Sprite`. Mixing components makes different things: a goblin might be `Health` + `Mover` + `ChasePlayer`, and a crate just `Health`.
 
-(ECS stands for Entity Component System. Forge's version is the friendly "game objects with components" style, as in Unity, rather than a data-oriented engine.)
+**What `<ECS>` is, and isn't.** The name comes from "Entity Component System", but Forge's `<ECS>` is the **entities-and-components** style that Unity's GameObjects use, not a data-oriented ECS like Bevy's or Unity DOTS:
+
+- An entity is an ordinary object that keeps a list of component objects. Each component is a class with its own `update` and `draw`, so the code lives in the components, not in separate "systems".
+- `get("Health")`, `has(...)`, `remove(...)` and `ECS.withComponent(...)` find components by their class name, by checking each component (and, for `withComponent`, each entity) in turn.
+- Nothing is packed into arrays for speed. It's as fast as the same game written with classes and lists, which is plenty for the tens or hundreds of objects of a typical Forge game. For thousands of identical things (bullets, particles), a plain `list` of structs updated in one loop is faster and simpler.
+
+Use it when mixing behaviors is easier than writing one class per kind of thing. Plain classes and lists are just as good a way to make a game.
 
 ### Components
 
@@ -10024,7 +10030,7 @@ Health h = slime.get("Health") as Health;    // find a component by its class na
 // every frame:  ECS.update(dt);  ECS.draw();
 ```
 
-A `Component` has `start()` (runs once, before its first update), `update(dt)`, `draw()` and `entity()`. An `Entity` has `name`, `active`, `components`, `add(c)`, `get("Type")`, `has("Type")`, `remove("Type")` and `destroy()`. The world has `ECS.create(name)` `add(entity)` `update(dt)` `draw()` `find(name)` `all()` `withComponent("Type")` `clear()` `count()`.
+This is the entities-and-components style (like Unity's GameObjects), not a data-oriented ECS: entities are ordinary objects holding a list of components, and `get("Type")` checks each component's class name. A `Component` has `start()` (runs once, before its first update), `update(dt)`, `draw()` and `entity()`. An `Entity` has `name`, `active`, `components`, `add(c)`, `get("Type")`, `has("Type")`, `remove("Type")` and `destroy()`. The world has `ECS.create(name)` `add(entity)` `update(dt)` `draw()` `find(name)` `all()` `withComponent("Type")` `clear()` `count()`.
 
 #### Timer
 
@@ -10165,7 +10171,7 @@ try {
 
 Every runtime error can be caught, including from functions called inside the `try`. `throw "message";` makes your own error (it stops the game if nothing catches it), and `throw e;` inside a catch passes it on. `wait()` can't be used inside a `catch { }`, and a `try` doesn't catch errors from tasks it starts (put the `try` inside the task).
 
-If a file has several syntax mistakes, Forge reports all of them in one go.
+If a file has several syntax mistakes, Forge reports the first one in each function in one go; a second mistake in the same function shows up once the first is fixed. Type mistakes (like giving text where a number is needed) are reported once there are no syntax mistakes left.
 
 ### Coming next
 

@@ -655,7 +655,7 @@ Health h = slime.get("Health") as Health;    // find a component by its class na
 // every frame:  ECS.update(dt);  ECS.draw();
 ```
 
-A `Component` has `start()` (runs once, before its first update), `update(dt)`, `draw()` and `entity()`. An `Entity` has `name`, `active`, `components`, `add(c)`, `get("Type")`, `has("Type")`, `remove("Type")` and `destroy()`. The world has `ECS.create(name)` `add(entity)` `update(dt)` `draw()` `find(name)` `all()` `withComponent("Type")` `clear()` `count()`.
+This is the entities-and-components style (like Unity's GameObjects), not a data-oriented ECS: entities are ordinary objects holding a list of components, and `get("Type")` checks each component's class name. A `Component` has `start()` (runs once, before its first update), `update(dt)`, `draw()` and `entity()`. An `Entity` has `name`, `active`, `components`, `add(c)`, `get("Type")`, `has("Type")`, `remove("Type")` and `destroy()`. The world has `ECS.create(name)` `add(entity)` `update(dt)` `draw()` `find(name)` `all()` `withComponent("Type")` `clear()` `count()`.
 
 ### Timer
 
@@ -796,7 +796,7 @@ try {
 
 Every runtime error can be caught, including from functions called inside the `try`. `throw "message";` makes your own error (it stops the game if nothing catches it), and `throw e;` inside a catch passes it on. `wait()` can't be used inside a `catch { }`, and a `try` doesn't catch errors from tasks it starts (put the `try` inside the task).
 
-If a file has several syntax mistakes, Forge reports all of them in one go.
+If a file has several syntax mistakes, Forge reports the first one in each function in one go; a second mistake in the same function shows up once the first is fixed. Type mistakes (like giving text where a number is needed) are reported once there are no syntax mistakes left.
 
 ## Coming next
 

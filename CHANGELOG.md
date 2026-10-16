@@ -18,6 +18,10 @@ What changed in each version of Forge. Plans for later versions are in the [road
 **Tools**
 - **The examples are run on every push, not only built.** A new CI job runs each example for 180 frames with scripted keys and keeps a picture of the last frame. GitHub's Windows machines have no graphics card, so it runs the Windows games on Linux under Wine with software drawing (OpenGL, DirectX and Vulkan all work there). A crash, a runtime error or a hang fails the run.
 
+**Docs**
+- `<ECS>` is described honestly: the entities-and-components style (like Unity's GameObjects), not a data-oriented ECS, with when to use plain classes and lists instead. The name stays.
+- Fixed claims that didn't match Forge: the roadmap's "now (0.8.0)", "Forge reports all syntax mistakes in one go" (it's the first one in each function, and type mistakes come once the syntax is right), and `physics.step(dt)` once per frame (now true at any frame rate, see above).
+
 **Examples**
 - **`examples/voxel`**: a creative-mode block world. Hills, trees, 16 kinds of block from a sprite sheet of 32 x 32 textures, breaking and placing, a hotbar and a creative menu. Faces that touch other blocks are never built, each 16 x 16 x 16 section is one mesh, sections behind the camera aren't drawn, and changing a block rebuilds only its section (about 1.5 ms).
 

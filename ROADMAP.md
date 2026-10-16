@@ -1,6 +1,6 @@
 # Roadmap
 
-What's planned for Forge between now (0.8.0) and 1.0.0. The order and the version numbers can change. What's already done is in the [changelog](CHANGELOG.md).
+What's planned for Forge between now (0.9.0) and 1.0.0. The order and the version numbers can change. What's already done is in the [changelog](CHANGELOG.md).
 
 Sizes are rough: **S** is small, **M** medium, **L** large.
 

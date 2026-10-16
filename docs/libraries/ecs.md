@@ -6,7 +6,13 @@
 
 An alternative way to organize a game. Instead of one big class per kind of thing (a `Player` class, a `Goblin` class...), every game object is an **Entity**: a named container. You give it **Components**: small, reusable pieces of behavior like `Health`, `Mover` or `Sprite`. Mixing components makes different things: a goblin might be `Health` + `Mover` + `ChasePlayer`, and a crate just `Health`.
 
-(ECS stands for Entity Component System. Forge's version is the friendly "game objects with components" style, as in Unity, rather than a data-oriented engine.)
+**What `<ECS>` is, and isn't.** The name comes from "Entity Component System", but Forge's `<ECS>` is the **entities-and-components** style that Unity's GameObjects use, not a data-oriented ECS like Bevy's or Unity DOTS:
+
+- An entity is an ordinary object that keeps a list of component objects. Each component is a class with its own `update` and `draw`, so the code lives in the components, not in separate "systems".
+- `get("Health")`, `has(...)`, `remove(...)` and `ECS.withComponent(...)` find components by their class name, by checking each component (and, for `withComponent`, each entity) in turn.
+- Nothing is packed into arrays for speed. It's as fast as the same game written with classes and lists, which is plenty for the tens or hundreds of objects of a typical Forge game. For thousands of identical things (bullets, particles), a plain `list` of structs updated in one loop is faster and simpler.
+
+Use it when mixing behaviors is easier than writing one class per kind of thing. Plain classes and lists are just as good a way to make a game.
 
 ## Components
 

@@ -616,7 +616,7 @@ void draw(){
 
 **UI** (`<ui>`). UI is drawn every frame like everything else: `if (ui.button(rect(380, 200, 200, 50), "Play")) { ... }` draws the button and is true on the frame it's clicked. `volume = ui.slider(rect(...), volume, 0, 1);` and `showFps = ui.checkbox(rect(...), "Show FPS", showFps);` give back the new value.
 
-**ECS** (`<ECS>`): entities made of components.
+**ECS** (`<ECS>`): entities made of components. Despite the name, it's the entities-and-components style (Unity's GameObjects), not a data-oriented ECS: an entity is an object with a list of component objects, each with its own `update`/`draw`, and `get("Health")` checks each component's class name. Fine for hundreds of objects; for thousands of identical things (bullets), teach a plain `list` of structs instead.
 
 ```cpp
 class Health : Component {

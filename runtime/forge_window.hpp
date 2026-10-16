@@ -42,7 +42,7 @@ inline ::Rectangle rl(core::rect_ r) { return ::Rectangle{r.x_, r.y_, r.width_, 
 // ---------------------------------------------------------------- automated testing
 // FRG_AUTOTEST_FRAMES=N        stop after N frames (taking a screenshot first, see below)
 // FRG_AUTOTEST_SHOT=name.png   the screenshot's file name (saved in the game's folder)
-// FRG_AUTOTEST_INPUT=RIGHT:10-60,SPACE:30-31   hold keys during those frames
+// FRG_AUTOTEST_INPUT=RIGHT:10-60,SPACE:30-31   hold keys during those frames (and MOUSE_LEFT, MOUSE_RIGHT, MOUSE_MIDDLE)
 namespace autotest {
 struct Hold {
     int key;
@@ -266,11 +266,12 @@ inline int rlButton(MouseButton_ b) {
 }
 
 // Keys held down by FRG_AUTOTEST_INPUT: returns -1 if the key isn't scripted, otherwise 0/1 for `frameOffset` frames ago.
-inline int scripted(Key_ k, long frameOffset) {
+// Scripted mouse buttons are stored after the keys, as 1000 + the button.
+inline int scripted(int k, long frameOffset) {
     long f = window::st().frame - frameOffset;
     int result = -1;
     for (auto& h : autotest::st().holds) {
-        if (h.key != (int)k) continue;
+        if (h.key != k) continue;
         if (result < 0) result = 0;
         if (f >= h.from && f <= h.to) result = 1;
     }
@@ -278,20 +279,29 @@ inline int scripted(Key_ k, long frameOffset) {
 }
 
 inline bool keyDown_(Key_ k) {
-    int s = scripted(k, 0);
+    int s = scripted((int)k, 0);
     return s >= 0 ? s == 1 : IsKeyDown(rlKey(k));
 }
 inline bool keyPressed_(Key_ k) {
-    int s = scripted(k, 0);
-    return s >= 0 ? (s == 1 && scripted(k, 1) == 0) : IsKeyPressed(rlKey(k));
+    int s = scripted((int)k, 0);
+    return s >= 0 ? (s == 1 && scripted((int)k, 1) == 0) : IsKeyPressed(rlKey(k));
 }
 inline bool keyReleased_(Key_ k) {
-    int s = scripted(k, 0);
-    return s >= 0 ? (s == 0 && scripted(k, 1) == 1) : IsKeyReleased(rlKey(k));
+    int s = scripted((int)k, 0);
+    return s >= 0 ? (s == 0 && scripted((int)k, 1) == 1) : IsKeyReleased(rlKey(k));
 }
-inline bool mouseDown_(MouseButton_ b) { return IsMouseButtonDown(rlButton(b)); }
-inline bool mousePressed_(MouseButton_ b) { return IsMouseButtonPressed(rlButton(b)); }
-inline bool mouseReleased_(MouseButton_ b) { return IsMouseButtonReleased(rlButton(b)); }
+inline bool mouseDown_(MouseButton_ b) {
+    int s = scripted(1000 + (int)b, 0);
+    return s >= 0 ? s == 1 : IsMouseButtonDown(rlButton(b));
+}
+inline bool mousePressed_(MouseButton_ b) {
+    int s = scripted(1000 + (int)b, 0);
+    return s >= 0 ? (s == 1 && scripted(1000 + (int)b, 1) == 0) : IsMouseButtonPressed(rlButton(b));
+}
+inline bool mouseReleased_(MouseButton_ b) {
+    int s = scripted(1000 + (int)b, 0);
+    return s >= 0 ? (s == 0 && scripted(1000 + (int)b, 1) == 1) : IsMouseButtonReleased(rlButton(b));
+}
 inline core::vec2_ mousePosition_() {
     ::Vector2 p = GetMousePosition();
     return {p.x, p.y};
@@ -299,6 +309,20 @@ inline core::vec2_ mousePosition_() {
 inline float mouseX_() { return GetMousePosition().x; }
 inline float mouseY_() { return GetMousePosition().y; }
 inline float mouseWheel_() { return GetMouseWheelMove(); }
+
+// How far the mouse moved since the last frame, in pixels: for looking around in 3D.
+inline core::vec2_ mouseDelta_() {
+    ::Vector2 d = GetMouseDelta();
+    return {d.x, d.y};
+}
+// A locked mouse is hidden and can't leave the window, and keeps giving mouseDelta() however far it's moved
+// (like in first-person games). Unlocked, it's the normal pointer again.
+inline void lockMouse_(bool locked) {
+    window::ensureFrame("input.lockMouse()");
+    if (locked && !IsCursorHidden()) DisableCursor();
+    if (!locked && IsCursorHidden()) EnableCursor();
+}
+inline bool isMouseLocked_() { return IsCursorHidden(); }
 
 // ---- gamepads (controllers). gamepad is 0 for the first one plugged in, 1 for the second...
 
@@ -367,6 +391,10 @@ inline void window::parseAutotestInput(const char* spec) {
             for (int i = 0; input::keyNames()[i]; i++)
                 if (name == input::keyNames()[i])
                     autotest::st().holds.push_back({i, std::atol(item.c_str() + colon + 1), std::atol(item.c_str() + dash + 1)});
+            const char* buttons[] = {"MOUSE_LEFT", "MOUSE_RIGHT", "MOUSE_MIDDLE"};
+            for (int b = 0; b < 3; b++)
+                if (name == buttons[b])
+                    autotest::st().holds.push_back({1000 + b, std::atol(item.c_str() + colon + 1), std::atol(item.c_str() + dash + 1)});
         }
         start = end + 1;
     }

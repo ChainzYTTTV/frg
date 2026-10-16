@@ -2,6 +2,16 @@
 
 What changed in each version of Forge. Plans for later versions are in the [roadmap](ROADMAP.md).
 
+## Unreleased
+
+**Engine**
+- **Meshes.** `graphics3d.makeMesh(positions, uvs, shades, texture)` sends your own triangles to the graphics card once, so thousands of them draw in one call. Mostly see-through pixels of the texture are cut out, so leaves and glass can have holes.
+- **Looking around with the mouse.** `input.mouseDelta()` is how far the mouse moved this frame, and `input.lockMouse(true)` hides the pointer and keeps it in the window (`isMouseLocked()` to check).
+- `FRG_AUTOTEST_INPUT` can press mouse buttons too: `MOUSE_LEFT`, `MOUSE_RIGHT`, `MOUSE_MIDDLE`.
+
+**Examples**
+- **`examples/voxel`**: a creative-mode block world. Hills, trees, 16 kinds of block from a sprite sheet of 32 x 32 textures, breaking and placing, a hotbar and a creative menu. Faces that touch other blocks are never built, each 16 x 16 x 16 section is one mesh, sections behind the camera aren't drawn, and changing a block rebuilds only its section (about 1.5 ms).
+
 ## 0.9.0 (2026-10-16)
 
 **Tools**

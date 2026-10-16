@@ -535,12 +535,12 @@ Library functions are reached through the library name (`window.open(...)`). Lib
 | `<math>` | `math.sqrt pow sin cos tan asin acos atan atan2 exp log floor ceil round abs sign min max clamp lerp`, and `math.PI TAU E`. Angles are in radians. |
 | `<random>` | `random.range(1, 6)` (whole numbers, both ends included), `random.range(0.5, 2.0)` (decimals), `random.value()` (0 to 1), `random.chance(0.25)`, `random.seed(n)`, `random.color()` (a random solid color) |
 | `<window>` | `window.open(width, height, "title")`, `shouldClose()`, `run()`, `close()`, `deltaTime()` (seconds since the last frame), `time()`, `width()`, `height()`, `fps()`, `setFPS(n)`, `setTitle(t)`, `setBackground(color)`, `toggleFullscreen()`, `screenshot("file.png")` |
-| `<input>` | `input.keyDown(Key.SPACE)` (held), `input.keyPressed(...)` (only the frame it was pressed), `input.keyReleased(...)`, `input.mouseDown(MouseButton.LEFT)`, `mousePressed`, `mouseReleased`, `mousePosition()` (a vec2), `mouseX()`, `mouseY()`, `mouseWheel()`. Controllers (gamepads): `input.gamepadDown(GamepadButton.A)`, `gamepadPressed`, `gamepadReleased` (Xbox-style names: `A B X Y LEFT_BUMPER RIGHT_BUMPER LEFT_TRIGGER RIGHT_TRIGGER BACK START LEFT_STICK RIGHT_STICK`, and the D-pad `UP DOWN LEFT RIGHT`), `input.leftStick()` / `rightStick()` (a vec2 from -1 to 1; y is down, like the screen; small wobbles read as 0), `leftTrigger()` / `rightTrigger()` (0 to 1), `gamepadConnected()`, `gamepadName()`. Each takes an optional controller number: 0 (the default) is the first one plugged in. Without a controller they all read "not pressed", so a game can check both: `if (input.keyDown(Key.SPACE) or input.gamepadDown(GamepadButton.A))` |
+| `<input>` | `input.keyDown(Key.SPACE)` (held), `input.keyPressed(...)` (only the frame it was pressed), `input.keyReleased(...)`, `input.mouseDown(MouseButton.LEFT)`, `mousePressed`, `mouseReleased`, `mousePosition()` (a vec2), `mouseX()`, `mouseY()`, `mouseWheel()`, `mouseDelta()` (how far the mouse moved this frame), `lockMouse(true)` (hides the pointer and keeps it in the window, so a 3D game can turn the camera forever; `false` gives it back), `isMouseLocked()`. Controllers (gamepads): `input.gamepadDown(GamepadButton.A)`, `gamepadPressed`, `gamepadReleased` (Xbox-style names: `A B X Y LEFT_BUMPER RIGHT_BUMPER LEFT_TRIGGER RIGHT_TRIGGER BACK START LEFT_STICK RIGHT_STICK`, and the D-pad `UP DOWN LEFT RIGHT`), `input.leftStick()` / `rightStick()` (a vec2 from -1 to 1; y is down, like the screen; small wobbles read as 0), `leftTrigger()` / `rightTrigger()` (0 to 1), `gamepadConnected()`, `gamepadName()`. Each takes an optional controller number: 0 (the default) is the first one plugged in. Without a controller they all read "not pressed", so a game can check both: `if (input.keyDown(Key.SPACE) or input.gamepadDown(GamepadButton.A))` |
 | `<graphics2d>` | `graphics2d.drawRect(x, y, w, h, color)` or `drawRect(rect, color)`, `drawRectOutline(x, y, w, h, color, thickness)`, `drawCircle(x, y, radius, color)` or `drawCircle(vec2, radius, color)`, `drawCircleOutline(x, y, radius, color)`, `drawLine(from, to, color, thickness)`, `drawTriangle(a, b, c, color)`, `drawText(text, x, y, size, color)`, `textWidth(text, size)`, `drawFPS(x, y)`, `clear(color)`, and a 2D camera (below) |
 | `<physics>` | the `Body` class, plus `physics.add(body)`, `remove(body)`, `step(dt)`, `setGravity(vec2)`, `gravity()`, `clear()`, `count()` |
 | `<assets>` | `assets.loadTexture("x.png")` gives a `Texture`, `assets.loadFont("x.ttf")` gives a `Font` (an optional second number is the size the letters are prepared at: use about the biggest size you draw it at, 64 to start with), `assets.exists(path)` |
 | `<audio>` | `audio.loadSound("x.wav")` gives a `Sound`, `audio.loadMusic("x.ogg")` gives a `Music`, `audio.setVolume(v)` |
-| `<graphics3d>` | the `Camera` struct and `Model` class, `graphics3d.setCamera(cam)`, `drawCube(pos, size, color)`, `drawCubeOutline`, `drawSphere(center, radius, color)`, `drawSphereOutline`, `drawCylinder(pos, radius, height, color)`, `drawPlane(center, vec2 size, color)`, `drawGrid(slices, spacing)`, `drawLine(from, to, color)`, `toScreen(vec3)`, `loadModel("x.glb")` |
+| `<graphics3d>` | the `Camera` struct and `Model` class, `graphics3d.setCamera(cam)`, `drawCube(pos, size, color)`, `drawCubeOutline`, `drawSphere(center, radius, color)`, `drawSphereOutline`, `drawCylinder(pos, radius, height, color)`, `drawPlane(center, vec2 size, color)`, `drawGrid(slices, spacing)`, `drawLine(from, to, color)`, `toScreen(vec3)`, `loadModel("x.glb")`, and `makeMesh(positions, uvs, shades, texture)`: a `Mesh` of your own triangles, sent to the graphics card once and drawn in one call with `mesh.draw(position)` (corners go counter-clockwise on the front; pixels that are mostly see-through are cut out). A block world builds one per chunk: see `examples/voxel` |
 | `<time>` | `time.now()`, `time.sleep(s)`, `time.clock()`, `time.date()`, `year() month() day() hour() minute() second()`, the `Timer` class |
 | `<tilemap>` | levels drawn as text, one character per tile: `TileMap level = TileMap("""` ... `""", 32);` (or `tilemap.load("level1.txt", 32)`). The game decides what characters mean. `level.addBodies("#")` makes static physics bodies, merging neighbouring tiles into big boxes (`addBodies("=", true)` makes one-way platforms); `level.find("C")` gives the top-left corner (pixels) of every `C` tile; `get(column, row)` (`" "` outside the map), `set(column, row, "#")`, `columns()`, `rows()`, `width()`, `height()` (pixels), `tileRect(column, row)`, `columnAt(x)`, `rowAt(y)`; `draw("#", color)` fills tiles with a color, `drawTiles(tileset, 16, "#=")` draws them from a tileset image (each character is the next 16x16 picture). Don't name the variable `map` (a type name) |
 | `<particles>` | dust, sparks, smoke, explosions: `Emitter sparks = Emitter(vec2(x, y));`, then `sparks.burst(30);` (all at once) or `sparks.rate = 50;` (a steady stream per second), and each frame `sparks.update(dt);` and `sparks.draw();`. Fields to set: `position`, `lifetime` (seconds), `speed`, `direction` (degrees: 0 right, -90 up), `spread` (degrees around it: 360 every way), `startColor`/`endColor` (an end color with alpha 0 fades them out), `startSize`/`endSize`, `gravity` (a vec2). Also `count()` and `clear()`. It draws in 2D, through the 2D camera |
@@ -5650,7 +5650,7 @@ Games read three environment variables, so they can be tested without anyone at 
 |---|---|
 | `FRG_AUTOTEST_FRAMES=90` | stop after 90 frames |
 | `FRG_AUTOTEST_SHOT=shot.png` | take this screenshot just before stopping |
-| `FRG_AUTOTEST_INPUT=RIGHT:10-60,SPACE:30-31` | pretend these keys are held during those frames |
+| `FRG_AUTOTEST_INPUT=RIGHT:10-60,SPACE:30-31` | pretend these keys are held during those frames (mouse buttons are `MOUSE_LEFT`, `MOUSE_RIGHT` and `MOUSE_MIDDLE`) |
 
 <!-- docs/libraries/input.md -->
 
@@ -5707,6 +5707,9 @@ Escape also closes the window by default.
 | `input.mousePressed(MouseButton b)` | `bool` | the button was just pressed (one frame) |
 | `input.mouseReleased(MouseButton b)` | `bool` | the button was just let go (one frame) |
 | `input.mouseWheel()` | `float` | how far the wheel moved this frame (positive = away from you) |
+| `input.mouseDelta()` | `vec2` | how far the mouse moved since the last frame, in pixels (right and down are positive) |
+| `input.lockMouse(bool locked)` | | `true` hides the pointer and keeps it in the window, so it can move forever (for looking around in 3D); `false` gives it back |
+| `input.isMouseLocked()` | `bool` | whether it's locked |
 
 Buttons: `MouseButton.LEFT`, `MouseButton.RIGHT`, `MouseButton.MIDDLE`.
 
@@ -5718,6 +5721,28 @@ if (input.mousePressed(MouseButton.LEFT)) {
     }
 }
 ```
+
+#### Looking around with the mouse
+
+First-person 3D games lock the mouse and turn the camera by how far it moved. `mouseDelta()` keeps working when the pointer would have hit the edge of the screen:
+
+```cpp
+float yaw = 0;     // left and right, in radians
+float pitch = 0;   // up and down
+
+void update(float dt){
+    if (input.isMouseLocked()) {
+        vec2 d = input.mouseDelta();
+        yaw -= d.x * 0.0025;
+        pitch = math.clamp(pitch - d.y * 0.0025, -1.5, 1.5);
+    }
+    if (input.keyPressed(Key.TAB)) {
+        input.lockMouse(!input.isMouseLocked());   // let go of the mouse, to click on a menu
+    }
+}
+```
+
+The direction the player looks is then `vec3(math.cos(pitch) * math.sin(yaw), math.sin(pitch), math.cos(pitch) * math.cos(yaw))`. See examples/voxel (the file `examples/voxel/player.frg` in the Forge folder).
 
 ### Controllers (gamepads)
 
@@ -5939,7 +5964,7 @@ void drawHealthBar(float x, float y, int hp, int maxHp){
 #include <graphics3d>
 ```
 
-Draws 3D shapes and models through a camera. See examples/world3d (the file `examples/world3d/main.frg` in the Forge folder) for a working scene.
+Draws 3D shapes and models through a camera. See examples/world3d (the file `examples/world3d/main.frg` in the Forge folder) for a working scene, and examples/voxel (the file `examples/voxel/main.frg` in the Forge folder) for a block world built from meshes.
 
 ### 3D coordinates
 
@@ -6021,6 +6046,50 @@ Model ship = graphics3d.loadModel("ship.glb");
 | `drawRotated(vec3 position, vec3 axis, float degrees, float scale = 1, color tint = color.WHITE)` | draws it turned `degrees` around `axis` (for example `vec3(0, 1, 0)` spins around the up axis) |
 
 Like textures (see “`<assets>`: Images, Animations and Fonts”), the file is found when it's loaded (a missing file is reported straight away), but it's only sent to the graphics card when it's first drawn, so loading as a global variable works. Models that include their own textures and colors (`.glb`, `.gltf`) are drawn with them; `tint` multiplies them.
+
+### Meshes: shapes you build yourself
+
+A `Mesh` is a set of triangles your game makes, sent to the graphics card once. Drawing it is one quick call however many triangles it has, so a whole chunk of a block world (thousands of faces) costs about the same to draw as one cube. Make the triangles once (or again when something changes), not every frame.
+
+| Function | Gives back | What it does |
+|---|---|---|
+| `graphics3d.makeMesh(list<float> positions, list<float> uvs, list<float> shades, Texture texture)` | `Mesh` | makes a mesh out of triangles, painted with a texture (see “`<assets>`: Images, Animations and Fonts”) |
+
+- `positions`: `x, y, z` for each corner, 3 corners for each triangle (so 9 numbers per triangle). The front of a triangle is the side where its corners go **counter-clockwise**; the back isn't drawn.
+- `uvs`: `u, v` for each corner: where in the texture it is, from `0` to `1` (`v = 0` is the top of the image). A sprite sheet (see “`<assets>`: Images, Animations and Fonts”) works: give each face the corners of its own tile.
+- `shades`: one brightness per corner, from `0` (black) to `1` (the texture's own colors), or `[]` for 1 everywhere. Darker sides make blocks look solid without lighting.
+- Pixels of the texture that are mostly see-through (alpha under half) are cut out and not drawn at all, so leaves, glass and fences can have holes, in any order.
+
+| `Mesh` method | What it does |
+|---|---|
+| `draw(vec3 position, color tint = color.WHITE)` | draws it moved by `position` (`vec3.ZERO` to draw it where its corners say) |
+| `vertexCount()` | how many corners it has (3 per triangle) |
+
+```cpp
+Texture tiles = assets.loadTexture("tiles.png");
+Mesh? floor = null;   // made once the window is open
+
+int main(){
+    window.open(960, 540, "A floor");
+    // one square, as two triangles, seen from above
+    list<float> positions = [0, 0, 0,  0, 0, 4,  4, 0, 4,    0, 0, 0,  4, 0, 4,  4, 0, 0];
+    list<float> uvs =       [0, 0,     0, 1,     1, 1,       0, 0,     1, 1,     1, 0];
+    floor = graphics3d.makeMesh(positions, uvs, [], tiles);
+    window.run();
+    return 0;
+}
+
+void update(float dt){
+}
+
+void draw(){
+    if (floor != null) {
+        floor.draw(vec3.ZERO);
+    }
+}
+```
+
+Meshes are made on the graphics card, so the window has to be open first. To change one, make a new mesh and put it in the old one's place; the old one is freed when nothing uses it.
 
 ### 3D points on the 2D screen
 
@@ -9877,7 +9946,7 @@ Each file includes the libraries it uses. Functions are reached through the libr
 | `<math>` | `math.sqrt` `pow` `sin` `cos` `tan` `asin` `acos` `atan` `atan2` `exp` `log` `floor` `ceil` `round` `abs` `sign` `min` `max` `clamp` `lerp`, plus `math.PI` `TAU` `E` |
 | `<random>` | `random.range(1, 6)` (whole numbers, both ends included), `random.range(0.5, 2.0)`, `random.value()` (0 to 1), `random.chance(0.25)`, `random.seed(n)`, `random.color()` |
 | `<window>` | `window.open(width, height, "title")` `shouldClose()` `run()` `close()` `deltaTime()` `time()` `width()` `height()` `fps()` `setFPS(n)` `setTitle(t)` `setBackground(color)` `toggleFullscreen()` `screenshot("file.png")` |
-| `<input>` | `input.keyDown(Key.SPACE)` (held), `keyPressed` (just pressed this frame), `keyReleased`, `mouseDown(MouseButton.LEFT)` `mousePressed` `mouseReleased` `mousePosition()` `mouseX()` `mouseY()` `mouseWheel()`. Keys: `Key.A`…`Key.Z`, `Key.NUM0`…`Key.NUM9`, `SPACE` `ENTER` `ESCAPE` `BACKSPACE` `TAB` `LEFT` `RIGHT` `UP` `DOWN` `LEFT_SHIFT` `RIGHT_SHIFT` `LEFT_CONTROL` `RIGHT_CONTROL` `LEFT_ALT` `RIGHT_ALT` `F1`…`F12`. Controllers: `input.gamepadDown(GamepadButton.A)` (also `gamepadPressed`, `gamepadReleased`; buttons `A` `B` `X` `Y` `LEFT_BUMPER` `RIGHT_BUMPER` `LEFT_TRIGGER` `RIGHT_TRIGGER` `BACK` `START` `LEFT_STICK` `RIGHT_STICK` `UP` `DOWN` `LEFT` `RIGHT`), `leftStick()` `rightStick()` (vec2, -1 to 1), `leftTrigger()` `rightTrigger()` (0 to 1), `gamepadConnected()`, `gamepadName()`. Each takes an optional controller number (0 = the first) |
+| `<input>` | `input.keyDown(Key.SPACE)` (held), `keyPressed` (just pressed this frame), `keyReleased`, `mouseDown(MouseButton.LEFT)` `mousePressed` `mouseReleased` `mousePosition()` `mouseX()` `mouseY()` `mouseWheel()` `mouseDelta()` (how far it moved this frame), `lockMouse(true)` (hide it and keep it in the window, for looking around in 3D) `isMouseLocked()`. Keys: `Key.A`…`Key.Z`, `Key.NUM0`…`Key.NUM9`, `SPACE` `ENTER` `ESCAPE` `BACKSPACE` `TAB` `LEFT` `RIGHT` `UP` `DOWN` `LEFT_SHIFT` `RIGHT_SHIFT` `LEFT_CONTROL` `RIGHT_CONTROL` `LEFT_ALT` `RIGHT_ALT` `F1`…`F12`. Controllers: `input.gamepadDown(GamepadButton.A)` (also `gamepadPressed`, `gamepadReleased`; buttons `A` `B` `X` `Y` `LEFT_BUMPER` `RIGHT_BUMPER` `LEFT_TRIGGER` `RIGHT_TRIGGER` `BACK` `START` `LEFT_STICK` `RIGHT_STICK` `UP` `DOWN` `LEFT` `RIGHT`), `leftStick()` `rightStick()` (vec2, -1 to 1), `leftTrigger()` `rightTrigger()` (0 to 1), `gamepadConnected()`, `gamepadName()`. Each takes an optional controller number (0 = the first) |
 | `<graphics2d>` | `graphics2d.drawRect(x, y, w, h, color)` or `drawRect(rect, color)`, `drawRectOutline(..., color, thickness)`, `drawCircle(x, y, radius, color)` or `drawCircle(vec2, radius, color)`, `drawCircleOutline`, `drawLine(from, to, color, thickness)`, `drawTriangle(a, b, c, color)`, `drawText(text, x, y, size, color)`, `textWidth(text, size)`, `drawFPS(x, y)`, `clear(color)`, and a 2D camera: `setCamera(Camera2D(target, offset, zoom, rotation))`, `resetCamera()`, `screenToWorld(p)`, `worldToScreen(p)` |
 | `<physics>` | the `Body` class and `physics.add(body)` `remove(body)` `step(dt)` `setGravity(vec2)` `gravity()` `clear()` `count()` (see below) |
 | `<assets>` | images and fonts: `assets.loadTexture("player.png")`, `assets.loadFont("font.ttf")`, `assets.exists(path)` (see below) |
@@ -9966,7 +10035,7 @@ void draw(){
 }
 ```
 
-Shapes: `drawCube` `drawCubeOutline` `drawSphere(center, radius, color)` `drawSphereOutline` `drawCylinder(position, radius, height, color)` `drawPlane(center, vec2 size, color)` `drawGrid(slices, spacing)` `drawLine(from, to, color)`. `Camera` has `position`, `target`, `up`, `fov` and `orbit(degrees)`. `Model` has `draw(position, scale, tint)` and `drawRotated(position, axis, degrees, scale, tint)`. In 3D, **y goes up**.
+Shapes: `drawCube` `drawCubeOutline` `drawSphere(center, radius, color)` `drawSphereOutline` `drawCylinder(position, radius, height, color)` `drawPlane(center, vec2 size, color)` `drawGrid(slices, spacing)` `drawLine(from, to, color)`. `Camera` has `position`, `target`, `up`, `fov` and `orbit(degrees)`. `Model` has `draw(position, scale, tint)` and `drawRotated(position, axis, degrees, scale, tint)`. `graphics3d.makeMesh(positions, uvs, shades, texture)` builds a `Mesh` of your own triangles (drawn in one call with `mesh.draw(position)`; see-through pixels are cut out); see Meshes (see “`<graphics3d>`: 3D Drawing” › “Meshes: shapes you build yourself”). In 3D, **y goes up**.
 
 #### Scenes
 
@@ -10099,7 +10168,7 @@ void draw(){
 
 The screen is cleared to the background color before each frame (`window.setBackground(color)` changes it). The window closes when you press Escape or click the X.
 
-See `examples/platformer` for a complete game. The other examples are `shapes` (2D drawing), `sprites` (images and sound), `menu` (scenes and UI) and `world3d` (3D).
+See `examples/platformer` for a complete game. The other examples are `shapes` (2D drawing), `sprites` (images and sound), `menu` (scenes and UI), `world3d` (3D) and `voxel` (a creative-mode block world, built from meshes).
 
 An `icon.png` in the game's folder becomes the icon of the `.exe` and of the window.
 

@@ -31,6 +31,8 @@ cmake --build build
 pwsh -File tests\run_tests.ps1
 ```
 
+On GitHub, every push also builds every example and then **runs** each one for 180 frames with scripted keys (`tests/run_games.sh`, on Linux under Wine with software drawing, because GitHub's Windows machines have no graphics card). A game that crashes, stops with a runtime error or hangs fails the run, and the last frame of each game is kept as a picture in the run's "screenshots" download.
+
 `bin\frg.exe` is the compiler, with the `runtime` folder next to it. The [README](README.md#how-it-works) and [How Forge works](docs/how-forge-works.md) explain how the parts fit together.
 
 ### The rules for changes

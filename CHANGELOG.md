@@ -15,6 +15,9 @@ What changed in each version of Forge. Plans for later versions are in the [road
 - **Looking around with the mouse.** `input.mouseDelta()` is how far the mouse moved this frame, and `input.lockMouse(true)` hides the pointer and keeps it in the window (`isMouseLocked()` to check).
 - `FRG_AUTOTEST_INPUT` can press mouse buttons too: `MOUSE_LEFT`, `MOUSE_RIGHT`, `MOUSE_MIDDLE`.
 
+**Tools**
+- **The examples are run on every push, not only built.** A new CI job runs each example for 180 frames with scripted keys and keeps a picture of the last frame. GitHub's Windows machines have no graphics card, so it runs the Windows games on Linux under Wine with software drawing (OpenGL, DirectX and Vulkan all work there). A crash, a runtime error or a hang fails the run.
+
 **Examples**
 - **`examples/voxel`**: a creative-mode block world. Hills, trees, 16 kinds of block from a sprite sheet of 32 x 32 textures, breaking and placing, a hotbar and a creative menu. Faces that touch other blocks are never built, each 16 x 16 x 16 section is one mesh, sections behind the camera aren't drawn, and changing a block rebuilds only its section (about 1.5 ms).
 

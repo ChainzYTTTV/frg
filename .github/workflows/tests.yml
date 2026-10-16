@@ -1,4 +1,5 @@
 # Builds frg.exe on Windows, runs every test in tests/cases, and builds every example game.
+# Then a Linux job runs every example for a few frames (see tests/run_games.sh).
 name: tests
 
 on:
@@ -42,3 +43,49 @@ jobs:
             if ($LASTEXITCODE -ne 0) { $failed += $dir.Name }
           }
           if ($failed.Count) { Write-Host "Examples that didn't build: $($failed -join ', ')"; exit 1 }
+
+      # The built games go to the next job, without Forge's in-between C++ files.
+      - name: Keep the built examples
+        uses: actions/upload-artifact@v4
+        with:
+          name: built-examples
+          path: |
+            examples/
+            !examples/*/build/forge/
+          retention-days: 7
+
+  # Runs every example for 180 frames with scripted keys and saves the last frame as a picture.
+  # GitHub's Windows machines have no graphics card, so this runs the Windows .exe files on Linux under Wine,
+  # with a virtual screen and software drawing (Mesa's llvmpipe for OpenGL and DirectX, lavapipe for Vulkan).
+  # It catches games that crash, stop with a runtime error or hang; the pictures are kept as "screenshots".
+  run-games:
+    needs: test
+    runs-on: ubuntu-24.04
+    env:
+      WINEDLLOVERRIDES: "mscoree,mshtml="   # don't ask to install Wine's .NET and browser parts
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/download-artifact@v4
+        with:
+          name: built-examples
+          path: games
+
+      - name: Install Wine, a virtual screen and software drawing
+        run: |
+          sudo apt-get update -q
+          sudo apt-get install -y -q --no-install-recommends wine wine64 xvfb mesa-vulkan-drivers libgl1-mesa-dri bc
+          wine --version
+          WINEDEBUG=-all wineboot --init
+          wineserver -w   # let it finish; otherwise games would reuse a Wine started without a screen
+
+      - name: Run every example for 180 frames
+        run: xvfb-run -a -s "-screen 0 1280x800x24" tests/run_games.sh games screenshots 180
+
+      - name: Keep the screenshots
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: screenshots
+          path: screenshots/
+          retention-days: 14

@@ -8,6 +8,13 @@ struct Error {
     string where;
 }
 
+struct Description {
+    string name;
+    string parent;
+    list<string> fields;
+    map<string, string> values;
+}
+
 struct vec2 {
     float x;
     float y;

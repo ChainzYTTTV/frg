@@ -691,6 +691,9 @@ void Checker::resolveTypeDeclParts(TypeDecl* d) {
         f->module = d->module;
         f->isField = true;
         f->type = resolveType(f->typeRef, false);
+        if (f->name == "describe" && !d->builtin)
+            reportError(f->loc, "'describe' is built into every struct and class, so a field can't be called that",
+                        "x.describe already shows an object's fields - pick another name, like 'description'");
         if (d->fieldMap.count(f->name)) reportError(f->loc, "'" + f->name + "' is in " + d->name + " twice");
         d->fieldMap[f->name] = f.get();
     }
@@ -698,6 +701,9 @@ void Checker::resolveTypeDeclParts(TypeDecl* d) {
         m->owner = d;
         m->module = d->module;
         resolveFunc(m.get());
+        if (m->name == "describe" && !d->builtin)
+            reportError(m->loc, "'describe' is built into every struct and class, so a method can't be called that",
+                        "x.describe already shows an object's fields - pick another name, like 'info'");
         if (d->methodMap.count(m->name) || d->fieldMap.count(m->name))
             reportError(m->loc, "'" + m->name + "' is in " + d->name + " twice",
                         "fields and methods each need their own name");
@@ -1157,7 +1163,8 @@ Type* Checker::finishRef(Expr* e, bool allowNonValue) {
         case RK::TypeStatic: return e->type = e->res.var->type ? e->res.var->type : tError();
         case RK::EnumValue: return e->type = tNamed(e->res.tdecl);
         case RK::StdConst: e->litFloat = true; return e->type = tFloat(32);
-        case RK::PointerValue: return e->type;
+        case RK::PointerValue:
+        case RK::Describe: return e->type;
         case RK::None: return e->type = tError();
         case RK::BuiltinMethod:
             if (n == "length") return e->type = tInt(32, true);
@@ -1323,6 +1330,14 @@ void Checker::valueMember(Expr* e, Expr* o) {
         reportError(e->loc, tp->name + " could be any type, so Forge can't know it has '" + n + "'",
                     "inside " + tp->decl->name + ", a " + tp->name + " can only be stored, passed on, given back, compared with == and printed");
         return;
+    }
+    if (n == "describe") {
+        Type* d = derefType(t);
+        if ((d->kind == TK::Struct || d->kind == TK::Class) && d->decl && !d->decl->builtin) {
+            r.kind = RK::Describe;
+            e->type = P.core && P.core->types.count("Description") ? tNamed(P.core->types["Description"]) : tError();
+            return;
+        }
     }
     if (t->kind == TK::Pointer && n == "value") {
         r.kind = RK::PointerValue;

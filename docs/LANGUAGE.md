@@ -311,19 +311,19 @@ class Entity {
         this.name = name;
     }
 
-    string describe() {
+    string info() {
         return "an entity";
     }
 }
 
 class Goblin : Entity {          // a Goblin is a kind of Entity
-    string describe() {
-        return "a goblin, not just " + super.describe();
+    string info() {
+        return "a goblin, not just " + super.info();
     }
 }
 
 Entity e = Goblin("Grok");       // a Goblin can go anywhere an Entity can
-print(e.describe());             // "a goblin, not just an entity"
+print(e.info());             // "a goblin, not just an entity"
 ```
 
 - A type can have **several constructors**, as long as each takes different types of values: `Size(float side)` and `Size(float w, float h)`. Forge picks the one that matches what you give it.
@@ -341,6 +341,10 @@ for (Entity e in enemies) {
     }
 }
 ```
+
+### describe
+
+Every struct and class object has built-in info: `g.describe` is text like `Goblin (an Enemy): hp = 30, name = "Grub"`, and `g.describe.name`, `.parent` (`""` if none), `.fields` (`list<string>`) and `.values` (`map<string, string>`) give one part. Private fields are left out, and no field or method can be called `describe`.
 
 ### static
 

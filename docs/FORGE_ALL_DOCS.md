@@ -376,13 +376,13 @@ class Entity {
         hp -= amount;
     }
 
-    string describe() {
+    string info() {
         return "an entity";
     }
 }
 
 class Goblin : Entity {           // inheritance: a Goblin is a kind of Entity
-    string describe() {           // replaces Entity's version (must match it exactly)
+    string info() {           // replaces Entity's version (must match it exactly)
         return "a goblin";
     }
 }
@@ -393,13 +393,13 @@ class Player : Entity {
         super(name);              // runs Entity's constructor
         hp = 150;
     }
-    string describe() {
-        return "the player, " + super.describe();   // calls Entity's version
+    string info() {
+        return "the player, " + super.info();   // calls Entity's version
     }
 }
 
 Entity e = Goblin("Grok");        // Goblin has no constructor, so it uses Entity's
-print(e.describe());              // "a goblin": the replaced version runs
+print(e.info());              // "a goblin": the replaced version runs
 list<Entity> all = [Player("Hero"), Goblin("Grok")];
 ```
 
@@ -423,6 +423,8 @@ for (Entity e in all) {
     }
 }
 ```
+
+**`describe`.** Every struct and class object has it built in: `print(g.describe)` shows `Goblin (an Enemy): hp = 30, name = "Grub"` (the real object's type, its parent, every non-private field). Parts: `g.describe.name` (`"Goblin"`), `.parent` (`""` if none), `.fields` (`list<string>`), `.values` (`map<string, string>`). On its own it's text (`string s = g.describe;` works). No field or method may be called `describe`. Great for debugging.
 
 **`static`** fields and methods belong to the type, not to each object: `static int count = 0;` is one counter shared by every `Enemy`, and `static Enemy boss() { ... }` is called on the type. Outside the type write `Enemy.count` and `Enemy.boss()`; inside it, the plain name works. A static method has no object, so it can't use normal fields, normal methods or `this` (an error says so). Static fields aren't part of the constructor or of printing. Structs can have them too (`Point.origin`).
 
@@ -3900,7 +3902,7 @@ class Entity {
         hp -= amount;
     }
 
-    string describe() {
+    string info() {
         return "an entity";
     }
 }
@@ -3908,14 +3910,14 @@ class Entity {
 class Goblin : Entity {
     int gold = 5;              // extra field
 
-    string describe() {        // replaces Entity's version
+    string info() {        // replaces Entity's version
         return "a goblin carrying {gold} gold";
     }
 }
 
 Goblin g = Goblin("Grok");     // Goblin has no constructor, so it uses Entity's
 g.takeHit(10);                 // inherited from Entity
-print(g.describe());           // a goblin carrying 5 gold
+print(g.info());           // a goblin carrying 5 gold
 ```
 
 - **A child can go anywhere its parent can.** An `Entity` variable, parameter or list item can hold a `Goblin`:
@@ -3923,7 +3925,7 @@ print(g.describe());           // a goblin carrying 5 gold
   ```cpp
   list<Entity> everyone = [Goblin("Grok"), Entity("Blob")];
   for (Entity e in everyone) {
-      print(e.describe());       // each one uses its own version
+      print(e.info());       // each one uses its own version
   }
   ```
 
@@ -3945,8 +3947,8 @@ class Player : Entity {
         hp = 150;
     }
 
-    string describe() {
-        return "the player, " + super.describe();    // Entity's describe()
+    string info() {
+        return "the player, " + super.info();    // Entity's info()
     }
 }
 ```
@@ -4041,6 +4043,33 @@ class Enemy {
     }
 }
 ```
+
+### describe: looking inside any object
+
+Every struct and class has `describe` built in, with nothing to write. It's handy while debugging:
+
+```cpp
+class Enemy {
+    int hp = 30;
+}
+
+class Goblin : Enemy {
+    string name = "Grub";
+}
+
+Goblin g = Goblin();
+print(g.describe);              // Goblin (an Enemy): hp = 30, name = "Grub"
+print(g.describe.name);         // Goblin
+print(g.describe.parent);       // Enemy  ("" if it doesn't inherit)
+print(g.describe.fields);       // [hp, name]
+print(g.describe.values);       // {hp: 30, name: Grub}  (a map<string, string>)
+```
+
+- On its own, `describe` is everything as text: it can be printed, put in `"{g.describe}"`, or stored in a `string`. A part after it gives only that part.
+- `fields` is a `list<string>` of the field names (the parent's first), and `values` is a `map<string, string>` of each field's value as text.
+- It describes the real object: an `Enemy e` that holds a `Goblin` says `Goblin`.
+- `private` and `static` fields are left out.
+- `describe` is a reserved member name, so your own field or method can't be called `describe`.
 
 ### static: shared by the whole type
 
@@ -4826,6 +4855,10 @@ These words have special meanings, so they can't be used as names for variables,
 
 `void` `bool` `string` `task` `int` `int8` `int16` `int32` `int64` `int128` `uint` `uint8` `uint16` `uint32` `uint64` `uint128` `float` `double` `list` `map` `Pointer` `Function` `Weak` `vec2` `vec3` `vec4` `color` `rect` `Error`
 
+### Built-in member names
+
+`describe` is built into every struct and class (`obj.describe`), so no field or method can be called that.
+
 ### Built-in functions
 
 `print` `write` `input` (from `<stdio>`), `wait` (inside tasks), and `Weak(...)`.
@@ -4921,6 +4954,7 @@ If you already know C++, C#, Java, JavaScript or Python, Forge will feel familia
 | lambdas, function pointers, callbacks | `(Enemy e) { return e.hp <= 0; }`, typed `Function<bool(Enemy)>` | a function value gets a copy of the local variables it uses. See Functions as values (see “6. Functions” › “Functions as values”) |
 | templates / generics you write yourself | `class Box<T> { T item; }`, used as `Box<int> b = Box(5);` | structs and classes only, not functions; inside, a `T` can only be stored, passed, compared and printed. See Generic types (see “9. Structs and Classes” › “Generic types: one type that holds any type”) |
 | `weak_ptr`, `WeakReference`, `weakref` | `Weak<Player> w = Weak(p);` and `Player? x = w.get();` | only for class types. See Weak (see “9. Structs and Classes” › “Weak: pointing at an object without keeping it alive”) |
+| `__name__`, `__class__`, `vars(obj)` (Python), reflection | `obj.describe`, `obj.describe.name`, `.parent`, `.fields`, `.values` | built into every struct and class. See describe (see “9. Structs and Classes” › “describe: looking inside any object”) |
 | threads | not available | use tasks (see “11. Tasks”) for things that happen over time |
 
 ### Things Forge adds
@@ -9338,19 +9372,19 @@ class Entity {
         this.name = name;
     }
 
-    string describe() {
+    string info() {
         return "an entity";
     }
 }
 
 class Goblin : Entity {          // a Goblin is a kind of Entity
-    string describe() {
-        return "a goblin, not just " + super.describe();
+    string info() {
+        return "a goblin, not just " + super.info();
     }
 }
 
 Entity e = Goblin("Grok");       // a Goblin can go anywhere an Entity can
-print(e.describe());             // "a goblin, not just an entity"
+print(e.info());             // "a goblin, not just an entity"
 ```
 
 - A type can have **several constructors**, as long as each takes different types of values: `Size(float side)` and `Size(float w, float h)`. Forge picks the one that matches what you give it.
@@ -9368,6 +9402,10 @@ for (Entity e in enemies) {
     }
 }
 ```
+
+#### describe
+
+Every struct and class object has built-in info: `g.describe` is text like `Goblin (an Enemy): hp = 30, name = "Grub"`, and `g.describe.name`, `.parent` (`""` if none), `.fields` (`list<string>`) and `.values` (`map<string, string>`) give one part. Private fields are left out, and no field or method can be called `describe`.
 
 #### static
 

@@ -1,0 +1,18 @@
+=== main.frg
+#include <stdio>
+
+class Enemy {
+    string describe = "big";
+
+    void describe() {
+    }
+}
+
+int main(){
+    int n = 5;
+    print(n.describe);
+    return 0;
+}
+=== error
+'describe' is built into every struct and class, so a field can't be called that
+'describe' is built into every struct and class, so a method can't be called that

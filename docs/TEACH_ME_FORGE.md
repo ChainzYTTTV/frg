@@ -350,13 +350,13 @@ class Entity {
         hp -= amount;
     }
 
-    string describe() {
+    string info() {
         return "an entity";
     }
 }
 
 class Goblin : Entity {           // inheritance: a Goblin is a kind of Entity
-    string describe() {           // replaces Entity's version (must match it exactly)
+    string info() {           // replaces Entity's version (must match it exactly)
         return "a goblin";
     }
 }
@@ -367,13 +367,13 @@ class Player : Entity {
         super(name);              // runs Entity's constructor
         hp = 150;
     }
-    string describe() {
-        return "the player, " + super.describe();   // calls Entity's version
+    string info() {
+        return "the player, " + super.info();   // calls Entity's version
     }
 }
 
 Entity e = Goblin("Grok");        // Goblin has no constructor, so it uses Entity's
-print(e.describe());              // "a goblin": the replaced version runs
+print(e.info());              // "a goblin": the replaced version runs
 list<Entity> all = [Player("Hero"), Goblin("Grok")];
 ```
 
@@ -397,6 +397,8 @@ for (Entity e in all) {
     }
 }
 ```
+
+**`describe`.** Every struct and class object has it built in: `print(g.describe)` shows `Goblin (an Enemy): hp = 30, name = "Grub"` (the real object's type, its parent, every non-private field). Parts: `g.describe.name` (`"Goblin"`), `.parent` (`""` if none), `.fields` (`list<string>`), `.values` (`map<string, string>`). On its own it's text (`string s = g.describe;` works). No field or method may be called `describe`. Great for debugging.
 
 **`static`** fields and methods belong to the type, not to each object: `static int count = 0;` is one counter shared by every `Enemy`, and `static Enemy boss() { ... }` is called on the type. Outside the type write `Enemy.count` and `Enemy.boss()`; inside it, the plain name works. A static method has no object, so it can't use normal fields, normal methods or `this` (an error says so). Static fields aren't part of the constructor or of printing. Structs can have them too (`Point.origin`).
 

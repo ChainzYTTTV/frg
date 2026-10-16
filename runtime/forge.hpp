@@ -918,6 +918,20 @@ struct rect_ {
     bool operator==(const rect_&) const = default;
 };
 
+// obj.describe: built-in info about a struct or class object. On its own, it's the text.
+struct Description_ {
+    std::string name_;
+    std::string parent_;
+    List<std::string> fields_;
+    Map<std::string, std::string> values_;
+    std::string text_;
+    static Description_ frg$make() { return {}; }
+    static Description_ frg$make(std::string n, std::string p, List<std::string> f, Map<std::string, std::string> v) {
+        return {n, p, f, v, n};
+    }
+    bool operator==(const Description_& o) const { return text_ == o.text_; }
+};
+inline std::string frg$str(const Description_& d) { return d.text_; }
 inline std::string frg$str(const Error_& e) { return "Error(message: " + e.message_ + ", where: " + e.where_ + ")"; }
 inline std::string frg$str(const vec2_& v) { return "vec2(" + str(v.x_) + ", " + str(v.y_) + ")"; }
 inline std::string frg$str(const vec3_& v) { return "vec3(" + str(v.x_) + ", " + str(v.y_) + ", " + str(v.z_) + ")"; }

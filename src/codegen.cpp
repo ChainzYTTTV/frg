@@ -152,6 +152,8 @@ std::string Gen::conv(const Expr* e, const Type* T) {
         return S->elem == T ? v : "static_cast<" + T->cpp + ">(" + v + ")";
     }
     if (T->kind == TK::Pointer && S == T->elem) return "(&" + ex(e) + ")";
+    if (T->kind == TK::String && S->kind == TK::Struct && S->decl && S->decl->builtin && S->decl->name == "Description")
+        return "::frg::core::frg$str(" + ex(e) + ")";
     if (S->kind == TK::Class && T->kind == TK::Class) return "static_cast<" + T->cpp + ">(" + ex(e) + ")";
     if (isNumeric(S) && isNumeric(T)) return "static_cast<" + T->cpp + ">(" + ex(e) + ")";
     return ex(e);
@@ -249,6 +251,11 @@ std::string Gen::ref(const Expr* e) {
                 return obj + sep + id(e->text);
             }
         case RK::PointerValue: return "(*::frg::live(" + ex(e->a.get()) + ", " + where(e->loc) + "))";
+        case RK::Describe: {
+            std::string sep;
+            std::string obj = objRef(e->a.get(), sep);
+            return obj + sep + "frg$describe()";
+        }
         case RK::BuiltinMethod:  // only `length` is used as a value
             return "static_cast<int32_t>(" + objValue(e->a.get()) + ".size())";
         default: return "/*?*/";
@@ -769,6 +776,7 @@ void Gen::emitTypeDef(TypeDecl* d) {
         ind++;
         line("virtual ~" + name + "() = default;");
         for (auto& m : d->methods) line("virtual " + m->ret->cpp + " " + id(m->name) + "(" + params(m.get()) + ") = 0;");
+        line("virtual ::frg::core::Description_ frg$describe() = 0;");
         ind--;
         line("};");
         line("}");
@@ -799,6 +807,7 @@ void Gen::emitTypeDef(TypeDecl* d) {
     for (auto& m : d->methods)
         line(std::string(m->isStatic ? "static " : d->kind == DK::Class ? "virtual " : "") + m->ret->cpp + " " + id(m->name) + "(" +
              params(m.get()) + ")" + (m->isAbstract ? " = 0" : "") + ";");
+    line(std::string(d->kind == DK::Class ? "virtual " : "") + "::frg::core::Description_ frg$describe();");
     if (d->kind == DK::Struct) line("bool operator==(const " + name + "&) const = default;");
     if (d->kind == DK::Class) {
         // Lets the runtime ask an object "are you a <type name>?" (used by ECS's entity.get("Health")).
@@ -910,6 +919,36 @@ void Gen::emitTypeFuncs(TypeDecl* d) {
 
     for (auto& m : d->methods)
         if (!m->isAbstract) emitBody(m.get(), d, th + m->ret->cpp + " " + q + "::" + id(m->name) + "(" + params(m.get()) + ")");
+
+    // obj.describe: the type's name, its parent's, and each field (not private ones) with its value as text.
+    line(th + "::frg::core::Description_ " + q + "::frg$describe() {");
+    ind++;
+    {
+        std::string parent = d->base ? d->base->name : "";
+        char c = parent.empty() ? 'x' : parent[0];
+        bool vowel = std::string("AEIOUaeiou").find(c) != std::string::npos;
+        std::string head = d->name + (parent.empty() ? "" : std::string(" (") + (vowel ? "an " : "a ") + parent + ")");
+        line("::frg::core::Description_ r;");
+        line("r.name_ = " + cppString(d->name) + ";");
+        line("r.parent_ = " + cppString(parent) + ";");
+        std::vector<VarDecl*> shown;
+        for (VarDecl* f : allFields(d))
+            if (!f->isPrivate && !f->isStatic) shown.push_back(f);
+        std::string text = "::std::string(" + cppString(head + (shown.empty() ? "" : ": ")) + ")";
+        for (size_t i = 0; i < shown.size(); i++) {
+            VarDecl* f = shown[i];
+            std::string v = strCode("this->" + id(f->name), f->type, true);
+            line("r.fields_.push_back(" + cppString(f->name) + ");");
+            line("r.values_[" + cppString(f->name) + "] = " + v + ";");
+            std::string val = "r.values_[" + cppString(f->name) + "]";
+            if (f->type->kind == TK::String) val = "\"\\\"\" + " + val + " + \"\\\"\"";
+            text += " + " + cppString((i ? ", " : "") + f->name + " = ") + " + " + val;
+        }
+        line("r.text_ = " + text + ";");
+        line("return r;");
+    }
+    ind--;
+    line("}");
 
     // Text form, used by print() and "{...}".
     line(strFuncProto(d) + " {");

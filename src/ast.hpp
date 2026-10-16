@@ -66,6 +66,7 @@ enum class RK {
     TypeStatic,    // color.RED (var = the static)
     BuiltinMethod, // list.add, map.keys, text.upper (name in `lib`)
     PointerValue,  // p.value
+    Describe,      // obj.describe: built-in info about any struct or class object
 };
 
 struct Resolved {

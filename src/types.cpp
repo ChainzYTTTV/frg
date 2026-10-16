@@ -284,6 +284,8 @@ bool implicitlyConverts(Type* from, Type* to) {
     }
     if (from->kind == TK::Int && to->kind == TK::Float) return true;
     if (from->kind == TK::Float && to->kind == TK::Float) return to->bits > from->bits;
+    // obj.describe on its own is its text.
+    if (from->kind == TK::Struct && from->decl && from->decl->builtin && from->decl->name == "Description" && to->kind == TK::String) return true;
     if (from->kind == TK::Weak && to->kind == TK::Weak) return implicitlyConverts(from->elem, to->elem);
     if (from->kind == TK::Class && to->kind == TK::Class) return !isGeneric(from) && !isGeneric(to) && inheritsFrom(from->decl, to->decl);
     if (to->kind == TK::Optional) {

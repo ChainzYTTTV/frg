@@ -19,6 +19,10 @@ These words have special meanings, so they can't be used as names for variables,
 
 `void` `bool` `string` `task` `int` `int8` `int16` `int32` `int64` `int128` `uint` `uint8` `uint16` `uint32` `uint64` `uint128` `float` `double` `list` `map` `Pointer` `Function` `Weak` `vec2` `vec3` `vec4` `color` `rect` `Error`
 
+## Built-in member names
+
+`describe` is built into every struct and class (`obj.describe`), so no field or method can be called that.
+
 ## Built-in functions
 
 `print` `write` `input` (from `<stdio>`), `wait` (inside tasks), and `Weak(...)`.

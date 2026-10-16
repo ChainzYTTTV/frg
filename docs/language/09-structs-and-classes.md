@@ -247,7 +247,7 @@ class Entity {
         hp -= amount;
     }
 
-    string describe() {
+    string info() {
         return "an entity";
     }
 }
@@ -255,14 +255,14 @@ class Entity {
 class Goblin : Entity {
     int gold = 5;              // extra field
 
-    string describe() {        // replaces Entity's version
+    string info() {        // replaces Entity's version
         return "a goblin carrying {gold} gold";
     }
 }
 
 Goblin g = Goblin("Grok");     // Goblin has no constructor, so it uses Entity's
 g.takeHit(10);                 // inherited from Entity
-print(g.describe());           // a goblin carrying 5 gold
+print(g.info());           // a goblin carrying 5 gold
 ```
 
 - **A child can go anywhere its parent can.** An `Entity` variable, parameter or list item can hold a `Goblin`:
@@ -270,7 +270,7 @@ print(g.describe());           // a goblin carrying 5 gold
   ```cpp
   list<Entity> everyone = [Goblin("Grok"), Entity("Blob")];
   for (Entity e in everyone) {
-      print(e.describe());       // each one uses its own version
+      print(e.info());       // each one uses its own version
   }
   ```
 
@@ -292,8 +292,8 @@ class Player : Entity {
         hp = 150;
     }
 
-    string describe() {
-        return "the player, " + super.describe();    // Entity's describe()
+    string info() {
+        return "the player, " + super.info();    // Entity's info()
     }
 }
 ```
@@ -388,6 +388,33 @@ class Enemy {
     }
 }
 ```
+
+## describe: looking inside any object
+
+Every struct and class has `describe` built in, with nothing to write. It's handy while debugging:
+
+```cpp
+class Enemy {
+    int hp = 30;
+}
+
+class Goblin : Enemy {
+    string name = "Grub";
+}
+
+Goblin g = Goblin();
+print(g.describe);              // Goblin (an Enemy): hp = 30, name = "Grub"
+print(g.describe.name);         // Goblin
+print(g.describe.parent);       // Enemy  ("" if it doesn't inherit)
+print(g.describe.fields);       // [hp, name]
+print(g.describe.values);       // {hp: 30, name: Grub}  (a map<string, string>)
+```
+
+- On its own, `describe` is everything as text: it can be printed, put in `"{g.describe}"`, or stored in a `string`. A part after it gives only that part.
+- `fields` is a `list<string>` of the field names (the parent's first), and `values` is a `map<string, string>` of each field's value as text.
+- It describes the real object: an `Enemy e` that holds a `Goblin` says `Goblin`.
+- `private` and `static` fields are left out.
+- `describe` is a reserved member name, so your own field or method can't be called `describe`.
 
 ## static: shared by the whole type
 

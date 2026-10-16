@@ -1,0 +1,81 @@
+=== main.frg
+#include <stdio>
+
+class Enemy {
+    int hp = 30;
+    private int secret = 7;
+}
+
+class Goblin : Enemy {
+    string name = "Grub";
+}
+
+class Orc : Enemy {
+}
+
+struct Point {
+    float x;
+    float y;
+}
+
+interface Named {
+    string label();
+}
+
+class Sign : Named {
+    list<int> marks = [1, 2];
+
+    string label() {
+        return "sign";
+    }
+}
+
+class Empty {
+}
+
+int main(){
+    Goblin g = Goblin();
+    print(g.describe);
+    print(g.describe.name);
+    print(g.describe.parent);
+    print(g.describe.fields);
+    print(g.describe.values);
+    print(g.describe.values["name"]);
+
+    Enemy e = g;
+    print(e.describe.name);          // the real object: a Goblin
+    print(Orc().describe);
+
+    Point p = Point(1.5, 2);
+    print(p.describe);
+    print("parent: '{p.describe.parent}'");
+
+    Named n = Sign();
+    print(n.describe);
+    print(Empty().describe);
+
+    string text = g.describe;
+    print(text.length);
+    Goblin? maybe = null;
+    try {
+        print(maybe.describe);
+    } catch (Error err) {
+        print(err.message);
+    }
+    return 0;
+}
+=== output
+Goblin (an Enemy): hp = 30, name = "Grub"
+Goblin
+Enemy
+[hp, name]
+{hp: 30, name: Grub}
+Grub
+Goblin
+Orc (an Enemy): hp = 30
+Point: x = 1.5, y = 2.0
+parent: ''
+Sign: marks = [1, 2]
+Empty
+41
+'maybe' is null

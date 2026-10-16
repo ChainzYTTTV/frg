@@ -32,7 +32,7 @@ int main(){
 
 ## How it works
 
-`frg build` checks your `.frg` files and translates them to C++. It then uses g++ to turn that C++ into a standalone `.exe`. The C++ is an internal step: it's saved as `build/forge_generated.cpp`, but you never need to read it.
+`frg build` checks your `.frg` files and translates them to C++. It then uses g++ to turn that C++ into a standalone `.exe`. The C++ is an internal step: it's saved in the `build/forge/` folder, but you never need to read it.
 
 ```
 src/

@@ -20,7 +20,7 @@ your .frg files
  4. check ───────── checker.cpp: works out types and names, and reports errors
       │
       ▼
- 5. generate ────── codegen.cpp: writes the program out as C++ (build/forge_generated.cpp)
+ 5. generate ────── codegen.cpp: writes the program out as C++ (build/forge/)
       │
       ▼
  6. compile ─────── g++ turns that C++, plus Forge's runtime, into build/<game>.exe
@@ -66,18 +66,38 @@ The **code generator** writes the checked program as C++:
 | `list<T>`, `map<K, V>` | `std::vector`, `std::map` |
 | `T?` | `std::optional<T>` (or a null-able pointer for classes) |
 | `task` functions | C++20 coroutines (`co_await`) |
-| `"HP: {hp}"` | string concatenation |
+| `"HP: {hp}"` | `::frg::cat({...})`: the pieces joined in order |
 | `list[i]` | a checked access that stops with a clear message if `i` is out of range |
 
-Forge's own helper names contain `$`, which Forge names can't, so they never clash with yours either. You can read the result in `build/forge_generated.cpp`.
+Forge's own helper names contain `$`, which Forge names can't, so they never clash with yours either. You can read the result in the `build/forge/` folder.
+
+**Left to right.** Forge promises that the parts of a call (`f(a(), b())`), of an operator (`a() + b()`) and of text with values are worked out left to right. C++ doesn't promise any order for those (g++ often goes right to left), so when two or more parts call something, the generator works them out one by one first, inside a small lambda: `[&]() -> auto { auto&& t0 = a(); auto&& t1 = b(); return f(t0, t1); }()`. Parts that only read values are written as plain C++, as before. Text with values is joined with `::frg::cat({...})`, because C++ always works out a `{ }` list left to right.
 
 ## 6. Compiling
 
-`frg` runs g++ on the generated file:
+The generated C++ is in pieces, in `build/forge/`:
+
+| File | What's in it |
+|---|---|
+| `game.hpp` | every type, function and global variable's declaration, plus generic types' code (C++ templates). Every part includes it. |
+| `game.cpp` | a small game: all the code, and C++'s `main()` |
+| `part1.cpp`, `part2.cpp` ... `main.cpp` | a bigger game, split into parts: each part has some of the `.frg` files' code, and `main.cpp` has the global variables and `main()` |
+
+`frg` compiles each part into a `.o` file, then links them into the `.exe`:
 
 ```
-g++ -std=gnu++20 -O1 -fwrapv -w -I<runtime> -I<cache> forge_generated.cpp -o game.exe -static
+g++ -std=gnu++20 -O1 -fwrapv -w -I<runtime> -I<cache> -c build/forge/game.cpp -o build/forge/game.o
+g++ build/forge/game.o -o game.exe -static
 ```
+
+**Split builds.** Compiling a part always costs about half a second, just to load Forge's runtime. So a small game is one part, and a game whose C++ is bigger than about 64 KB is split into 2, 4, 8 ... up to 64 parts of about 48 KB each:
+
+- **The parts are compiled at the same time**, one per processor core (fewer if memory is short).
+- **Each `.frg` file always goes in the same part.** The part is chosen from the file's name, not its size, so editing one file can't move the others. The number of parts only changes when the game's size passes a power of two.
+- **Only changed parts are compiled again.** Each part has a `.key` file saying everything it was made from (Forge, g++, the flags, the declarations and its own code). If that matches, its `.o` is reused. Editing the inside of one function recompiles just its part, and a build where nothing changed doesn't even link.
+- **A big game's declarations are precompiled too.** When `game.hpp` is big (over 96 KB), every part would spend time reading it, so it's compiled once together with the runtime into `game_pch.hpp.gch`, in the game's own `build/forge/` folder. It's only made again when a declaration changes (a type, a function's parameters, a global), not when the code inside a function changes.
+
+Global variables all go in one part, because C++ sets them in the order they're written within one file, but in no fixed order between files, and Forge sets them in a fixed order.
 
 - If the game's folder has `icon.png`, Forge wraps the PNG in an `.ico` file (an `.ico` can simply hold a PNG), writes a one-line resource script `GLFW_ICON ICON "icon.ico"`, and runs **windres** (from w64devkit) to turn it into `build/icon_res.o`, which is linked in. That gives the `.exe` its icon; the name `GLFW_ICON` is the one raylib's window library looks for, and the window also loads `icon.png` with raylib's `SetWindowIcon`.
 - `-O1` optimizes a little, and compiles fast. `--release` builds use `-O2`, which optimizes more but takes longer.

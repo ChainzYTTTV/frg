@@ -3552,19 +3552,17 @@ A file the game loads isn't in the game's folder.
 <!-- check: runtime-error exit 1 -->
 
 ```cpp
-#include <window>
 #include <assets>
 
 int main(){
-    window.open(320, 200, "game");
-    Texture t = assets.loadTexture("hero.png");
+    Texture hero = assets.loadTexture("hero.png");
     return 0;
 }
 ```
 
 ```text
 Runtime error in assets.loadTexture(): can't find the file 'hero.png' - put it in the game's folder (next to main.frg), or check the spelling
-  called from main.frg:6 (in main)
+  called from main.frg:4 (in main)
 ```
 
 **Fix:** put the file next to `main.frg` (or in a folder there, and write the path: `"art/hero.png"`), and check the spelling.

@@ -107,7 +107,9 @@ function Test-Check($check, [string]$dir) {
         elseif ($kind -eq 'command' -and $w -eq 1 -and $words[$w] -eq 'fails') { $fails = $true }
         elseif ($kind -eq 'command') { $commandArgs += $words[$w] }
     }
-    if ($settings.Count -and $env:FRG_NO_WINDOW) { return @{ Skipped = $true } }
+    $opensWindow = $settings.Count -or ($kind -in 'output', 'runtime-error' -and
+        @($check.Files.Values | Where-Object { $_ -match '\b(window\.open|openWindow)\(' }).Count)
+    if ($opensWindow -and $env:FRG_NO_WINDOW) { return @{ Skipped = $true } }
     if (Test-Path $dir) { Remove-Item -Recurse -Force $dir }
     New-Item -ItemType Directory -Force $dir | Out-Null
     foreach ($f in $check.Files.Keys) {
@@ -192,6 +194,10 @@ foreach ($pagePath in $pages) {
         if ($result.Problem -and -not ($Update -and $fill -and $result.Problem -match '^(this line isn''t in|--- the page shows)')) {
             Write-Host "FAIL  $name ($($check.Spec))" -ForegroundColor Red
             Write-Host ($result.Problem -replace '(?m)^', '      ')
+            if ($env:GITHUB_ACTIONS) {
+                $text = ($result.Problem -split "`n" | Select-Object -First 12) -join '%0A'
+                Write-Host "::error file=$rel,line=$($check.Line),title=doc example::$text"
+            }
             $failed += $name
         } else {
             $pass++

@@ -236,6 +236,11 @@ foreach ($file in Get-ChildItem (Join-Path $PSScriptRoot "cases") -Filter "$Filt
     if ($problem) {
         Write-Host "FAIL  $name" -ForegroundColor Red
         Write-Host ($problem -replace '(?m)^', '      ')
+        if ($env:GITHUB_ACTIONS) {
+            # An annotation on the run's page: readable by anyone, unlike the log.
+            $text = ($problem -split "`n" | Select-Object -First 12) -join '%0A'
+            Write-Host "::error file=tests/cases/$name.test,title=$name::$text"
+        }
         $failed += $name
     } else {
         Write-Host "pass  $name" -ForegroundColor Green

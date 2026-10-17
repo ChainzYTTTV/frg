@@ -19,6 +19,8 @@ int main(){
 }
 ```
 
+**Install:** download `Forge-<version>-setup.exe` from the [latest release](https://github.com/ChainzYTTTV/frg/releases/latest) and run it. It has everything Forge needs, including its own C++ compiler (see [Getting started](docs/getting-started.md#installing)).
+
 **Documentation:** start at [docs/README.md](docs/README.md), which has a getting-started guide, a chapter for each part of the language, a page for every library, and guides. [docs/LANGUAGE.md](docs/LANGUAGE.md) is a one-page cheat sheet. For VS Code support (colors, errors as you save, a Run button), see [editors/vscode](editors/vscode/README.md).
 
 ## What it looks like
@@ -46,6 +48,7 @@ src/
   checker.cpp      types, names and the friendly error messages
   codegen.cpp      syntax tree  -> C++
   diagnostics.cpp  error printing
+  update.cpp       frg update, and the daily check for a newer Forge
 runtime/
   forge.hpp             core runtime: text, lists, maps, optionals, tasks (coroutines), vec2/color/rect, random
   forge_window.hpp      <window>, <input>, <graphics2d> on top of raylib

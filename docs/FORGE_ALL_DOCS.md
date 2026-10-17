@@ -5666,7 +5666,7 @@ Games read three environment variables, so they can be tested without anyone at 
 |---|---|
 | `FRG_AUTOTEST_FRAMES=90` | stop after 90 frames |
 | `FRG_AUTOTEST_SHOT=shot.png` | take this screenshot just before stopping |
-| `FRG_AUTOTEST_INPUT=RIGHT:10-60,SPACE:30-31` | pretend these keys are held during those frames (mouse buttons are `MOUSE_LEFT`, `MOUSE_RIGHT` and `MOUSE_MIDDLE`) |
+| `FRG_AUTOTEST_INPUT=RIGHT:10-60,SPACE:30-31` | pretend these keys are held during those frames (mouse buttons are `MOUSE_LEFT`, `MOUSE_RIGHT`, `MOUSE_MIDDLE`, `MOUSE_BACK` and `MOUSE_FORWARD`) |
 
 <!-- docs/libraries/input.md -->
 
@@ -5726,7 +5726,7 @@ Escape is a normal key: it doesn't close the window, so a game can use it for a 
 | `input.mouseDelta()` | `vec2` | how far the mouse moved since the last frame, in pixels (right and down are positive) |
 | `input.isMouseInWindow()` | `bool` | the pointer is over the window |
 
-Buttons: `MouseButton.LEFT`, `MouseButton.RIGHT`, `MouseButton.MIDDLE`.
+Buttons: `MouseButton.LEFT`, `MouseButton.RIGHT`, `MouseButton.MIDDLE`, and the two side (thumb) buttons many mice have: `MouseButton.BACK` (the one nearer you) and `MouseButton.FORWARD`.
 
 ```cpp
 if (input.mousePressed(MouseButton.LEFT)) {
@@ -10317,7 +10317,7 @@ $env:FRG_AUTOTEST_INPUT = "RIGHT:10-60,SPACE:30-31,MOUSE_LEFT:50-50,CLOSE:100-10
 | Name | What it pretends |
 |---|---|
 | `A` ... `Z`, `NUM0` ... `NUM9`, `SPACE`, `ENTER`, `ESCAPE`, `LEFT`, `F1` ... (every `Key` (see “`<input>`: Keyboard, Mouse and Controllers” › “Keyboard”) name) | that key |
-| `MOUSE_LEFT`, `MOUSE_RIGHT`, `MOUSE_MIDDLE` | that mouse button |
+| `MOUSE_LEFT`, `MOUSE_RIGHT`, `MOUSE_MIDDLE`, `MOUSE_BACK`, `MOUSE_FORWARD` | that mouse button (BACK and FORWARD are the side buttons) |
 | `CLOSE` | the player clicking the window's X: `window.shouldClose()` is `true` from that frame |
 | `MOUSE@x/y` | the pointer at (x, y) in the window, from the first frame of the range on (`MOUSE@400/300:10-10`). Once any `MOUSE@` is given, the real mouse is ignored |
 | `TURN@dx/dy` | the mouse moving by (dx, dy) on each frame of the range: what `input.mouseDelta()` gives, for testing mouse-look (`TURN@-5/0:20-40` turns left). On other frames it's (0, 0) |

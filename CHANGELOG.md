@@ -11,6 +11,7 @@ Found while building a full 3D first-person game in Forge.
 - `graphics3d.clearDepth()`: 3D drawn after it shows in front of everything drawn before it, for a first-person gun that never sinks into walls.
 - `graphics3d.pushTransform(position, axis, degrees, scale)` and `popTransform()`: turn, move and scale everything drawn between them (characters facing where they walk, a gun tilting while it reloads). They nest, and a missing `popTransform` is a clear error.
 - `FRG_AUTOTEST_HIDDEN=1` is silent too: a hidden test window plays no sound.
+- **The side mouse buttons:** `MouseButton.BACK` (the thumb button nearer you) and `MouseButton.FORWARD`, in the engine and in the OpenGL / DirectX / Vulkan toolkits. Tests can script them as `MOUSE_BACK` and `MOUSE_FORWARD`.
 
 **Language**
 - A reserved word where a name goes says so: `int add(int a, int negative)` gives "'negative' is a reserved word in Forge, so it can't be a parameter name" instead of "expected a parameter name". The same for fields, methods and other names.

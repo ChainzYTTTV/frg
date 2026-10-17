@@ -131,6 +131,7 @@ These were decided by Forge's designer (2026-10-16). Build them this way.
 | Turn, move and scale drawings (`pushTransform` / `popTransform`) | characters facing where they walk, a tilting gun | done |
 | Draw in front of everything (`clearDepth`) | a first-person gun that never sinks into walls | done |
 | Scripted mouse movement in tests | tests that click through menus and check mouse-look | done |
+| The side mouse buttons (`MouseButton.BACK` / `FORWARD`) | games couldn't use them, so players couldn't bind them | done |
 | Clearer errors for reserved words and name clashes | "expected a parameter name" didn't say why; one clash gave many errors | done |
 
 ## 0.9.x: Engine extras

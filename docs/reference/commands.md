@@ -15,7 +15,7 @@ The error messages on this page are checked against the real `frg` every time Fo
 frg version
 ```
 
-which prints `Forge 0.9.1` (or whichever version you have). If it says `frg is not recognized`, the folder with `frg.exe` isn't on your `PATH`.
+which prints `Forge 0.9.2` (or whichever version you have). If it says `frg is not recognized`, the folder with `frg.exe` isn't on your `PATH`.
 
 ### Moving between folders
 
@@ -461,7 +461,7 @@ error: frg cache doesn't know 'tidy'
 
 ## frg version and frg help
 
-`frg version` (or `frg --version`) prints the version, like `Forge 0.9.1`.
+`frg version` (or `frg --version`) prints the version, like `Forge 0.9.2`.
 
 `frg help` (or `frg --help`, `frg -h`, or `frg` on its own) prints the list of commands and options.
 

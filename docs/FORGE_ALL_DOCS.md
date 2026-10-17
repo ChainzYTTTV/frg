@@ -1,4 +1,4 @@
-# Forge 0.9.1: the complete documentation
+# Forge 0.9.2: the complete documentation
 
 This one file holds everything written about the Forge programming language, so it can be uploaded in one go:
 
@@ -525,7 +525,7 @@ Library functions are reached through the library name (`window.open(...)`). Lib
 | `<math>` | `math.sqrt pow sin cos tan asin acos atan atan2 exp log floor ceil round abs sign min max clamp lerp`, and `math.PI TAU E`. Angles are in radians. |
 | `<random>` | `random.range(1, 6)` (whole numbers, both ends included), `random.range(0.5, 2.0)` (decimals), `random.value()` (0 to 1), `random.chance(0.25)`, `random.seed(n)`, `random.color()` (a random solid color) |
 | `<window>` | `window.open(width, height, "title")`, `shouldClose()`, `run()`, `close()`, `deltaTime()` (seconds since the last frame), `time()`, `width()`, `height()`, `fps()`, `setFPS(n)`, `setTitle(t)`, `setBackground(color)`, `toggleFullscreen()`, `screenshot("file.png")` |
-| `<input>` | `input.keyDown(Key.SPACE)` (held), `input.keyPressed(...)` (only the frame it was pressed), `input.keyReleased(...)`, `input.mouseDown(MouseButton.LEFT)`, `mousePressed`, `mouseReleased`, `mousePosition()` (a vec2), `mouseX()`, `mouseY()`, `mouseWheel()`, `mouseDelta()` (how far the mouse moved this frame), `lockMouse(true)` (hides the pointer and keeps it in the window, so a 3D game can turn the camera forever; `false` gives it back), `isMouseLocked()`. Controllers (gamepads): `input.gamepadDown(GamepadButton.A)`, `gamepadPressed`, `gamepadReleased` (Xbox-style names: `A B X Y LEFT_BUMPER RIGHT_BUMPER LEFT_TRIGGER RIGHT_TRIGGER BACK START LEFT_STICK RIGHT_STICK`, and the D-pad `UP DOWN LEFT RIGHT`), `input.leftStick()` / `rightStick()` (a vec2 from -1 to 1; y is down, like the screen; small wobbles read as 0), `leftTrigger()` / `rightTrigger()` (0 to 1), `gamepadConnected()`, `gamepadName()`. Each takes an optional controller number: 0 (the default) is the first one plugged in. Without a controller they all read "not pressed", so a game can check both: `if (input.keyDown(Key.SPACE) or input.gamepadDown(GamepadButton.A))` |
+| `<input>` | `input.keyDown(Key.SPACE)` (held), `input.keyPressed(...)` (only the frame it was pressed), `input.keyReleased(...)`, `input.mouseDown(MouseButton.LEFT)`, `mousePressed`, `mouseReleased`, `mousePosition()` (a vec2), `mouseX()`, `mouseY()`, `mouseWheel()`, `mouseDelta()` (how far the mouse moved this frame), `lockMouse(true)` (hides the pointer and keeps it in the window, so a 3D game can turn the camera forever; `false` gives it back), `isMouseLocked()`. The pointer: `hideCursor()` / `showCursor()` / `isCursorHidden()` (hidden, it still moves and can leave the window, unlike a locked one: for drawing your own pointer), `setMousePosition(x, y)`, `setCursor(Cursor.HAND)` (shapes `ARROW HAND TEXT CROSSHAIR RESIZE_ALL RESIZE_LEFT_RIGHT RESIZE_UP_DOWN NOT_ALLOWED`), `isMouseInWindow()`. Escape doesn't close the window, so it's the usual key to unlock the mouse in a first-person game. Controllers (gamepads): `input.gamepadDown(GamepadButton.A)`, `gamepadPressed`, `gamepadReleased` (Xbox-style names: `A B X Y LEFT_BUMPER RIGHT_BUMPER LEFT_TRIGGER RIGHT_TRIGGER BACK START LEFT_STICK RIGHT_STICK`, and the D-pad `UP DOWN LEFT RIGHT`), `input.leftStick()` / `rightStick()` (a vec2 from -1 to 1; y is down, like the screen; small wobbles read as 0), `leftTrigger()` / `rightTrigger()` (0 to 1), `gamepadConnected()`, `gamepadName()`. Each takes an optional controller number: 0 (the default) is the first one plugged in. Without a controller they all read "not pressed", so a game can check both: `if (input.keyDown(Key.SPACE) or input.gamepadDown(GamepadButton.A))` |
 | `<graphics2d>` | `graphics2d.drawRect(x, y, w, h, color)` or `drawRect(rect, color)`, `drawRectOutline(x, y, w, h, color, thickness)`, `drawCircle(x, y, radius, color)` or `drawCircle(vec2, radius, color)`, `drawCircleOutline(x, y, radius, color)`, `drawLine(from, to, color, thickness)`, `drawTriangle(a, b, c, color)`, `drawText(text, x, y, size, color)`, `textWidth(text, size)`, `drawFPS(x, y)`, `clear(color)`, and a 2D camera (below) |
 | `<physics>` | the `Body` class, plus `physics.add(body)`, `remove(body)`, `step(dt)`, `setGravity(vec2)`, `gravity()`, `clear()`, `count()` |
 | `<assets>` | `assets.loadTexture("x.png")` gives a `Texture`, `assets.loadFont("x.ttf")` gives a `Font` (an optional second number is the size the letters are prepared at: use about the biggest size you draw it at, 64 to start with), `assets.exists(path)` |
@@ -1802,7 +1802,7 @@ frg version
 g++ --version
 ```
 
-The first should print `Forge 0.9.1` and the second should print a GCC version. If `frg` isn't found, add Forge's `bin` folder to your PATH and restart the terminal.
+The first should print `Forge 0.9.2` and the second should print a GCC version. If `frg` isn't found, add Forge's `bin` folder to your PATH and restart the terminal.
 
 #### Building Forge from source
 
@@ -5724,8 +5724,7 @@ Escape is a normal key: it doesn't close the window, so a game can use it for a 
 | `input.mouseReleased(MouseButton b)` | `bool` | the button was just let go (one frame) |
 | `input.mouseWheel()` | `float` | how far the wheel moved this frame (positive = away from you) |
 | `input.mouseDelta()` | `vec2` | how far the mouse moved since the last frame, in pixels (right and down are positive) |
-| `input.lockMouse(bool locked)` | | `true` hides the pointer and keeps it in the window, so it can move forever (for looking around in 3D); `false` gives it back |
-| `input.isMouseLocked()` | `bool` | whether it's locked |
+| `input.isMouseInWindow()` | `bool` | the pointer is over the window |
 
 Buttons: `MouseButton.LEFT`, `MouseButton.RIGHT`, `MouseButton.MIDDLE`.
 
@@ -5738,13 +5737,94 @@ if (input.mousePressed(MouseButton.LEFT)) {
 }
 ```
 
-#### Looking around with the mouse
+### The mouse pointer (cursor)
 
-First-person 3D games lock the mouse and turn the camera by how far it moved. `mouseDelta()` keeps working when the pointer would have hit the edge of the screen:
+| Function | Gives back | What it does |
+|---|---|---|
+| `input.hideCursor()` | | hides the pointer. It still moves, and can leave the window |
+| `input.showCursor()` | | shows it again (and lets go of it, if it was locked) |
+| `input.isCursorHidden()` | `bool` | whether it's hidden (also while it's locked) |
+| `input.lockMouse(bool locked)` | | `true` hides the pointer **and** keeps it in the window, so the mouse can move forever (for looking around in 3D); `false` gives it back, shown |
+| `input.isMouseLocked()` | `bool` | whether it's locked |
+| `input.setMousePosition(float x, float y)` | | moves the pointer to that place in the window (also takes a `vec2`) |
+| `input.setCursor(Cursor shape)` | | the pointer's shape: `Cursor.ARROW` (normal), `HAND` (something to click), `TEXT` (typing), `CROSSHAIR`, `RESIZE_ALL`, `RESIZE_LEFT_RIGHT`, `RESIZE_UP_DOWN`, `NOT_ALLOWED` |
+
+These need the window to be open (they stop the game with "the window isn't open yet" before `window.open(...)`).
+
+**Hidden or locked?**
+
+| | `hideCursor()` | `lockMouse(true)` |
+|---|---|---|
+| the pointer shows | no | no |
+| `mousePosition()` follows the mouse | yes | no: use `mouseDelta()` |
+| it can leave the window | yes | no |
+| it stops at the edge of the screen | yes | no: the mouse can turn forever |
+| for | drawing your own pointer, games played with a controller | first-person cameras, mouse-steered games |
+
+#### Drawing your own pointer
+
+Hide the real one and draw something at `mousePosition()` at the end of `draw()`, so it's on top of everything:
+
+<!-- check: builds -->
 
 ```cpp
-float yaw = 0;     // left and right, in radians
-float pitch = 0;   // up and down
+#include <window>
+#include <input>
+#include <graphics2d>
+
+rect button = rect(140, 120, 120, 40);
+
+int main(){
+    window.open(400, 300, "Own pointer");
+    input.hideCursor();
+    window.run();
+    return 0;
+}
+
+void update(float dt){
+    // the real pointer comes back over the window's edge, so it's usable outside the game
+    if (input.isMouseInWindow()) {
+        input.hideCursor();
+    } else {
+        input.showCursor();
+    }
+}
+
+void draw(){
+    vec2 m = input.mousePosition();
+    bool over = button.contains(m);
+    graphics2d.drawRect(button, over ? color.ORANGE : color.GRAY);
+    graphics2d.drawText("Play", button.x + 35, button.y + 10, 20, color.BLACK);
+    // a crosshair pointer, drawn last
+    graphics2d.drawLine(m.x - 8, m.y, m.x + 8, m.y, color.WHITE, 2);
+    graphics2d.drawLine(m.x, m.y - 8, m.x, m.y + 8, color.WHITE, 2);
+}
+```
+
+To keep the normal pointer but show that something can be clicked, change its shape instead: `input.setCursor(over ? Cursor.HAND : Cursor.ARROW);`.
+
+#### Looking around with the mouse (first-person)
+
+First-person 3D games lock the mouse and turn the camera by how far it moved. `mouseDelta()` keeps working when the pointer would have hit the edge of the screen. Since Escape is a normal key, it's the usual way to let go of the mouse (to reach the window's X, or a menu), and a click takes it back:
+
+<!-- check: builds -->
+
+```cpp
+#include <window>
+#include <input>
+#include <graphics3d>
+#include <math>
+
+float yaw = 0;     // turning left and right, in radians (0 looks along +z)
+float pitch = 0;   // looking up and down
+vec3 eye = vec3(0, 2, -6);
+
+int main(){
+    window.open(960, 540, "Mouse look");
+    input.lockMouse(true);
+    window.run();
+    return 0;
+}
 
 void update(float dt){
     if (input.isMouseLocked()) {
@@ -5752,13 +5832,30 @@ void update(float dt){
         yaw -= d.x * 0.0025;
         pitch = math.clamp(pitch - d.y * 0.0025, -1.5, 1.5);
     }
-    if (input.keyPressed(Key.TAB)) {
-        input.lockMouse(!input.isMouseLocked());   // let go of the mouse, to click on a menu
+    if (input.keyPressed(Key.ESCAPE)) {
+        input.lockMouse(false);          // let go of the mouse
     }
+    if (!input.isMouseLocked() and input.mousePressed(MouseButton.LEFT)) {
+        input.lockMouse(true);           // clicking the game takes it back
+    }
+    vec3 look = vec3(math.cos(pitch) * math.sin(yaw), math.sin(pitch), math.cos(pitch) * math.cos(yaw));
+    vec3 forward = vec3(math.sin(yaw), 0, math.cos(yaw));
+    if (input.keyDown(Key.W)) {
+        eye += forward * (5 * dt);
+    }
+    if (input.keyDown(Key.S)) {
+        eye -= forward * (5 * dt);
+    }
+    graphics3d.setCamera(Camera(eye, eye + look));
+}
+
+void draw(){
+    graphics3d.drawGrid(20, 1);
+    graphics3d.drawCube(vec3(0, 0.5, 0), vec3(1, 1, 1), color.ORANGE);
 }
 ```
 
-The direction the player looks is then `vec3(math.cos(pitch) * math.sin(yaw), math.sin(pitch), math.cos(pitch) * math.cos(yaw))`. See examples/voxel (the file `examples/voxel/player.frg` in the Forge folder).
+examples/voxel (the file `examples/voxel/player.frg` in the Forge folder) does this in a full game, with walking, jumping and collisions.
 
 ### Controllers (gamepads)
 
@@ -9601,7 +9698,7 @@ The error messages on this page are checked against the real `frg` every time Fo
 frg version
 ```
 
-which prints `Forge 0.9.1` (or whichever version you have). If it says `frg is not recognized`, the folder with `frg.exe` isn't on your `PATH`.
+which prints `Forge 0.9.2` (or whichever version you have). If it says `frg is not recognized`, the folder with `frg.exe` isn't on your `PATH`.
 
 #### Moving between folders
 
@@ -10047,7 +10144,7 @@ error: frg cache doesn't know 'tidy'
 
 ### frg version and frg help
 
-`frg version` (or `frg --version`) prints the version, like `Forge 0.9.1`.
+`frg version` (or `frg --version`) prints the version, like `Forge 0.9.2`.
 
 `frg help` (or `frg --help`, `frg -h`, or `frg` on its own) prints the list of commands and options.
 
@@ -15161,7 +15258,7 @@ Each file includes the libraries it uses. Functions are reached through the libr
 | `<math>` | `math.sqrt` `pow` `sin` `cos` `tan` `asin` `acos` `atan` `atan2` `exp` `log` `floor` `ceil` `round` `abs` `sign` `min` `max` `clamp` `lerp`, plus `math.PI` `TAU` `E` |
 | `<random>` | `random.range(1, 6)` (whole numbers, both ends included), `random.range(0.5, 2.0)`, `random.value()` (0 to 1), `random.chance(0.25)`, `random.seed(n)`, `random.color()` |
 | `<window>` | `window.open(width, height, "title")` `shouldClose()` `run()` `close()` `deltaTime()` `time()` `width()` `height()` `fps()` `setFPS(n)` `setTitle(t)` `setBackground(color)` `toggleFullscreen()` `screenshot("file.png")` |
-| `<input>` | `input.keyDown(Key.SPACE)` (held), `keyPressed` (just pressed this frame), `keyReleased`, `mouseDown(MouseButton.LEFT)` `mousePressed` `mouseReleased` `mousePosition()` `mouseX()` `mouseY()` `mouseWheel()` `mouseDelta()` (how far it moved this frame), `lockMouse(true)` (hide it and keep it in the window, for looking around in 3D) `isMouseLocked()`. Keys: `Key.A`…`Key.Z`, `Key.NUM0`…`Key.NUM9`, `SPACE` `ENTER` `ESCAPE` `BACKSPACE` `TAB` `LEFT` `RIGHT` `UP` `DOWN` `LEFT_SHIFT` `RIGHT_SHIFT` `LEFT_CONTROL` `RIGHT_CONTROL` `LEFT_ALT` `RIGHT_ALT` `F1`…`F12`. Controllers: `input.gamepadDown(GamepadButton.A)` (also `gamepadPressed`, `gamepadReleased`; buttons `A` `B` `X` `Y` `LEFT_BUMPER` `RIGHT_BUMPER` `LEFT_TRIGGER` `RIGHT_TRIGGER` `BACK` `START` `LEFT_STICK` `RIGHT_STICK` `UP` `DOWN` `LEFT` `RIGHT`), `leftStick()` `rightStick()` (vec2, -1 to 1), `leftTrigger()` `rightTrigger()` (0 to 1), `gamepadConnected()`, `gamepadName()`. Each takes an optional controller number (0 = the first) |
+| `<input>` | `input.keyDown(Key.SPACE)` (held), `keyPressed` (just pressed this frame), `keyReleased`, `mouseDown(MouseButton.LEFT)` `mousePressed` `mouseReleased` `mousePosition()` `mouseX()` `mouseY()` `mouseWheel()` `mouseDelta()` (how far it moved this frame), `lockMouse(true)` (hide it and keep it in the window, for looking around in 3D) `isMouseLocked()`, `hideCursor()` `showCursor()` `isCursorHidden()` (the pointer still moves), `setMousePosition(x, y)`, `setCursor(Cursor.HAND)` (shapes: `ARROW` `HAND` `TEXT` `CROSSHAIR` `RESIZE_ALL` `RESIZE_LEFT_RIGHT` `RESIZE_UP_DOWN` `NOT_ALLOWED`), `isMouseInWindow()`. Keys: `Key.A`…`Key.Z`, `Key.NUM0`…`Key.NUM9`, `SPACE` `ENTER` `ESCAPE` `BACKSPACE` `TAB` `LEFT` `RIGHT` `UP` `DOWN` `LEFT_SHIFT` `RIGHT_SHIFT` `LEFT_CONTROL` `RIGHT_CONTROL` `LEFT_ALT` `RIGHT_ALT` `F1`…`F12`. Controllers: `input.gamepadDown(GamepadButton.A)` (also `gamepadPressed`, `gamepadReleased`; buttons `A` `B` `X` `Y` `LEFT_BUMPER` `RIGHT_BUMPER` `LEFT_TRIGGER` `RIGHT_TRIGGER` `BACK` `START` `LEFT_STICK` `RIGHT_STICK` `UP` `DOWN` `LEFT` `RIGHT`), `leftStick()` `rightStick()` (vec2, -1 to 1), `leftTrigger()` `rightTrigger()` (0 to 1), `gamepadConnected()`, `gamepadName()`. Each takes an optional controller number (0 = the first) |
 | `<graphics2d>` | `graphics2d.drawRect(x, y, w, h, color)` or `drawRect(rect, color)`, `drawRectOutline(..., color, thickness)`, `drawCircle(x, y, radius, color)` or `drawCircle(vec2, radius, color)`, `drawCircleOutline`, `drawLine(from, to, color, thickness)`, `drawTriangle(a, b, c, color)`, `drawText(text, x, y, size, color)`, `textWidth(text, size)`, `drawFPS(x, y)`, `clear(color)`, and a 2D camera: `setCamera(Camera2D(target, offset, zoom, rotation))`, `resetCamera()`, `screenToWorld(p)`, `worldToScreen(p)` |
 | `<physics>` | the `Body` class and `physics.add(body)` `remove(body)` `step(dt)` `setGravity(vec2)` `gravity()` `clear()` `count()` (see below) |
 | `<assets>` | images and fonts: `assets.loadTexture("player.png")`, `assets.loadFont("font.ttf")`, `assets.exists(path)` (see below) |

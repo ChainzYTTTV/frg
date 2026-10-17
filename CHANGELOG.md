@@ -2,6 +2,14 @@
 
 What changed in each version of Forge. Plans for later versions are in the [roadmap](ROADMAP.md).
 
+## Unreleased
+
+**Installing and updating**
+- **An installer:** `Forge-<version>-setup.exe` on every release. Everything in one step, for your Windows account only (no admin rights): `frg`, its own C++ compiler (w64devkit), the docs, the examples and the VS Code extension. It can put Forge on the PATH and give `.frg` files their icon; uninstalling undoes everything. Each installer is built and tested by installing it, building a game with it and uninstalling it.
+- **An installed Forge uses its own compiler**, whatever else is on the PATH.
+- **`frg update`**: checks for a newer Forge and, if you say yes, downloads and starts its installer. Once a day, building or running also notices a new version and says so in one line. Updating is never required; `frg update --off` (or `FRG_NO_UPDATE_CHECK=1`) stops the daily check.
+- The VS Code extension also finds an installed Forge before VS Code is restarted.
+
 ## 0.9.4 (2026-10-17)
 
 The engine extras before 1.0: 3D culling and light, balls and ramps in `<physics>`, sprite effects, and textures for the low-level toolkits.

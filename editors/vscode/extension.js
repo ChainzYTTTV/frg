@@ -407,6 +407,9 @@ function frgPath() {
         const p = fs.readFileSync(recorded, 'utf8').trim();
         if (p && fs.existsSync(p)) return p;
     }
+    // Where the Forge installer puts it (VS Code only sees a new PATH after it's restarted).
+    const installed = path.join(process.env.LOCALAPPDATA || '', 'Programs', 'Forge', 'bin', 'frg.exe');
+    if (process.env.LOCALAPPDATA && fs.existsSync(installed)) return installed;
     return 'frg';
 }
 

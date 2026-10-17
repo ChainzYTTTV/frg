@@ -2,3 +2,5 @@ build/
 bin/
 editors/vscode/dist/
 *.spv
+installer/stage/
+installer/out/

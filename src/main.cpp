@@ -9,6 +9,7 @@
 #include "query.hpp"
 #include "format.hpp"
 #include "templates.hpp"
+#include "update.hpp"
 
 #include <algorithm>
 #include <set>
@@ -920,6 +921,7 @@ static void printHelp() {
         "      --print                  print the tidied files instead of changing them\n"
         "  frg package [folder]  make a finished build and zip it, ready to share: dist/<name>.zip\n"
         "  frg cache           show how big the build cache is (frg cache clear deletes it)\n"
+        "  frg update          check for a newer Forge, and install it if you want (--off: no daily check)\n"
         "  frg version         show the Forge version\n\n"
         "[folder] is the game's top folder (the one with main.frg). It defaults to the current folder.\n"
         "Options for build, run, test and package:\n"
@@ -932,9 +934,7 @@ static void printHelp() {
         kVersion);
 }
 
-int main(int argc, char** argv) {
-    initConsole();
-    std::vector<std::string> args(argv + 1, argv + argc);
+static int dispatch(const std::vector<std::string>& args) {
     if (args.empty() || args[0] == "help" || args[0] == "--help" || args[0] == "-h") {
         printHelp();
         return 0;
@@ -1155,6 +1155,33 @@ int main(int argc, char** argv) {
         }
         return cmdNew(name, templateName);
     }
+    if (cmd == "update") return update::command(args, exeDir(), kVersion);
     reportPlainError("unknown command '" + cmd + "'", "try frg build, frg run, or frg new <name>");
     return 1;
+}
+
+// An installed Forge has its own g++ next to it (w64devkit, from the installer): that one is used, so a build never
+// depends on what else is on the PATH. (Without it, the g++ on the PATH is used.)
+static void useBundledCompiler() {
+    fs::path kit = exeDir().parent_path() / "w64devkit" / "bin";
+    std::error_code ec;
+    if (!fs::exists(kit / "g++.exe", ec)) return;
+    static wchar_t old[32767];
+    DWORD n = GetEnvironmentVariableW(L"PATH", old, 32767);
+    std::wstring path = kit.wstring() + L";" + (n ? std::wstring(old, n) : L"");
+    SetEnvironmentVariableW(L"PATH", path.c_str());
+}
+
+int main(int argc, char** argv) {
+    initConsole();
+    useBundledCompiler();
+    std::vector<std::string> args(argv + 1, argv + argc);
+    // once a day, building, running, testing, packaging or making a game also looks for a newer Forge (in the
+    // background; a short note at the end if there is one)
+    std::string cmd = args.empty() ? "" : args[0];
+    bool daily = cmd == "build" || cmd == "run" || cmd == "test" || cmd == "package" || cmd == "new";
+    if (daily) update::startDailyCheck(exeDir());
+    int code = dispatch(args);
+    if (daily) update::finishDailyCheck(exeDir(), kVersion);
+    return code;
 }

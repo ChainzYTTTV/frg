@@ -93,3 +93,8 @@ boom.burst(80);
 One emitter can be moved around and reused: set its `position`, then `burst`. Particles already flying stay where they are.
 
 [examples/platformer](../../examples/platformer/) uses an emitter for dust when the player lands (in `player.frg`) and one for sparkles when a coin is collected (in `level.frg`).
+
+## Limits
+
+- Particles are colored circles (going from `startColor` to `endColor`): they can't be pictures.
+- 2D only, and particles don't collide with anything.

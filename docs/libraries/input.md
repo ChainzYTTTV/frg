@@ -256,3 +256,10 @@ if (input.keyPressed(Key.P)) {
     paused = not paused;
 }
 ```
+
+## Limits
+
+- **Only the keys in the [table](#keys) can be read**: letters, the number row, the arrows, Space, Enter, Escape, Backspace, Tab, the Shift / Control / Alt keys and F1-F12. The number pad, punctuation keys (like `,` `.` `-` `=`), Delete, Home, End, Page Up / Down, Insert, Caps Lock and the Windows key can't.
+- Typing text is done with [`ui.textBox`](ui.md#typing-text-textbox).
+- Up to four controllers (`gamepad` 0 to 3). Their buttons have the Xbox names; controllers can't vibrate.
+- No touch screens.

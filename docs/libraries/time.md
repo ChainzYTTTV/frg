@@ -57,3 +57,7 @@ Showing a countdown:
 Timer roundTimer = Timer(60);
 graphics2d.drawText("{int(roundTimer.left())}", 20, 20, 32, color.WHITE);
 ```
+
+## Limits
+
+- `Timer` and `time.now()` measure **real time**: they keep counting while your game shows its own pause menu, or while the window is being dragged. For a countdown that pauses, keep a `float` and take away `dt` in `update` only while the game isn't paused.

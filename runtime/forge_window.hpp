@@ -42,7 +42,8 @@ inline ::Rectangle rl(core::rect_ r) { return ::Rectangle{r.x_, r.y_, r.width_, 
 // ---------------------------------------------------------------- automated testing
 // FRG_AUTOTEST_FRAMES=N        stop after N frames (taking a screenshot first, see below)
 // FRG_AUTOTEST_SHOT=name.png   the screenshot's file name (saved in the game's folder)
-// FRG_AUTOTEST_INPUT=RIGHT:10-60,SPACE:30-31   hold keys during those frames (and MOUSE_LEFT, MOUSE_RIGHT, MOUSE_MIDDLE)
+// FRG_AUTOTEST_INPUT=RIGHT:10-60,SPACE:30-31   hold keys during those frames (and MOUSE_LEFT, MOUSE_RIGHT, MOUSE_MIDDLE).
+//                              CLOSE:N-N clicks the window's X button at frame N.
 namespace autotest {
 struct Hold {
     int key;
@@ -57,6 +58,14 @@ inline State& st() {
     static State s;
     return s;
 }
+const int kClose = 2000;  // CLOSE: the window's X button
+inline bool held(int key, long frame) {
+    for (auto& h : st().holds)
+        if (h.key == key && frame >= h.from && frame <= h.to) return true;
+    return false;
+}
+// Whether scripted input clicks the window's X at the start of this frame.
+inline bool closeRequested(long frame) { return held(kClose, frame) && !held(kClose, frame - 1); }
 }  // namespace autotest
 
 // ---------------------------------------------------------------- 2D camera (the type; the functions are in graphics2d below)
@@ -85,6 +94,7 @@ inline ::Camera2D rlCamera(const Camera2D_& c) { return ::Camera2D{rl(c.offset_)
 namespace window {
 struct State {
     bool open = false;
+    bool closed = false;  // window.close() was called (or the player closed it), so drawing can say so
     bool inFrame = false;
     core::color_ background{24, 24, 32, 255};
     long frame = 0;
@@ -130,6 +140,7 @@ inline void close_() {
     for (auto fn : beforeCloseHooks()) fn();
     CloseWindow();
     s.open = false;
+    s.closed = true;
 }
 
 inline void beginFrame() {
@@ -153,6 +164,9 @@ inline void endFrame() {
 
 // Drawing works any time after open(); a frame starts by itself if one isn't running.
 inline void ensureFrame(const char* what) {
+    if (!st().open && st().closed)
+        panic(what, "the window has been closed (by window.close(), or by the player), so there's nothing to draw on - "
+                    "check window.shouldClose() before drawing, or stop drawing after closing it");
     if (!st().open) panic(what, "the window isn't open yet - call window.open(width, height, \"title\") first");
     if (!st().inFrame) beginFrame();
     if (st().leave3D) st().leave3D();  // 2D drawing goes on top of any 3D drawn so far
@@ -170,6 +184,7 @@ inline void open_(int32_t width, int32_t height, const std::string& title) {
     if (s.open) return;
     SetTraceLogLevel(LOG_WARNING);
     InitWindow(width, height, title.c_str());
+    SetExitKey(KEY_NULL);  // Escape is a normal key (for pause menus): only the X button or window.close() close the window
     SetTargetFPS(60);
     // icon.png in the game's folder becomes the window's icon (frg build also puts it into the .exe).
     std::string icon = findGameFile("icon.png");
@@ -182,6 +197,7 @@ inline void open_(int32_t width, int32_t height, const std::string& title) {
         }
     }
     s.open = true;
+    s.closed = false;
     addHook(shutdownHooks(), &close_);
     auto& at = autotest::st();
     if (const char* f = std::getenv("FRG_AUTOTEST_FRAMES")) at.frames = std::atol(f);
@@ -195,7 +211,7 @@ inline bool shouldClose_() {
     if (!s.open) return true;
     if (s.inFrame) endFrame();
     auto& at = autotest::st();
-    if (WindowShouldClose() || (at.frames >= 0 && s.frame > at.frames)) return true;
+    if (WindowShouldClose() || autotest::closeRequested(s.frame) || (at.frames >= 0 && s.frame > at.frames)) return true;
     beginFrame();
     return false;
 }
@@ -205,6 +221,7 @@ void run_(Update update, Draw draw) {
     if (!st().open) panic("window.run()", "the window isn't open yet - call window.open(width, height, \"title\") first");
     while (!shouldClose_()) {
         update(GetFrameTime());
+        if (!st().open) break;  // update called window.close(): there's no window left to draw on
         draw();
     }
     close_();
@@ -391,6 +408,8 @@ inline void window::parseAutotestInput(const char* spec) {
             for (int i = 0; input::keyNames()[i]; i++)
                 if (name == input::keyNames()[i])
                     autotest::st().holds.push_back({i, std::atol(item.c_str() + colon + 1), std::atol(item.c_str() + dash + 1)});
+            if (name == "CLOSE")
+                autotest::st().holds.push_back({autotest::kClose, std::atol(item.c_str() + colon + 1), std::atol(item.c_str() + dash + 1)});
             const char* buttons[] = {"MOUSE_LEFT", "MOUSE_RIGHT", "MOUSE_MIDDLE"};
             for (int b = 0; b < 3; b++)
                 if (name == buttons[b])

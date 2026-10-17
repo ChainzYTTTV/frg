@@ -48,7 +48,7 @@ window.close();
 
 | Function | What it does |
 |---|---|
-| `window.shouldClose()` | Shows the frame drawn since the last call, then starts the next frame. Gives back `true` when the player closes the window (the X button or Escape), so the loop ends. |
+| `window.shouldClose()` | Shows the frame drawn since the last call, then starts the next frame. Gives back `true` when the player has clicked the window's X (or `window.close()` was called), so the loop ends. |
 
 **The engine loop:**
 
@@ -93,7 +93,7 @@ Both loops do the same things each frame:
 
 - Drawing can happen any time after `open()`; a frame starts by itself if one isn't running.
 - Calling drawing functions before `window.open(...)` stops the game with "the window isn't open yet".
-- Escape closes the window by default.
+- Escape doesn't close the window: it's a normal key your game can use. The window closes when the player clicks its X, when your code calls `window.close()`, or when `main` ends.
 - If the game's folder has an `icon.png`, it becomes the window's icon (and the `.exe`'s icon). See [The game's icon](../getting-started.md#the-games-icon).
 - [`<input>`](input.md), [`<graphics2d>`](graphics2d.md), [`<graphics3d>`](graphics3d.md) and [`<ui>`](ui.md) all work with this window.
 

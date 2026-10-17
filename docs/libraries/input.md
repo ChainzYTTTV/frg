@@ -38,7 +38,7 @@ if (input.keyPressed(Key.SPACE) and onGround) {
 
 `Key` is an [enum](../language/10-enums-and-optionals.md#enums), so keys can be stored in variables and lists: `Key jumpKey = Key.SPACE;`.
 
-Escape also closes the window by default.
+Escape is a normal key: it doesn't close the window, so a game can use it for a pause menu or to let go of the mouse. The player closes the window with its X button (see [Stopping the game](window.md#stopping-the-game)).
 
 ## Mouse
 

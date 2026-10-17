@@ -911,16 +911,20 @@ static void printHelp() {
         "  frg run [folder]    compile the game, then run it\n"
         "  frg check [folder]  look for errors without building\n"
         "  frg test [folder]   run the tests in the game's tests folder\n"
+        "  frg fmt [folders or files]  tidy the layout of .frg files (indentation, braces, blank lines)\n"
+        "      --check                  only list the files that aren't tidy (exit code 1 if there are any)\n"
+        "      --print                  print the tidied files instead of changing them\n"
         "  frg package [folder]  make a finished build and zip it, ready to share: dist/<name>.zip\n"
         "  frg cache           show how big the build cache is (frg cache clear deletes it)\n"
         "  frg version         show the Forge version\n\n"
         "[folder] is the game's top folder (the one with main.frg). It defaults to the current folder.\n"
-        "Options for build and run:\n"
+        "Options for build, run, test and package:\n"
         "  --release           make a finished game: no console window, and a smaller .exe\n"
         "  --debug             a build for the debugger: breakpoints and variables on your .frg lines\n"
         "  --no-console        no console window (print() output isn't shown; runtime errors pop up in a box)\n"
         "  --console           keep the console window, even with --release\n"
-        "Without options the console is on, so print() and errors show while you test the game.\n",
+        "Without options the console is on, so print() and errors show while you test the game.\n\n"
+        "Every command and option is explained in docs/reference/commands.md.\n",
         kVersion);
 }
 
@@ -1083,11 +1087,19 @@ int main(int argc, char** argv) {
     if (cmd == "check") {
         // frg check [folder] [--machine]: find errors without building anything.
         fs::path dir = fs::current_path();
+        int folders = 0;
         for (size_t i = 1; i < args.size(); i++) {
-            if (args[i] == "--machine")
+            if (args[i] == "--machine") {
                 setMachineOutput(true);
-            else
+            } else if (args[i].starts_with("--")) {
+                reportPlainError("there's no option called " + args[i], "frg check only takes a folder: frg check [folder]");
+                return 1;
+            } else if (folders++) {
+                reportPlainError("too many arguments", "usage: frg check [folder]");
+                return 1;
+            } else {
                 dir = args[i];
+            }
         }
         if (!fs::is_regular_file(dir / "main.frg")) {
             reportPlainError("there's no main.frg in " + fs::absolute(dir).string(),

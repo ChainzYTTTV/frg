@@ -721,7 +721,7 @@ void draw(){
 }
 ```
 
-The screen is cleared to the background color before every frame. **Escape** or the window's X closes the game. Multiply speeds by `dt` so movement is the same speed on every computer: `x += 200 * dt;` moves 200 pixels per second.
+The screen is cleared to the background color before every frame. The window's X closes the game (Escape is a normal key: it does **not** close the window, so games can use it for pause menus). Multiply speeds by `dt` so movement is the same speed on every computer: `x += 200 * dt;` moves 200 pixels per second.
 
 #### Low-level toolkits (advanced, optional)
 
@@ -5552,7 +5552,7 @@ window.close();
 
 | Function | What it does |
 |---|---|
-| `window.shouldClose()` | Shows the frame drawn since the last call, then starts the next frame. Gives back `true` when the player closes the window (the X button or Escape), so the loop ends. |
+| `window.shouldClose()` | Shows the frame drawn since the last call, then starts the next frame. Gives back `true` when the player has clicked the window's X (or `window.close()` was called), so the loop ends. |
 
 **The engine loop:**
 
@@ -5597,7 +5597,7 @@ Both loops do the same things each frame:
 
 - Drawing can happen any time after `open()`; a frame starts by itself if one isn't running.
 - Calling drawing functions before `window.open(...)` stops the game with "the window isn't open yet".
-- Escape closes the window by default.
+- Escape doesn't close the window: it's a normal key your game can use. The window closes when the player clicks its X, when your code calls `window.close()`, or when `main` ends.
 - If the game's folder has an `icon.png`, it becomes the window's icon (and the `.exe`'s icon). See The game's icon (see “Getting Started” › “The game's icon”).
 - `<input>` (see “`<input>`: Keyboard, Mouse and Controllers”), `<graphics2d>` (see “`<graphics2d>`: 2D Drawing”), `<graphics3d>` (see “`<graphics3d>`: 3D Drawing”) and `<ui>` (see “`<ui>`: Buttons, Checkboxes, Sliders and Text Boxes”) all work with this window.
 
@@ -5653,7 +5653,7 @@ if (input.keyPressed(Key.SPACE) and onGround) {
 
 `Key` is an enum (see “10. Enums and Optionals” › “Enums”), so keys can be stored in variables and lists: `Key jumpKey = Key.SPACE;`.
 
-Escape also closes the window by default.
+Escape is a normal key: it doesn't close the window, so a game can use it for a pause menu or to let go of the mouse. The player closes the window with its X button (see Stopping the game (see “`<window>`: The Game Window”)).
 
 ### Mouse
 
@@ -7650,7 +7650,7 @@ All three toolkits share the same window, keyboard and mouse functions. They're 
 | Function | What it does |
 |---|---|
 | `openWindow(int width, int height, string title)` | opens the window and starts the graphics API. Call it once, before anything else. |
-| `shouldClose()` | call once per frame, at the top of the game loop. It shows the frame you just drew, reads the keyboard and mouse, and gives back `true` when the player closes the window (or presses **Escape**). |
+| `shouldClose()` | call once per frame, at the top of the game loop. It shows the frame you just drew, reads the keyboard and mouse, and gives back `true` when the player clicks the window's X (Escape is a normal key, it doesn't close the window). |
 | `closeWindow()` | frees everything and closes the window. It also happens by itself when the program ends. |
 | `width()`, `height()` | the window's size in pixels (`int`). The window can't be resized. |
 | `deltaTime()` | seconds since the last frame (`float`), for moving things smoothly |
@@ -10123,7 +10123,7 @@ void draw(){
 }
 ```
 
-The screen is cleared to the background color before each frame (`window.setBackground(color)` changes it). The window closes when you press Escape or click the X.
+The screen is cleared to the background color before each frame (`window.setBackground(color)` changes it). The window closes when the player clicks its X, or when your code calls `window.close()`; Escape is a normal key (it doesn't close anything).
 
 See `examples/platformer` for a complete game. The other examples are `shapes` (2D drawing), `sprites` (images and sound), `menu` (scenes and UI), `world3d` (3D) and `voxel` (a creative-mode block world, built from meshes).
 

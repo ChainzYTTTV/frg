@@ -695,7 +695,7 @@ void draw(){
 }
 ```
 
-The screen is cleared to the background color before every frame. **Escape** or the window's X closes the game. Multiply speeds by `dt` so movement is the same speed on every computer: `x += 200 * dt;` moves 200 pixels per second.
+The screen is cleared to the background color before every frame. The window's X closes the game (Escape is a normal key: it does **not** close the window, so games can use it for pause menus). Multiply speeds by `dt` so movement is the same speed on every computer: `x += 200 * dt;` moves 200 pixels per second.
 
 ### Low-level toolkits (advanced, optional)
 

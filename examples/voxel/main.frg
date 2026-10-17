@@ -9,6 +9,7 @@
   Mouse to look, W A S D to walk, Space to jump, F (or Space twice) to fly - then Space / Left Shift go up / down.
   Left click breaks a block, right click places the one in your hand, middle click picks the one you look at.
   1 - 9 or the mouse wheel choose a hotbar slot, E opens the creative menu, F3 shows the debug numbers.
+  Escape lets go of the mouse (click the window to look around again); close the game with the window's X.
 
   The files: blocks.frg (the kinds of block), world.frg (the blocks, and making the hills and trees),
   mesher.frg (turning blocks into meshes), player.frg (moving and aiming), hud.frg (everything flat on top).

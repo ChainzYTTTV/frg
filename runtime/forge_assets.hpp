@@ -56,19 +56,20 @@ struct Texture_ : std::enable_shared_from_this<Texture_> {
     virtual int32_t width_() { return w; }
     virtual int32_t height_() { return h; }
     virtual void draw_(float x, float y, core::color_ tint) {
-        if (ready("texture.draw()")) DrawTextureV(tex, ::Vector2{x, y}, rl(tint));
+        if (ready("texture.draw()")) graphics2d::drawSprite(tex, ::Rectangle{0, 0, (float)w, (float)h}, ::Rectangle{x, y, (float)w, (float)h}, ::Vector2{0, 0}, 0, rl(tint));
     }
     virtual void drawScaled_(float x, float y, float scale, core::color_ tint) {
-        if (ready("texture.drawScaled()")) DrawTextureEx(tex, ::Vector2{x, y}, 0, scale, rl(tint));
+        if (ready("texture.drawScaled()"))
+            graphics2d::drawSprite(tex, ::Rectangle{0, 0, (float)w, (float)h}, ::Rectangle{x, y, w * scale, h * scale}, ::Vector2{0, 0}, 0, rl(tint));
     }
     virtual void drawRotated_(core::vec2_ center, float degrees, float scale, core::color_ tint) {
         if (!ready("texture.drawRotated()")) return;
         float dw = w * scale, dh = h * scale;
-        DrawTexturePro(tex, ::Rectangle{0, 0, (float)w, (float)h}, ::Rectangle{center.x_, center.y_, dw, dh},
+        graphics2d::drawSprite(tex, ::Rectangle{0, 0, (float)w, (float)h}, ::Rectangle{center.x_, center.y_, dw, dh},
                        ::Vector2{dw / 2, dh / 2}, degrees, rl(tint));
     }
     virtual void drawPart_(core::rect_ source, core::rect_ dest, core::color_ tint) {
-        if (ready("texture.drawPart()")) DrawTexturePro(tex, rl(source), rl(dest), ::Vector2{0, 0}, 0, rl(tint));
+        if (ready("texture.drawPart()")) graphics2d::drawSprite(tex, rl(source), rl(dest), ::Vector2{0, 0}, 0, rl(tint));
     }
 };
 
@@ -209,7 +210,7 @@ struct Animation_ : std::enable_shared_from_this<Animation_> {
     virtual void draw_(float x, float y, core::color_ tint) { drawScaled_(x, y, 1, tint); }
     virtual void drawScaled_(float x, float y, float scale, core::color_ tint) {
         if (!sheet || !sheet->ready("animation.draw()")) return;
-        DrawTexturePro(sheet->tex, source(), ::Rectangle{x, y, frameWidth * scale, frameHeight * scale}, ::Vector2{0, 0}, 0, rl(tint));
+        graphics2d::drawSprite(sheet->tex, source(), ::Rectangle{x, y, frameWidth * scale, frameHeight * scale}, ::Vector2{0, 0}, 0, rl(tint));
     }
     virtual void play_() { playing = true; }
     virtual void pause_() { playing = false; }

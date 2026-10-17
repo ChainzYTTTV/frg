@@ -612,6 +612,141 @@ inline void drawFPS_(float x, float y) {
     window::ensureFrame("graphics2d.drawFPS()");
     DrawFPS((int)x, (int)y);
 }
+
+// ---------------------------------------------------------------- sprite effects
+// beginFlash / beginOutline / beginGlow: textures and animations drawn after one of them get that effect, until
+// endEffect() (or the next begin...). Shapes and text don't. Everything a texture draws goes through drawSprite().
+extern "C" void rlDrawRenderBatchActive(void);
+
+enum class Fx { None, Flash, Outline, Glow };
+struct Effects {
+    Fx kind = Fx::None;
+    ::Color color{255, 255, 255, 255};
+    float amount = 1;      // flash: how far toward the color; outline: thickness; glow: size (pixels)
+    ::Shader flash{}, outline{};
+    bool loaded = false;
+};
+inline Effects& fx() {
+    static Effects e;
+    return e;
+}
+
+inline void unloadEffects() {
+    Effects& e = fx();
+    if (!e.loaded) return;
+    UnloadShader(e.flash);
+    UnloadShader(e.outline);
+    e.loaded = false;
+}
+
+inline void loadEffects() {
+    Effects& e = fx();
+    if (e.loaded) return;
+    static const char* flashFs = R"GLSL(#version 330
+in vec2 fragTexCoord;
+in vec4 fragColor;
+uniform sampler2D texture0;
+uniform vec4 colDiffuse;
+uniform vec4 fxColor;
+uniform float fxAmount;
+out vec4 finalColor;
+void main() {
+    vec4 t = texture(texture0, fragTexCoord) * colDiffuse * fragColor;
+    finalColor = vec4(mix(t.rgb, fxColor.rgb, fxAmount), t.a * mix(1.0, fxColor.a, fxAmount));
+}
+)GLSL";
+    static const char* outlineFs = R"GLSL(#version 330
+in vec2 fragTexCoord;
+in vec4 fragColor;
+uniform sampler2D texture0;
+uniform vec4 colDiffuse;
+uniform vec4 fxColor;
+uniform float fxAmount;
+uniform vec2 texel;
+out vec4 finalColor;
+void main() {
+    vec4 t = texture(texture0, fragTexCoord) * colDiffuse * fragColor;
+    if (t.a > 0.5) {
+        finalColor = t;
+        return;
+    }
+    float near = 0.0;
+    for (int dy = -4; dy <= 4; dy++) {
+        for (int dx = -4; dx <= 4; dx++) {
+            if (float(dx * dx + dy * dy) > fxAmount * fxAmount + 0.5) continue;
+            near = max(near, texture(texture0, fragTexCoord + vec2(float(dx), float(dy)) * texel).a);
+        }
+    }
+    finalColor = near > 0.5 ? vec4(fxColor.rgb, fxColor.a * fragColor.a) : t;
+}
+)GLSL";
+    e.flash = LoadShaderFromMemory(nullptr, flashFs);
+    e.outline = LoadShaderFromMemory(nullptr, outlineFs);
+    e.loaded = true;
+    addHook(window::beforeCloseHooks(), &unloadEffects);
+}
+
+inline void fxUniforms(::Shader& s, ::Color c, float amount) {
+    float col[4] = {c.r / 255.0f, c.g / 255.0f, c.b / 255.0f, c.a / 255.0f};
+    SetShaderValue(s, GetShaderLocation(s, "fxColor"), col, SHADER_UNIFORM_VEC4);
+    SetShaderValue(s, GetShaderLocation(s, "fxAmount"), &amount, SHADER_UNIFORM_FLOAT);
+}
+
+// Draws (part of) a texture, with the current effect.
+inline void drawSprite(const ::Texture2D& tex, ::Rectangle src, ::Rectangle dst, ::Vector2 origin, float degrees, ::Color tint) {
+    Effects& e = fx();
+    if (e.kind == Fx::None) {
+        DrawTexturePro(tex, src, dst, origin, degrees, tint);
+        return;
+    }
+    loadEffects();
+    rlDrawRenderBatchActive();   // what's waiting is drawn first, with the shader it was meant for
+    if (e.kind == Fx::Flash) {
+        BeginShaderMode(e.flash);
+        fxUniforms(e.flash, e.color, e.amount);
+        DrawTexturePro(tex, src, dst, origin, degrees, tint);
+        EndShaderMode();
+        return;
+    }
+    if (e.kind == Fx::Outline) {
+        BeginShaderMode(e.outline);
+        fxUniforms(e.outline, e.color, e.amount);
+        float texel[2] = {1.0f / std::max(1, tex.width), 1.0f / std::max(1, tex.height)};
+        SetShaderValue(e.outline, GetShaderLocation(e.outline, "texel"), texel, SHADER_UNIFORM_VEC2);
+        DrawTexturePro(tex, src, dst, origin, degrees, tint);
+        EndShaderMode();
+        return;
+    }
+    // glow: soft copies in the glow's color around it (added light), then the sprite itself
+    BeginShaderMode(e.flash);
+    fxUniforms(e.flash, e.color, 1);
+    BeginBlendMode(BLEND_ADDITIVE);
+    for (int ring = 1; ring <= 2; ring++) {
+        float r = e.amount * ring / 2;
+        for (int i = 0; i < 12; i++) {
+            float a = i * 6.2831853f / 12;
+            ::Rectangle d{dst.x + std::cos(a) * r, dst.y + std::sin(a) * r, dst.width, dst.height};
+            DrawTexturePro(tex, src, d, origin, degrees, ::Color{255, 255, 255, (unsigned char)(e.color.a / 6)});
+        }
+    }
+    EndBlendMode();
+    EndShaderMode();
+    DrawTexturePro(tex, src, dst, origin, degrees, tint);
+}
+
+inline void beginFlash_(core::color_ c, float amount) {
+    if (amount < 0 || amount > 1) panic("graphics2d.beginFlash()", "the amount goes from 0 (no flash) to 1 (all one color), but it's " + str(amount));
+    fx() = Effects{Fx::Flash, rl(c), amount, fx().flash, fx().outline, fx().loaded};
+}
+inline void beginOutline_(core::color_ c, float thickness) {
+    if (thickness < 1 || thickness > 4) panic("graphics2d.beginOutline()", "the outline is 1 to 4 pixels thick, but this is " + str(thickness));
+    fx() = Effects{Fx::Outline, rl(c), thickness, fx().flash, fx().outline, fx().loaded};
+}
+inline void beginGlow_(core::color_ c, float size) {
+    if (size < 1 || size > 32) panic("graphics2d.beginGlow()", "the glow is 1 to 32 pixels wide, but this is " + str(size));
+    fx() = Effects{Fx::Glow, rl(c), size, fx().flash, fx().outline, fx().loaded};
+}
+inline void endEffect_() { fx().kind = Fx::None; }
 }  // namespace graphics2d
 
 }  // namespace frg

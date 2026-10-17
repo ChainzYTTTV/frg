@@ -234,6 +234,10 @@ void drawTriangle(vec2 a, vec2 b, vec2 c, color fill);
 void drawText(string text, float x, float y, int size, color c);
 int textWidth(string text, int size);
 void drawFPS(float x, float y);
+void beginFlash(color c, float amount = 1);
+void beginOutline(color c, float thickness = 1);
+void beginGlow(color c, float size = 4);
+void endEffect();
 )FRG";
 
 static const char* kPhysics = R"FRG(

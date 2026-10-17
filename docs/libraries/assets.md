@@ -62,6 +62,8 @@ void draw(){
 
 Pixel art stays sharp when scaled up; there's no blurring.
 
+Textures and animations can flash, get an outline or glow: see [Sprite effects](graphics2d.md#sprite-effects-flash-outline-glow).
+
 ## Animation
 
 Plays the frames of a **sprite sheet** (one image holding every frame of an animation, side by side) one after the other. The [sprites and animation guide](../guides/sprites-and-animation.md#animation) explains it step by step.

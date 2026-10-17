@@ -6052,6 +6052,35 @@ Every function takes a `color` (see “Built-in Types: vec2, vec3, vec4, color, 
 
 To draw pictures from files, see `<assets>` (see “`<assets>`: Images, Animations and Fonts”) (`Texture`). For sprite sheets and animation, see the sprites guide (see “Sprites and Animation”).
 
+### Sprite effects: flash, outline, glow
+
+Three effects for pictures (`Texture` and `Animation` from `<assets>` (see “`<assets>`: Images, Animations and Fonts”)), without writing a shader. Start one, draw the sprites that should have it, then end it. Shapes and text are never changed.
+
+| Function | What it does |
+|---|---|
+| `graphics2d.beginFlash(color c, float amount = 1)` | sprites drawn after this turn toward `c`: `amount` 1 is all `c`, 0.5 half way. A white flash is the classic "got hit" |
+| `graphics2d.beginOutline(color c, float thickness = 1)` | a `thickness`-pixel line (1 to 4) around the visible part of each sprite |
+| `graphics2d.beginGlow(color c, float size = 4)` | a soft glow of `c` around each sprite, `size` pixels wide (1 to 32) |
+| `graphics2d.endEffect()` | back to drawing sprites normally |
+
+Starting one effect ends the one before, and an effect stays on until `endEffect()` (even into the next frame), so end it after the sprites that need it.
+
+```cpp
+void draw(){
+    if (hurtTime > 0) {
+        graphics2d.beginFlash(color.WHITE, 0.8);      // the player flashes white for a moment after a hit
+    }
+    player.draw(x, y);
+    graphics2d.endEffect();
+
+    graphics2d.beginOutline(color.YELLOW);           // the thing under the mouse gets an outline
+    chest.draw(chestX, chestY);
+    graphics2d.endEffect();
+}
+```
+
+The outline is drawn on the see-through pixels around the picture (it can't go past the edge of the image), so leave at least `thickness` empty pixels around a sprite that gets one. A glow can go past the edge.
+
 ### Mixing with 3D
 
 2D drawing can be mixed with `<graphics3d>` (see “`<graphics3d>`: 3D Drawing”) in the same frame. 2D drawn after 3D appears on top of it, which is how you'd draw a HUD over a 3D scene.
@@ -6466,6 +6495,8 @@ void draw(){
 ```
 
 Pixel art stays sharp when scaled up; there's no blurring.
+
+Textures and animations can flash, get an outline or glow: see Sprite effects (see “`<graphics2d>`: 2D Drawing” › “Sprite effects: flash, outline, glow”).
 
 ### Animation
 

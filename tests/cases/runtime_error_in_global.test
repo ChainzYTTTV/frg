@@ -1,0 +1,12 @@
+=== main.frg
+#include <stdio>
+
+list<int> empty = [];
+int first = empty[0];
+
+int main(){
+    print("main");
+    return 0;
+}
+=== runtime error
+Runtime error in main.frg:4: position 0 is outside the list: the list is empty

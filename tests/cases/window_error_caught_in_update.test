@@ -1,0 +1,33 @@
+=== main.frg
+#include <window>
+#include <stdio>
+
+``` A try { } in update catches the error, and the game keeps running. ```
+int frames = 0;
+list<int> scores = [];
+
+int main(){
+    window.open(320, 200, "Caught");
+    window.run();
+    print("still ran all {frames} frames");
+    return 0;
+}
+
+void update(float dt){
+    frames++;
+    if (frames == 3) {
+        try {
+            int best = scores[0];
+        } catch (Error e) {
+            print("caught: {e.message}");
+        }
+    }
+}
+
+void draw(){
+}
+=== window
+frames: 6
+=== output
+caught: position 0 is outside the list: the list is empty
+still ran all 6 frames

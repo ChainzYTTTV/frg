@@ -11,6 +11,7 @@ These docs are for **anyone using or learning Forge**, including people who have
 | | |
 |---|---|
 | [Getting Started](getting-started.md) | Setup, the `frg` command, VS Code, your first program, and building a finished game |
+| [Commands](reference/commands.md) | Everything you type in the terminal: every `frg` command and option |
 | [Cheat sheet](LANGUAGE.md) | The whole language on one page, for looking things up quickly |
 | [Everything in one file](FORGE_ALL_DOCS.md) | The teaching brief and every page below, combined into one file to upload to an AI chat. Rebuild it with `.\docs\make-all-docs.ps1` after changing the docs. |
 
@@ -73,6 +74,17 @@ For advanced users who want to write their own rendering with a real graphics AP
 | [`<OpenGL>`](libraries/opengl.md) | OpenGL 3.3, with GLSL shaders |
 | [`<DirectX>`](libraries/directx.md) | Direct3D 11, with HLSL shaders |
 | [`<Vulkan>`](libraries/vulkan.md) | Vulkan, with GLSL shaders compiled to SPIR-V |
+
+## Reference
+
+For looking things up exactly. The examples on these pages are run by Forge's tests, so what they show is what Forge does.
+
+| | |
+|---|---|
+| [Syntax](reference/syntax.md) | Every form the language has, in one place: literals, types, statements, expressions, and what Forge *doesn't* have |
+| [How Forge behaves, exactly](reference/rules.md) | The "what happens if...?" answers: the order things run in, numbers that get too big, copies vs shared objects, loops, a frame step by step, every way a game stops |
+| [Commands](reference/commands.md) | Every `frg` command and option, what it prints, the files it makes, exit codes, environment variables, and the same things in VS Code |
+| [Error messages](reference/error-messages.md) | Every error and warning, with an example that causes it and how to fix it |
 
 ## Guides
 

@@ -137,6 +137,7 @@ private:
     // Expressions
     std::string ex(const Expr* e);
     std::string conv(const Expr* e, const Type* T);
+    std::string globalValue(const VarDecl* v);
     std::string unwrap(const std::string& code, const Type* opt, const Loc& l, const std::string& what = "");
     std::string objRef(const Expr* o, std::string& sep);
     std::string objValue(const Expr* o);
@@ -164,6 +165,15 @@ private:
 std::string Gen::unwrap(const std::string& code, const Type* opt, const Loc& l, const std::string& what) {
     std::string desc = what.empty() ? "this value" : "'" + what + "'";
     return std::string(isNullableRef(opt->elem) ? "::frg::nn(" : "::frg::unwrap(") + code + ", " + where(l) + ", " + cppString(desc) + ")";
+}
+
+// The starting value of a global variable or a static field. It's worked out before main() starts, so anything that
+// could stop with a runtime error (all but plain values) goes through initGlobal, which reports it like one in main.
+std::string Gen::globalValue(const VarDecl* v) {
+    const Expr* e = v->init.get();
+    if (e->kind == EK::Int || e->kind == EK::Float || e->kind == EK::Bool || (e->kind == EK::Str && e->args.empty()))
+        return conv(e, v->type);
+    return "::frg::initGlobal([]() -> " + v->type->cpp + " { return " + conv(e, v->type) + "; })";
 }
 
 std::string Gen::conv(const Expr* e, const Type* T) {
@@ -1221,7 +1231,7 @@ GeneratedCpp Gen::run() {
             if (!f->isStatic) continue;
             // d->cpp starts with "::", which C++ would join to the type before it, so it's left off here.
             std::string decl = "inline " + f->type->cpp + " " + d->cpp.substr(2) + "::" + id(f->name);
-            line(f->init ? decl + " = " + conv(f->init.get(), f->type) + ";" : decl + "{};");
+            line(f->init ? decl + " = " + globalValue(f.get()) + ";" : decl + "{};");
         }
 
     globalScope = false;
@@ -1263,7 +1273,7 @@ GeneratedCpp Gen::run() {
         ind++;
         for (auto& g : m->ast.globals) {
             std::string decl = g->type->cpp + " " + id(g->name);
-            line(g->init ? decl + " = " + conv(g->init.get(), g->type) + ";" : decl + "{};");
+            line(g->init ? decl + " = " + globalValue(g.get()) + ";" : decl + "{};");
         }
         ind--;
         line("}");

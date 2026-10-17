@@ -1,0 +1,33 @@
+=== main.frg
+#include <window>
+#include <graphics2d>
+#include <stdio>
+
+``` A title screen in your own loop, then the game in window.run(), in the same window. ```
+int titleFrames = 0;
+int gameFrames = 0;
+
+int main(){
+    window.open(320, 200, "Title, then game");
+    while (titleFrames < 3 and !window.shouldClose()) {
+        titleFrames++;
+        graphics2d.drawText("Title", 10, 10, 20, color.WHITE);
+    }
+    print("title screen done after {titleFrames} frames");
+    window.run();
+    print("the game ran for {gameFrames} frames");
+    return 0;
+}
+
+void update(float dt){
+    gameFrames++;
+}
+
+void draw(){
+    graphics2d.drawText("Game", 10, 10, 20, color.WHITE);
+}
+=== window
+frames: 10
+=== output
+title screen done after 3 frames
+the game ran for 7 frames

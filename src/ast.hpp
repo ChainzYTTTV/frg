@@ -94,7 +94,7 @@ struct Expr {
     std::vector<int> decimals;       // Str: for each interpolation, the decimals asked for with {value:.2}, or -1
     std::vector<ExprPtr> keys;       // MapLit keys
     ExprPtr a, b, c;                 // operands / object / callee / index (b) / ternary branches (b, c)
-    TypeRef typeRef;                 // Is / As: the type checked for
+    TypeRef typeRef;                 // Is / As: the type checked for. Name / Member: the <types> in Box<int>(5)
     std::string opWord;              // Binary: the operator as written, when it was a word ("plus", "greater or equal")
 
     // Filled in by the checker.

@@ -1,0 +1,31 @@
+=== main.frg
+#include <stdio>
+
+class Box<T> {
+    T item;
+    Box(T item){ this.item = item; }
+}
+
+struct Player {
+    int hp = 10;
+}
+
+int twice(int n){ return n * 2; }
+
+int main(){
+    int a = twice<int>(3);
+    Player p = Player<int>();
+    Box<int> b = Box<int, int>(5);
+    Box<int> c = Box<int>("x");
+    Box<int> d = Box<string>("x");
+    Box<Nope> e = Box<Nope>(1);
+    return 0;
+}
+=== error
+only a type can be followed by types inside < >, like Box<int>(5)
+'twice' isn't a type, so write it without the < >
+'Player' doesn't take types inside < >
+'Box' needs 1 type inside < >, for T
+'item' in Box() needs an int, but this is a string
+'d' needs a Box<int>, but this is a Box<string>
+unknown type 'Nope'

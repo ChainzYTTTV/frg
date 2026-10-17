@@ -2,6 +2,26 @@
 
 What changed in each version of Forge. Plans for later versions are in the [roadmap](ROADMAP.md).
 
+## 0.9.2 (2026-10-17)
+
+**Engine**
+- **No key closes the window by itself.** Escape is a normal key now (games can use it for a pause menu); the window closes with its X, Alt+F4, `window.close()`, or when `main` ends. Alt+F4 also works in the OpenGL / DirectX / Vulkan toolkits now.
+- **The mouse pointer:** `input.hideCursor()`, `showCursor()`, `isCursorHidden()`, `setMousePosition(x, y)`, `setCursor(Cursor.HAND)` (8 shapes) and `isMouseInWindow()`, next to `lockMouse` for first-person cameras.
+- `window.close()` in `update` no longer crashes `draw`: `window.run()` stops before drawing. Drawing after the window was closed says so.
+- `FRG_AUTOTEST_FRAMES=N` runs exactly N frames (it ran one more). `FRG_AUTOTEST_INPUT` can click the window's X (`CLOSE:5-5`), and `FRG_AUTOTEST_HIDDEN=1` runs without showing the window.
+
+**Language**
+- Generic types can name their types when they're made: `Box<int>(5)`, `Box<Button>()`.
+- A runtime error in a global variable's starting value (or a static field's) shows its message and line, instead of crashing without one.
+- Clearer messages for an extra `}` or `;`, `null` in a type that isn't optional, and `window.run()` after the window was closed.
+
+**Tools**
+- `frg help` lists `frg fmt`; `frg check` rejects options it doesn't know.
+
+**Docs and tests**
+- A new **Reference** section, whose examples are run by the tests so they're exactly what Forge does: [Syntax](docs/reference/syntax.md), [How Forge behaves, exactly](docs/reference/rules.md), [Commands](docs/reference/commands.md) (everything you type in the terminal) and [Error messages](docs/reference/error-messages.md) (134 of them, each with an example and a fix).
+- 24 new tests that really run games (`=== window`): every way a game stops, custom loops, frame order, key timing, the mouse pointer. CI runs them on Linux.
+
 ## 0.9.1 (2026-10-16)
 
 **Language**

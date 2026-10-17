@@ -1,5 +1,6 @@
 # Builds frg.exe on Windows, runs every test in tests/cases, and builds every example game.
-# Then a Linux job runs every example for a few frames (see tests/run_games.sh).
+# Then a Linux job runs every example for a few frames (see tests/run_games.sh), and the window tests
+# (see tests/run_window_tests.sh).
 name: tests
 
 on:
@@ -29,9 +30,21 @@ jobs:
           cmake -S . -B build -G Ninja
           cmake --build build
 
+      # This machine can't open a window, so the window tests are only built here (into window-tests/),
+      # and the run-games job runs them; the docs' examples that open a window are skipped.
       - name: Run the tests
         shell: pwsh
+        env:
+          FRG_NO_WINDOW: "1"
+          FRG_COLLECT_WINDOW_TESTS: ${{ github.workspace }}/window-tests
         run: .\tests\run_tests.ps1
+
+      - name: Keep the built window tests
+        uses: actions/upload-artifact@v4
+        with:
+          name: window-tests
+          path: window-tests/
+          retention-days: 7
 
       - name: Build every example
         shell: pwsh
@@ -71,6 +84,11 @@ jobs:
           name: built-examples
           path: games
 
+      - uses: actions/download-artifact@v4
+        with:
+          name: window-tests
+          path: window-tests
+
       - name: Install Wine, a virtual screen and software drawing
         run: |
           sudo apt-get update -q
@@ -81,6 +99,9 @@ jobs:
 
       - name: Run every example for 180 frames
         run: xvfb-run -a -s "-screen 0 1280x800x24" tests/run_games.sh games screenshots 180
+
+      - name: Run the window tests (games that check what they print, frame by frame)
+        run: xvfb-run -a -s "-screen 0 1280x800x24" tests/run_window_tests.sh window-tests
 
       - name: Keep the screenshots
         if: always()

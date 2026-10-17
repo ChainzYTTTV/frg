@@ -1,0 +1,27 @@
+=== main.frg
+#include <window>
+#include <graphics2d>
+#include <stdio>
+
+``` Your own loop: window.close() makes the next shouldClose() true. Code after close() in the same turn still runs. ```
+int main(){
+    window.open(320, 200, "Own loop");
+    int frames = 0;
+    while (!window.shouldClose()) {
+        frames++;
+        graphics2d.drawRect(10, 10, 20, 20, color.RED);
+        if (frames == 4) {
+            window.close();
+            print("closed on frame {frames}");
+        }
+    }
+    print("the loop ended after {frames} turns");
+    print("shouldClose() stays true: {window.shouldClose()}");
+    return 0;
+}
+=== window
+frames: 60
+=== output
+closed on frame 4
+the loop ended after 4 turns
+shouldClose() stays true: true

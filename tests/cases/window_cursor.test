@@ -1,0 +1,55 @@
+=== main.frg
+#include <window>
+#include <input>
+#include <graphics2d>
+#include <stdio>
+
+int frame = 0;
+
+int main(){
+    window.open(400, 300, "Cursor");
+    print("start: hidden {input.isCursorHidden()}, locked {input.isMouseLocked()}");
+    input.hideCursor();
+    print("hideCursor: hidden {input.isCursorHidden()}, locked {input.isMouseLocked()}");
+    input.showCursor();
+    print("showCursor: hidden {input.isCursorHidden()}");
+    input.lockMouse(true);
+    print("lockMouse(true): hidden {input.isCursorHidden()}, locked {input.isMouseLocked()}");
+    input.lockMouse(false);
+    print("lockMouse(false): hidden {input.isCursorHidden()}, locked {input.isMouseLocked()}");
+    input.hideCursor();
+    input.lockMouse(true);
+    input.showCursor();
+    print("lock, then showCursor: hidden {input.isCursorHidden()}, locked {input.isMouseLocked()}");
+    input.setCursor(Cursor.HAND);
+    Cursor c = Cursor.CROSSHAIR;
+    input.setCursor(c);
+    print("cursor shape {c}");
+    input.setMousePosition(100, 50);
+    input.setMousePosition(vec2(120, 60));
+    window.run();
+    return 0;
+}
+
+void update(float dt){
+    if (frame == 1) {
+        vec2 m = input.mousePosition();
+        print("after setMousePosition: {m.x}, {m.y}");
+    }
+    frame++;
+}
+
+void draw(){
+    graphics2d.drawCircle(input.mousePosition(), 5, color.RED);
+}
+=== window
+frames: 3
+=== output
+start: hidden false, locked false
+hideCursor: hidden true, locked false
+showCursor: hidden false
+lockMouse(true): hidden true, locked true
+lockMouse(false): hidden false, locked false
+lock, then showCursor: hidden false, locked false
+cursor shape CROSSHAIR
+after setMousePosition: 120.0, 60.0

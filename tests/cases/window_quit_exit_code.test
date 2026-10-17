@@ -1,0 +1,23 @@
+=== main.frg
+#include <window>
+#include <stdio>
+
+``` main's number is the game's exit code, also after a window: 0 = fine, anything else = something went wrong. ```
+int main(){
+    window.open(320, 200, "Exit code");
+    window.run();
+    print("returning 3");
+    return 3;
+}
+
+void update(float dt){
+}
+
+void draw(){
+}
+=== window
+frames: 2
+=== output
+returning 3
+=== exit code
+3

@@ -1,0 +1,27 @@
+=== main.frg
+#include <window>
+#include <stdio>
+
+``` The player clicks the window's X on frame 5: window.run() returns, and main carries on (to save, say goodbye...). ```
+int frames = 0;
+
+int main(){
+    window.open(320, 200, "Quit with the X");
+    window.run();
+    print("window.run() returned after {frames} frames");
+    print("saving the game");
+    return 0;
+}
+
+void update(float dt){
+    frames++;
+}
+
+void draw(){
+}
+=== window
+frames: 60
+input: CLOSE:5-5
+=== output
+window.run() returned after 5 frames
+saving the game

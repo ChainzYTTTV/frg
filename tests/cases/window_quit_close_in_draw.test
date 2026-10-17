@@ -1,0 +1,29 @@
+=== main.frg
+#include <window>
+#include <graphics2d>
+#include <stdio>
+
+``` window.close() at the end of draw: the frame is done, and the next frame doesn't start. ```
+int frames = 0;
+
+int main(){
+    window.open(320, 200, "Quit from draw");
+    window.run();
+    print("run() returned after {frames} frames");
+    return 0;
+}
+
+void update(float dt){
+    frames++;
+}
+
+void draw(){
+    graphics2d.drawRect(10, 10, 20, 20, color.RED);
+    if (frames == 4) {
+        window.close();
+    }
+}
+=== window
+frames: 60
+=== output
+run() returned after 4 frames

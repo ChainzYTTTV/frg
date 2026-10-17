@@ -1,6 +1,6 @@
 # Roadmap
 
-What's planned for Forge between now (0.9.1) and 1.0.0. The order and the version numbers can change. What's already done is in the [changelog](CHANGELOG.md).
+What's planned for Forge between now (0.9.2) and 1.0.0. The order and the version numbers can change. What's already done is in the [changelog](CHANGELOG.md).
 
 Sizes are rough: **S** is small, **M** medium, **L** large.
 
@@ -112,6 +112,16 @@ These were decided by Forge's designer (2026-10-16). Build them this way.
 | Run every example in CI, not only build it | drawing, input and game code could break without a test failing | done (Linux, Wine, software drawing) |
 | Docs that match Forge | `<ECS>` described honestly, and wrong claims fixed | done |
 | Call a function value from anywhere: `fs[0]()` | only variables and fields could be called | done |
+
+## 0.9.2: Exact docs, and stopping a game properly
+
+| Item | Why | Status |
+|---|---|---|
+| No single key closes the window (Escape is a normal key) | a stray key press shouldn't end the game; Escape is for pause menus | done |
+| Hide, show, move and shape the mouse pointer | own pointers, menus, mouse-look games | done (`hideCursor`, `setMousePosition`, `setCursor`...) |
+| Reference docs whose examples are run by the tests | no guessing: syntax, exact behavior, every command, every error message | done (`docs/reference/`) |
+| Tests that run games and check what they do | every way a game stops, custom loops, frame order, key timing | done (`=== window` tests, run in CI) |
+| `Box<int>(5)` | the natural way to make a generic object gave a confusing error | done |
 
 ## 0.9.x: Engine extras
 

@@ -1,0 +1,9 @@
+=== main.frg
+#include <input>
+
+int main(){
+    input.hideCursor();
+    return 0;
+}
+=== runtime error
+Runtime error in input.hideCursor(): the window isn't open yet

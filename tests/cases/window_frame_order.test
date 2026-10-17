@@ -1,0 +1,45 @@
+=== main.frg
+#include <window>
+#include <stdio>
+
+``` The order of one frame: waiting tasks wake up, then update(dt), then draw(). dt is 0 on the first frame. ```
+int frame = 0;
+
+task ticker(){
+    for (int i in 1..3) {
+        print("  task (frame {frame})");
+        wait(0);
+    }
+}
+
+int main(){
+    window.open(320, 200, "Order");
+    ticker();
+    print("before run");
+    window.run();
+    print("after run: {frame} frames");
+    return 0;
+}
+
+void update(float dt){
+    print("update {frame}" + (dt > 0 ? "" : " (dt is 0)"));
+}
+
+void draw(){
+    print("draw {frame}");
+    frame++;
+}
+=== window
+frames: 3
+=== output
+  task (frame 0)
+before run
+  task (frame 0)
+update 0 (dt is 0)
+draw 0
+  task (frame 1)
+update 1
+draw 1
+update 2
+draw 2
+after run: 3 frames

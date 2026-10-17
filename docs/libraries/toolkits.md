@@ -53,7 +53,7 @@ All three toolkits share the same window, keyboard and mouse functions. They're 
 | Function | What it does |
 |---|---|
 | `openWindow(int width, int height, string title)` | opens the window and starts the graphics API. Call it once, before anything else. |
-| `shouldClose()` | call once per frame, at the top of the game loop. It shows the frame you just drew, reads the keyboard and mouse, and gives back `true` when the player closes the window (or presses **Escape**). |
+| `shouldClose()` | call once per frame, at the top of the game loop. It shows the frame you just drew, reads the keyboard and mouse, and gives back `true` when the player clicks the window's X (Escape is a normal key, it doesn't close the window). |
 | `closeWindow()` | frees everything and closes the window. It also happens by itself when the program ends. |
 | `width()`, `height()` | the window's size in pixels (`int`). The window can't be resized. |
 | `deltaTime()` | seconds since the last frame (`float`), for moving things smoothly |

@@ -1,0 +1,29 @@
+=== main.frg
+#include <window>
+#include <graphics2d>
+#include <stdio>
+
+``` After window.run() returns, the window is closed: shouldClose() is true, and drawing is an error. ```
+int main(){
+    window.open(320, 200, "After");
+    window.run();
+    print("shouldClose(): {window.shouldClose()}");
+    try {
+        graphics2d.drawRect(0, 0, 10, 10, color.RED);
+    } catch (Error e) {
+        print("drawing: {e.message}");
+    }
+    return 0;
+}
+
+void update(float dt){
+}
+
+void draw(){
+}
+=== window
+frames: 3
+input: CLOSE:1-1
+=== output
+shouldClose(): true
+drawing: the window has been closed (by window.close(), or by the player), so there's nothing to draw on - check window.shouldClose() before drawing, or stop drawing after closing it

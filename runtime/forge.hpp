@@ -90,6 +90,17 @@ inline std::string callTrace(const char* where) {
     std::exit(1);
 }
 
+// A global variable's starting value: it's worked out before main() starts, so a runtime error in it (like
+// `int first = empty[0];`) is reported here, instead of crashing without a message.
+template <class F>
+auto initGlobal(F&& f) -> decltype(f()) {
+    try {
+        return f();
+    } catch (const core::Error_& e) {
+        fatal(e);
+    }
+}
+
 // Every runtime error goes through here. A try { } around the code catches it; otherwise main() stops the game with it.
 [[noreturn]] inline void panic(const char* where, const std::string& msg) { throw core::Error_{msg, where, callTrace(where)}; }
 // throw "message"; in Forge code.

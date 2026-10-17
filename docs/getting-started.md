@@ -18,7 +18,7 @@ frg version
 g++ --version
 ```
 
-The first should print `Forge 0.9.1` and the second should print a GCC version. If `frg` isn't found, add Forge's `bin` folder to your PATH and restart the terminal.
+The first should print `Forge 0.9.2` and the second should print a GCC version. If `frg` isn't found, add Forge's `bin` folder to your PATH and restart the terminal.
 
 ### Building Forge from source
 
@@ -84,7 +84,7 @@ Each one is a single `main.frg` with comments, ready to `frg run` and then chang
 
 ## The `frg` command
 
-Run these in a terminal. `[folder]` is the game's top folder (the one with `main.frg`); leave it out to use the current folder.
+Run these in a terminal. `[folder]` is the game's top folder (the one with `main.frg`); leave it out to use the current folder. Every command, option and message is explained in [Commands](reference/commands.md).
 
 | Command | What it does |
 |---|---|

@@ -85,6 +85,7 @@ private:
     }
     bool declAhead(bool allowParen);
     bool lambdaAhead();
+    bool typeArgsAhead(size_t nameTok, TypeRef& out);
     bool bodyless = false;  // parsing an interface's or an abstract method: it ends with ; instead of { code }
     ExprPtr parseLambda();
     Include parseInclude();
@@ -227,6 +228,26 @@ bool Parser::lambdaAhead() {
     return result;
 }
 
+// Box<int>(5): the name at `nameTok` is followed by <types> and then '('. If so, reads them into `out` (just past the
+// '>'); otherwise consumes nothing, so `a < b` is still a comparison.
+bool Parser::typeArgsAhead(size_t nameTok, TypeRef& out) {
+    if (t[nameTok + 1].kind != Tok::Lt) return false;
+    size_t save = p, splits = splitLog.size();
+    p = nameTok;
+    TypeRef tmp;
+    if (parseTypeImpl(tmp, true) && tmp.path.size() == 1 && !tmp.args.empty() && !tmp.optional && !tmp.isFunction &&
+        at(Tok::LParen)) {
+        out = std::move(tmp);
+        return true;
+    }
+    while (splitLog.size() > splits) {
+        t[splitLog.back().first] = splitLog.back().second;
+        splitLog.pop_back();
+    }
+    p = save;
+    return false;
+}
+
 ExprPtr Parser::parseLambda() {
     auto e = std::make_unique<Expr>(EK::Lambda, cur().loc);
     auto f = std::make_shared<FuncDecl>();
@@ -319,6 +340,11 @@ FileAST Parser::parseFile() {
                 fail(cur().loc, "this code has to go inside a function",
                      "put it inside main(){ ... } - or, if you're making a new function, give it a return type like 'void " +
                          cur().text + "()'");
+            if (at(Tok::RBrace))
+                fail(cur().loc, "this '}' doesn't close anything",
+                     "remove it - or, if a function or type ends too early, look for an extra '}' above it");
+            if (at(Tok::Semi))
+                fail(cur().loc, "this ';' isn't needed", "remove it - in Forge, nothing ends with '};'");
             fail(cur().loc, "expected a function, a variable, a type or an #include, but found " + describe(cur()));
         } catch (CompileAbort&) {
             ast.ok = false;
@@ -652,6 +678,7 @@ StmtPtr Parser::parseStmt() {
             }
             break;
         case Tok::KwElse: fail(l, "this 'else' doesn't belong to an 'if'", "else has to come right after the } of an if");
+        case Tok::Semi: fail(l, "this ';' is on its own, so it doesn't end anything", "remove it - a '}' doesn't need a ';' after it");
         case Tok::KwCase:
         case Tok::KwDefault: fail(l, "'" + cur().text + "' can only be used inside a switch");
         case Tok::KwStruct:
@@ -1072,6 +1099,7 @@ ExprPtr Parser::parsePostfix() {
             auto m = std::make_unique<Expr>(EK::Member, name.loc);
             m->text = name.text;
             m->a = std::move(e);
+            typeArgsAhead(p - 1, m->typeRef);  // world.Box<int>(5)
             e = std::move(m);
         } else if (at(Tok::LBracket)) {
             auto idx = std::make_unique<Expr>(EK::Index, cur().loc);
@@ -1176,9 +1204,9 @@ ExprPtr Parser::parsePrimary() {
                 fail(k.loc, "'" + k.text + "' is a type, not a value",
                      k.text == "list" ? "make a list like this: list<int> numbers = [1, 2, 3];"
                                       : "make a map like this: map<string, int> ages = {\"Ana\": 12};");
-            p++;
             auto e = std::make_unique<Expr>(EK::Name, k.loc);
             e->text = k.text;
+            if (!typeArgsAhead(p, e->typeRef)) p++;  // Box<int>(5) names the types; otherwise just the name
             return e;
         }
         case Tok::KwReserved:

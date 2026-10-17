@@ -917,6 +917,10 @@ bool Checker::assignable(Expr* e, Type* T, const std::string& dest) {
         hint = "a " + S->name + " isn't a kind of " + T->name;
     else if (S->kind == TK::List && T->kind == TK::List)
         hint = "the items in the list have to be exactly " + T->elem->name;
+    if (S->kind == TK::Null) {
+        reportError(e->loc, dest + " can't be null, because " + aType(T) + " isn't optional", hint);
+        return false;
+    }
     reportError(e->loc, dest + " needs " + aType(T) + ", but this is " + aType(S), hint);
     return false;
 }
@@ -1780,7 +1784,17 @@ FuncDecl* Checker::resolveCall(Expr* e, const std::vector<FuncDecl*>& candidates
 Type* Checker::construct(Expr* e, std::vector<ExprPtr>& args, TypeDecl* d, Type* expected) {
     e->builds = d;
     Type* inst = nullptr;
-    if (!d->typeParams.empty()) {
+    // Box<int>(5): the types are written out.
+    const TypeRef* written = e->kind == EK::Call && e->a && !e->a->typeRef.args.empty() ? &e->a->typeRef : nullptr;
+    if (written) {
+        Type* t = namedType(d, *written);  // reports a type that takes no < >, or the wrong number of them
+        if (!t) {
+            for (auto& a : args) value(a.get());
+            return e->type = tError();
+        }
+        if (!d->typeParams.empty()) inst = t;
+    }
+    if (!d->typeParams.empty() && !inst) {
         // Box(5) is a Box<int> when that's what's wanted: Box<int> b = Box(5);
         Type* want = expected && expected->kind == TK::Optional ? expected->elem : expected;
         if (want && want->decl == d) inst = want;
@@ -1791,7 +1805,7 @@ Type* Checker::construct(Expr* e, std::vector<ExprPtr>& args, TypeDecl* d, Type*
             for (size_t i = 0; i < d->typeParams.size(); i++) example += i ? ", int" : "int";
             reportError(e->loc, "Forge needs to know what " + joinNames(d->typeParams) + " " + (d->typeParams.size() == 1 ? "is" : "are") +
                                     " for this " + d->name,
-                        "make it where its type is written, like: " + example + "> b = " + d->name + "(...);");
+                        "say it here, like " + example + ">(...), or make it where its type is written: " + example + "> b = " + d->name + "(...);");
             return e->type = tError();
         }
     }
@@ -1855,6 +1869,13 @@ Type* Checker::callExpr(Expr* e, Type* expected) {
     callArgs = e->args.size();
     expr(callee, nullptr, true);
     callArgs = outer;
+    if (!callee->typeRef.args.empty() && (callee->kind == EK::Name || callee->kind == EK::Member) && callee->res.kind != RK::Type &&
+        callee->res.kind != RK::None) {
+        reportError(callee->typeRef.loc, "only a type can be followed by types inside < >, like Box<int>(5)",
+                    "'" + callee->text + "' isn't a type, so write it without the < >");
+        for (auto& a : e->args) value(a.get());
+        return e->type = tError();
+    }
     switch (callee->res.kind) {
         case RK::Func: {
             Module* m = callee->res.module ? callee->res.module : callee->res.func->module;

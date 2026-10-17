@@ -1,0 +1,14 @@
+=== main.frg
+#include <stdio>
+
+class Waves {
+    static list<int> sizes = [];
+    static int firstSize = Waves.sizes[0];
+}
+
+int main(){
+    print("main {Waves.firstSize}");
+    return 0;
+}
+=== runtime error
+Runtime error in main.frg:5: position 0 is outside the list: the list is empty

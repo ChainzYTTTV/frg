@@ -26,6 +26,7 @@ struct Hold {
     int key;
     long from, to;
 };
+const int kScriptedClose = 2000;  // FRG_AUTOTEST_INPUT's CLOSE: the window's X button
 
 struct Win {
     HWND hwnd = nullptr;
@@ -85,8 +86,10 @@ LRESULT CALLBACK wndProc(HWND hwnd, UINT msg, WPARAM wp, LPARAM lp) {
         case WM_CLOSE: s.closing = true; return 0;
         case WM_KEYDOWN:
         case WM_SYSKEYDOWN:
+            // Every key is a normal key, Escape too: no single key closes the window. Alt+F4 goes on to Windows,
+            // which turns it into WM_CLOSE, like the X button.
             s.keys[sidedKey(wp, lp) & 0xff] = true;
-            if (wp == VK_ESCAPE) s.closing = true;  // like the engine: Escape closes the window
+            if (msg == WM_SYSKEYDOWN && wp == VK_F4) break;
             return 0;
         case WM_KEYUP:
         case WM_SYSKEYUP: s.keys[sidedKey(wp, lp) & 0xff] = false; return 0;
@@ -133,6 +136,8 @@ void parseAutotest() {
                 for (int i = 0; i < kKeyCount; i++)
                     if (name == kKeyNames[i])
                         s.holds.push_back({i, std::atol(item.c_str() + colon + 1), std::atol(item.c_str() + dash + 1)});
+                if (name == "CLOSE")  // the window's X button
+                    s.holds.push_back({kScriptedClose, std::atol(item.c_str() + colon + 1), std::atol(item.c_str() + dash + 1)});
             }
             start = end + 1;
         }
@@ -204,7 +209,8 @@ void open(int32_t width, int32_t height, const std::string& title, void (*presen
     QueryPerformanceCounter(&s.start);
     s.last = s.start;
     parseAutotest();
-    ShowWindow(s.hwnd, SW_SHOW);
+    // FRG_AUTOTEST_HIDDEN=1: tests run the game without its window showing up on the screen.
+    if (!std::getenv("FRG_AUTOTEST_HIDDEN")) ShowWindow(s.hwnd, SW_SHOW);
     UpdateWindow(s.hwnd);
 }
 
@@ -245,6 +251,7 @@ bool shouldClose() {
     s.dt = double(now.QuadPart - s.last.QuadPart) / double(s.freq.QuadPart);
     if (s.dt > 0.25) s.dt = 0.25;
     s.last = now;
+    if (scripted(kScriptedClose, 0) == 1 && scripted(kScriptedClose, 1) == 0) s.closing = true;
     if (s.closing || (s.autotestFrames >= 0 && s.frame >= s.autotestFrames)) return true;
     s.inFrame = true;
     tasks::update_((float)s.dt);

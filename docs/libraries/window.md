@@ -48,7 +48,7 @@ window.close();
 
 | Function | What it does |
 |---|---|
-| `window.shouldClose()` | Shows the frame drawn since the last call, then starts the next frame. Gives back `true` when the player closes the window (the X button or Escape), so the loop ends. |
+| `window.shouldClose()` | Shows the frame drawn since the last call, then starts the next frame. Gives back `true` when the player has clicked the window's X (or `window.close()` was called), so the loop ends. |
 
 **The engine loop:**
 
@@ -89,11 +89,53 @@ Both loops do the same things each frame:
 | `window.toggleFullscreen()` | switches between fullscreen and windowed |
 | `window.screenshot(string fileName)` | saves what's on screen as a `.png` in the game's folder |
 
+## Stopping the game
+
+No single key closes a Forge game. **Escape is a normal key** that your game can use (for a pause menu, say). The window closes when:
+
+- the player clicks its **X**, or presses **Alt+F4**;
+- your code calls **`window.close()`** (from a Quit button, after the last level...);
+- **`main` returns**, or the game stops with a runtime error.
+
+With `window.run()`, the first two make `window.run()` return, and `main` carries on after it: that's the place to save the game. If `update` calls `window.close()`, `update` finishes, `draw` isn't called again, and `window.run()` returns. With your own loop, they make the next `window.shouldClose()` give back `true`.
+
+<!-- check: builds -->
+
+```cpp
+#include <window>
+#include <input>
+#include <stdio>
+
+bool paused = false;
+int coins = 0;
+
+int main(){
+    window.open(960, 540, "My game");
+    window.run();           // returns when the player closes the window, or window.close() is called
+    print("saving {coins} coins");   // so this runs every time the game ends normally
+    return 0;
+}
+
+void update(float dt){
+    if (input.keyPressed(Key.ESCAPE)) {
+        paused = !paused;   // Escape opens and closes the pause menu
+    }
+    if (paused and input.keyPressed(Key.Q)) {
+        window.close();     // Quit, from the pause menu
+    }
+}
+
+void draw(){
+}
+```
+
+Every way a game can stop, what runs after each, and examples that are checked by Forge's tests: [Stopping the game](../reference/rules.md#stopping-the-game). The exact order of everything in a frame: [A frame, step by step](../reference/rules.md#a-frame-step-by-step).
+
 ## Notes
 
 - Drawing can happen any time after `open()`; a frame starts by itself if one isn't running.
 - Calling drawing functions before `window.open(...)` stops the game with "the window isn't open yet".
-- Escape closes the window by default.
+- Escape doesn't close the window: it's a normal key your game can use. The window closes when the player clicks its X, when your code calls `window.close()`, or when `main` ends.
 - If the game's folder has an `icon.png`, it becomes the window's icon (and the `.exe`'s icon). See [The game's icon](../getting-started.md#the-games-icon).
 - [`<input>`](input.md), [`<graphics2d>`](graphics2d.md), [`<graphics3d>`](graphics3d.md) and [`<ui>`](ui.md) all work with this window.
 

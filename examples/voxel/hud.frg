@@ -50,6 +50,11 @@ void update(){
         menuOpen = !menuOpen;
         input.lockMouse(!menuOpen);
     }
+    // Escape closes the menu, or lets go of the mouse (to reach the window's X); a click grabs it again.
+    if (input.keyPressed(Key.ESCAPE)) {
+        menuOpen = false;
+        input.lockMouse(false);
+    }
     if (menuOpen) {
         if (input.mousePressed(MouseButton.LEFT)) {
             int block = blockUnderMouse();

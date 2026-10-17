@@ -1,0 +1,26 @@
+=== main.frg
+#include <OpenGL>
+#include <stdio>
+
+``` The low-level toolkits stop the same way: the X ends the loop, Escape is a normal key. ```
+int main(){
+    OpenGL.openWindow(320, 200, "OpenGL");
+    int frames = 0;
+    int escapes = 0;
+    while (!OpenGL.shouldClose()) {
+        frames++;
+        if (OpenGL.keyPressed(Key.ESCAPE)) {
+            escapes++;
+        }
+        OpenGL.clearColor(0.1, 0.1, 0.2, 1);
+        OpenGL.clear(OpenGL.COLOR_BUFFER_BIT);
+    }
+    OpenGL.closeWindow();
+    print("closed after {frames} frames, Escape pressed {escapes} times");
+    return 0;
+}
+=== window
+frames: 60
+input: ESCAPE:2-3,CLOSE:7-7
+=== output
+closed after 7 frames, Escape pressed 1 times

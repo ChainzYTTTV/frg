@@ -1,0 +1,40 @@
+=== main.frg
+#include <window>
+#include <stdio>
+
+```
+  FRG_AUTOTEST_FRAMES=N runs exactly N frames in all, whichever loop runs them.
+  Each window.shouldClose() call starts a frame. In `while (!window.shouldClose() and own < 4)` the last call starts
+  a frame that the loop then doesn't use, so it's shown empty. Checking the count first (`own < 4 and ...`) doesn't.
+```
+int updates = 0;
+
+int main(){
+    window.open(320, 200, "Count");
+    int own = 0;
+    while (own < 4 and !window.shouldClose()) {
+        own++;
+    }
+    print("own loop, count first: {own}");
+    int second = 0;
+    while (!window.shouldClose() and second < 2) {
+        second++;
+    }
+    print("own loop, shouldClose first: {second} (and one empty frame)");
+    window.run();
+    print("window.run(): {updates}");
+    return 0;
+}
+
+void update(float dt){
+    updates++;
+}
+
+void draw(){
+}
+=== window
+frames: 12
+=== output
+own loop, count first: 4
+own loop, shouldClose first: 2 (and one empty frame)
+window.run(): 5

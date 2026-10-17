@@ -140,7 +140,7 @@ These were decided by Forge's designer (2026-10-16). Build them this way.
 |---|---|---|
 | Circle collisions, slopes and collision layers in `<physics>` | balls, ramps, "bullets don't hit bullets" | M |
 | Automatic 3D culling (skip what the camera can't see) | big 3D worlds only cost what's in view | done |
-| Simple 3D lighting | 3D shapes stop looking flat | M |
+| Simple 3D lighting | 3D shapes stop looking flat | done (`graphics3d.setLight`) |
 | Custom shaders on sprites in the engine (glow, flash white, outlines) | effects without a low-level toolkit | M |
 | Textures in `<Vulkan>`, and drawing into textures in `<OpenGL>` and `<DirectX>` | fills the toolkits' gaps | M |
 | Test the toolkits on NVIDIA and laptop graphics | only one AMD card has run them so far | S |

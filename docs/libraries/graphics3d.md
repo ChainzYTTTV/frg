@@ -236,6 +236,29 @@ void draw(){
 }
 ```
 
+## Light
+
+Without light, every side of a shape is the same color, so 3D looks flat. `graphics3d.setLight` adds a light that shines from one direction, like the sun, plus a soft light from everywhere so the sides facing away aren't black. Everything 3D is lit by it: shapes, meshes and models. Lines and outlines aren't.
+
+| Function | What it does |
+|---|---|
+| `graphics3d.setLight(vec3 direction, color light = color.WHITE, color ambient = color(100, 105, 120))` | turns the light on. `direction` is the way the light shines (`vec3(0, -1, 0)` is straight down; it doesn't need to be length 1). `light` is its color, `ambient` the soft light everywhere |
+| `graphics3d.lightOff()` | back to no light: everything shows its own color |
+| `graphics3d.isLit()` | whether the light is on |
+
+Call `setLight` once (after `window.open`), or again to change it: a sunset is a low, orange light.
+
+```cpp
+int main(){
+    window.open(800, 450, "Lit");
+    graphics3d.setLight(vec3(-0.5, -1, -0.3));                                   // high up, from one side
+    window.run();
+    return 0;
+}
+```
+
+A surface facing the light gets the ambient plus the light; one facing away gets only the ambient. Brighter `ambient` means softer shadows. Meshes made with `makeMesh` are lit by their triangles: each triangle's front (the side its corners go around counter-clockwise) faces the way it's lit from.
+
 ## Culling: what the camera can't see isn't drawn
 
 Forge skips anything that's entirely outside what the camera sees: behind it, off to a side, or farther than it can see. Every shape, mesh and model has a box around it, and if the whole box is out of view, it isn't drawn at all. Things partly in view are drawn as usual. This happens by itself, so a big world with lots of things in it only costs the time of the part you're looking at. It follows `pushTransform`, so a moved or turned drawing is checked where it really ends up.

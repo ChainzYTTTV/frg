@@ -5,6 +5,7 @@ What changed in each version of Forge. Plans for later versions are in the [road
 ## Unreleased
 
 **Engine**
+- **3D light:** `graphics3d.setLight(direction, light, ambient)` lights every shape, mesh and model from one direction (like the sun), with a soft light everywhere, so 3D stops looking flat. `lightOff()` and `isLit()`. Lines and outlines stay unlit; see-through shapes stay see-through.
 - **3D culling:** anything entirely outside what the camera sees (behind it, off to a side, too far) isn't drawn, so big 3D worlds only cost what's in view. On by default; it follows `pushTransform`. `graphics3d.setCulling(false)` turns it off, and `graphics3d.culledLastFrame()` counts what was skipped.
 
 ## 0.9.3 (2026-10-17)

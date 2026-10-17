@@ -73,8 +73,12 @@ inline ::Camera3D rlCamera() {
     return cam;
 }
 
+void beginLight();
+void endLight();
+
 inline void leave3D() {
     if (!st().in3D) return;
+    endLight();
     if (st().transforms > 0) {  // the 3D part ends with transforms still pushed: undo them, then say so
         int n = st().transforms;
         while (st().transforms > 0) {
@@ -100,8 +104,187 @@ inline void enter3D(const char* what) {
     window::leaveCamera2D();  // 3D uses its own camera; the 2D one comes back at the next 2D drawing
     BeginMode3D(rlCamera());
     st().in3D = true;
+    beginLight();
     window::st().leave3D = &leave3D;
     addHook(window::beforeEndFrameHooks(), &leave3D);
+}
+
+// ---------------------------------------------------------------- light
+// Off until setLight(): then every shape, mesh and model is lit by one light from a direction (like the sun) plus
+// a soft light from everywhere (ambient). Surfaces facing the light are bright, the ones facing away get the
+// ambient only. Lines and outlines aren't lit.
+//
+// Three versions of one shader: for raylib's batched shapes (their normals are already in world space), for
+// Forge's meshes (cut-out: see-through pixels are dropped) and for models, spheres and cylinders (drawn as meshes,
+// so they can be see-through, like smoke).
+inline const char* litVertex() {
+    return R"GLSL(#version 330
+in vec3 vertexPosition;
+in vec2 vertexTexCoord;
+in vec3 vertexNormal;
+in vec4 vertexColor;
+uniform mat4 mvp;
+uniform mat4 matModel;
+out vec2 fragTexCoord;
+out vec4 fragColor;
+out vec3 fragNormal;
+void main() {
+    fragTexCoord = vertexTexCoord;
+    fragColor = vertexColor;
+    fragNormal = USE_MODEL ? mat3(matModel) * vertexNormal : vertexNormal;
+    gl_Position = mvp * vec4(vertexPosition, 1.0);
+}
+)GLSL";
+}
+inline const char* litFragment() {
+    return R"GLSL(#version 330
+in vec2 fragTexCoord;
+in vec4 fragColor;
+in vec3 fragNormal;
+uniform sampler2D texture0;
+uniform vec4 colDiffuse;
+uniform vec3 lightDir;
+uniform vec3 lightColor;
+uniform vec3 ambient;
+out vec4 finalColor;
+void main() {
+    vec4 c = texture(texture0, fragTexCoord) * colDiffuse * fragColor;
+    if (CUTOUT && c.a < 0.5) discard;
+    float len = length(fragNormal);
+    if (len < 0.01) {          // no direction to light it by: as it is
+        finalColor = c;
+        return;
+    }
+    float d = max(dot(fragNormal / len, -lightDir), 0.0);
+    finalColor = vec4(c.rgb * min(ambient + lightColor * d, vec3(1.0)), c.a);
+}
+)GLSL";
+}
+
+struct Light {
+    bool on = false;
+    ::Vector3 dir{-0.37f, -0.84f, -0.4f};     // the way the light travels (normalized)
+    ::Vector3 color{1.0f, 0.98f, 0.94f};
+    ::Vector3 ambient{0.4f, 0.42f, 0.48f};
+    ::Shader batch{}, cutout{}, smooth{};
+    bool loaded = false;
+    ::Mesh sphere{}, cylinder{};               // unit shapes with normals, for lit spheres and cylinders
+    ::Material material{};
+    bool active = false;                       // the batch shader is in use (between beginLight and endLight)
+};
+inline Light& light() {
+    static Light l;
+    return l;
+}
+
+inline std::string litSource(const char* src, bool model, bool cutout) {
+    std::string s = src;
+    auto put = [&](const std::string& name, bool v) {
+        for (size_t at = s.find(name); at != std::string::npos; at = s.find(name, at)) s.replace(at, name.size(), v ? "true" : "false");
+    };
+    put("USE_MODEL", model);
+    put("CUTOUT", cutout);
+    return s;
+}
+
+inline void unloadLight() {
+    Light& l = light();
+    if (!l.loaded) return;
+    UnloadShader(l.batch);
+    UnloadShader(l.cutout);
+    UnloadShader(l.smooth);
+    UnloadMesh(l.sphere);
+    UnloadMesh(l.cylinder);
+    if (l.material.maps) RL_FREE(l.material.maps);
+    l.material.maps = nullptr;
+    l.loaded = false;
+}
+
+inline void loadLight() {
+    Light& l = light();
+    if (l.loaded) return;
+    l.batch = LoadShaderFromMemory(litSource(litVertex(), false, false).c_str(), litSource(litFragment(), false, false).c_str());
+    l.cutout = LoadShaderFromMemory(litSource(litVertex(), true, false).c_str(), litSource(litFragment(), true, true).c_str());
+    l.smooth = LoadShaderFromMemory(litSource(litVertex(), true, false).c_str(), litSource(litFragment(), true, false).c_str());
+    l.sphere = GenMeshSphere(1, 16, 24);
+    l.cylinder = GenMeshCylinder(1, 1, 24);
+    l.material = LoadMaterialDefault();
+    l.loaded = true;
+    addHook(window::beforeCloseHooks(), &unloadLight);
+}
+
+// Gives a lit shader the light's numbers.
+inline void lightUniforms(::Shader& s) {
+    Light& l = light();
+    SetShaderValue(s, GetShaderLocation(s, "lightDir"), &l.dir, SHADER_UNIFORM_VEC3);
+    SetShaderValue(s, GetShaderLocation(s, "lightColor"), &l.color, SHADER_UNIFORM_VEC3);
+    SetShaderValue(s, GetShaderLocation(s, "ambient"), &l.ambient, SHADER_UNIFORM_VEC3);
+}
+
+inline bool lit() { return light().on; }
+
+inline ::Vector3 colorVec(core::color_ c) { return ::Vector3{c.r_ / 255.0f, c.g_ / 255.0f, c.b_ / 255.0f}; }
+
+inline void setLight_(core::vec3_ direction, core::color_ lightColor, core::color_ ambient) {
+    float len = std::sqrt(direction.x_ * direction.x_ + direction.y_ * direction.y_ + direction.z_ * direction.z_);
+    if (len < 1e-6f) panic("graphics3d.setLight()", "the light's direction can't be (0, 0, 0) - it's the way the light shines, like vec3(0, -1, 0) for straight down");
+    leave3D();   // the 3D drawn next uses the new light
+    Light& l = light();
+    l.dir = ::Vector3{direction.x_ / len, direction.y_ / len, direction.z_ / len};
+    l.color = colorVec(lightColor);
+    l.ambient = colorVec(ambient);
+    l.on = true;
+}
+inline void lightOff_() {
+    leave3D();
+    light().on = false;
+}
+inline bool isLit_() { return light().on; }
+
+// A sphere or cylinder, lit: drawn from the unit shape, stretched and moved (and through pushTransform).
+inline void drawLitShape(const ::Mesh& mesh, ::Vector3 scale, ::Vector3 at, core::color_ c) {
+    Light& l = light();
+    ::Matrix m{};
+    m.m0 = scale.x;
+    m.m5 = scale.y;
+    m.m10 = scale.z;
+    m.m15 = 1;
+    m.m12 = at.x;
+    m.m13 = at.y;
+    m.m14 = at.z;
+    l.material.shader = l.smooth;
+    l.material.maps[MATERIAL_MAP_DIFFUSE].color = rl(c);
+    lightUniforms(l.smooth);
+    DrawMesh(mesh, l.material, m);
+}
+
+inline void beginLight() {
+    if (!lit()) return;
+    loadLight();
+    lightUniforms(light().batch);
+    BeginShaderMode(light().batch);
+    light().active = true;
+}
+inline void endLight() {
+    if (!light().active) return;
+    EndShaderMode();
+    light().active = false;
+}
+
+// Lines and outlines aren't lit: drawn with raylib's own shader.
+template <typename F>
+inline void unlit(F draw) {
+    if (!lit()) {
+        draw();
+        return;
+    }
+    if (!light().active) {
+        draw();
+        return;
+    }
+    EndShaderMode();
+    draw();
+    BeginShaderMode(light().batch);
 }
 
 // Everything drawn after pushTransform (until the matching popTransform) is turned by `degrees` around `axis`, made
@@ -216,20 +399,27 @@ inline void drawCube_(core::vec3_ p, core::vec3_ size, core::color_ c) {
 }
 inline void drawCubeOutline_(core::vec3_ p, core::vec3_ size, core::color_ c) {
     enter3D("graphics3d.drawCubeOutline()");
-    if (visibleAround(p, size.x_ / 2, size.y_ / 2, size.z_ / 2)) DrawCubeWiresV(rl3(p), rl3(size), rl(c));
+    if (visibleAround(p, size.x_ / 2, size.y_ / 2, size.z_ / 2)) unlit([&] { DrawCubeWiresV(rl3(p), rl3(size), rl(c)); });
 }
 inline void drawSphere_(core::vec3_ p, float radius, core::color_ c) {
     enter3D("graphics3d.drawSphere()");
-    if (visibleAround(p, radius, radius, radius)) DrawSphereEx(rl3(p), radius, 16, 24, rl(c));
+    if (!visibleAround(p, radius, radius, radius)) return;
+    if (lit())
+        drawLitShape(light().sphere, ::Vector3{radius, radius, radius}, rl3(p), c);
+    else
+        DrawSphereEx(rl3(p), radius, 16, 24, rl(c));
 }
 inline void drawSphereOutline_(core::vec3_ p, float radius, core::color_ c) {
     enter3D("graphics3d.drawSphereOutline()");
-    if (visibleAround(p, radius, radius, radius)) DrawSphereWires(rl3(p), radius, 12, 16, rl(c));
+    if (visibleAround(p, radius, radius, radius)) unlit([&] { DrawSphereWires(rl3(p), radius, 12, 16, rl(c)); });
 }
 inline void drawCylinder_(core::vec3_ p, float radius, float height, core::color_ c) {
     enter3D("graphics3d.drawCylinder()");
     if (visible(::Vector3{p.x_ - radius, p.y_ + std::min(0.0f, height), p.z_ - radius}, ::Vector3{p.x_ + radius, p.y_ + std::max(0.0f, height), p.z_ + radius}))
-        DrawCylinder(rl3(p), radius, radius, height, 24, rl(c));
+        if (lit())
+            drawLitShape(light().cylinder, ::Vector3{radius, height, radius}, rl3(p), c);
+        else
+            DrawCylinder(rl3(p), radius, radius, height, 24, rl(c));
 }
 inline void drawPlane_(core::vec3_ center, core::vec2_ size, core::color_ c) {
     enter3D("graphics3d.drawPlane()");
@@ -237,12 +427,12 @@ inline void drawPlane_(core::vec3_ center, core::vec2_ size, core::color_ c) {
 }
 inline void drawGrid_(int32_t slices, float spacing) {
     enter3D("graphics3d.drawGrid()");
-    DrawGrid(slices, spacing);
+    unlit([&] { DrawGrid(slices, spacing); });
 }
 inline void drawLine_(core::vec3_ a, core::vec3_ b, core::color_ c) {
     enter3D("graphics3d.drawLine()");
     if (visible(::Vector3{std::min(a.x_, b.x_), std::min(a.y_, b.y_), std::min(a.z_, b.z_)}, ::Vector3{std::max(a.x_, b.x_), std::max(a.y_, b.y_), std::max(a.z_, b.z_)}))
-        DrawLine3D(rl3(a), rl3(b), rl(c));
+        unlit([&] { DrawLine3D(rl3(a), rl3(b), rl(c)); });
 }
 
 // Where a 3D point shows up on the screen (for putting 2D text over 3D things).
@@ -288,6 +478,22 @@ struct Model_ : std::enable_shared_from_this<Model_> {
         }
         return true;
     }
+    // While the light is on, the model's materials use the lit shader (and get their own back after).
+    template <typename F>
+    void withLight(F draw) {
+        if (!lit()) {
+            draw();
+            return;
+        }
+        std::vector<::Shader> own;
+        for (int i = 0; i < model.materialCount; i++) {
+            own.push_back(model.materials[i].shader);
+            model.materials[i].shader = light().smooth;
+        }
+        lightUniforms(light().smooth);
+        draw();
+        for (int i = 0; i < model.materialCount; i++) model.materials[i].shader = own[i];
+    }
     // The box around the model, as loaded (for culling).
     ::BoundingBox bounds{};
     // How far the model reaches from its origin in any direction (a box that fits it however it's turned).
@@ -309,12 +515,12 @@ struct Model_ : std::enable_shared_from_this<Model_> {
             lo = ::Vector3{position.x_ - r, position.y_ - r, position.z_ - r};
             hi = ::Vector3{position.x_ + r, position.y_ + r, position.z_ + r};
         }
-        if (visible(lo, hi)) DrawModel(model, rl3(position), scale, rl(tint));
+        if (visible(lo, hi)) withLight([&] { DrawModel(model, rl3(position), scale, rl(tint)); });
     }
     virtual void drawRotated_(core::vec3_ position, core::vec3_ axis, float degrees, float scale, core::color_ tint) {
         if (!ready("model.drawRotated()")) return;
         float r = reach() * std::fabs(scale);
-        if (visibleAround(position, r, r, r)) DrawModelEx(model, rl3(position), rl3(axis), degrees, ::Vector3{scale, scale, scale}, rl(tint));
+        if (visibleAround(position, r, r, r)) withLight([&] { DrawModelEx(model, rl3(position), rl3(axis), degrees, ::Vector3{scale, scale, scale}, rl(tint)); });
     }
 };
 
@@ -414,8 +620,15 @@ struct Mesh_ : std::enable_shared_from_this<Mesh_> {
         at.m12 = position.x_;
         at.m13 = position.y_;
         at.m14 = position.z_;
-        if (visible(::Vector3{lo.x + position.x_, lo.y + position.y_, lo.z + position.z_}, ::Vector3{hi.x + position.x_, hi.y + position.y_, hi.z + position.z_}))
-            DrawMesh(mesh, material, at);
+        if (!visible(::Vector3{lo.x + position.x_, lo.y + position.y_, lo.z + position.z_}, ::Vector3{hi.x + position.x_, hi.y + position.y_, hi.z + position.z_}))
+            return;
+        if (lit()) {
+            material.shader = light().cutout;
+            lightUniforms(light().cutout);
+        } else {
+            material.shader = cutoutShader();
+        }
+        DrawMesh(mesh, material, at);
     }
     virtual int32_t vertexCount_() { return vertices; }
 };
@@ -457,6 +670,24 @@ inline std::shared_ptr<Mesh_> makeMesh_(const List<float>& positions, const List
     for (size_t i = 0; i < n; i++) {
         m->lo = ::Vector3{std::min(m->lo.x, positions[i * 3]), std::min(m->lo.y, positions[i * 3 + 1]), std::min(m->lo.z, positions[i * 3 + 2])};
         m->hi = ::Vector3{std::max(m->hi.x, positions[i * 3]), std::max(m->hi.y, positions[i * 3 + 1]), std::max(m->hi.z, positions[i * 3 + 2])};
+    }
+    mesh.normals = (float*)RL_MALLOC(n * 3 * sizeof(float));
+    for (size_t t = 0; t + 2 < n; t += 3) {
+        const float* a = &positions[t * 3];
+        float ux = a[3] - a[0], uy = a[4] - a[1], uz = a[5] - a[2];
+        float vx = a[6] - a[0], vy = a[7] - a[1], vz = a[8] - a[2];
+        float nx = uy * vz - uz * vy, ny = uz * vx - ux * vz, nz = ux * vy - uy * vx;
+        float len = std::sqrt(nx * nx + ny * ny + nz * nz);
+        if (len > 0) {
+            nx /= len;
+            ny /= len;
+            nz /= len;
+        }
+        for (int k = 0; k < 3; k++) {
+            mesh.normals[(t + k) * 3] = nx;
+            mesh.normals[(t + k) * 3 + 1] = ny;
+            mesh.normals[(t + k) * 3 + 2] = nz;
+        }
     }
     std::memcpy(mesh.texcoords, uvs.data(), n * 2 * sizeof(float));
     for (size_t i = 0; i < n; i++) {

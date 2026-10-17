@@ -236,6 +236,28 @@ void draw(){
 }
 ```
 
+## Culling: what the camera can't see isn't drawn
+
+Forge skips anything that's entirely outside what the camera sees: behind it, off to a side, or farther than it can see. Every shape, mesh and model has a box around it, and if the whole box is out of view, it isn't drawn at all. Things partly in view are drawn as usual. This happens by itself, so a big world with lots of things in it only costs the time of the part you're looking at. It follows `pushTransform`, so a moved or turned drawing is checked where it really ends up.
+
+| Function | What it does |
+|---|---|
+| `graphics3d.setCulling(bool on)` | turns culling off (`false`) or back on (`true`); it's on to start with |
+| `graphics3d.isCulling()` | whether it's on |
+| `graphics3d.culledLastFrame()` | how many things weren't drawn in the last frame because they were out of view |
+
+Culling never changes what you see, only how fast it's drawn, so you'll rarely need to turn it off. `culledLastFrame()` is handy for checking that it works: print it, turn around, and watch the number change.
+
+```cpp
+void draw(){
+    graphics3d.setCamera(cam);
+    for (vec3 p in trees) {
+        graphics3d.drawCylinder(p, 0.3, 4, color.BROWN);    // only the trees in view are drawn
+    }
+    graphics2d.drawText("not drawn: {graphics3d.culledLastFrame()}", 10, 10, 20, color.WHITE);
+}
+```
+
 ## 3D points on the 2D screen
 
 | Function | Gives back | What it does |

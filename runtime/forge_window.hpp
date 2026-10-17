@@ -337,14 +337,62 @@ inline core::vec2_ mouseDelta_() {
     ::Vector2 d = GetMouseDelta();
     return {d.x, d.y};
 }
-// A locked mouse is hidden and can't leave the window, and keeps giving mouseDelta() however far it's moved
-// (like in first-person games). Unlocked, it's the normal pointer again.
-inline void lockMouse_(bool locked) {
-    window::ensureFrame("input.lockMouse()");
-    if (locked && !IsCursorHidden()) DisableCursor();
-    if (!locked && IsCursorHidden()) EnableCursor();
+// The mouse pointer (the cursor) belongs to the window, so these need it open.
+inline void needWindow(const char* what) {
+    if (!window::st().open && window::st().closed)
+        panic(what, "the window has been closed, so there's no mouse pointer to change");
+    if (!window::st().open) panic(what, "the window isn't open yet - call window.open(width, height, \"title\") first");
 }
-inline bool isMouseLocked_() { return IsCursorHidden(); }
+inline bool& mouseLocked() {
+    static bool locked = false;
+    return locked;
+}
+
+// A locked mouse is hidden and can't leave the window, and keeps giving mouseDelta() however far it's moved
+// (like in first-person games). Unlocked, it's the normal pointer again (shown, even if hideCursor() hid it before).
+inline void lockMouse_(bool locked) {
+    needWindow("input.lockMouse()");
+    if (locked && !mouseLocked()) DisableCursor();
+    if (!locked && mouseLocked()) EnableCursor();
+    mouseLocked() = locked;
+}
+inline bool isMouseLocked_() { return mouseLocked(); }
+
+// A hidden pointer still moves, and can leave the window (unlike a locked one). For drawing your own pointer,
+// or hiding it while the player uses a controller.
+inline void hideCursor_() {
+    needWindow("input.hideCursor()");
+    HideCursor();
+}
+inline void showCursor_() {
+    needWindow("input.showCursor()");
+    if (mouseLocked()) {  // showing it lets go of it too: a locked pointer has to be hidden
+        EnableCursor();
+        mouseLocked() = false;
+    }
+    ShowCursor();
+}
+inline bool isCursorHidden_() { return window::st().open && IsCursorHidden(); }
+
+enum class Cursor_ : int32_t { ARROW_, HAND_, TEXT_, CROSSHAIR_, RESIZE_ALL_, RESIZE_LEFT_RIGHT_, RESIZE_UP_DOWN_, NOT_ALLOWED_ };
+inline void setCursor_(Cursor_ c) {
+    needWindow("input.setCursor()");
+    static const int shapes[] = {MOUSE_CURSOR_ARROW,      MOUSE_CURSOR_POINTING_HAND, MOUSE_CURSOR_IBEAM,     MOUSE_CURSOR_CROSSHAIR,
+                                 MOUSE_CURSOR_RESIZE_ALL, MOUSE_CURSOR_RESIZE_EW,     MOUSE_CURSOR_RESIZE_NS, MOUSE_CURSOR_NOT_ALLOWED};
+    SetMouseCursor(shapes[(int)c]);
+}
+inline std::string frg$str(Cursor_ c) {
+    static const char* names[] = {"ARROW", "HAND", "TEXT", "CROSSHAIR", "RESIZE_ALL", "RESIZE_LEFT_RIGHT", "RESIZE_UP_DOWN", "NOT_ALLOWED"};
+    return names[(int)c];
+}
+
+// Moves the pointer to a place in the window (0, 0 is the top left).
+inline void setMousePosition_(float x, float y) {
+    needWindow("input.setMousePosition()");
+    SetMousePosition((int)x, (int)y);
+}
+inline void setMousePosition_(core::vec2_ p) { setMousePosition_(p.x_, p.y_); }
+inline bool isMouseInWindow_() { return window::st().open && IsCursorOnScreen(); }
 
 // ---- gamepads (controllers). gamepad is 0 for the first one plugged in, 1 for the second...
 

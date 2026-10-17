@@ -52,8 +52,7 @@ Escape is a normal key: it doesn't close the window, so a game can use it for a 
 | `input.mouseReleased(MouseButton b)` | `bool` | the button was just let go (one frame) |
 | `input.mouseWheel()` | `float` | how far the wheel moved this frame (positive = away from you) |
 | `input.mouseDelta()` | `vec2` | how far the mouse moved since the last frame, in pixels (right and down are positive) |
-| `input.lockMouse(bool locked)` | | `true` hides the pointer and keeps it in the window, so it can move forever (for looking around in 3D); `false` gives it back |
-| `input.isMouseLocked()` | `bool` | whether it's locked |
+| `input.isMouseInWindow()` | `bool` | the pointer is over the window |
 
 Buttons: `MouseButton.LEFT`, `MouseButton.RIGHT`, `MouseButton.MIDDLE`.
 
@@ -66,13 +65,94 @@ if (input.mousePressed(MouseButton.LEFT)) {
 }
 ```
 
-### Looking around with the mouse
+## The mouse pointer (cursor)
 
-First-person 3D games lock the mouse and turn the camera by how far it moved. `mouseDelta()` keeps working when the pointer would have hit the edge of the screen:
+| Function | Gives back | What it does |
+|---|---|---|
+| `input.hideCursor()` | | hides the pointer. It still moves, and can leave the window |
+| `input.showCursor()` | | shows it again (and lets go of it, if it was locked) |
+| `input.isCursorHidden()` | `bool` | whether it's hidden (also while it's locked) |
+| `input.lockMouse(bool locked)` | | `true` hides the pointer **and** keeps it in the window, so the mouse can move forever (for looking around in 3D); `false` gives it back, shown |
+| `input.isMouseLocked()` | `bool` | whether it's locked |
+| `input.setMousePosition(float x, float y)` | | moves the pointer to that place in the window (also takes a `vec2`) |
+| `input.setCursor(Cursor shape)` | | the pointer's shape: `Cursor.ARROW` (normal), `HAND` (something to click), `TEXT` (typing), `CROSSHAIR`, `RESIZE_ALL`, `RESIZE_LEFT_RIGHT`, `RESIZE_UP_DOWN`, `NOT_ALLOWED` |
+
+These need the window to be open (they stop the game with "the window isn't open yet" before `window.open(...)`).
+
+**Hidden or locked?**
+
+| | `hideCursor()` | `lockMouse(true)` |
+|---|---|---|
+| the pointer shows | no | no |
+| `mousePosition()` follows the mouse | yes | no: use `mouseDelta()` |
+| it can leave the window | yes | no |
+| it stops at the edge of the screen | yes | no: the mouse can turn forever |
+| for | drawing your own pointer, games played with a controller | first-person cameras, mouse-steered games |
+
+### Drawing your own pointer
+
+Hide the real one and draw something at `mousePosition()` at the end of `draw()`, so it's on top of everything:
+
+<!-- check: builds -->
 
 ```cpp
-float yaw = 0;     // left and right, in radians
-float pitch = 0;   // up and down
+#include <window>
+#include <input>
+#include <graphics2d>
+
+rect button = rect(140, 120, 120, 40);
+
+int main(){
+    window.open(400, 300, "Own pointer");
+    input.hideCursor();
+    window.run();
+    return 0;
+}
+
+void update(float dt){
+    // the real pointer comes back over the window's edge, so it's usable outside the game
+    if (input.isMouseInWindow()) {
+        input.hideCursor();
+    } else {
+        input.showCursor();
+    }
+}
+
+void draw(){
+    vec2 m = input.mousePosition();
+    bool over = button.contains(m);
+    graphics2d.drawRect(button, over ? color.ORANGE : color.GRAY);
+    graphics2d.drawText("Play", button.x + 35, button.y + 10, 20, color.BLACK);
+    // a crosshair pointer, drawn last
+    graphics2d.drawLine(m.x - 8, m.y, m.x + 8, m.y, color.WHITE, 2);
+    graphics2d.drawLine(m.x, m.y - 8, m.x, m.y + 8, color.WHITE, 2);
+}
+```
+
+To keep the normal pointer but show that something can be clicked, change its shape instead: `input.setCursor(over ? Cursor.HAND : Cursor.ARROW);`.
+
+### Looking around with the mouse (first-person)
+
+First-person 3D games lock the mouse and turn the camera by how far it moved. `mouseDelta()` keeps working when the pointer would have hit the edge of the screen. Since Escape is a normal key, it's the usual way to let go of the mouse (to reach the window's X, or a menu), and a click takes it back:
+
+<!-- check: builds -->
+
+```cpp
+#include <window>
+#include <input>
+#include <graphics3d>
+#include <math>
+
+float yaw = 0;     // turning left and right, in radians (0 looks along +z)
+float pitch = 0;   // looking up and down
+vec3 eye = vec3(0, 2, -6);
+
+int main(){
+    window.open(960, 540, "Mouse look");
+    input.lockMouse(true);
+    window.run();
+    return 0;
+}
 
 void update(float dt){
     if (input.isMouseLocked()) {
@@ -80,13 +160,30 @@ void update(float dt){
         yaw -= d.x * 0.0025;
         pitch = math.clamp(pitch - d.y * 0.0025, -1.5, 1.5);
     }
-    if (input.keyPressed(Key.TAB)) {
-        input.lockMouse(!input.isMouseLocked());   // let go of the mouse, to click on a menu
+    if (input.keyPressed(Key.ESCAPE)) {
+        input.lockMouse(false);          // let go of the mouse
     }
+    if (!input.isMouseLocked() and input.mousePressed(MouseButton.LEFT)) {
+        input.lockMouse(true);           // clicking the game takes it back
+    }
+    vec3 look = vec3(math.cos(pitch) * math.sin(yaw), math.sin(pitch), math.cos(pitch) * math.cos(yaw));
+    vec3 forward = vec3(math.sin(yaw), 0, math.cos(yaw));
+    if (input.keyDown(Key.W)) {
+        eye += forward * (5 * dt);
+    }
+    if (input.keyDown(Key.S)) {
+        eye -= forward * (5 * dt);
+    }
+    graphics3d.setCamera(Camera(eye, eye + look));
+}
+
+void draw(){
+    graphics3d.drawGrid(20, 1);
+    graphics3d.drawCube(vec3(0, 0.5, 0), vec3(1, 1, 1), color.ORANGE);
 }
 ```
 
-The direction the player looks is then `vec3(math.cos(pitch) * math.sin(yaw), math.sin(pitch), math.cos(pitch) * math.cos(yaw))`. See [examples/voxel](../../examples/voxel/player.frg).
+[examples/voxel](../../examples/voxel/player.frg) does this in a full game, with walking, jumping and collisions.
 
 ## Controllers (gamepads)
 

@@ -166,6 +166,8 @@ float mouseWheel();
 )FRG"
 
 static const char* kInput = FRG_KEY_ENUMS R"FRG(
+enum Cursor { ARROW, HAND, TEXT, CROSSHAIR, RESIZE_ALL, RESIZE_LEFT_RIGHT, RESIZE_UP_DOWN, NOT_ALLOWED }
+
 enum GamepadButton {
     A, B, X, Y,
     LEFT_BUMPER, RIGHT_BUMPER, LEFT_TRIGGER, RIGHT_TRIGGER,
@@ -195,6 +197,13 @@ float mouseWheel();
 vec2 mouseDelta();
 void lockMouse(bool locked);
 bool isMouseLocked();
+void hideCursor();
+void showCursor();
+bool isCursorHidden();
+void setCursor(Cursor shape);
+void setMousePosition(float x, float y);
+void setMousePosition(vec2 point);
+bool isMouseInWindow();
 )FRG";
 
 static const char* kGraphics2d = R"FRG(

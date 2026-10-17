@@ -415,6 +415,9 @@ class Mesh {
 void setCamera(Camera camera);
 Camera camera();
 void clearDepth();
+void setCulling(bool on);
+bool isCulling();
+int culledLastFrame();
 void pushTransform(vec3 position, vec3 axis = vec3.UP, float degrees = 0, float scale = 1);
 void popTransform();
 void drawCube(vec3 position, vec3 size, color c);

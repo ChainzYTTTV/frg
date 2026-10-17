@@ -2,6 +2,11 @@
 
 What changed in each version of Forge. Plans for later versions are in the [roadmap](ROADMAP.md).
 
+## Unreleased
+
+**Engine**
+- **3D culling:** anything entirely outside what the camera sees (behind it, off to a side, too far) isn't drawn, so big 3D worlds only cost what's in view. On by default; it follows `pushTransform`. `graphics3d.setCulling(false)` turns it off, and `graphics3d.culledLastFrame()` counts what was skipped.
+
 ## 0.9.3 (2026-10-17)
 
 Found while building a full 3D first-person game in Forge.

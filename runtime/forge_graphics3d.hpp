@@ -42,6 +42,10 @@ struct State {
     Camera_ camera;
     bool in3D = false;
     int transforms = 0;  // pushTransform() calls not popped yet
+    bool culling = true;     // skip things entirely outside what the camera sees
+    long cullFrame = -1;     // the frame culledNow counts
+    int32_t culledNow = 0;   // things skipped this frame
+    int32_t culledLast = 0;  // ... and in the frame before
 };
 
 // raylib's matrix stack (rlgl, compiled into raylib).
@@ -50,6 +54,9 @@ extern "C" void rlPopMatrix(void);
 extern "C" void rlTranslatef(float x, float y, float z);
 extern "C" void rlRotatef(float angle, float x, float y, float z);
 extern "C" void rlScalef(float x, float y, float z);
+extern "C" ::Matrix rlGetMatrixModelview(void);   // the camera's view (BeginMode3D)
+extern "C" ::Matrix rlGetMatrixProjection(void);
+extern "C" ::Matrix rlGetMatrixTransform(void);   // pushTransform's matrix
 inline State& st() {
     static State s;
     return s;
@@ -126,6 +133,77 @@ inline void clearDepth_() {
     glClear(0x0100);   // GL_DEPTH_BUFFER_BIT
 }
 
+// ---------------------------------------------------------------- culling
+// Every shape, mesh and model has a box around it. Before it's drawn, the box's 8 corners are moved the way the
+// drawing will be (pushTransform, the camera, the lens): if all 8 are past the same edge of the view (left, right,
+// top, bottom, too near or too far), none of it can show, so it isn't drawn at all. Anything partly in view is drawn.
+
+// raylib's MatrixMultiply (raymath): `a` first, then `b`.
+inline ::Matrix mul(const ::Matrix& a, const ::Matrix& b) {
+    ::Matrix r;
+    r.m0 = a.m0 * b.m0 + a.m1 * b.m4 + a.m2 * b.m8 + a.m3 * b.m12;
+    r.m1 = a.m0 * b.m1 + a.m1 * b.m5 + a.m2 * b.m9 + a.m3 * b.m13;
+    r.m2 = a.m0 * b.m2 + a.m1 * b.m6 + a.m2 * b.m10 + a.m3 * b.m14;
+    r.m3 = a.m0 * b.m3 + a.m1 * b.m7 + a.m2 * b.m11 + a.m3 * b.m15;
+    r.m4 = a.m4 * b.m0 + a.m5 * b.m4 + a.m6 * b.m8 + a.m7 * b.m12;
+    r.m5 = a.m4 * b.m1 + a.m5 * b.m5 + a.m6 * b.m9 + a.m7 * b.m13;
+    r.m6 = a.m4 * b.m2 + a.m5 * b.m6 + a.m6 * b.m10 + a.m7 * b.m14;
+    r.m7 = a.m4 * b.m3 + a.m5 * b.m7 + a.m6 * b.m11 + a.m7 * b.m15;
+    r.m8 = a.m8 * b.m0 + a.m9 * b.m4 + a.m10 * b.m8 + a.m11 * b.m12;
+    r.m9 = a.m8 * b.m1 + a.m9 * b.m5 + a.m10 * b.m9 + a.m11 * b.m13;
+    r.m10 = a.m8 * b.m2 + a.m9 * b.m6 + a.m10 * b.m10 + a.m11 * b.m14;
+    r.m11 = a.m8 * b.m3 + a.m9 * b.m7 + a.m10 * b.m11 + a.m11 * b.m15;
+    r.m12 = a.m12 * b.m0 + a.m13 * b.m4 + a.m14 * b.m8 + a.m15 * b.m12;
+    r.m13 = a.m12 * b.m1 + a.m13 * b.m5 + a.m14 * b.m9 + a.m15 * b.m13;
+    r.m14 = a.m12 * b.m2 + a.m13 * b.m6 + a.m14 * b.m10 + a.m15 * b.m14;
+    r.m15 = a.m12 * b.m3 + a.m13 * b.m7 + a.m14 * b.m11 + a.m15 * b.m15;
+    return r;
+}
+
+// Whether any of the box from `lo` to `hi` (before pushTransform) can be seen. Call it after enter3D(). A box that
+// can't be seen is counted (culledLastFrame).
+inline bool visible(::Vector3 lo, ::Vector3 hi) {
+    long frame = window::st().frame;
+    if (st().cullFrame != frame) {
+        st().culledLast = st().cullFrame == frame - 1 ? st().culledNow : 0;
+        st().culledNow = 0;
+        st().cullFrame = frame;
+    }
+    if (!st().culling) return true;
+    ::Matrix m = mul(mul(rlGetMatrixTransform(), rlGetMatrixModelview()), rlGetMatrixProjection());
+    int out[6] = {0, 0, 0, 0, 0, 0};
+    for (int i = 0; i < 8; i++) {
+        float x = (i & 1) ? hi.x : lo.x, y = (i & 2) ? hi.y : lo.y, z = (i & 4) ? hi.z : lo.z;
+        float cx = m.m0 * x + m.m4 * y + m.m8 * z + m.m12;
+        float cy = m.m1 * x + m.m5 * y + m.m9 * z + m.m13;
+        float cz = m.m2 * x + m.m6 * y + m.m10 * z + m.m14;
+        float cw = m.m3 * x + m.m7 * y + m.m11 * z + m.m15;
+        out[0] += cx < -cw;
+        out[1] += cx > cw;
+        out[2] += cy < -cw;
+        out[3] += cy > cw;
+        out[4] += cz < -cw;
+        out[5] += cz > cw;
+    }
+    for (int k = 0; k < 6; k++)
+        if (out[k] == 8) {
+            st().culledNow++;
+            return false;
+        }
+    return true;
+}
+inline bool visibleAround(core::vec3_ center, float hx, float hy, float hz) {
+    return visible(::Vector3{center.x_ - hx, center.y_ - hy, center.z_ - hz}, ::Vector3{center.x_ + hx, center.y_ + hy, center.z_ + hz});
+}
+
+inline void setCulling_(bool on) { st().culling = on; }
+inline bool isCulling_() { return st().culling; }
+inline int32_t culledLastFrame_() {
+    long frame = window::st().frame;
+    if (st().cullFrame == frame) return st().culledLast;
+    return st().cullFrame == frame - 1 ? st().culledNow : 0;   // nothing drawn yet this frame
+}
+
 inline void setCamera_(Camera_ c) {
     leave3D();  // the next 3D drawing starts again with the new camera
     st().camera = c;
@@ -134,27 +212,28 @@ inline Camera_ camera_() { return st().camera; }
 
 inline void drawCube_(core::vec3_ p, core::vec3_ size, core::color_ c) {
     enter3D("graphics3d.drawCube()");
-    DrawCubeV(rl3(p), rl3(size), rl(c));
+    if (visibleAround(p, size.x_ / 2, size.y_ / 2, size.z_ / 2)) DrawCubeV(rl3(p), rl3(size), rl(c));
 }
 inline void drawCubeOutline_(core::vec3_ p, core::vec3_ size, core::color_ c) {
     enter3D("graphics3d.drawCubeOutline()");
-    DrawCubeWiresV(rl3(p), rl3(size), rl(c));
+    if (visibleAround(p, size.x_ / 2, size.y_ / 2, size.z_ / 2)) DrawCubeWiresV(rl3(p), rl3(size), rl(c));
 }
 inline void drawSphere_(core::vec3_ p, float radius, core::color_ c) {
     enter3D("graphics3d.drawSphere()");
-    DrawSphereEx(rl3(p), radius, 16, 24, rl(c));
+    if (visibleAround(p, radius, radius, radius)) DrawSphereEx(rl3(p), radius, 16, 24, rl(c));
 }
 inline void drawSphereOutline_(core::vec3_ p, float radius, core::color_ c) {
     enter3D("graphics3d.drawSphereOutline()");
-    DrawSphereWires(rl3(p), radius, 12, 16, rl(c));
+    if (visibleAround(p, radius, radius, radius)) DrawSphereWires(rl3(p), radius, 12, 16, rl(c));
 }
 inline void drawCylinder_(core::vec3_ p, float radius, float height, core::color_ c) {
     enter3D("graphics3d.drawCylinder()");
-    DrawCylinder(rl3(p), radius, radius, height, 24, rl(c));
+    if (visible(::Vector3{p.x_ - radius, p.y_ + std::min(0.0f, height), p.z_ - radius}, ::Vector3{p.x_ + radius, p.y_ + std::max(0.0f, height), p.z_ + radius}))
+        DrawCylinder(rl3(p), radius, radius, height, 24, rl(c));
 }
 inline void drawPlane_(core::vec3_ center, core::vec2_ size, core::color_ c) {
     enter3D("graphics3d.drawPlane()");
-    DrawPlane(rl3(center), ::Vector2{size.x_, size.y_}, rl(c));
+    if (visibleAround(center, size.x_ / 2, 0, size.y_ / 2)) DrawPlane(rl3(center), ::Vector2{size.x_, size.y_}, rl(c));
 }
 inline void drawGrid_(int32_t slices, float spacing) {
     enter3D("graphics3d.drawGrid()");
@@ -162,7 +241,8 @@ inline void drawGrid_(int32_t slices, float spacing) {
 }
 inline void drawLine_(core::vec3_ a, core::vec3_ b, core::color_ c) {
     enter3D("graphics3d.drawLine()");
-    DrawLine3D(rl3(a), rl3(b), rl(c));
+    if (visible(::Vector3{std::min(a.x_, b.x_), std::min(a.y_, b.y_), std::min(a.z_, b.z_)}, ::Vector3{std::max(a.x_, b.x_), std::max(a.y_, b.y_), std::max(a.z_, b.z_)}))
+        DrawLine3D(rl3(a), rl3(b), rl(c));
 }
 
 // Where a 3D point shows up on the screen (for putting 2D text over 3D things).
@@ -201,18 +281,40 @@ struct Model_ : std::enable_shared_from_this<Model_> {
             model = LoadModel(path.c_str());
             SetTraceLogLevel(LOG_WARNING);
             if (model.meshCount == 0) panic(what, "couldn't read '" + path + "' as a 3D model (use .obj, .gltf, .glb, .iqm, .vox or .m3d)");
+            bounds = GetModelBoundingBox(model);
             loaded = true;
             liveModels().push_back(this);
             addHook(window::beforeCloseHooks(), &unloadModels);
         }
         return true;
     }
+    // The box around the model, as loaded (for culling).
+    ::BoundingBox bounds{};
+    // How far the model reaches from its origin in any direction (a box that fits it however it's turned).
+    float reach() {
+        float r = 0;
+        for (int i = 0; i < 8; i++) {
+            float x = (i & 1) ? bounds.max.x : bounds.min.x, y = (i & 2) ? bounds.max.y : bounds.min.y, z = (i & 4) ? bounds.max.z : bounds.min.z;
+            r = std::max(r, std::sqrt(x * x + y * y + z * z));
+        }
+        return r;
+    }
     virtual void draw_(core::vec3_ position, float scale, core::color_ tint) {
-        if (ready("model.draw()")) DrawModel(model, rl3(position), scale, rl(tint));
+        if (!ready("model.draw()")) return;
+        float s = std::fabs(scale);
+        ::Vector3 lo{position.x_ + bounds.min.x * s, position.y_ + bounds.min.y * s, position.z_ + bounds.min.z * s};
+        ::Vector3 hi{position.x_ + bounds.max.x * s, position.y_ + bounds.max.y * s, position.z_ + bounds.max.z * s};
+        if (scale < 0) {
+            float r = reach() * s;
+            lo = ::Vector3{position.x_ - r, position.y_ - r, position.z_ - r};
+            hi = ::Vector3{position.x_ + r, position.y_ + r, position.z_ + r};
+        }
+        if (visible(lo, hi)) DrawModel(model, rl3(position), scale, rl(tint));
     }
     virtual void drawRotated_(core::vec3_ position, core::vec3_ axis, float degrees, float scale, core::color_ tint) {
-        if (ready("model.drawRotated()"))
-            DrawModelEx(model, rl3(position), rl3(axis), degrees, ::Vector3{scale, scale, scale}, rl(tint));
+        if (!ready("model.drawRotated()")) return;
+        float r = reach() * std::fabs(scale);
+        if (visibleAround(position, r, r, r)) DrawModelEx(model, rl3(position), rl3(axis), degrees, ::Vector3{scale, scale, scale}, rl(tint));
     }
 };
 
@@ -286,6 +388,7 @@ struct Mesh_ : std::enable_shared_from_this<Mesh_> {
     std::shared_ptr<assets::Texture_> texture;
     int32_t vertices = 0;
     bool uploaded = false;
+    ::Vector3 lo{0, 0, 0}, hi{0, 0, 0};   // the box around its corners (for culling)
 
     Mesh_() = default;
     Mesh_(const Mesh_&) = delete;
@@ -311,7 +414,8 @@ struct Mesh_ : std::enable_shared_from_this<Mesh_> {
         at.m12 = position.x_;
         at.m13 = position.y_;
         at.m14 = position.z_;
-        DrawMesh(mesh, material, at);
+        if (visible(::Vector3{lo.x + position.x_, lo.y + position.y_, lo.z + position.z_}, ::Vector3{hi.x + position.x_, hi.y + position.y_, hi.z + position.z_}))
+            DrawMesh(mesh, material, at);
     }
     virtual int32_t vertexCount_() { return vertices; }
 };
@@ -349,6 +453,11 @@ inline std::shared_ptr<Mesh_> makeMesh_(const List<float>& positions, const List
     mesh.texcoords = (float*)RL_MALLOC(n * 2 * sizeof(float));
     mesh.colors = (unsigned char*)RL_MALLOC(n * 4);
     std::memcpy(mesh.vertices, positions.data(), n * 3 * sizeof(float));
+    m->lo = m->hi = ::Vector3{positions[0], positions[1], positions[2]};
+    for (size_t i = 0; i < n; i++) {
+        m->lo = ::Vector3{std::min(m->lo.x, positions[i * 3]), std::min(m->lo.y, positions[i * 3 + 1]), std::min(m->lo.z, positions[i * 3 + 2])};
+        m->hi = ::Vector3{std::max(m->hi.x, positions[i * 3]), std::max(m->hi.y, positions[i * 3 + 1]), std::max(m->hi.z, positions[i * 3 + 2])};
+    }
     std::memcpy(mesh.texcoords, uvs.data(), n * 2 * sizeof(float));
     for (size_t i = 0; i < n; i++) {
         float s = shades.empty() ? 1.0f : std::clamp(shades[i], 0.0f, 1.0f);

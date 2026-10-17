@@ -44,16 +44,25 @@ inline ::Rectangle rl(core::rect_ r) { return ::Rectangle{r.x_, r.y_, r.width_, 
 // FRG_AUTOTEST_SHOT=name.png   the screenshot's file name (saved in the game's folder)
 // FRG_AUTOTEST_INPUT=RIGHT:10-60,SPACE:30-31   hold keys during those frames (and MOUSE_LEFT, MOUSE_RIGHT, MOUSE_MIDDLE).
 //                              CLOSE:N-N clicks the window's X button at frame N.
+//                              MOUSE@x/y:N-M puts the pointer at (x, y) from frame N on (once any MOUSE@ is given,
+//                              the real mouse is ignored). TURN@dx/dy:N-M makes mouseDelta() (dx, dy) during those
+//                              frames, and (0, 0) on the others.
 // FRG_AUTOTEST_HIDDEN=1        the window isn't shown (for tests that only check what the game prints)
 namespace autotest {
 struct Hold {
     int key;
     long from, to;
 };
+struct Move {  // MOUSE@ (where the pointer is) or TURN@ (how far it moves each frame)
+    bool turn;
+    float x, y;
+    long from, to;
+};
 struct State {
     long frames = -1;
     std::string shot = "autotest.png";
     std::vector<Hold> holds;
+    std::vector<Move> moves;
 };
 inline State& st() {
     static State s;
@@ -67,6 +76,37 @@ inline bool held(int key, long frame) {
 }
 // Whether scripted input clicks the window's X at the start of this frame.
 inline bool closeRequested(long frame) { return held(kClose, frame) && !held(kClose, frame - 1); }
+// Scripted pointer position: the latest MOUSE@ that has started by this frame. Gives false if none is scripted.
+inline bool scriptedPointer(long frame, float& x, float& y) {
+    bool any = false, found = false;
+    long latest = -1;
+    for (auto& m : st().moves) {
+        if (m.turn) continue;
+        any = true;
+        if (m.from <= frame && m.from >= latest) {
+            latest = m.from;
+            x = m.x;
+            y = m.y;
+            found = true;
+        }
+    }
+    if (any && !found) x = y = 0;
+    return any;
+}
+// Scripted mouse movement this frame. Gives false if no TURN@ is scripted at all.
+inline bool scriptedTurn(long frame, float& dx, float& dy) {
+    bool any = false;
+    dx = dy = 0;
+    for (auto& m : st().moves) {
+        if (!m.turn) continue;
+        any = true;
+        if (frame >= m.from && frame <= m.to) {
+            dx += m.x;
+            dy += m.y;
+        }
+    }
+    return any;
+}
 }  // namespace autotest
 
 // ---------------------------------------------------------------- 2D camera (the type; the functions are in graphics2d below)
@@ -325,15 +365,19 @@ inline bool mouseReleased_(MouseButton_ b) {
     return s >= 0 ? (s == 0 && scripted(1000 + (int)b, 1) == 1) : IsMouseButtonReleased(rlButton(b));
 }
 inline core::vec2_ mousePosition_() {
+    float x, y;
+    if (autotest::scriptedPointer(window::st().frame, x, y)) return {x, y};
     ::Vector2 p = GetMousePosition();
     return {p.x, p.y};
 }
-inline float mouseX_() { return GetMousePosition().x; }
-inline float mouseY_() { return GetMousePosition().y; }
+inline float mouseX_() { return mousePosition_().x_; }
+inline float mouseY_() { return mousePosition_().y_; }
 inline float mouseWheel_() { return GetMouseWheelMove(); }
 
 // How far the mouse moved since the last frame, in pixels: for looking around in 3D.
 inline core::vec2_ mouseDelta_() {
+    float dx, dy;
+    if (autotest::scriptedTurn(window::st().frame, dx, dy)) return {dx, dy};
     ::Vector2 d = GetMouseDelta();
     return {d.x, d.y};
 }
@@ -392,7 +436,11 @@ inline void setMousePosition_(float x, float y) {
     SetMousePosition((int)x, (int)y);
 }
 inline void setMousePosition_(core::vec2_ p) { setMousePosition_(p.x_, p.y_); }
-inline bool isMouseInWindow_() { return window::st().open && IsCursorOnScreen(); }
+inline bool isMouseInWindow_() {
+    float x, y;
+    if (autotest::scriptedPointer(window::st().frame, x, y)) return window::st().open;
+    return window::st().open && IsCursorOnScreen();
+}
 
 // ---- gamepads (controllers). gamepad is 0 for the first one plugged in, 1 for the second...
 
@@ -455,7 +503,8 @@ inline void window::parseAutotestInput(const char* spec) {
         size_t end = s.find(',', start);
         if (end == std::string::npos) end = s.size();
         std::string item = s.substr(start, end - start);
-        size_t colon = item.find(':'), dash = item.find('-');
+        size_t colon = item.find(':');
+        size_t dash = colon == std::string::npos ? std::string::npos : item.find('-', colon);  // after the :, since TURN@-5/0 has a - too
         if (colon != std::string::npos && dash != std::string::npos) {
             std::string name = item.substr(0, colon);
             for (int i = 0; input::keyNames()[i]; i++)
@@ -463,6 +512,14 @@ inline void window::parseAutotestInput(const char* spec) {
                     autotest::st().holds.push_back({i, std::atol(item.c_str() + colon + 1), std::atol(item.c_str() + dash + 1)});
             if (name == "CLOSE")
                 autotest::st().holds.push_back({autotest::kClose, std::atol(item.c_str() + colon + 1), std::atol(item.c_str() + dash + 1)});
+            // MOUSE@x/y and TURN@dx/dy: the numbers are between the @ and the :, split by /
+            size_t at = name.find('@'), slash = name.find('/');
+            if (at != std::string::npos && slash != std::string::npos && slash > at) {
+                std::string what = name.substr(0, at);
+                float x = (float)std::atof(name.c_str() + at + 1), y = (float)std::atof(name.c_str() + slash + 1);
+                if (what == "MOUSE" || what == "TURN")
+                    autotest::st().moves.push_back({what == "TURN", x, y, std::atol(item.c_str() + colon + 1), std::atol(item.c_str() + dash + 1)});
+            }
             const char* buttons[] = {"MOUSE_LEFT", "MOUSE_RIGHT", "MOUSE_MIDDLE"};
             for (int b = 0; b < 3; b++)
                 if (name == buttons[b])

@@ -528,6 +528,8 @@ $env:FRG_AUTOTEST_INPUT = "RIGHT:10-60,SPACE:30-31,MOUSE_LEFT:50-50,CLOSE:100-10
 | `A` ... `Z`, `NUM0` ... `NUM9`, `SPACE`, `ENTER`, `ESCAPE`, `LEFT`, `F1` ... (every [`Key`](../libraries/input.md#keyboard) name) | that key |
 | `MOUSE_LEFT`, `MOUSE_RIGHT`, `MOUSE_MIDDLE` | that mouse button |
 | `CLOSE` | the player clicking the window's X: `window.shouldClose()` is `true` from that frame |
+| `MOUSE@x/y` | the pointer at (x, y) in the window, from the first frame of the range on (`MOUSE@400/300:10-10`). Once any `MOUSE@` is given, the real mouse is ignored |
+| `TURN@dx/dy` | the mouse moving by (dx, dy) on each frame of the range: what `input.mouseDelta()` gives, for testing mouse-look (`TURN@-5/0:20-40` turns left). On other frames it's (0, 0) |
 
 While a key is scripted, the real key is ignored. Pressing (`keyPressed`) happens on the first frame of each range, and letting go (`keyReleased`) on the frame after the last. This is how Forge's own tests play games: see [Testing a game that opens a window](rules.md#testing-a-game-that-opens-a-window).
 

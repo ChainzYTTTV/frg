@@ -414,6 +414,7 @@ class Mesh {
 
 void setCamera(Camera camera);
 Camera camera();
+void clearDepth();
 void drawCube(vec3 position, vec3 size, color c);
 void drawCubeOutline(vec3 position, vec3 size, color c);
 void drawSphere(vec3 center, float radius, color c);

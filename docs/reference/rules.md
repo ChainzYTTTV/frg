@@ -16,6 +16,8 @@ This page answers the "what happens if...?" questions, so you don't have to gues
 
 1. **Global variables** (the ones outside every function) get their starting values first, before `main`: those in `main.frg` first, then the other files of the top folder in alphabetical order, then the files of each included folder. Within one file, from top to bottom.
 2. Then **`main()`** runs, from its first line to its `return`.
+The game runs **in its own folder** (the one with `main.frg`, or the `.exe`'s folder in a packaged game), so files like `"data/level.txt"` are found however it was started.
+
 3. When `main` returns, the window closes (if one is open), sound stops, and the program ends with `main`'s number as its [exit code](commands.md#exit-codes).
 
 <!-- check: output -->
@@ -643,6 +645,6 @@ Three [environment variables](commands.md#environment-variables) let a test play
 
 - `FRG_AUTOTEST_FRAMES=N` runs **exactly N frames** (frames 0 to N-1), then closes the window as if the player had clicked the X. So `window.run()` returns, and the rest of `main` runs.
 - `FRG_AUTOTEST_SHOT=name.png` saves a picture of the last frame (normally `autotest.png`, in the game's folder).
-- `FRG_AUTOTEST_INPUT=SPACE:1-2,CLOSE:5-5` holds keys and mouse buttons during those frames, both ends included. `CLOSE` clicks the window's X.
+- `FRG_AUTOTEST_INPUT=SPACE:1-2,CLOSE:5-5` holds keys and mouse buttons during those frames, both ends included. `CLOSE` clicks the window's X, `MOUSE@x/y` moves the pointer (for clicking menus) and `TURN@dx/dy` moves the mouse (for mouse-look). See [Scripted input](commands.md#scripted-input).
 
 Forge's own tests use these to check the examples on this page, and every example game, on every change.

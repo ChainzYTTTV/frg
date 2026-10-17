@@ -11,6 +11,28 @@ Draws 3D shapes and models through a camera. See [examples/world3d](../../exampl
 - Positions are [`vec3`](core-types.md#vec3): `(x, y, z)`.
 - **y points up**, unlike the screen in 2D. The ground is usually y = 0.
 - Units are whatever you decide (1 unit = 1 meter is common). Shapes are sized in the same units.
+- The directions are "right-handed": looking along **+z**, **+x is to your left** (and looking along -z, +x is to your right). So the direction to the right of a camera is `forward.cross(vec3.UP)`, and its left is the opposite. Don't assume "+x is right": it depends on which way the camera faces.
+
+<!-- check: output -->
+
+```cpp
+#include <stdio>
+
+int main(){
+    vec3 forward = vec3(0, 0, 1);              // looking along +z
+    vec3 right = forward.cross(vec3.UP);
+    print("right of +z is {right.x}, {right.y}, {right.z}");
+    forward = vec3(1, 0, 0);                   // turned to look along +x
+    right = forward.cross(vec3.UP);
+    print("right of +x is {right.x}, {right.y}, {right.z}");
+    return 0;
+}
+```
+
+```text
+right of +z is -1.0, 0.0, 0.0
+right of +x is 0.0, 0.0, 1.0
+```
 
 ## The camera
 
@@ -130,6 +152,45 @@ void draw(){
 ```
 
 Meshes are made on the graphics card, so the window has to be open first. To change one, make a new mesh and put it in the old one's place; the old one is freed when nothing uses it.
+
+## Drawing on top: clearDepth
+
+3D shapes hide the ones behind them. `graphics3d.clearDepth()` makes everything drawn **after** it show in front of everything drawn **before** it (the picture so far stays). That's how a first-person game draws the player's gun: the world first, then `clearDepth()`, then the gun, so the gun never sinks into a wall the player stands against.
+
+| Function | What it does |
+|---|---|
+| `graphics3d.clearDepth()` | 3D drawn after this is in front of all the 3D drawn before it |
+
+The gun is easiest to draw with its own camera that never moves, so it's always in the same place on the screen:
+
+<!-- check: builds -->
+
+```cpp
+#include <window>
+#include <graphics3d>
+
+Camera player = Camera(vec3(0, 1.6, -4), vec3(0, 1.6, 0));
+Camera gunView = Camera(vec3(0, 0, 0), vec3(0, 0, 1));   // looking along +z, so +x is on the left
+
+int main(){
+    window.open(960, 540, "First person");
+    window.run();
+    return 0;
+}
+
+void update(float dt){
+}
+
+void draw(){
+    graphics3d.setCamera(player);
+    graphics3d.drawGrid(20, 1);
+    graphics3d.drawCube(vec3(0, 1, 0), vec3(4, 2, 0.2), color.GRAY);   // a wall
+
+    graphics3d.clearDepth();
+    graphics3d.setCamera(gunView);
+    graphics3d.drawCube(vec3(-0.25, -0.2, 0.6), vec3(0.08, 0.1, 0.5), color.DARKGRAY);   // the gun, low on the right
+}
+```
 
 ## 3D points on the 2D screen
 

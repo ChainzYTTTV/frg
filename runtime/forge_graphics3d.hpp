@@ -76,6 +76,17 @@ inline void enter3D(const char* what) {
     addHook(window::beforeEndFrameHooks(), &leave3D);
 }
 
+// OpenGL 1.1, in Windows' opengl32.dll (which raylib already uses).
+extern "C" __declspec(dllimport) void __stdcall glClear(unsigned int mask);
+
+// Forgets how far away everything drawn so far is, so the 3D drawn next shows in front of all of it: a first-person
+// gun that never pokes into walls, or a 3D model on top of the world. The pictures already drawn stay.
+inline void clearDepth_() {
+    enter3D("graphics3d.clearDepth()");
+    leave3D();         // draws everything waiting first
+    glClear(0x0100);   // GL_DEPTH_BUFFER_BIT
+}
+
 inline void setCamera_(Camera_ c) {
     leave3D();  // the next 3D drawing starts again with the new camera
     st().camera = c;

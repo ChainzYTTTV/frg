@@ -615,7 +615,7 @@ void draw(){
 }
 ```
 
-Shapes: `drawCube` `drawCubeOutline` `drawSphere(center, radius, color)` `drawSphereOutline` `drawCylinder(position, radius, height, color)` `drawPlane(center, vec2 size, color)` `drawGrid(slices, spacing)` `drawLine(from, to, color)`. `Camera` has `position`, `target`, `up`, `fov` and `orbit(degrees)`. `Model` has `draw(position, scale, tint)` and `drawRotated(position, axis, degrees, scale, tint)`. `graphics3d.makeMesh(positions, uvs, shades, texture)` builds a `Mesh` of your own triangles (drawn in one call with `mesh.draw(position)`; see-through pixels are cut out); see [Meshes](libraries/graphics3d.md#meshes-shapes-you-build-yourself). In 3D, **y goes up**.
+Shapes: `drawCube` `drawCubeOutline` `drawSphere(center, radius, color)` `drawSphereOutline` `drawCylinder(position, radius, height, color)` `drawPlane(center, vec2 size, color)` `drawGrid(slices, spacing)` `drawLine(from, to, color)`. `Camera` has `position`, `target`, `up`, `fov` and `orbit(degrees)`. `Model` has `draw(position, scale, tint)` and `drawRotated(position, axis, degrees, scale, tint)`. `graphics3d.makeMesh(positions, uvs, shades, texture)` builds a `Mesh` of your own triangles (drawn in one call with `mesh.draw(position)`; see-through pixels are cut out); see [Meshes](libraries/graphics3d.md#meshes-shapes-you-build-yourself). `graphics3d.clearDepth()` makes the 3D drawn after it show in front of everything before it (a first-person gun). In 3D, **y goes up**, and looking along +z, +x is to the **left**: a camera's right is `forward.cross(vec3.UP)`.
 
 ### Scenes
 

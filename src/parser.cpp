@@ -134,6 +134,11 @@ const Token& Parser::expect(Tok k, const std::string& what) {
         l.len = 1;
         fail(l, "missing ';' at the end of this line");
     }
+    // `int add(int a, int negative)` - a reserved word where a name goes.
+    if (k == Tok::Ident && isKeyword(cur().text)) {
+        fail(cur().loc, "'" + cur().text + "' is a reserved word in Forge, so it can't be " + what,
+             "pick a different name - the reserved words are listed in the docs (Reserved words)");
+    }
     fail(cur().loc, "expected " + what + ", but found " + describe(cur()));
 }
 

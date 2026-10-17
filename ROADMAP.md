@@ -123,6 +123,16 @@ These were decided by Forge's designer (2026-10-16). Build them this way.
 | Tests that run games and check what they do | every way a game stops, custom loops, frame order, key timing | done (`=== window` tests, run in CI) |
 | `Box<int>(5)` | the natural way to make a generic object gave a confusing error | done |
 
+## 0.9.3: What a 3D first-person game needed
+
+| Item | Why | Status |
+|---|---|---|
+| Games find their files however they're started | double-clicking the `.exe` looked in `build/` | done |
+| Turn, move and scale drawings (`pushTransform` / `popTransform`) | characters facing where they walk, a tilting gun | done |
+| Draw in front of everything (`clearDepth`) | a first-person gun that never sinks into walls | done |
+| Scripted mouse movement in tests | tests that click through menus and check mouse-look | done |
+| Clearer errors for reserved words and name clashes | "expected a parameter name" didn't say why; one clash gave many errors | done |
+
 ## 0.9.x: Engine extras
 
 | Feature | Why | Size |

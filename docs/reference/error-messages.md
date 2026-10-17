@@ -1231,6 +1231,61 @@ error: 'string' is a built-in type name, so it can't be used as a name
 
 **Fix:** pick another name.
 
+### `'negative' is a reserved word in Forge, so it can't be a parameter name`
+
+A reserved word (like `negative`, `and`, `is` or `do`) where a name goes: a variable, a parameter, a field or a method. The end of the message says which kind of name it was.
+
+<!-- check: error -->
+
+```cpp
+int add(int a, int negative){
+    return a + negative;
+}
+
+int main(){
+    return add(1, 2);
+}
+```
+
+```text
+error: 'negative' is a reserved word in Forge, so it can't be a parameter name
+  --> main.frg:1:20
+   |
+ 1 | int add(int a, int negative){
+   |                    ^^^^^^^^
+  hint: pick a different name - the reserved words are listed in the docs (Reserved words)
+```
+
+**Fix:** pick another name, like `amount`. The full list is in [Reserved words](../language/13-reserved-words.md).
+
+### `'feed' is already the name of a function in this file`
+
+A variable with the same name as a function in the same file. Only this line gets an error: the lines after it that use the variable don't.
+
+<!-- check: error -->
+
+```cpp
+void feed(){
+}
+
+int main(){
+    int feed = 5;
+    feed++;
+    return feed;
+}
+```
+
+```text
+error: 'feed' is already the name of a function in this file
+  --> main.frg:5:9
+   |
+ 5 |     int feed = 5;
+   |         ^^^^
+  hint: pick a different name
+```
+
+**Fix:** rename the variable (like `feedCount`), or the function.
+
 ### `'enemies' is a file, not a value`
 
 A file's name is used to reach what's inside it (`enemies.spawn()`), so it isn't a value itself.

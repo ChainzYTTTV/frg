@@ -2,13 +2,26 @@
 
 What changed in each version of Forge. Plans for later versions are in the [roadmap](ROADMAP.md).
 
-## Unreleased
+## 0.9.3 (2026-10-17)
 
+Found while building a full 3D first-person game in Forge.
+
+**Engine**
 - **Games run in their own folder.** `file.read("data/level.txt")`, `<save>` and loading pictures and sounds now find the game's files however it was started (`frg run`, double-clicking `build/game.exe`, or from another folder). Before, double-clicking the `.exe` looked in `build/`.
 - `graphics3d.clearDepth()`: 3D drawn after it shows in front of everything drawn before it, for a first-person gun that never sinks into walls.
 - `graphics3d.pushTransform(position, axis, degrees, scale)` and `popTransform()`: turn, move and scale everything drawn between them (characters facing where they walk, a gun tilting while it reloads). They nest, and a missing `popTransform` is a clear error.
+- `FRG_AUTOTEST_HIDDEN=1` is silent too: a hidden test window plays no sound.
+
+**Language**
+- A reserved word where a name goes says so: `int add(int a, int negative)` gives "'negative' is a reserved word in Forge, so it can't be a parameter name" instead of "expected a parameter name". The same for fields, methods and other names.
+- A variable named like a function (or a global) in the same file gives one error, on that line. The lines that use the variable no longer each add a misleading "'feed' is a function".
+
+**Tools**
 - `FRG_AUTOTEST_INPUT` can move the pointer (`MOUSE@400/300:10-10`) and the mouse (`TURN@-5/0:20-40`), so tests can click through menus and check mouse-look.
+
+**Docs**
 - The docs say which way the 3D directions go: looking along +z, +x is on the left.
+- Two more entries in [Error messages](docs/reference/error-messages.md), for the messages above.
 
 ## 0.9.2 (2026-10-17)
 

@@ -2,7 +2,7 @@
     "name": "forge",
     "displayName": "Forge",
     "description": "Forge (.frg) game language: syntax colors, errors as you save, autocomplete for the built-in libraries, and a Run button.",
-    "version": "0.9.2",
+    "version": "0.9.3",
     "publisher": "forge-lang",
     "license": "MIT",
     "icon": "icons/forge-128.png",

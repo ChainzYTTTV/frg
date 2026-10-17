@@ -24,7 +24,9 @@
 #include <vector>
 
 extern "C" __declspec(dllimport) int __stdcall SetConsoleOutputCP(unsigned int);
-extern "C" __declspec(dllimport) unsigned long __stdcall GetModuleFileNameW(void*, wchar_t*, unsigned long);
+// Declared exactly as windows.h does (HMODULE is HINSTANCE__*), so files that include windows.h too still build.
+struct HINSTANCE__;
+extern "C" __declspec(dllimport) unsigned long __stdcall GetModuleFileNameW(HINSTANCE__*, wchar_t*, unsigned long);
 
 namespace frg {
 

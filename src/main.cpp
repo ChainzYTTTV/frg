@@ -27,7 +27,7 @@
 
 namespace fs = std::filesystem;
 
-static const char* kVersion = "0.9.2";
+static const char* kVersion = "0.9.3";
 
 static fs::path exeDir() {
     std::wstring buf(32768, L'\0');

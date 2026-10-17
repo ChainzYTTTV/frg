@@ -1,4 +1,4 @@
-# Forge 0.9.2: the complete documentation
+# Forge 0.9.3: the complete documentation
 
 This one file holds everything written about the Forge programming language, so it can be uploaded in one go:
 
@@ -1802,7 +1802,7 @@ frg version
 g++ --version
 ```
 
-The first should print `Forge 0.9.2` and the second should print a GCC version. If `frg` isn't found, add Forge's `bin` folder to your PATH and restart the terminal.
+The first should print `Forge 0.9.3` and the second should print a GCC version. If `frg` isn't found, add Forge's `bin` folder to your PATH and restart the terminal.
 
 #### Building Forge from source
 
@@ -9805,7 +9805,7 @@ The error messages on this page are checked against the real `frg` every time Fo
 frg version
 ```
 
-which prints `Forge 0.9.2` (or whichever version you have). If it says `frg is not recognized`, the folder with `frg.exe` isn't on your `PATH`.
+which prints `Forge 0.9.3` (or whichever version you have). If it says `frg is not recognized`, the folder with `frg.exe` isn't on your `PATH`.
 
 #### Moving between folders
 
@@ -10251,7 +10251,7 @@ error: frg cache doesn't know 'tidy'
 
 ### frg version and frg help
 
-`frg version` (or `frg --version`) prints the version, like `Forge 0.9.2`.
+`frg version` (or `frg --version`) prints the version, like `Forge 0.9.3`.
 
 `frg help` (or `frg --help`, `frg -h`, or `frg` on its own) prints the list of commands and options.
 
@@ -10302,6 +10302,7 @@ $env:FRG_VERBOSE = 1; frg build; Remove-Item Env:FRG_VERBOSE
 | `FRG_AUTOTEST_FRAMES=N` | a game with a window | runs the game for N frames, then closes the window |
 | `FRG_AUTOTEST_SHOT=name.png` | a game with a window | the picture saved of frame N (normally `autotest.png`) |
 | `FRG_AUTOTEST_INPUT=...` | a game with a window | pretends keys and buttons are held during certain frames (below) |
+| `FRG_AUTOTEST_HIDDEN=1` | a game with a window | runs without showing the window, and without sound (for tests that check what the game prints) |
 
 #### Scripted input
 
@@ -11588,6 +11589,61 @@ error: 'string' is a built-in type name, so it can't be used as a name
 ```
 
 **Fix:** pick another name.
+
+#### `'negative' is a reserved word in Forge, so it can't be a parameter name`
+
+A reserved word (like `negative`, `and`, `is` or `do`) where a name goes: a variable, a parameter, a field or a method. The end of the message says which kind of name it was.
+
+<!-- check: error -->
+
+```cpp
+int add(int a, int negative){
+    return a + negative;
+}
+
+int main(){
+    return add(1, 2);
+}
+```
+
+```text
+error: 'negative' is a reserved word in Forge, so it can't be a parameter name
+  --> main.frg:1:20
+   |
+ 1 | int add(int a, int negative){
+   |                    ^^^^^^^^
+  hint: pick a different name - the reserved words are listed in the docs (Reserved words)
+```
+
+**Fix:** pick another name, like `amount`. The full list is in Reserved words (see “13. Reserved Words”).
+
+#### `'feed' is already the name of a function in this file`
+
+A variable with the same name as a function in the same file. Only this line gets an error: the lines after it that use the variable don't.
+
+<!-- check: error -->
+
+```cpp
+void feed(){
+}
+
+int main(){
+    int feed = 5;
+    feed++;
+    return feed;
+}
+```
+
+```text
+error: 'feed' is already the name of a function in this file
+  --> main.frg:5:9
+   |
+ 5 |     int feed = 5;
+   |         ^^^^
+  hint: pick a different name
+```
+
+**Fix:** rename the variable (like `feedCount`), or the function.
 
 #### `'enemies' is a file, not a value`
 

@@ -6,6 +6,7 @@ What changed in each version of Forge. Plans for later versions are in the [road
 
 - **Games run in their own folder.** `file.read("data/level.txt")`, `<save>` and loading pictures and sounds now find the game's files however it was started (`frg run`, double-clicking `build/game.exe`, or from another folder). Before, double-clicking the `.exe` looked in `build/`.
 - `graphics3d.clearDepth()`: 3D drawn after it shows in front of everything drawn before it, for a first-person gun that never sinks into walls.
+- `graphics3d.pushTransform(position, axis, degrees, scale)` and `popTransform()`: turn, move and scale everything drawn between them (characters facing where they walk, a gun tilting while it reloads). They nest, and a missing `popTransform` is a clear error.
 - `FRG_AUTOTEST_INPUT` can move the pointer (`MOUSE@400/300:10-10`) and the mouse (`TURN@-5/0:20-40`), so tests can click through menus and check mouse-look.
 - The docs say which way the 3D directions go: looking along +z, +x is on the left.
 

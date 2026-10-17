@@ -153,6 +153,50 @@ void draw(){
 
 Meshes are made on the graphics card, so the window has to be open first. To change one, make a new mesh and put it in the old one's place; the old one is freed when nothing uses it.
 
+## Turning, moving and scaling drawings
+
+`drawCube` always draws boxes lined up with the x, y and z directions. To draw something turned (a character facing the way it walks, a door swinging open, a gun tilting while it reloads), wrap the drawing in `pushTransform` and `popTransform`:
+
+| Function | What it does |
+|---|---|
+| `graphics3d.pushTransform(vec3 position, vec3 axis = vec3.UP, float degrees = 0, float scale = 1)` | everything drawn after it is turned `degrees` around `axis`, made `scale` times bigger, then moved by `position` |
+| `graphics3d.popTransform()` | ends the latest `pushTransform`: drawing goes back to how it was before it |
+
+- Inside a transform, positions are relative to it: `drawCube(vec3.ZERO, ...)` draws at the transform's `position`.
+- Transforms can go inside each other. The inner one is relative to the outer one, like a hand that moves with the arm it's on.
+- Every `pushTransform` needs a `popTransform` before the frame ends, before 2D drawing, and before `setCamera`. Otherwise the game stops with an error that says so. A `popTransform` without a `pushTransform` before it is an error too.
+- Models and meshes drawn inside a transform are turned with it.
+
+<!-- check: builds -->
+
+```cpp
+#include <window>
+#include <graphics3d>
+
+float turn = 0;
+
+int main(){
+    window.open(960, 540, "Turning");
+    window.run();
+    return 0;
+}
+
+void update(float dt){
+    turn += 90 * dt;   // a quarter turn per second
+}
+
+void draw(){
+    graphics3d.setCamera(Camera(vec3(0, 3, -6), vec3(0, 0, 0)));
+    graphics3d.drawGrid(10, 1);
+    graphics3d.pushTransform(vec3(0, 0.5, 0), vec3.UP, turn);                       // a body that turns
+    graphics3d.drawCube(vec3.ZERO, vec3(0.6, 1, 0.4), color.RED);
+    graphics3d.pushTransform(vec3(0.2, 0.1, 0.4), vec3(1, 0, 0), 0);               // its gun, held in front
+    graphics3d.drawCube(vec3(0, 0, 0.3), vec3(0.08, 0.1, 0.6), color.DARKGRAY);
+    graphics3d.popTransform();
+    graphics3d.popTransform();
+}
+```
+
 ## Drawing on top: clearDepth
 
 3D shapes hide the ones behind them. `graphics3d.clearDepth()` makes everything drawn **after** it show in front of everything drawn **before** it (the picture so far stays). That's how a first-person game draws the player's gun: the world first, then `clearDepth()`, then the gun, so the gun never sinks into a wall the player stands against.

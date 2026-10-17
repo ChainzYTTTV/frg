@@ -530,7 +530,7 @@ Library functions are reached through the library name (`window.open(...)`). Lib
 | `<physics>` | the `Body` class, plus `physics.add(body)`, `remove(body)`, `step(dt)`, `setGravity(vec2)`, `gravity()`, `clear()`, `count()` |
 | `<assets>` | `assets.loadTexture("x.png")` gives a `Texture`, `assets.loadFont("x.ttf")` gives a `Font` (an optional second number is the size the letters are prepared at: use about the biggest size you draw it at, 64 to start with), `assets.exists(path)` |
 | `<audio>` | `audio.loadSound("x.wav")` gives a `Sound`, `audio.loadMusic("x.ogg")` gives a `Music`, `audio.setVolume(v)` |
-| `<graphics3d>` | the `Camera` struct and `Model` class, `graphics3d.setCamera(cam)`, `drawCube(pos, size, color)`, `drawCubeOutline`, `drawSphere(center, radius, color)`, `drawSphereOutline`, `drawCylinder(pos, radius, height, color)`, `drawPlane(center, vec2 size, color)`, `drawGrid(slices, spacing)`, `drawLine(from, to, color)`, `toScreen(vec3)`, `loadModel("x.glb")`, and `makeMesh(positions, uvs, shades, texture)`: a `Mesh` of your own triangles, sent to the graphics card once and drawn in one call with `mesh.draw(position)` (corners go counter-clockwise on the front; pixels that are mostly see-through are cut out). A block world builds one per chunk: see `examples/voxel`. `clearDepth()` makes what's drawn after it show in front of everything before it (a first-person gun). Directions: y is up, and looking along +z, +x is on the **left**, so a camera's right is `forward.cross(vec3.UP)` |
+| `<graphics3d>` | the `Camera` struct and `Model` class, `graphics3d.setCamera(cam)`, `drawCube(pos, size, color)`, `drawCubeOutline`, `drawSphere(center, radius, color)`, `drawSphereOutline`, `drawCylinder(pos, radius, height, color)`, `drawPlane(center, vec2 size, color)`, `drawGrid(slices, spacing)`, `drawLine(from, to, color)`, `toScreen(vec3)`, `loadModel("x.glb")`, and `makeMesh(positions, uvs, shades, texture)`: a `Mesh` of your own triangles, sent to the graphics card once and drawn in one call with `mesh.draw(position)` (corners go counter-clockwise on the front; pixels that are mostly see-through are cut out). A block world builds one per chunk: see `examples/voxel`. `clearDepth()` makes what's drawn after it show in front of everything before it (a first-person gun). `pushTransform(position, axis, degrees, scale)` and `popTransform()` turn, move and scale everything drawn between them (they nest; each push needs a pop before the frame ends). Directions: y is up, and looking along +z, +x is on the **left**, so a camera's right is `forward.cross(vec3.UP)` |
 | `<time>` | `time.now()`, `time.sleep(s)`, `time.clock()`, `time.date()`, `year() month() day() hour() minute() second()`, the `Timer` class |
 | `<tilemap>` | levels drawn as text, one character per tile: `TileMap level = TileMap("""` ... `""", 32);` (or `tilemap.load("level1.txt", 32)`). The game decides what characters mean. `level.addBodies("#")` makes static physics bodies, merging neighbouring tiles into big boxes (`addBodies("=", true)` makes one-way platforms); `level.find("C")` gives the top-left corner (pixels) of every `C` tile; `get(column, row)` (`" "` outside the map), `set(column, row, "#")`, `columns()`, `rows()`, `width()`, `height()` (pixels), `tileRect(column, row)`, `columnAt(x)`, `rowAt(y)`; `draw("#", color)` fills tiles with a color, `drawTiles(tileset, 16, "#=")` draws them from a tileset image (each character is the next 16x16 picture). Don't name the variable `map` (a type name) |
 | `<particles>` | dust, sparks, smoke, explosions: `Emitter sparks = Emitter(vec2(x, y));`, then `sparks.burst(30);` (all at once) or `sparks.rate = 50;` (a steady stream per second), and each frame `sparks.update(dt);` and `sparks.draw();`. Fields to set: `position`, `lifetime` (seconds), `speed`, `direction` (degrees: 0 right, -90 up), `spread` (degrees around it: 360 every way), `startColor`/`endColor` (an end color with alpha 0 fades them out), `startSize`/`endSize`, `gravity` (a vec2). Also `count()` and `clear()`. It draws in 2D, through the 2D camera |
@@ -6225,6 +6225,50 @@ void draw(){
 ```
 
 Meshes are made on the graphics card, so the window has to be open first. To change one, make a new mesh and put it in the old one's place; the old one is freed when nothing uses it.
+
+### Turning, moving and scaling drawings
+
+`drawCube` always draws boxes lined up with the x, y and z directions. To draw something turned (a character facing the way it walks, a door swinging open, a gun tilting while it reloads), wrap the drawing in `pushTransform` and `popTransform`:
+
+| Function | What it does |
+|---|---|
+| `graphics3d.pushTransform(vec3 position, vec3 axis = vec3.UP, float degrees = 0, float scale = 1)` | everything drawn after it is turned `degrees` around `axis`, made `scale` times bigger, then moved by `position` |
+| `graphics3d.popTransform()` | ends the latest `pushTransform`: drawing goes back to how it was before it |
+
+- Inside a transform, positions are relative to it: `drawCube(vec3.ZERO, ...)` draws at the transform's `position`.
+- Transforms can go inside each other. The inner one is relative to the outer one, like a hand that moves with the arm it's on.
+- Every `pushTransform` needs a `popTransform` before the frame ends, before 2D drawing, and before `setCamera`. Otherwise the game stops with an error that says so. A `popTransform` without a `pushTransform` before it is an error too.
+- Models and meshes drawn inside a transform are turned with it.
+
+<!-- check: builds -->
+
+```cpp
+#include <window>
+#include <graphics3d>
+
+float turn = 0;
+
+int main(){
+    window.open(960, 540, "Turning");
+    window.run();
+    return 0;
+}
+
+void update(float dt){
+    turn += 90 * dt;   // a quarter turn per second
+}
+
+void draw(){
+    graphics3d.setCamera(Camera(vec3(0, 3, -6), vec3(0, 0, 0)));
+    graphics3d.drawGrid(10, 1);
+    graphics3d.pushTransform(vec3(0, 0.5, 0), vec3.UP, turn);                       // a body that turns
+    graphics3d.drawCube(vec3.ZERO, vec3(0.6, 1, 0.4), color.RED);
+    graphics3d.pushTransform(vec3(0.2, 0.1, 0.4), vec3(1, 0, 0), 0);               // its gun, held in front
+    graphics3d.drawCube(vec3(0, 0, 0.3), vec3(0.08, 0.1, 0.6), color.DARKGRAY);
+    graphics3d.popTransform();
+    graphics3d.popTransform();
+}
+```
 
 ### Drawing on top: clearDepth
 
@@ -15410,7 +15454,7 @@ void draw(){
 }
 ```
 
-Shapes: `drawCube` `drawCubeOutline` `drawSphere(center, radius, color)` `drawSphereOutline` `drawCylinder(position, radius, height, color)` `drawPlane(center, vec2 size, color)` `drawGrid(slices, spacing)` `drawLine(from, to, color)`. `Camera` has `position`, `target`, `up`, `fov` and `orbit(degrees)`. `Model` has `draw(position, scale, tint)` and `drawRotated(position, axis, degrees, scale, tint)`. `graphics3d.makeMesh(positions, uvs, shades, texture)` builds a `Mesh` of your own triangles (drawn in one call with `mesh.draw(position)`; see-through pixels are cut out); see Meshes (see “`<graphics3d>`: 3D Drawing” › “Meshes: shapes you build yourself”). `graphics3d.clearDepth()` makes the 3D drawn after it show in front of everything before it (a first-person gun). In 3D, **y goes up**, and looking along +z, +x is to the **left**: a camera's right is `forward.cross(vec3.UP)`.
+Shapes: `drawCube` `drawCubeOutline` `drawSphere(center, radius, color)` `drawSphereOutline` `drawCylinder(position, radius, height, color)` `drawPlane(center, vec2 size, color)` `drawGrid(slices, spacing)` `drawLine(from, to, color)`. `Camera` has `position`, `target`, `up`, `fov` and `orbit(degrees)`. `Model` has `draw(position, scale, tint)` and `drawRotated(position, axis, degrees, scale, tint)`. `graphics3d.makeMesh(positions, uvs, shades, texture)` builds a `Mesh` of your own triangles (drawn in one call with `mesh.draw(position)`; see-through pixels are cut out); see Meshes (see “`<graphics3d>`: 3D Drawing” › “Meshes: shapes you build yourself”). `graphics3d.clearDepth()` makes the 3D drawn after it show in front of everything before it (a first-person gun). `pushTransform(position, axis, degrees, scale)` ... `popTransform()` turns, moves and scales what's drawn between them (they nest). In 3D, **y goes up**, and looking along +z, +x is to the **left**: a camera's right is `forward.cross(vec3.UP)`.
 
 #### Scenes
 

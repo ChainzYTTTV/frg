@@ -18,6 +18,7 @@ Found while building a full 3D first-person game in Forge.
 - A variable named like a function (or a global) in the same file gives one error, on that line. The lines that use the variable no longer each add a misleading "'feed' is a function".
 
 **Tools**
+- **Builds stop preparing Forge's runtime over and over.** Each kind of build (normal, `--debug`, `--release`) needs its own prepared runtime of 100-150 MB, and the build cache was capped at 400 MB, so they pushed each other out: switching between kinds of build showed "Preparing Forge's runtime ... (only the first time)" every time. The cache is now kept under about 1 GB, and the message says what it really is: once for each kind of build, and again after Forge is updated.
 - `FRG_AUTOTEST_INPUT` can move the pointer (`MOUSE@400/300:10-10`) and the mouse (`TURN@-5/0:20-40`), so tests can click through menus and check mouse-look.
 
 **Docs**

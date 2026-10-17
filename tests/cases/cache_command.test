@@ -1,5 +1,5 @@
 === command
 cache
 === prints
-Forge keeps it under about 400 MB
+Forge keeps it under about 1.0 GB
 To delete it: frg cache clear

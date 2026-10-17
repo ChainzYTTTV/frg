@@ -118,7 +118,7 @@ In **VS Code** (with the Forge extension): errors are underlined when you save, 
 
 Forge is **compiled**. The whole program is checked before it runs, so most mistakes are caught before the game starts.
 
-The first build (and the first `--release` build) shows "Preparing Forge's runtime ... (only the first time)" and takes longer: Forge is getting its own code ready once, so later builds of every game are faster. It's stored in a `cache` folder next to `frg.exe`, which Forge keeps under about 400 MB by itself. `frg cache` shows its size and `frg cache clear` deletes it (the next build just prepares it again).
+The first build (and the first `--debug` and `--release` builds) shows "Preparing Forge's runtime for this kind of build ..." and takes longer: Forge is getting its own code ready, once for each kind of build, so later builds of every game are faster. After Forge is updated it happens once more. It's stored in a `cache` folder next to `frg.exe`, which Forge keeps under about 1 GB by itself. `frg cache` shows its size and `frg cache clear` deletes it (the next build just prepares it again).
 
 ---
 
@@ -1906,13 +1906,13 @@ In VS Code, the **Forge: Turn the Console On/Off** command switches the console 
 
 #### Why the first build is slower
 
-The very first time you build a game (and the first time with `--release` or without a console), Forge shows:
+The very first time you build a game (and the first time with `--debug`, `--release` or without a console), Forge shows:
 
 ```
-   Preparing Forge's runtime for these libraries (only the first time, to make later builds faster)
+   Preparing Forge's runtime for this kind of build (once each for normal, --debug and --release builds, and again after Forge is updated)
 ```
 
-It's getting Forge's own code ready once, so every build after that is quicker, for all your games. It's kept in a `cache` folder next to `frg.exe`. Each kind of game (console, window, release...) gets its own prepared set of about 100 MB, and Forge keeps the whole folder under about **400 MB** by deleting the sets that haven't been used for the longest time. When Forge (or w64devkit) is updated, the old sets are deleted by themselves too.
+It's getting Forge's own code ready once, so every build after that is quicker, for all your games. It's kept in a `cache` folder next to `frg.exe`. Each kind of build (normal, `--debug`, `--release`, with or without a window) gets its own prepared set of 100-150 MB, and Forge keeps the whole folder under about **1 GB** by deleting the sets that haven't been used for the longest time. When Forge (or w64devkit) is updated, the old sets are deleted by themselves too, so the message shows once more after an update.
 
 ```
 frg cache          // shows where the cache is and how big it is
@@ -9923,7 +9923,7 @@ What it prints, when it works:
 - `(3 files)` counts your `.frg` files.
 - If nothing changed since the last build, it says `(nothing changed)` and takes a fraction of a second.
 - A big game is split into parts that are compiled at the same time; it then says how many had to be compiled again, like `(2 of 8 parts compiled)`.
-- The very first build that uses a library also prints `Preparing Forge's runtime for these libraries (only the first time, to make later builds faster)` and takes longer. See frg cache (see “frg cache”).
+- The first build of each kind (normal, `--debug`, `--release`) also prints `Preparing Forge's runtime for this kind of build (once each for normal, --debug and --release builds, and again after Forge is updated)` and takes longer. See frg cache (see “frg cache”).
 
 If the game has mistakes, it prints each one and stops without making an `.exe`:
 
@@ -10230,11 +10230,11 @@ frg cache
 frg cache clear
 ```
 
-The first build that uses a set of libraries prepares Forge's runtime for them, and keeps the result in the **build cache** (`bin\cache` next to `frg.exe`), so later builds are fast. Forge keeps it under about 400 MB by deleting the sets that haven't been used for the longest.
+The first build that uses a set of libraries prepares Forge's runtime for them, and keeps the result in the **build cache** (`bin\cache` next to `frg.exe`), so later builds are fast. Forge keeps it under about 1 GB by deleting the sets that haven't been used for the longest.
 
 ```text
        Cache D:\forge\bin\cache
-    358 MB in 4 sets (Forge keeps it under about 400 MB)
+    358 MB in 4 sets (Forge keeps it under about 1.0 GB)
     It makes builds faster. To delete it: frg cache clear
 ```
 
@@ -14786,7 +14786,7 @@ Global variables all go in one part, because C++ sets them in the order they're 
 
 - If the game's folder has `icon.png`, Forge wraps the PNG in an `.ico` file (an `.ico` can simply hold a PNG), writes a one-line resource script `GLFW_ICON ICON "icon.ico"`, and runs **windres** (from w64devkit) to turn it into `build/icon_res.o`, which is linked in. That gives the `.exe` its icon; the name `GLFW_ICON` is the one raylib's window library looks for, and the window also loads `icon.png` with raylib's `SetWindowIcon`.
 - `-O1` optimizes a little, and compiles fast. `--release` builds use `-O2`, which optimizes more but takes longer.
-- **Precompiled headers.** Most of a build's time goes into reading Forge's runtime headers (and raylib's). So the generated file starts with `#include "forge_pch.hpp"`, and Forge compiles that header once into `forge_pch.hpp.gch` in a `cache` folder next to `frg.exe` (or in the game's `build/` folder if that one can't be written). There are two versions: one with the core and the libraries that don't use raylib, and one that adds every raylib library, so all games share them. The toolkits' own `.cpp` files are cached as `.o` files the same way. The cache folder's name comes from everything that affects the result (Forge's version, the runtime files' dates, which g++ is used, and the flags), so it's never stale. Each cache folder also has a `stamp.txt` naming the Forge and g++ that made it; when a new folder is made, folders from an older Forge or g++ are deleted, so the cache doesn't grow after updates. Using a folder touches its `stamp.txt`, and after each build the folders used least recently are deleted until the cache is under about 400 MB (the ones that build used always stay). `frg cache` shows the size, and `frg cache clear` deletes it all. If a cached file is unusable anyway, g++ just reads the real headers, so the cache only changes speed, never behavior.
+- **Precompiled headers.** Most of a build's time goes into reading Forge's runtime headers (and raylib's). So the generated file starts with `#include "forge_pch.hpp"`, and Forge compiles that header once into `forge_pch.hpp.gch` in a `cache` folder next to `frg.exe` (or in the game's `build/` folder if that one can't be written). There are two versions: one with the core and the libraries that don't use raylib, and one that adds every raylib library, so all games share them. The toolkits' own `.cpp` files are cached as `.o` files the same way. The cache folder's name comes from everything that affects the result (Forge's version, the runtime files' dates, which g++ is used, and the flags), so it's never stale. Each cache folder also has a `stamp.txt` naming the Forge and g++ that made it; when a new folder is made, folders from an older Forge or g++ are deleted, so the cache doesn't grow after updates. Using a folder touches its `stamp.txt`, and after each build the folders used least recently are deleted until the cache is under about 1 GB (each set is 100-150 MB, and normal, `--debug` and `--release` builds each need their own) (the ones that build used always stay). `frg cache` shows the size, and `frg cache clear` deletes it all. If a cached file is unusable anyway, g++ just reads the real headers, so the cache only changes speed, never behavior.
 - `-fwrapv` makes whole numbers wrap around predictably when they overflow.
 - `-static` puts everything into the `.exe`, so it runs anywhere without extra files.
 - Games that use the engine libraries also link **raylib** (`-lraylib -lopengl32 -lgdi32 -lwinmm`).
@@ -14921,7 +14921,7 @@ int main(){
 | `frg check` | only looks for errors |
 | `frg fmt` | tidies the layout of the game's `.frg` files (indentation, braces, blank lines) |
 | `frg test` | runs the tests in the game's `tests` folder (details (see “`<testing>`: Testing Your Game's Code”)) |
-| `frg cache` / `frg cache clear` | show how big the build cache is (kept under about 400 MB) / delete it |
+| `frg cache` / `frg cache clear` | show how big the build cache is (kept under about 1 GB) / delete it |
 | `frg package` | makes the finished game and zips it into `dist/<name>.zip`, ready to share |
 | `--release` (after build or run) | the finished game: no console window, smaller `.exe` |
 | `--no-console` / `--console` | turn the console window off or on, whatever else is chosen |

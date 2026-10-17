@@ -26,7 +26,7 @@ int main(){
 | `frg check` | only looks for errors |
 | `frg fmt` | tidies the layout of the game's `.frg` files (indentation, braces, blank lines) |
 | `frg test` | runs the tests in the game's `tests` folder ([details](libraries/testing.md)) |
-| `frg cache` / `frg cache clear` | show how big the build cache is (kept under about 400 MB) / delete it |
+| `frg cache` / `frg cache clear` | show how big the build cache is (kept under about 1 GB) / delete it |
 | `frg package` | makes the finished game and zips it into `dist/<name>.zip`, ready to share |
 | `--release` (after build or run) | the finished game: no console window, smaller `.exe` |
 | `--no-console` / `--console` | turn the console window off or on, whatever else is chosen |

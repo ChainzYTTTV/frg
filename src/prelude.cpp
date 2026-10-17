@@ -415,6 +415,9 @@ class Mesh {
 void setCamera(Camera camera);
 Camera camera();
 void clearDepth();
+void setLight(vec3 direction, color light = color.WHITE, color ambient = color(100, 105, 120));
+void lightOff();
+bool isLit();
 void setCulling(bool on);
 bool isCulling();
 int culledLastFrame();

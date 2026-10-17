@@ -41,7 +41,15 @@ inline std::string frg$str(const Camera_& c) {
 struct State {
     Camera_ camera;
     bool in3D = false;
+    int transforms = 0;  // pushTransform() calls not popped yet
 };
+
+// raylib's matrix stack (rlgl, compiled into raylib).
+extern "C" void rlPushMatrix(void);
+extern "C" void rlPopMatrix(void);
+extern "C" void rlTranslatef(float x, float y, float z);
+extern "C" void rlRotatef(float angle, float x, float y, float z);
+extern "C" void rlScalef(float x, float y, float z);
 inline State& st() {
     static State s;
     return s;
@@ -60,6 +68,19 @@ inline ::Camera3D rlCamera() {
 
 inline void leave3D() {
     if (!st().in3D) return;
+    if (st().transforms > 0) {  // the 3D part ends with transforms still pushed: undo them, then say so
+        int n = st().transforms;
+        while (st().transforms > 0) {
+            rlPopMatrix();
+            st().transforms--;
+        }
+        EndMode3D();
+        st().in3D = false;
+        window::st().leave3D = nullptr;
+        panic("graphics3d.pushTransform()",
+              std::to_string(n) + " pushTransform() call" + (n == 1 ? " wasn't" : "s weren't") +
+                  " undone with popTransform() before the frame ended (or before 2D drawing, or setCamera) - every pushTransform() needs a popTransform() after the drawing it's for");
+    }
     EndMode3D();
     st().in3D = false;
     window::st().leave3D = nullptr;
@@ -74,6 +95,35 @@ inline void enter3D(const char* what) {
     st().in3D = true;
     window::st().leave3D = &leave3D;
     addHook(window::beforeEndFrameHooks(), &leave3D);
+}
+
+// Everything drawn after pushTransform (until the matching popTransform) is turned by `degrees` around `axis`, made
+// `scale` times bigger, then moved by `position`. Pairs can go inside each other: the inner one is relative to the outer.
+inline void pushTransform_(core::vec3_ position, core::vec3_ axis, float degrees, float scale) {
+    enter3D("graphics3d.pushTransform()");
+    rlPushMatrix();
+    st().transforms++;
+    rlTranslatef(position.x_, position.y_, position.z_);
+    float len = std::sqrt(axis.x_ * axis.x_ + axis.y_ * axis.y_ + axis.z_ * axis.z_);
+    if (degrees != 0 && len > 0) rlRotatef(degrees, axis.x_ / len, axis.y_ / len, axis.z_ / len);
+    if (scale != 1) rlScalef(scale, scale, scale);
+}
+inline void popTransform_() {
+    if (st().transforms <= 0)
+        panic("graphics3d.popTransform()", "there's no pushTransform() to undo - each popTransform() goes with one pushTransform() before it");
+    rlPopMatrix();
+    st().transforms--;
+}
+
+// OpenGL 1.1, in Windows' opengl32.dll (which raylib already uses).
+extern "C" __declspec(dllimport) void __stdcall glClear(unsigned int mask);
+
+// Forgets how far away everything drawn so far is, so the 3D drawn next shows in front of all of it: a first-person
+// gun that never pokes into walls, or a 3D model on top of the world. The pictures already drawn stay.
+inline void clearDepth_() {
+    enter3D("graphics3d.clearDepth()");
+    leave3D();         // draws everything waiting first
+    glClear(0x0100);   // GL_DEPTH_BUFFER_BIT
 }
 
 inline void setCamera_(Camera_ c) {

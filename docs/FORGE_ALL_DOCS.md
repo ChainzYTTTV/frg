@@ -1,4 +1,4 @@
-# Forge 0.9.2: the complete documentation
+# Forge 0.9.3: the complete documentation
 
 This one file holds everything written about the Forge programming language, so it can be uploaded in one go:
 
@@ -530,7 +530,7 @@ Library functions are reached through the library name (`window.open(...)`). Lib
 | `<physics>` | the `Body` class, plus `physics.add(body)`, `remove(body)`, `step(dt)`, `setGravity(vec2)`, `gravity()`, `clear()`, `count()` |
 | `<assets>` | `assets.loadTexture("x.png")` gives a `Texture`, `assets.loadFont("x.ttf")` gives a `Font` (an optional second number is the size the letters are prepared at: use about the biggest size you draw it at, 64 to start with), `assets.exists(path)` |
 | `<audio>` | `audio.loadSound("x.wav")` gives a `Sound`, `audio.loadMusic("x.ogg")` gives a `Music`, `audio.setVolume(v)` |
-| `<graphics3d>` | the `Camera` struct and `Model` class, `graphics3d.setCamera(cam)`, `drawCube(pos, size, color)`, `drawCubeOutline`, `drawSphere(center, radius, color)`, `drawSphereOutline`, `drawCylinder(pos, radius, height, color)`, `drawPlane(center, vec2 size, color)`, `drawGrid(slices, spacing)`, `drawLine(from, to, color)`, `toScreen(vec3)`, `loadModel("x.glb")`, and `makeMesh(positions, uvs, shades, texture)`: a `Mesh` of your own triangles, sent to the graphics card once and drawn in one call with `mesh.draw(position)` (corners go counter-clockwise on the front; pixels that are mostly see-through are cut out). A block world builds one per chunk: see `examples/voxel` |
+| `<graphics3d>` | the `Camera` struct and `Model` class, `graphics3d.setCamera(cam)`, `drawCube(pos, size, color)`, `drawCubeOutline`, `drawSphere(center, radius, color)`, `drawSphereOutline`, `drawCylinder(pos, radius, height, color)`, `drawPlane(center, vec2 size, color)`, `drawGrid(slices, spacing)`, `drawLine(from, to, color)`, `toScreen(vec3)`, `loadModel("x.glb")`, and `makeMesh(positions, uvs, shades, texture)`: a `Mesh` of your own triangles, sent to the graphics card once and drawn in one call with `mesh.draw(position)` (corners go counter-clockwise on the front; pixels that are mostly see-through are cut out). A block world builds one per chunk: see `examples/voxel`. `clearDepth()` makes what's drawn after it show in front of everything before it (a first-person gun). `pushTransform(position, axis, degrees, scale)` and `popTransform()` turn, move and scale everything drawn between them (they nest; each push needs a pop before the frame ends). Directions: y is up, and looking along +z, +x is on the **left**, so a camera's right is `forward.cross(vec3.UP)` |
 | `<time>` | `time.now()`, `time.sleep(s)`, `time.clock()`, `time.date()`, `year() month() day() hour() minute() second()`, the `Timer` class |
 | `<tilemap>` | levels drawn as text, one character per tile: `TileMap level = TileMap("""` ... `""", 32);` (or `tilemap.load("level1.txt", 32)`). The game decides what characters mean. `level.addBodies("#")` makes static physics bodies, merging neighbouring tiles into big boxes (`addBodies("=", true)` makes one-way platforms); `level.find("C")` gives the top-left corner (pixels) of every `C` tile; `get(column, row)` (`" "` outside the map), `set(column, row, "#")`, `columns()`, `rows()`, `width()`, `height()` (pixels), `tileRect(column, row)`, `columnAt(x)`, `rowAt(y)`; `draw("#", color)` fills tiles with a color, `drawTiles(tileset, 16, "#=")` draws them from a tileset image (each character is the next 16x16 picture). Don't name the variable `map` (a type name) |
 | `<particles>` | dust, sparks, smoke, explosions: `Emitter sparks = Emitter(vec2(x, y));`, then `sparks.burst(30);` (all at once) or `sparks.rate = 50;` (a steady stream per second), and each frame `sparks.update(dt);` and `sparks.draw();`. Fields to set: `position`, `lifetime` (seconds), `speed`, `direction` (degrees: 0 right, -90 up), `spread` (degrees around it: 360 every way), `startColor`/`endColor` (an end color with alpha 0 fades them out), `startSize`/`endSize`, `gravity` (a vec2). Also `count()` and `clear()`. It draws in 2D, through the 2D camera |
@@ -1802,7 +1802,7 @@ frg version
 g++ --version
 ```
 
-The first should print `Forge 0.9.2` and the second should print a GCC version. If `frg` isn't found, add Forge's `bin` folder to your PATH and restart the terminal.
+The first should print `Forge 0.9.3` and the second should print a GCC version. If `frg` isn't found, add Forge's `bin` folder to your PATH and restart the terminal.
 
 #### Building Forge from source
 
@@ -6084,6 +6084,28 @@ Draws 3D shapes and models through a camera. See examples/world3d (the file `exa
 - Positions are `vec3` (see “Built-in Types: vec2, vec3, vec4, color, rect” › “vec3”): `(x, y, z)`.
 - **y points up**, unlike the screen in 2D. The ground is usually y = 0.
 - Units are whatever you decide (1 unit = 1 meter is common). Shapes are sized in the same units.
+- The directions are "right-handed": looking along **+z**, **+x is to your left** (and looking along -z, +x is to your right). So the direction to the right of a camera is `forward.cross(vec3.UP)`, and its left is the opposite. Don't assume "+x is right": it depends on which way the camera faces.
+
+<!-- check: output -->
+
+```cpp
+#include <stdio>
+
+int main(){
+    vec3 forward = vec3(0, 0, 1);              // looking along +z
+    vec3 right = forward.cross(vec3.UP);
+    print("right of +z is {right.x}, {right.y}, {right.z}");
+    forward = vec3(1, 0, 0);                   // turned to look along +x
+    right = forward.cross(vec3.UP);
+    print("right of +x is {right.x}, {right.y}, {right.z}");
+    return 0;
+}
+```
+
+```text
+right of +z is -1.0, 0.0, 0.0
+right of +x is 0.0, 0.0, 1.0
+```
 
 ### The camera
 
@@ -6203,6 +6225,89 @@ void draw(){
 ```
 
 Meshes are made on the graphics card, so the window has to be open first. To change one, make a new mesh and put it in the old one's place; the old one is freed when nothing uses it.
+
+### Turning, moving and scaling drawings
+
+`drawCube` always draws boxes lined up with the x, y and z directions. To draw something turned (a character facing the way it walks, a door swinging open, a gun tilting while it reloads), wrap the drawing in `pushTransform` and `popTransform`:
+
+| Function | What it does |
+|---|---|
+| `graphics3d.pushTransform(vec3 position, vec3 axis = vec3.UP, float degrees = 0, float scale = 1)` | everything drawn after it is turned `degrees` around `axis`, made `scale` times bigger, then moved by `position` |
+| `graphics3d.popTransform()` | ends the latest `pushTransform`: drawing goes back to how it was before it |
+
+- Inside a transform, positions are relative to it: `drawCube(vec3.ZERO, ...)` draws at the transform's `position`.
+- Transforms can go inside each other. The inner one is relative to the outer one, like a hand that moves with the arm it's on.
+- Every `pushTransform` needs a `popTransform` before the frame ends, before 2D drawing, and before `setCamera`. Otherwise the game stops with an error that says so. A `popTransform` without a `pushTransform` before it is an error too.
+- Models and meshes drawn inside a transform are turned with it.
+
+<!-- check: builds -->
+
+```cpp
+#include <window>
+#include <graphics3d>
+
+float turn = 0;
+
+int main(){
+    window.open(960, 540, "Turning");
+    window.run();
+    return 0;
+}
+
+void update(float dt){
+    turn += 90 * dt;   // a quarter turn per second
+}
+
+void draw(){
+    graphics3d.setCamera(Camera(vec3(0, 3, -6), vec3(0, 0, 0)));
+    graphics3d.drawGrid(10, 1);
+    graphics3d.pushTransform(vec3(0, 0.5, 0), vec3.UP, turn);                       // a body that turns
+    graphics3d.drawCube(vec3.ZERO, vec3(0.6, 1, 0.4), color.RED);
+    graphics3d.pushTransform(vec3(0.2, 0.1, 0.4), vec3(1, 0, 0), 0);               // its gun, held in front
+    graphics3d.drawCube(vec3(0, 0, 0.3), vec3(0.08, 0.1, 0.6), color.DARKGRAY);
+    graphics3d.popTransform();
+    graphics3d.popTransform();
+}
+```
+
+### Drawing on top: clearDepth
+
+3D shapes hide the ones behind them. `graphics3d.clearDepth()` makes everything drawn **after** it show in front of everything drawn **before** it (the picture so far stays). That's how a first-person game draws the player's gun: the world first, then `clearDepth()`, then the gun, so the gun never sinks into a wall the player stands against.
+
+| Function | What it does |
+|---|---|
+| `graphics3d.clearDepth()` | 3D drawn after this is in front of all the 3D drawn before it |
+
+The gun is easiest to draw with its own camera that never moves, so it's always in the same place on the screen:
+
+<!-- check: builds -->
+
+```cpp
+#include <window>
+#include <graphics3d>
+
+Camera player = Camera(vec3(0, 1.6, -4), vec3(0, 1.6, 0));
+Camera gunView = Camera(vec3(0, 0, 0), vec3(0, 0, 1));   // looking along +z, so +x is on the left
+
+int main(){
+    window.open(960, 540, "First person");
+    window.run();
+    return 0;
+}
+
+void update(float dt){
+}
+
+void draw(){
+    graphics3d.setCamera(player);
+    graphics3d.drawGrid(20, 1);
+    graphics3d.drawCube(vec3(0, 1, 0), vec3(4, 2, 0.2), color.GRAY);   // a wall
+
+    graphics3d.clearDepth();
+    graphics3d.setCamera(gunView);
+    graphics3d.drawCube(vec3(-0.25, -0.2, 0.6), vec3(0.08, 0.1, 0.5), color.DARKGRAY);   // the gun, low on the right
+}
+```
 
 ### 3D points on the 2D screen
 
@@ -6749,10 +6854,10 @@ Reads and writes text files: level data, lists, your own file formats. (To simpl
 
 ### Where files go
 
-Paths are relative to the folder the game was **started from**:
+Paths are relative to the **game's folder**, however the game was started (`frg run`, double-clicking the `.exe`, or from another folder):
 
-- with `frg run`, that's the game's top folder (next to `main.frg`);
-- when someone double-clicks the `.exe`, it's the folder the `.exe` is in.
+- while you're making the game, that's the folder with `main.frg` (the `.exe` is one folder down, in `build/`);
+- in a packaged game (`frg package`), it's the folder the `.exe` is in.
 
 Subfolders are fine (`"saves/slot1.txt"`). `write`, `append` and `writeLines` create missing folders by themselves.
 
@@ -9048,6 +9153,8 @@ This page answers the "what happens if...?" questions, so you don't have to gues
 
 1. **Global variables** (the ones outside every function) get their starting values first, before `main`: those in `main.frg` first, then the other files of the top folder in alphabetical order, then the files of each included folder. Within one file, from top to bottom.
 2. Then **`main()`** runs, from its first line to its `return`.
+The game runs **in its own folder** (the one with `main.frg`, or the `.exe`'s folder in a packaged game), so files like `"data/level.txt"` are found however it was started.
+
 3. When `main` returns, the window closes (if one is open), sound stops, and the program ends with `main`'s number as its exit code (see “Commands: everything `frg` can do” › “Exit codes”).
 
 <!-- check: output -->
@@ -9675,7 +9782,7 @@ Three environment variables (see “Commands: everything `frg` can do” › “
 
 - `FRG_AUTOTEST_FRAMES=N` runs **exactly N frames** (frames 0 to N-1), then closes the window as if the player had clicked the X. So `window.run()` returns, and the rest of `main` runs.
 - `FRG_AUTOTEST_SHOT=name.png` saves a picture of the last frame (normally `autotest.png`, in the game's folder).
-- `FRG_AUTOTEST_INPUT=SPACE:1-2,CLOSE:5-5` holds keys and mouse buttons during those frames, both ends included. `CLOSE` clicks the window's X.
+- `FRG_AUTOTEST_INPUT=SPACE:1-2,CLOSE:5-5` holds keys and mouse buttons during those frames, both ends included. `CLOSE` clicks the window's X, `MOUSE@x/y` moves the pointer (for clicking menus) and `TURN@dx/dy` moves the mouse (for mouse-look). See Scripted input (see “Commands: everything `frg` can do” › “Scripted input”).
 
 Forge's own tests use these to check the examples on this page, and every example game, on every change.
 
@@ -9698,7 +9805,7 @@ The error messages on this page are checked against the real `frg` every time Fo
 frg version
 ```
 
-which prints `Forge 0.9.2` (or whichever version you have). If it says `frg is not recognized`, the folder with `frg.exe` isn't on your `PATH`.
+which prints `Forge 0.9.3` (or whichever version you have). If it says `frg is not recognized`, the folder with `frg.exe` isn't on your `PATH`.
 
 #### Moving between folders
 
@@ -10144,7 +10251,7 @@ error: frg cache doesn't know 'tidy'
 
 ### frg version and frg help
 
-`frg version` (or `frg --version`) prints the version, like `Forge 0.9.2`.
+`frg version` (or `frg --version`) prints the version, like `Forge 0.9.3`.
 
 `frg help` (or `frg --help`, `frg -h`, or `frg` on its own) prints the list of commands and options.
 
@@ -10195,6 +10302,7 @@ $env:FRG_VERBOSE = 1; frg build; Remove-Item Env:FRG_VERBOSE
 | `FRG_AUTOTEST_FRAMES=N` | a game with a window | runs the game for N frames, then closes the window |
 | `FRG_AUTOTEST_SHOT=name.png` | a game with a window | the picture saved of frame N (normally `autotest.png`) |
 | `FRG_AUTOTEST_INPUT=...` | a game with a window | pretends keys and buttons are held during certain frames (below) |
+| `FRG_AUTOTEST_HIDDEN=1` | a game with a window | runs without showing the window, and without sound (for tests that check what the game prints) |
 
 #### Scripted input
 
@@ -10211,6 +10319,8 @@ $env:FRG_AUTOTEST_INPUT = "RIGHT:10-60,SPACE:30-31,MOUSE_LEFT:50-50,CLOSE:100-10
 | `A` ... `Z`, `NUM0` ... `NUM9`, `SPACE`, `ENTER`, `ESCAPE`, `LEFT`, `F1` ... (every `Key` (see “`<input>`: Keyboard, Mouse and Controllers” › “Keyboard”) name) | that key |
 | `MOUSE_LEFT`, `MOUSE_RIGHT`, `MOUSE_MIDDLE` | that mouse button |
 | `CLOSE` | the player clicking the window's X: `window.shouldClose()` is `true` from that frame |
+| `MOUSE@x/y` | the pointer at (x, y) in the window, from the first frame of the range on (`MOUSE@400/300:10-10`). Once any `MOUSE@` is given, the real mouse is ignored |
+| `TURN@dx/dy` | the mouse moving by (dx, dy) on each frame of the range: what `input.mouseDelta()` gives, for testing mouse-look (`TURN@-5/0:20-40` turns left). On other frames it's (0, 0) |
 
 While a key is scripted, the real key is ignored. Pressing (`keyPressed`) happens on the first frame of each range, and letting go (`keyReleased`) on the frame after the last. This is how Forge's own tests play games: see Testing a game that opens a window (see “How Forge behaves, exactly” › “Testing a game that opens a window”).
 
@@ -11479,6 +11589,61 @@ error: 'string' is a built-in type name, so it can't be used as a name
 ```
 
 **Fix:** pick another name.
+
+#### `'negative' is a reserved word in Forge, so it can't be a parameter name`
+
+A reserved word (like `negative`, `and`, `is` or `do`) where a name goes: a variable, a parameter, a field or a method. The end of the message says which kind of name it was.
+
+<!-- check: error -->
+
+```cpp
+int add(int a, int negative){
+    return a + negative;
+}
+
+int main(){
+    return add(1, 2);
+}
+```
+
+```text
+error: 'negative' is a reserved word in Forge, so it can't be a parameter name
+  --> main.frg:1:20
+   |
+ 1 | int add(int a, int negative){
+   |                    ^^^^^^^^
+  hint: pick a different name - the reserved words are listed in the docs (Reserved words)
+```
+
+**Fix:** pick another name, like `amount`. The full list is in Reserved words (see “13. Reserved Words”).
+
+#### `'feed' is already the name of a function in this file`
+
+A variable with the same name as a function in the same file. Only this line gets an error: the lines after it that use the variable don't.
+
+<!-- check: error -->
+
+```cpp
+void feed(){
+}
+
+int main(){
+    int feed = 5;
+    feed++;
+    return feed;
+}
+```
+
+```text
+error: 'feed' is already the name of a function in this file
+  --> main.frg:5:9
+   |
+ 5 |     int feed = 5;
+   |         ^^^^
+  hint: pick a different name
+```
+
+**Fix:** rename the variable (like `feedCount`), or the function.
 
 #### `'enemies' is a file, not a value`
 
@@ -15345,7 +15510,7 @@ void draw(){
 }
 ```
 
-Shapes: `drawCube` `drawCubeOutline` `drawSphere(center, radius, color)` `drawSphereOutline` `drawCylinder(position, radius, height, color)` `drawPlane(center, vec2 size, color)` `drawGrid(slices, spacing)` `drawLine(from, to, color)`. `Camera` has `position`, `target`, `up`, `fov` and `orbit(degrees)`. `Model` has `draw(position, scale, tint)` and `drawRotated(position, axis, degrees, scale, tint)`. `graphics3d.makeMesh(positions, uvs, shades, texture)` builds a `Mesh` of your own triangles (drawn in one call with `mesh.draw(position)`; see-through pixels are cut out); see Meshes (see “`<graphics3d>`: 3D Drawing” › “Meshes: shapes you build yourself”). In 3D, **y goes up**.
+Shapes: `drawCube` `drawCubeOutline` `drawSphere(center, radius, color)` `drawSphereOutline` `drawCylinder(position, radius, height, color)` `drawPlane(center, vec2 size, color)` `drawGrid(slices, spacing)` `drawLine(from, to, color)`. `Camera` has `position`, `target`, `up`, `fov` and `orbit(degrees)`. `Model` has `draw(position, scale, tint)` and `drawRotated(position, axis, degrees, scale, tint)`. `graphics3d.makeMesh(positions, uvs, shades, texture)` builds a `Mesh` of your own triangles (drawn in one call with `mesh.draw(position)`; see-through pixels are cut out); see Meshes (see “`<graphics3d>`: 3D Drawing” › “Meshes: shapes you build yourself”). `graphics3d.clearDepth()` makes the 3D drawn after it show in front of everything before it (a first-person gun). `pushTransform(position, axis, degrees, scale)` ... `popTransform()` turns, moves and scales what's drawn between them (they nest). In 3D, **y goes up**, and looking along +z, +x is to the **left**: a camera's right is `forward.cross(vec3.UP)`.
 
 #### Scenes
 

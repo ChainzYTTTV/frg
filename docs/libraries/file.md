@@ -8,10 +8,10 @@ Reads and writes text files: level data, lists, your own file formats. (To simpl
 
 ## Where files go
 
-Paths are relative to the folder the game was **started from**:
+Paths are relative to the **game's folder**, however the game was started (`frg run`, double-clicking the `.exe`, or from another folder):
 
-- with `frg run`, that's the game's top folder (next to `main.frg`);
-- when someone double-clicks the `.exe`, it's the folder the `.exe` is in.
+- while you're making the game, that's the folder with `main.frg` (the `.exe` is one folder down, in `build/`);
+- in a packaged game (`frg package`), it's the folder the `.exe` is in.
 
 Subfolders are fine (`"saves/slot1.txt"`). `write`, `append` and `writeLines` create missing folders by themselves.
 

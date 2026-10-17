@@ -1,0 +1,19 @@
+=== main.frg
+#include <file>
+#include <stdio>
+
+``` A game runs in its own folder, even when it's started from somewhere else (here, from build/). ```
+int main(){
+    print(file.read("data/level.txt"));
+    file.write("saves/slot1.txt", "saved");
+    print("exists: {file.exists("saves/slot1.txt")}");
+    return 0;
+}
+=== data/level.txt
+level one
+=== window
+cwd: build
+=== output
+level one
+
+exists: true

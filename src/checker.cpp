@@ -841,13 +841,17 @@ void Checker::declareLocal(VarDecl* v) {
                     "pick a different name - or to change the existing one, leave off the type: " + v->name + " = ...;");
         return;
     }
+    // After these two, the variable is still declared, so the lines that use it don't each give another error
+    // ("'feed' is a function") - the one above is the real problem.
     if (cur->funcs.count(v->name)) {
         reportError(v->loc, "'" + v->name + "' is already the name of a function in this file", "pick a different name");
+        scopes.back()[v->name] = v;
         return;
     }
     if (cur->globals.count(v->name)) {
         reportError(v->loc, "there's already a global variable called '" + v->name + "' in this file",
                     "to change it, leave off the type: " + v->name + " = ...;");
+        scopes.back()[v->name] = v;
         return;
     }
     if (cur->types.count(v->name) || findTypeDecl(v->name)) {

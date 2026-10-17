@@ -21,6 +21,7 @@
 #   === window          runs a game that opens a window, with these lines (both optional):
 #                           frames: 60              how many frames it runs (FRG_AUTOTEST_FRAMES; 60 if not given)
 #                           input: SPACE:1-2,CLOSE:5-5   scripted keys (FRG_AUTOTEST_INPUT)
+#                           cwd: build              start it from that folder inside the game's folder
 #                       Then === output is exactly what it prints, === runtime error lines must be in its errors,
 #                       and === exit code (one line) is the code it must end with (0 if not given).
 #                       FRG_NO_WINDOW=1 skips these (a computer without a screen). FRG_COLLECT_WINDOW_TESTS=<folder>
@@ -165,8 +166,8 @@ foreach ($file in Get-ChildItem (Join-Path $PSScriptRoot "cases") -Filter "$Filt
             }
         }
     } elseif ($sections.Contains('window')) {
-        $settings = @{ frames = "60"; input = "" }
-        foreach ($l in $sections['window']) { if ($l -match '^\s*(frames|input):\s*(.*)$') { $settings[$Matches[1]] = $Matches[2].Trim() } }
+        $settings = @{ frames = "60"; input = ""; cwd = "" }
+        foreach ($l in $sections['window']) { if ($l -match '^\s*(frames|input|cwd):\s*(.*)$') { $settings[$Matches[1]] = $Matches[2].Trim() } }
         $wantCode = if ($sections.Contains('exit code')) { [int]$sections['exit code'][0] } else { 0 }
         if ($env:FRG_NO_WINDOW -and -not $env:FRG_COLLECT_WINDOW_TESTS) { $skipped++; continue }
         $r = Invoke-Frg build $dir
@@ -187,7 +188,8 @@ foreach ($file in Get-ChildItem (Join-Path $PSScriptRoot "cases") -Filter "$Filt
         } else {
             $env2 = @{ FRG_AUTOTEST_FRAMES = $settings.frames; FRG_AUTOTEST_HIDDEN = "1" }
             if ($settings.input) { $env2["FRG_AUTOTEST_INPUT"] = $settings.input }
-            $g = Invoke-Game (Join-Path $dir "build\$name.exe") $dir $env2
+            $from = if ($settings.cwd) { Join-Path $dir $settings.cwd } else { $dir }   # cwd: build starts it from another folder
+            $g = Invoke-Game (Join-Path $dir "build\$name.exe") $from $env2
             if ($g.Code -ne $wantCode) { $problem = "expected exit code $wantCode, but it was $($g.Code)`n$($g.Out)$($g.Err)" }
             if (-not $problem -and $sections.Contains('output')) {
                 $expected = (($sections['output'] | ForEach-Object { $_.TrimEnd() }) -join "`n") + "`n"

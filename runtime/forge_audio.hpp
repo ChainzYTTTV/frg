@@ -39,6 +39,8 @@ inline bool ensureDevice() {
         InitAudioDevice();
         s.ready = IsAudioDeviceReady();
         if (!s.ready) std::fprintf(stderr, "[audio] no sound device found - sounds will be silent\n");
+        // FRG_AUTOTEST_HIDDEN=1: a test running out of sight is out of earshot too
+        if (s.ready && std::getenv("FRG_AUTOTEST_HIDDEN")) SetMasterVolume(0);
         addHook(frameHooks(), &updateMusic);
         addHook(shutdownHooks(), &closeAudio);
     }
@@ -149,7 +151,7 @@ inline std::shared_ptr<Music_> loadMusic_(const std::string& path) {
 }
 
 inline void setVolume_(float v) {
-    if (ensureDevice()) SetMasterVolume(v);
+    if (ensureDevice() && !std::getenv("FRG_AUTOTEST_HIDDEN")) SetMasterVolume(v);
 }
 
 // For games without a window: keeps music playing (the window does this by itself).

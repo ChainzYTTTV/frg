@@ -11,6 +11,7 @@
 #include <cstdint>
 #include <cstdio>
 #include <cstdlib>
+#include <filesystem>
 #include <iostream>
 #include <limits>
 #include <map>
@@ -23,6 +24,9 @@
 #include <vector>
 
 extern "C" __declspec(dllimport) int __stdcall SetConsoleOutputCP(unsigned int);
+// Declared exactly as windows.h does (HMODULE is HINSTANCE__*), so files that include windows.h too still build.
+struct HINSTANCE__;
+extern "C" __declspec(dllimport) unsigned long __stdcall GetModuleFileNameW(HINSTANCE__*, wchar_t*, unsigned long);
 
 namespace frg {
 
@@ -118,7 +122,25 @@ inline std::vector<void (*)()>& frameHooks() {
 inline void addHook(std::vector<void (*)()>& hooks, void (*fn)()) {
     if (std::find(hooks.begin(), hooks.end(), fn) == hooks.end()) hooks.push_back(fn);
 }
-inline void init() { SetConsoleOutputCP(65001); }
+// The game runs in its own folder, so "data/levels.txt", save files and pictures are found the same way however the
+// game was started (frg run, double-clicking the .exe, or from another folder): the folder with main.frg, which is
+// one up from build/ (two up from build/tests/), or the .exe's own folder in a packaged game.
+inline void enterGameFolder() {
+    namespace fs = std::filesystem;
+    std::wstring buf(32768, L'\0');
+    unsigned long n = GetModuleFileNameW(nullptr, buf.data(), (unsigned long)buf.size());
+    if (n == 0 || n >= buf.size()) return;
+    fs::path dir = fs::path(buf.substr(0, n)).parent_path();
+    if (dir.filename() == "tests" && dir.parent_path().filename() == "build") dir = dir.parent_path().parent_path();
+    else if (dir.filename() == "build") dir = dir.parent_path();
+    std::error_code ec;
+    fs::current_path(dir, ec);
+}
+
+inline void init() {
+    SetConsoleOutputCP(65001);
+    enterGameFolder();
+}
 inline void shutdown() {
     auto& hooks = shutdownHooks();
     for (auto it = hooks.rbegin(); it != hooks.rend(); ++it) (*it)();

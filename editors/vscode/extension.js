@@ -132,6 +132,9 @@ const LIBRARIES = {
         ['drawLine', 'void drawLine(vec3 from, vec3 to, color c)', 'A line in 3D.'],
         ['toScreen', 'vec2 toScreen(vec3 point)', 'Where a 3D point shows up on screen - for 2D labels over 3D things.'],
         ['loadModel', 'Model loadModel(string path)', 'Loads a 3D model (.obj .gltf .glb .iqm .vox .m3d). Then: model.draw(position, scale, tint), drawRotated(position, axis, degrees, scale, tint).'],
+        ['pushTransform', 'void pushTransform(vec3 position, vec3 axis = vec3.UP, float degrees = 0, float scale = 1)', 'Everything drawn until popTransform() is turned around axis, scaled, then moved by position. Pairs nest.'],
+        ['popTransform', 'void popTransform()', 'Ends the latest pushTransform().'],
+        ['clearDepth', 'void clearDepth()', '3D drawn after this shows in front of everything drawn before it: for a first-person gun that never sinks into walls.'],
         ['makeMesh', 'Mesh makeMesh(list<float> positions, list<float> uvs, list<float> shades, Texture texture)', 'Your own triangles, sent to the graphics card once: x, y, z per corner (counter-clockwise on the front), u, v per corner, a brightness per corner (or []). Then: mesh.draw(position), vertexCount().'],
     ],
     time: [

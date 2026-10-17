@@ -1,0 +1,36 @@
+=== main.frg
+#include <window>
+#include <input>
+#include <stdio>
+
+``` FRG_AUTOTEST_INPUT can move the pointer (MOUSE@x/y) and the mouse (TURN@dx/dy), so menus and mouse-look can be tested. ```
+
+int frame = 0;
+
+int main(){
+    window.open(400, 300, "mouse");
+    window.run();
+    return 0;
+}
+
+void update(float dt){
+    vec2 p = input.mousePosition();
+    vec2 d = input.mouseDelta();
+    string click = input.mousePressed(MouseButton.LEFT) ? " click" : "";
+    print("frame {frame}: at {p.x}/{p.y} moved {d.x}/{d.y}{click}");
+    frame++;
+}
+
+void draw(){
+}
+=== window
+frames: 7
+input: MOUSE@100/50:1-1,MOUSE@200/150:4-4,MOUSE_LEFT:4-4,TURN@-5/2:2-3,TURN@10/0:5-5
+=== output
+frame 0: at 0.0/0.0 moved 0.0/0.0
+frame 1: at 100.0/50.0 moved 0.0/0.0
+frame 2: at 100.0/50.0 moved -5.0/2.0
+frame 3: at 100.0/50.0 moved -5.0/2.0
+frame 4: at 200.0/150.0 moved 0.0/0.0 click
+frame 5: at 200.0/150.0 moved 10.0/0.0
+frame 6: at 200.0/150.0 moved 0.0/0.0

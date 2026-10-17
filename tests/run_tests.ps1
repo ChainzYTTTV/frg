@@ -18,6 +18,13 @@
 #   === runtime error   text that must appear when the program stops with a runtime error (one check per line)
 #   === warning         text that must appear in the warnings (one check per line); add it to any of the others
 #   === no warnings     (empty) there must be no warnings at all
+#   === window          runs a game that opens a window, with these lines (both optional):
+#                           frames: 60              how many frames it runs (FRG_AUTOTEST_FRAMES; 60 if not given)
+#                           input: SPACE:1-2,CLOSE:5-5   scripted keys (FRG_AUTOTEST_INPUT)
+#                       Then === output is exactly what it prints, === runtime error lines must be in its errors,
+#                       and === exit code (one line) is the code it must end with (0 if not given).
+#                       FRG_NO_WINDOW=1 skips these (a computer without a screen). FRG_COLLECT_WINDOW_TESTS=<folder>
+#                       builds them and copies each game there instead of running it, for tests/run_window_tests.sh.
 #
 # Needs PowerShell 7 (pwsh), not the older Windows PowerShell 5.
 #
@@ -51,7 +58,25 @@ function Invoke-Frg([string]$command, [string]$dir, [string[]]$extra = @()) {
     }
 }
 
+# Runs a built game with scripted frames and input; gives back its exit code, output and errors.
+function Invoke-Game([string]$exe, [string]$dir, [hashtable]$env) {
+    $psi = [Diagnostics.ProcessStartInfo]::new($exe)
+    $psi.WorkingDirectory = $dir
+    $psi.UseShellExecute = $false
+    $psi.RedirectStandardOutput = $true
+    $psi.RedirectStandardError = $true
+    $psi.StandardOutputEncoding = [Text.Encoding]::UTF8
+    $psi.StandardErrorEncoding = [Text.Encoding]::UTF8
+    foreach ($k in $env.Keys) { $psi.Environment[$k] = $env[$k] }
+    $p = [Diagnostics.Process]::Start($psi)
+    $errTask = $p.StandardError.ReadToEndAsync()
+    $out = $p.StandardOutput.ReadToEnd()
+    if (-not $p.WaitForExit(60000)) { $p.Kill(); return [pscustomobject]@{ Code = -999; Out = $out; Err = "it was still running after a minute" } }
+    [pscustomobject]@{ Code = $p.ExitCode; Out = ($out -replace "`r`n", "`n"); Err = ($errTask.Result -replace "`r`n", "`n") }
+}
+
 $pass = 0
+$skipped = 0
 $failed = @()
 foreach ($file in Get-ChildItem (Join-Path $PSScriptRoot "cases") -Filter "$Filter.test" | Sort-Object Name) {
     $name = $file.BaseName
@@ -72,7 +97,7 @@ foreach ($file in Get-ChildItem (Join-Path $PSScriptRoot "cases") -Filter "$Filt
     foreach ($key in @($sections.Keys)) {
         $lines = $sections[$key]
         while ($lines.Count -gt 0 -and $lines[$lines.Count - 1] -eq '') { $lines.RemoveAt($lines.Count - 1) }
-        if ($key -in 'output', 'error', 'build', 'warning', 'no warnings', 'runtime error', 'package', 'new', 'command', 'prints', 'query') { continue }
+        if ($key -in 'output', 'error', 'build', 'warning', 'no warnings', 'runtime error', 'package', 'new', 'command', 'prints', 'query', 'window', 'exit code') { continue }
         if ($key -match '^(.+) \(base64\)$') {
             $path = Join-Path $dir $Matches[1]
             New-Item -ItemType Directory -Force (Split-Path $path) | Out-Null
@@ -139,6 +164,42 @@ foreach ($file in Get-ChildItem (Join-Path $PSScriptRoot "cases") -Filter "$Filt
                 if (-not $absent -and -not (Test-Path $path)) { $problem = "$want is missing after frg package`n$($r.Err)" }
             }
         }
+    } elseif ($sections.Contains('window')) {
+        $settings = @{ frames = "60"; input = "" }
+        foreach ($l in $sections['window']) { if ($l -match '^\s*(frames|input):\s*(.*)$') { $settings[$Matches[1]] = $Matches[2].Trim() } }
+        $wantCode = if ($sections.Contains('exit code')) { [int]$sections['exit code'][0] } else { 0 }
+        if ($env:FRG_NO_WINDOW -and -not $env:FRG_COLLECT_WINDOW_TESTS) { $skipped++; continue }
+        $r = Invoke-Frg build $dir
+        if ($r.Code -ne 0) { $problem = "expected it to build, but:`n$($r.Err)" }
+        elseif ($env:FRG_COLLECT_WINDOW_TESTS) {
+            # Kept for tests/run_window_tests.sh: the game, and what it should do.
+            $to = Join-Path $env:FRG_COLLECT_WINDOW_TESTS $name
+            New-Item -ItemType Directory -Force $to | Out-Null
+            Get-ChildItem $dir -Exclude build | Copy-Item -Destination $to -Recurse -Force
+            Copy-Item (Join-Path $dir "build\$name.exe") (Join-Path $to "game.exe")
+            [IO.File]::WriteAllText((Join-Path $to "frames.txt"), $settings.frames)
+            [IO.File]::WriteAllText((Join-Path $to "input.txt"), $settings.input)
+            [IO.File]::WriteAllText((Join-Path $to "exit-code.txt"), "$wantCode")
+            if ($sections.Contains('output')) { [IO.File]::WriteAllText((Join-Path $to "expected-output.txt"), (($sections['output'] | ForEach-Object { $_.TrimEnd() }) -join "`n") + "`n") }
+            if ($sections.Contains('runtime error')) { [IO.File]::WriteAllText((Join-Path $to "expected-errors.txt"), ($sections['runtime error'] -join "`n") + "`n") }
+            $skipped++
+            continue
+        } else {
+            $env2 = @{ FRG_AUTOTEST_FRAMES = $settings.frames; FRG_AUTOTEST_HIDDEN = "1" }
+            if ($settings.input) { $env2["FRG_AUTOTEST_INPUT"] = $settings.input }
+            $g = Invoke-Game (Join-Path $dir "build\$name.exe") $dir $env2
+            if ($g.Code -ne $wantCode) { $problem = "expected exit code $wantCode, but it was $($g.Code)`n$($g.Out)$($g.Err)" }
+            if (-not $problem -and $sections.Contains('output')) {
+                $expected = (($sections['output'] | ForEach-Object { $_.TrimEnd() }) -join "`n") + "`n"
+                $got = (($g.Out -split "`n") | ForEach-Object { $_.TrimEnd() }) -join "`n"
+                if ($got -ne $expected) { $problem = "--- expected:`n$expected--- got:`n$($g.Out)$($g.Err)" }
+            }
+            if (-not $problem -and $sections.Contains('runtime error')) {
+                foreach ($want in $sections['runtime error']) {
+                    if ($want -and -not $g.Err.Contains($want)) { $problem = "the runtime error doesn't contain: $want`n--- it printed:`n$($g.Err)" }
+                }
+            }
+        }
     } elseif ($sections.Contains('runtime error')) {
         $r = Invoke-Frg run $dir
         if ($r.Code -eq 0) { $problem = "expected a runtime error, but it ran without one`n$($r.Out)" }
@@ -182,6 +243,17 @@ foreach ($file in Get-ChildItem (Join-Path $PSScriptRoot "cases") -Filter "$Filt
     }
 }
 
+# The examples in the docs (<!-- check: ... --> blocks) have to do what the docs say.
+$docExamples = & pwsh -NoProfile -File (Join-Path $PSScriptRoot "check_doc_examples.ps1") 2>&1
+if ($LASTEXITCODE -ne 0) {
+    Write-Host "FAIL  doc examples" -ForegroundColor Red
+    Write-Host (($docExamples | Where-Object { $_ -notmatch '^\s*$' }) -join "`n" -replace '(?m)^', '      ')
+    $failed += "doc examples"
+} else {
+    Write-Host "pass  doc examples ($(($docExamples | Select-Object -Last 1) -replace '^Doc examples: ', ''))" -ForegroundColor Green
+    $pass++
+}
+
 # The combined docs file (docs/FORGE_ALL_DOCS.md) has to match the docs pages it's made from.
 $docsCheck = & pwsh -NoProfile -File (Join-Path $PSScriptRoot "..\docs\make-all-docs.ps1") -Check 2>&1
 if ($LASTEXITCODE -ne 0) {
@@ -198,4 +270,5 @@ if ($failed.Count) {
     Write-Host "$pass passed, $($failed.Count) failed: $($failed -join ', ')" -ForegroundColor Red
     exit 1
 }
-Write-Host "All $pass tests passed." -ForegroundColor Green
+$note = if ($skipped) { " ($skipped that open a window were skipped)" } else { "" }
+Write-Host "All $pass tests passed$note." -ForegroundColor Green

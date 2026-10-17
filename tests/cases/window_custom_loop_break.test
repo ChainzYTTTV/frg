@@ -1,0 +1,31 @@
+=== main.frg
+#include <window>
+#include <graphics2d>
+#include <input>
+#include <stdio>
+
+``` Leaving your own loop with break: the window is still open, so the game can do more with it, and closes it after. ```
+int main(){
+    window.open(320, 200, "Break out");
+    int frames = 0;
+    while (!window.shouldClose()) {
+        frames++;
+        if (input.keyPressed(Key.Q)) {
+            print("Q pressed on frame {frames}: leaving the loop");
+            break;
+        }
+        graphics2d.drawText("press Q", 10, 10, 20, color.WHITE);
+    }
+    graphics2d.drawText("bye", 10, 10, 20, color.WHITE);
+    print("still drawing after the loop");
+    window.close();
+    print("closed");
+    return 0;
+}
+=== window
+frames: 60
+input: Q:6-8
+=== output
+Q pressed on frame 7: leaving the loop
+still drawing after the loop
+closed

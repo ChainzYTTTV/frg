@@ -27,10 +27,12 @@ $parts = [ordered]@{
         "libraries/assets.md", "libraries/audio.md", "libraries/physics.md", "libraries/time.md", "libraries/file.md",
         "libraries/save.md", "libraries/tween.md", "libraries/particles.md", "libraries/tilemap.md", "libraries/scenes.md", "libraries/ui.md", "libraries/ecs.md", "libraries/tasks.md", "libraries/testing.md",
         "libraries/toolkits.md", "libraries/opengl.md", "libraries/directx.md", "libraries/vulkan.md")
+    "Part E: Reference (exact rules, every command, every error message)" = @(
+        "reference/syntax.md", "reference/rules.md", "reference/commands.md", "reference/error-messages.md")
     # The practice projects are left out here: they're already in Part A (Part 6 of the teaching brief).
-    "Part E: Guides" = @("guides/game-loop.md", "guides/sprites-and-animation.md", "guides/platformer-walkthrough.md")
-    "Part F: Under the hood" = @("how-forge-works.md")
-    "Part G: The cheat sheet (everything on one page)" = @("LANGUAGE.md")
+    "Part F: Guides" = @("guides/game-loop.md", "guides/sprites-and-animation.md", "guides/platformer-walkthrough.md")
+    "Part G: Under the hood" = @("how-forge-works.md")
+    "Part H: The cheat sheet (everything on one page)" = @("LANGUAGE.md")
 }
 $skipped = @("guides/practice-projects.md")
 
@@ -41,7 +43,7 @@ function Read([string]$rel) { [IO.File]::ReadAllText((Join-Path $docs $rel)).Rep
 $listed = @($parts.Values | ForEach-Object { $_ }) + $skipped
 $extra = Get-ChildItem $docs -Recurse -Filter *.md | ForEach-Object { RelPath $_.FullName } |
     Where-Object { $_ -ne "FORGE_ALL_DOCS.md" -and $listed -notcontains $_ } | Sort-Object
-if ($extra) { $parts["Part H: Other pages"] = @($extra) }
+if ($extra) { $parts["Part I: Other pages"] = @($extra) }
 
 # Lines inside ``` code blocks are left alone. A block opened with ```` only closes with ```` or more.
 function ForEachProseLine([string]$text, [scriptblock]$fn) {
@@ -119,10 +121,10 @@ $sb = [Text.StringBuilder]::new()
 This one file holds everything written about the Forge programming language, so it can be uploaded in one go:
 
 - **Part A** is the teaching brief, written for an AI that teaches Forge to a beginner. It explains how to teach, what Forge has and doesn't have, the example platformer, and practice projects.
-- **Parts B to F** are the full documentation, page by page: getting started, every part of the language, every library, the guides, and how Forge works inside.
-- **Part G** is the one-page cheat sheet.
+- **Parts B to G** are the full documentation, page by page: getting started, every part of the language, every library, the reference (every form of the syntax, exactly how Forge behaves, every `frg` command and every error message), the guides, and how Forge works inside.
+- **Part H** is the one-page cheat sheet.
 
-Where the parts disagree, the detailed pages (B to F) are more precise, and the compiler is always right. This file is made from the separate pages in Forge's docs folder by docs/make-all-docs.ps1, so don't edit it by hand.
+Where the parts disagree, the detailed pages (B to G) are more precise, and the compiler is always right. The examples in Part E are run by Forge's tests, so their output is exactly what Forge prints. This file is made from the separate pages in Forge's docs folder by docs/make-all-docs.ps1, so don't edit it by hand.
 
 ## Contents
 

@@ -1,0 +1,40 @@
+=== main.frg
+#include <window>
+#include <input>
+#include <stdio>
+
+``` The usual use for Escape: a pause menu. The game only quits when the player picks Quit (Q) in it. ```
+bool paused = false;
+int played = 0;
+
+int main(){
+    window.open(320, 200, "Pause");
+    window.run();
+    print("played {played} frames, then quit from the pause menu");
+    return 0;
+}
+
+void update(float dt){
+    if (input.keyPressed(Key.ESCAPE)) {
+        paused = !paused;
+        print(paused ? "paused" : "playing again");
+    }
+    if (paused) {
+        if (input.keyPressed(Key.Q)) {
+            window.close();
+        }
+        return;
+    }
+    played++;
+}
+
+void draw(){
+}
+=== window
+frames: 60
+input: ESCAPE:3-3,ESCAPE:6-6,ESCAPE:9-9,Q:12-12
+=== output
+paused
+playing again
+paused
+played 6 frames, then quit from the pause menu

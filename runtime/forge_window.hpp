@@ -44,6 +44,7 @@ inline ::Rectangle rl(core::rect_ r) { return ::Rectangle{r.x_, r.y_, r.width_, 
 // FRG_AUTOTEST_SHOT=name.png   the screenshot's file name (saved in the game's folder)
 // FRG_AUTOTEST_INPUT=RIGHT:10-60,SPACE:30-31   hold keys during those frames (and MOUSE_LEFT, MOUSE_RIGHT, MOUSE_MIDDLE).
 //                              CLOSE:N-N clicks the window's X button at frame N.
+// FRG_AUTOTEST_HIDDEN=1        the window isn't shown (for tests that only check what the game prints)
 namespace autotest {
 struct Hold {
     int key;
@@ -183,6 +184,8 @@ inline void open_(int32_t width, int32_t height, const std::string& title) {
     State& s = st();
     if (s.open) return;
     SetTraceLogLevel(LOG_WARNING);
+    // FRG_AUTOTEST_HIDDEN=1: tests run the game without its window showing up on the screen.
+    if (std::getenv("FRG_AUTOTEST_HIDDEN")) SetConfigFlags(FLAG_WINDOW_HIDDEN);
     InitWindow(width, height, title.c_str());
     SetExitKey(KEY_NULL);  // Escape is a normal key (for pause menus): only the X button or window.close() close the window
     SetTargetFPS(60);
@@ -211,13 +214,15 @@ inline bool shouldClose_() {
     if (!s.open) return true;
     if (s.inFrame) endFrame();
     auto& at = autotest::st();
-    if (WindowShouldClose() || autotest::closeRequested(s.frame) || (at.frames >= 0 && s.frame > at.frames)) return true;
+    if (WindowShouldClose() || autotest::closeRequested(s.frame) || (at.frames >= 0 && s.frame >= at.frames)) return true;  // exactly N frames
     beginFrame();
     return false;
 }
 
 template <class Update, class Draw>
 void run_(Update update, Draw draw) {
+    if (!st().open && st().closed)
+        panic("window.run()", "the window has been closed, so there's no game to run - open it again with window.open(width, height, \"title\") first");
     if (!st().open) panic("window.run()", "the window isn't open yet - call window.open(width, height, \"title\") first");
     while (!shouldClose_()) {
         update(GetFrameTime());

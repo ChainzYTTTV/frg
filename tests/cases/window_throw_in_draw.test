@@ -1,0 +1,29 @@
+=== main.frg
+#include <window>
+#include <stdio>
+
+``` throw in draw stops the game like any runtime error. ```
+int frames = 0;
+
+int main(){
+    window.open(320, 200, "Throw");
+    window.run();
+    return 0;
+}
+
+void update(float dt){
+    frames++;
+}
+
+void draw(){
+    if (frames == 2) {
+        throw "the level is missing";
+    }
+}
+=== window
+frames: 60
+=== exit code
+1
+=== runtime error
+Runtime error in main.frg:19: the level is missing
+  called from main.frg:9 (in main)

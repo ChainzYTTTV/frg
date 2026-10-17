@@ -1,0 +1,19 @@
+=== main.frg
+#include <window>
+#include <stdio>
+
+``` Your own loop ends by itself when the player clicks the X. ```
+int main(){
+    window.open(320, 200, "Own loop, X");
+    int frames = 0;
+    while (!window.shouldClose()) {
+        frames++;
+    }
+    print("the player closed it after {frames} frames");
+    return 0;
+}
+=== window
+frames: 60
+input: CLOSE:9-9
+=== output
+the player closed it after 9 frames

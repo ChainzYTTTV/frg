@@ -340,6 +340,11 @@ FileAST Parser::parseFile() {
                 fail(cur().loc, "this code has to go inside a function",
                      "put it inside main(){ ... } - or, if you're making a new function, give it a return type like 'void " +
                          cur().text + "()'");
+            if (at(Tok::RBrace))
+                fail(cur().loc, "this '}' doesn't close anything",
+                     "remove it - or, if a function or type ends too early, look for an extra '}' above it");
+            if (at(Tok::Semi))
+                fail(cur().loc, "this ';' isn't needed", "remove it - in Forge, nothing ends with '};'");
             fail(cur().loc, "expected a function, a variable, a type or an #include, but found " + describe(cur()));
         } catch (CompileAbort&) {
             ast.ok = false;
@@ -673,6 +678,7 @@ StmtPtr Parser::parseStmt() {
             }
             break;
         case Tok::KwElse: fail(l, "this 'else' doesn't belong to an 'if'", "else has to come right after the } of an if");
+        case Tok::Semi: fail(l, "this ';' is on its own, so it doesn't end anything", "remove it - a '}' doesn't need a ';' after it");
         case Tok::KwCase:
         case Tok::KwDefault: fail(l, "'" + cur().text + "' can only be used inside a switch");
         case Tok::KwStruct:

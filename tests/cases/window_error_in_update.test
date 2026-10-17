@@ -1,0 +1,34 @@
+=== main.frg
+#include <window>
+#include <stdio>
+
+``` A runtime error in update stops the game: exit code 1, the message, and the code after run() doesn't run. ```
+int frames = 0;
+list<int> scores = [];
+
+int main(){
+    window.open(320, 200, "Error");
+    window.run();
+    print("never printed");
+    return 0;
+}
+
+void update(float dt){
+    frames++;
+    if (frames == 3) {
+        print("frame 3");
+        int best = scores[0];
+    }
+}
+
+void draw(){
+}
+=== window
+frames: 60
+=== output
+frame 3
+=== exit code
+1
+=== runtime error
+Runtime error in main.frg:19: position 0 is outside the list: the list is empty
+  called from main.frg:10 (in main)

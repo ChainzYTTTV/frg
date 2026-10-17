@@ -1,0 +1,18 @@
+=== main.frg
+#include <window>
+#include <graphics2d>
+#include <stdio>
+
+``` main can return with the window still open: it closes by itself, and the exit code is main's. ```
+int main(){
+    window.open(320, 200, "Early");
+    graphics2d.drawText("hello", 10, 10, 20, color.WHITE);
+    print("leaving main with the window open");
+    return 7;
+}
+=== window
+frames: 60
+=== output
+leaving main with the window open
+=== exit code
+7

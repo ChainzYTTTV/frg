@@ -746,7 +746,7 @@ void draw(){
 }
 ```
 
-The screen is cleared to the background color before each frame (`window.setBackground(color)` changes it). The window closes when the player clicks its X, or when your code calls `window.close()`; Escape is a normal key (it doesn't close anything).
+The screen is cleared to the background color before each frame (`window.setBackground(color)` changes it). The window closes when the player clicks its X (or presses Alt+F4), or when your code calls `window.close()`; Escape is a normal key (it doesn't close anything). After either, `window.run()` returns and `main` carries on ([every way a game stops](reference/rules.md#stopping-the-game)).
 
 See `examples/platformer` for a complete game. The other examples are `shapes` (2D drawing), `sprites` (images and sound), `menu` (scenes and UI), `world3d` (3D) and `voxel` (a creative-mode block world, built from meshes).
 

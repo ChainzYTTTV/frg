@@ -3,10 +3,10 @@
 This one file holds everything written about the Forge programming language, so it can be uploaded in one go:
 
 - **Part A** is the teaching brief, written for an AI that teaches Forge to a beginner. It explains how to teach, what Forge has and doesn't have, the example platformer, and practice projects.
-- **Parts B to F** are the full documentation, page by page: getting started, every part of the language, every library, the guides, and how Forge works inside.
-- **Part G** is the one-page cheat sheet.
+- **Parts B to G** are the full documentation, page by page: getting started, every part of the language, every library, the reference (every form of the syntax, exactly how Forge behaves, every rg command and every error message), the guides, and how Forge works inside.
+- **Part H** is the one-page cheat sheet.
 
-Where the parts disagree, the detailed pages (B to F) are more precise, and the compiler is always right. This file is made from the separate pages in Forge's docs folder by docs/make-all-docs.ps1, so don't edit it by hand.
+Where the parts disagree, the detailed pages (B to G) are more precise, and the compiler is always right. The examples in Part E are run by Forge's tests, so their output is exactly what Forge prints. This file is made from the separate pages in Forge's docs folder by docs/make-all-docs.ps1, so don't edit it by hand.
 
 ## Contents
 
@@ -14,9 +14,10 @@ Where the parts disagree, the detailed pages (B to F) are more precise, and the 
 - **Part B: Start here**: Forge Documentation - Getting Started
 - **Part C: The language**: 1. The Basics - 2. Variables and Types - 3. Text - 4. Operators - 5. Making Decisions and Repeating - 6. Functions - 7. Files and Folders - 8. Lists and Maps - 9. Structs and Classes - 10. Enums and Optionals - 11. Tasks - 12. Errors - 13. Reserved Words - 14. Coming From Other Languages
 - **Part D: The libraries**: Library Overview - Built-in Types: vec2, vec3, vec4, color, rect - <stdio>: Console Input and Output - <math>: Math Functions - <random>: Random Numbers - <window>: The Game Window - <input>: Keyboard, Mouse and Controllers - <graphics2d>: 2D Drawing - <graphics3d>: 3D Drawing - <assets>: Images, Animations and Fonts - <audio>: Sounds and Music - <physics>: Boxes, Gravity and Collisions - <time>: Clock, Date and Timers - <file>: Reading and Writing Text Files - <save>: Remembering Things Between Runs - <tween>: Smooth Changes Over Time - <particles>: Dust, Sparks and Explosions - <tilemap>: Levels Drawn as Text - <scenes>: Menus, Levels and Game Over - <ui>: Buttons, Checkboxes, Sliders and Text Boxes - <ECS>: Entities and Components - <tasks>: Tasks Without a Window - <testing>: Testing Your Game's Code - Low-Level Toolkits: OpenGL, DirectX and Vulkan - <OpenGL>: Drawing with OpenGL Yourself - <DirectX>: Drawing with Direct3D 11 Yourself - <Vulkan>: Drawing with Vulkan Yourself
-- **Part E: Guides**: The Game Loop - Sprites and Animation - Platformer Walkthrough
-- **Part F: Under the hood**: How Forge Works
-- **Part G: The cheat sheet (everything on one page)**: Forge Cheat Sheet (v0.9)
+- **Part E: Reference (exact rules, every command, every error message)**: Syntax: every way to write Forge - How Forge behaves, exactly - Commands: everything frg can do - Error messages
+- **Part F: Guides**: The Game Loop - Sprites and Animation - Platformer Walkthrough
+- **Part G: Under the hood**: How Forge Works
+- **Part H: The cheat sheet (everything on one page)**: Forge Cheat Sheet (v0.9)
 
 ---
 
@@ -1689,6 +1690,7 @@ These docs are for **anyone using or learning Forge**, including people who have
 | | |
 |---|---|
 | Getting Started (see “Getting Started”) | Setup, the `frg` command, VS Code, your first program, and building a finished game |
+| Commands (see “Commands: everything `frg` can do”) | Everything you type in the terminal: every `frg` command and option |
 | Cheat sheet (see “Forge Cheat Sheet (v0.9)”) | The whole language on one page, for looking things up quickly |
 | Everything in one file (the file `FORGE_ALL_DOCS.md` in the Forge folder) | The teaching brief and every page below, combined into one file to upload to an AI chat. Rebuild it with `.\docs\make-all-docs.ps1` after changing the docs. |
 
@@ -1751,6 +1753,17 @@ For advanced users who want to write their own rendering with a real graphics AP
 | `<OpenGL>` (see “`<OpenGL>`: Drawing with OpenGL Yourself”) | OpenGL 3.3, with GLSL shaders |
 | `<DirectX>` (see “`<DirectX>`: Drawing with Direct3D 11 Yourself”) | Direct3D 11, with HLSL shaders |
 | `<Vulkan>` (see “`<Vulkan>`: Drawing with Vulkan Yourself”) | Vulkan, with GLSL shaders compiled to SPIR-V |
+
+### Reference
+
+For looking things up exactly. The examples on these pages are run by Forge's tests, so what they show is what Forge does.
+
+| | |
+|---|---|
+| Syntax (see “Syntax: every way to write Forge”) | Every form the language has, in one place: literals, types, statements, expressions, and what Forge *doesn't* have |
+| How Forge behaves, exactly (see “How Forge behaves, exactly”) | The "what happens if...?" answers: the order things run in, numbers that get too big, copies vs shared objects, loops, a frame step by step, every way a game stops |
+| Commands (see “Commands: everything `frg` can do”) | Every `frg` command and option, what it prints, the files it makes, exit codes, environment variables, and the same things in VS Code |
+| Error messages (see “Error messages”) | Every error and warning, with an example that causes it and how to fix it |
 
 ### Guides
 
@@ -1855,7 +1868,7 @@ Each one is a single `main.frg` with comments, ready to `frg run` and then chang
 
 ### The `frg` command
 
-Run these in a terminal. `[folder]` is the game's top folder (the one with `main.frg`); leave it out to use the current folder.
+Run these in a terminal. `[folder]` is the game's top folder (the one with `main.frg`); leave it out to use the current folder. Every command, option and message is explained in Commands (see “Commands: everything `frg` can do”).
 
 | Command | What it does |
 |---|---|
@@ -4720,6 +4733,8 @@ Most mistakes are compile errors, so they're caught before you ever see the game
 
 Forge also gives **warnings**: code that works, but probably doesn't do what you meant. A warning never stops the game from building. See Warnings (see “Warnings”) below.
 
+> **Every message:** Error messages (see “Error messages”) lists every error and warning Forge has, each with an example that causes it and how to fix it. This chapter explains how to read them, and the most common ones.
+
 ### Reading a compile error
 
 ```
@@ -5593,6 +5608,48 @@ Both loops do the same things each frame:
 | `window.toggleFullscreen()` | switches between fullscreen and windowed |
 | `window.screenshot(string fileName)` | saves what's on screen as a `.png` in the game's folder |
 
+### Stopping the game
+
+No single key closes a Forge game. **Escape is a normal key** that your game can use (for a pause menu, say). The window closes when:
+
+- the player clicks its **X**, or presses **Alt+F4**;
+- your code calls **`window.close()`** (from a Quit button, after the last level...);
+- **`main` returns**, or the game stops with a runtime error.
+
+With `window.run()`, the first two make `window.run()` return, and `main` carries on after it: that's the place to save the game. If `update` calls `window.close()`, `update` finishes, `draw` isn't called again, and `window.run()` returns. With your own loop, they make the next `window.shouldClose()` give back `true`.
+
+<!-- check: builds -->
+
+```cpp
+#include <window>
+#include <input>
+#include <stdio>
+
+bool paused = false;
+int coins = 0;
+
+int main(){
+    window.open(960, 540, "My game");
+    window.run();           // returns when the player closes the window, or window.close() is called
+    print("saving {coins} coins");   // so this runs every time the game ends normally
+    return 0;
+}
+
+void update(float dt){
+    if (input.keyPressed(Key.ESCAPE)) {
+        paused = !paused;   // Escape opens and closes the pause menu
+    }
+    if (paused and input.keyPressed(Key.Q)) {
+        window.close();     // Quit, from the pause menu
+    }
+}
+
+void draw(){
+}
+```
+
+Every way a game can stop, what runs after each, and examples that are checked by Forge's tests: Stopping the game (see “How Forge behaves, exactly” › “Stopping the game”). The exact order of everything in a frame: A frame, step by step (see “How Forge behaves, exactly” › “A frame, step by step”).
+
 ### Notes
 
 - Drawing can happen any time after `open()`; a frame starts by itself if one isn't running.
@@ -5653,7 +5710,7 @@ if (input.keyPressed(Key.SPACE) and onGround) {
 
 `Key` is an enum (see “10. Enums and Optionals” › “Enums”), so keys can be stored in variables and lists: `Key jumpKey = Key.SPACE;`.
 
-Escape is a normal key: it doesn't close the window, so a game can use it for a pause menu or to let go of the mouse. The player closes the window with its X button (see Stopping the game (see “`<window>`: The Game Window”)).
+Escape is a normal key: it doesn't close the window, so a game can use it for a pause menu or to let go of the mouse. The player closes the window with its X button (see Stopping the game (see “`<window>`: The Game Window” › “Stopping the game”)).
 
 ### Mouse
 
@@ -8465,7 +8522,5208 @@ These may come later.
 
 ---
 
-# Part E: Guides
+# Part E: Reference (exact rules, every command, every error message)
+
+<!-- docs/reference/syntax.md -->
+
+## Syntax: every way to write Forge
+
+This page lists every form the language has, in one place, with the exact shape of each. The chapters in The language (see “Forge Documentation” › “The language”) explain them slowly; this page is for looking things up. The examples are run by Forge's tests, so they're exactly right.
+
+How to read the shapes:
+
+- `name`, `Type`, `value`, `condition` stand for something you write there.
+- `[ ... ]` (in a shape, not in code) means that part can be left out.
+- `...` means "more of the same".
+
+### Files and lines
+
+- A game is a folder with a `main.frg`, plus any other `.frg` files next to it (Files and folders (see “7. Files and Folders”)).
+- A **statement** (a line that does something) ends with `;`. Blocks of statements go inside `{ }`.
+- **Braces are required**, even around one line: `if (x > 0) { x--; }`. Never `if (x > 0) x--;`.
+- Spaces, tabs and line breaks between words don't matter (except inside text). `frg fmt` tidies them.
+- Names are case-sensitive: `score`, `Score` and `SCORE` are three different names.
+
+### Comments
+
+~~~cpp
+// from here to the end of the line
+
+```
+Several lines,
+until the next three backticks.
+```
+~~~
+
+`/* ... */` isn't used in Forge (it's an error that says to use three backticks).
+
+### Names
+
+A name (of a variable, function, type, field...) is made of letters, digits and `_`, and doesn't start with a digit. It can't be one of the reserved words (see “13. Reserved Words”) (`if`, `class`, `and`...), a type name (`int`, `string`, `list`...), or a library's name (`window`, `math`...).
+
+The usual style, which `frg fmt` doesn't change: `camelCase` for variables and functions, `PascalCase` for types, `UPPER_CASE` for constants and enum values, `lower_case` for file names.
+
+### Values written in the code (literals)
+
+| Kind | How to write it | Notes |
+|---|---|---|
+| whole number | `42`, `-7`, `1_000_000` | `_` can separate digits anywhere |
+| hexadecimal | `0xFF`, `0x1F_FF` | base 16 |
+| binary | `0b1010` | base 2 |
+| decimal number | `3.14`, `0.5`, `1.5e3`, `2e-4` | needs a digit before the dot: `0.5`, not `.5`. `e3` means "times 1000" |
+| true / false | `true`, `false` | |
+| nothing | `null` | only for optional types (`Player?`) |
+| text | `"Hello"` | on one line. `{value}` puts a value inside; `\n` new line, `\t` tab, `\"` quote, `\\` backslash, `\{` and `\}` (or `{{`) braces |
+| raw text | `"""` ... `"""` | many lines, exactly as written: no `{value}`s, no `\` escapes |
+| list | `[1, 2, 3]`, `[]` | `[]` needs its type known: `list<int> xs = [];` |
+| map | `{"Ana": 12, "Ben": 9}` | key `:` value |
+| struct or class | `Point(1, 2)`, `Point()`, or `{1, 2}` where the type is known | see Making objects (see “Making objects”) |
+| function value | `(int n) { return n * 2; }` | see Function values (see “Function values”) |
+
+Text with values inside:
+
+<!-- check: output -->
+
+```cpp
+#include <stdio>
+
+int main(){
+    int hp = 7;
+    float speed = 3.14159;
+    print("HP: {hp} of {hp * 2}");
+    print("Speed: {speed:.2}");
+    print("Braces: {{hp}} or \{hp\}");
+    print("Tab:\tafter, quote: \"hi\"");
+    print("""Raw text: {hp} stays as it is, and \n too""");
+    print(0xFF + 0b11 + 1_000);
+    return 0;
+}
+```
+
+```text
+HP: 7 of 14
+Speed: 3.14
+Braces: {hp} or {hp}
+Tab:	after, quote: "hi"
+Raw text: {hp} stays as it is, and \n too
+1258
+```
+
+### Types
+
+| Shape | Example | Meaning |
+|---|---|---|
+| a built-in type | `int` `float` `double` `bool` `string` `int8`...`uint128` | see Variables and types (see “2. Variables and Types”) |
+| `vec2` `vec3` `vec4` `color` `rect` | `vec2 pos = vec2(1, 2);` | always available (Built-in types (see “Built-in Types: vec2, vec3, vec4, color, rect”)) |
+| `list<T>` | `list<Enemy>` | a list of T |
+| `map<K, V>` | `map<string, int>` | keys K to values V. K is a number, `string`, `bool` or an enum |
+| `T?` | `Player?`, `int?` | a T, or `null` |
+| `Function<R(P1, P2)>` | `Function<bool(Enemy)>`, `Function<void()>` | a function value that takes P1, P2 and gives back R |
+| `Weak<T>` | `Weak<Player>` | holds a class object without keeping it alive |
+| your own type | `Enemy`, `Box<int>` | |
+| a type from another file | `enemies.Goblin`, `world.items.Sword` | `file.Type`, or `folder.file.Type` |
+| `void` | `void update(float dt)` | "nothing": only as what a function gives back |
+
+### The top level of a file
+
+Outside every function, a file can have only these:
+
+```cpp
+#include <stdio>                       // a library
+#include <"enemies">                   // a folder of your own .frg files, next to this file
+
+const int MAX_HP = 100;                // a constant
+int score = 0;                         // a global variable
+private int secret = 7;                // only this file can use it
+
+int add(int a, int b){ ... }           // a function
+task blink(){ ... }                    // a task (a function that can wait)
+
+struct Point { ... }                   // types
+class Enemy { ... }
+class Goblin : Enemy, Drawable { ... } // inherits from Enemy, has the interface Drawable
+abstract class Shape { ... }
+interface Drawable { ... }
+enum State { IDLE, RUNNING }
+class Box<T> { ... }                   // a generic type
+```
+
+Code that *does* something (`print("hi");`, `score++;`) has to be inside a function.
+
+### Functions
+
+```cpp
+ReturnType name(Type param, Type param = defaultValue, ...){
+    statements
+}
+```
+
+- `void` as the return type means it gives nothing back; otherwise every way through it must `return value;`.
+- Parameters with a default value come after the ones without.
+- Several functions can share a name if their parameters differ (overloading).
+- `int main()` is where the game starts. It takes nothing and returns an `int` (0 = everything went well).
+- `private` before a function hides it from other files.
+- `task` instead of a return type makes a task (see “11. Tasks”): `task flash(){ ... wait(0.5); ... }`.
+
+Calling: `name(value, value)`, `file.name(value)` for one in another file, `object.method(value)` for a method.
+
+### Statements
+
+Every kind of statement, with its exact shape:
+
+| Statement | Shape |
+|---|---|
+| a variable | `Type name = value;` or `Type name;` (numbers start at 0, text at `""`) |
+| a constant | `const Type NAME = value;` |
+| changing a variable | `name = value;` `name += value;` (also `-=` `*=` `/=` `%=`) `name++;` `name--;` |
+| the same in words | `set x to 5;` `increase x by 2;` `decrease x by 2;` `multiply x by 2;` `divide x by 2;` `increase x;` `decrease x;` |
+| calling a function | `name(values);` |
+| if | `if (condition) { ... }` then any number of `else if (condition) { ... }`, then at most one `else { ... }` |
+| while | `while (condition) { ... }` |
+| do-while | `do { ... } while (condition);` (runs at least once) |
+| counting for | `for (int i = 0; i < 10; i++) { ... }` (each of the three parts can be left empty) |
+| for each | `for (Type name in list) { ... }` |
+| for a range | `for (int i in first..last) { ... }` (both ends included) |
+| switch | `switch (value) { case 1: ... case 2, 3: ... default: ... }` |
+| leaving a loop | `break;` (out of the loop) `continue;` (on to the next turn) |
+| giving back a value | `return value;` or `return;` in a `void` function |
+| errors | `try { ... } catch (Error e) { ... }` and `throw "message";` |
+| waiting (only in a task) | `wait(seconds);` or `wait(otherTask);` |
+| a block | `{ ... }` on its own: its variables only exist inside it |
+
+`switch` works on whole numbers, text and enums. Each `case` stops by itself at the next one (no `break` needed; `break` in a switch is an error). One case can list several values: `case 2, 3:`.
+
+<!-- check: output -->
+
+```cpp
+#include <stdio>
+
+enum Weather { SUN, RAIN, SNOW }
+
+int main(){
+    int total = 0;
+    for (int i = 1; i <= 3; i++) {
+        total += i;
+    }
+    for (int i in 4..5) {
+        increase total by i;
+    }
+    int n = 0;
+    do {
+        n++;
+    } while (n < 3);
+    while (true) {
+        n++;
+        if (n == 5) {
+            break;
+        }
+    }
+    Weather today = Weather.RAIN;
+    switch (today) {
+        case Weather.SUN:
+            print("sunny");
+        case Weather.RAIN, Weather.SNOW:
+            print("wet");
+        default:
+            print("never shown");
+    }
+    try {
+        throw "something went wrong";
+    } catch (Error e) {
+        print("caught: {e.message}");
+    }
+    print("total {total}, n {n}");
+    return 0;
+}
+```
+
+```text
+wet
+caught: something went wrong
+total 15, n 5
+```
+
+What isn't a statement in Forge: assigning inside a condition (`if (x = 5)` is an error: use `==`), `++` inside an expression (`print(x++)` is an error: write `x++;` on its own line), and a value on its own that doesn't do anything (`x + 1;`).
+
+### Expressions
+
+An **expression** is anything that gives a value. All the forms:
+
+| Form | Example |
+|---|---|
+| a literal | `42`, `"hi"`, `[1, 2]`, `null` |
+| a name | `score`, `MAX_HP`, `enemies.count` |
+| a call | `add(1, 2)`, `player.jump()`, `fs[0]()`, `makeAdder(10)(5)` |
+| a field | `player.hp`, `pos.x` |
+| a list or map item | `items[0]`, `ages["Ana"]` |
+| an operator | `a + b`, `not done`, `x is Goblin` (all of them (see “4. Operators”)) |
+| choosing | `condition ? a : b` or `a if condition else b` |
+| a backup for null | `maybe ?? backup` or `maybe otherwise backup` |
+| converting | `int(3.9)`, `float(n)`, `string(42)`, `int("12")` |
+| checking a class | `enemy is Goblin`, `enemy as Goblin` (gives `Goblin?`) |
+| making an object | `Point(1, 2)`, `Box<int>(5)`, `{1, 2}` |
+| a function value | `(int n) { return n * 2; }` |
+
+The order operators happen in, and every word version, is in Operators (see “4. Operators” › “Order of operations”). In short: calls, fields and `[ ]` first; then `-a` and `!a`; then `* / %`; then `+ -`; then comparisons; then `==`; then `and`; then `or`; then `??`; then `? :`. Parentheses `( )` change the order. Within one expression, the parts happen left to right (see “How Forge behaves, exactly” › “The order a program runs in”).
+
+### Making objects
+
+| Shape | When |
+|---|---|
+| `Type(values)` | calls the type's constructor; without one, gives the fields in order (all of them, or none) |
+| `Type()` | every field at its starting value |
+| `{values}` | the same as `Type(values)`, when the type is already known: `Point p = {1, 2};`, or as an argument |
+| `Box<int>(5)` | a generic type, saying its types |
+| `Box(5)` | the same, when the type is known from where it goes: `Box<int> b = Box(5);` |
+
+### Your own types
+
+```cpp
+struct Point {
+    int x = 0;                     // a field, with its starting value
+    int y = 0;
+    static int made = 0;           // one value for the whole type: Point.made
+
+    Point(int x, int y){           // a constructor (optional; several are allowed)
+        this.x = x;
+        this.y = y;
+    }
+
+    int sum(){                     // a method
+        return x + y;
+    }
+
+    static Point origin(){         // a static method: Point.origin()
+        return Point(0, 0);
+    }
+}
+
+class Goblin : Enemy {             // inherits Enemy's fields and methods
+    Goblin(){
+        super(10);                 // runs Enemy's constructor first
+    }
+    void attack(){                 // replaces Enemy's attack
+        super.attack();            // runs Enemy's version too
+    }
+}
+
+interface Drawable {
+    void draw();                   // only the shape: classes that have the interface write the code
+}
+
+abstract class Shape {
+    abstract float area();         // every class that inherits Shape has to write area()
+}
+
+enum Direction { UP, DOWN, LEFT, RIGHT }
+
+class Box<T> {                     // a generic type: Box<int>, Box<string>...
+    T item;
+    Box(T item){
+        this.item = item;
+    }
+}
+```
+
+- `private` before a field, method or constructor: only the type's own methods can use it (for a class, also the classes that inherit from it).
+- A struct is copied; a class is shared (Copies and shared objects (see “How Forge behaves, exactly” › “Copies and shared objects”)).
+- Methods named `plus`, `minus`, `times`, `div`, `less`, `equals` and `toText` make `+`, `-`, `*`, `/`, `<`, `==` and `"{x}"` work on your type (Structs and classes (see “9. Structs and Classes”)).
+- `x.describe` shows any object's fields; `x.describe.name`, `.parent`, `.fields`, `.values` give one part.
+
+### Function values
+
+A function can be stored in a variable, passed to a function, and kept in a list:
+
+```cpp
+Function<int(int)> twice = (int n) { return n * 2; };
+Function<void()> hello = () { print("hi"); };
+list<Enemy> alive = enemies.filter((Enemy e) { return e.hp > 0; });
+```
+
+A function value gets a **copy** of the local variables around it, at the moment it's made. It can read them, but changing them only changes its copy; use a global variable or a class object's field to share a value.
+
+<!-- check: output -->
+
+```cpp
+#include <stdio>
+
+Function<int(int)> makeAdder(int amount){
+    return (int n) { return n + amount; };
+}
+
+int main(){
+    Function<int(int)> twice = (int n) { return n * 2; };
+    list<Function<int(int)>> steps = [twice, makeAdder(1)];
+    int value = 5;
+    for (Function<int(int)> step in steps) {
+        value = step(value);
+    }
+    print(value);
+    print(steps[0](10));
+    print(makeAdder(10)(5));
+    list<int> big = [3, 8, 1, 9].filter((int n) { return n > 2; });
+    print(big);
+    return 0;
+}
+```
+
+```text
+11
+20
+15
+[3, 8, 9]
+```
+
+### Things Forge doesn't have
+
+So you don't have to wonder:
+
+| Not in Forge | Instead |
+|---|---|
+| pointers (`*`, `&`, `Pointer<T>`) | return the new value, or keep it in a class object |
+| `new` and `delete` | `Enemy()` makes one; it's freed when nothing holds it |
+| `x++` or `x = 5` inside an expression | do them on their own line |
+| falling through from one `case` to the next | list several values in one case: `case 1, 2:` |
+| `goto` | loops, `break`, `continue`, functions |
+| `'c'` single characters | one-letter text: `"c"`, and `text.charAt(i)` |
+| functions inside functions | function values: `Function<int(int)> f = (int n) { ... };` |
+| code outside functions | put it in `main`, or in a function `main` calls |
+| `#define`, macros, header files | `const` values, and files see each other with the file-name prefix |
+| exceptions of different types | one `Error` type; `throw "message";` and `e.message` |
+| generic functions (`T max<T>(T a, T b)`) | generic types only: `class Box<T>` |
+
+<!-- check: error -->
+
+```cpp
+int main(){
+    int x = 0;
+    if (x = 5) {
+        x++;
+    }
+    return 0;
+}
+```
+
+```text
+error: '=' sets a variable - to compare two values, use '=='
+  --> main.frg:3:11
+   |
+ 3 |     if (x = 5) {
+   |           ^
+```
+
+<!-- check: error -->
+
+```cpp
+int main(){
+    int lives = 3;
+    if (lives > 0) lives--;
+    return 0;
+}
+```
+
+```text
+error: 'if' needs { } around its code
+  --> main.frg:3:20
+   |
+ 3 |     if (lives > 0) lives--;
+   |                    ^^^^^
+  hint: for example: if (...) { ... }
+```
+
+<!-- docs/reference/rules.md -->
+
+## How Forge behaves, exactly
+
+This page answers the "what happens if...?" questions, so you don't have to guess. Every example here is run when Forge's tests run, and the output shown under it is what it really prints. If Forge ever behaves differently from this page, the tests fail.
+
+- The order a program runs in (see “The order a program runs in”)
+- Numbers (see “Numbers”)
+- Text (see “Text”)
+- Copies and shared objects (see “Copies and shared objects”)
+- Loops (see “Loops”)
+- null (see “null”)
+- A frame, step by step (see “A frame, step by step”)
+- Stopping the game (see “Stopping the game”)
+- Testing a game that opens a window (see “Testing a game that opens a window”)
+
+### The order a program runs in
+
+1. **Global variables** (the ones outside every function) get their starting values first, before `main`: those in `main.frg` first, then the other files of the top folder in alphabetical order, then the files of each included folder. Within one file, from top to bottom.
+2. Then **`main()`** runs, from its first line to its `return`.
+3. When `main` returns, the window closes (if one is open), sound stops, and the program ends with `main`'s number as its exit code (see “Commands: everything `frg` can do” › “Exit codes”).
+
+<!-- check: output -->
+
+```cpp
+#include <stdio>
+
+int first = note("a global in main.frg", 1);
+
+int note(string what, int value){
+    print(what);
+    return value;
+}
+
+int main(){
+    print("main starts");
+    return 0;
+}
+```
+
+```cpp
+// file: enemies.frg
+int count = main.note("a global in enemies.frg", 2);
+```
+
+```text
+a global in main.frg
+a global in enemies.frg
+main starts
+```
+
+Inside one line, things happen **left to right**: in `add(next(), next())` the first `next()` runs first; in `a() + b()`, `a()` runs first; in `"{a()} {b()}"`, `a()` runs first.
+
+<!-- check: output -->
+
+```cpp
+#include <stdio>
+
+int counter = 0;
+
+int next(){
+    counter++;
+    return counter;
+}
+
+int main(){
+    print("{next()} {next()} {next()}");
+    print(next() * 10 + next());
+    return 0;
+}
+```
+
+```text
+1 2 3
+45
+```
+
+A runtime error in a global's starting value stops the game before `main` starts, with the line it happened on:
+
+<!-- check: runtime-error exit 1 -->
+
+```cpp
+list<int> scores = [];
+int best = scores[0];
+
+int main(){
+    return 0;
+}
+```
+
+```text
+Runtime error in main.frg:2: position 0 is outside the list: the list is empty
+```
+
+### Numbers
+
+#### Whole numbers
+
+`int` holds whole numbers from -2,147,483,648 to 2,147,483,647. The other sizes (`int8` to `int128`, and the unsigned `uint` ones) are listed in Variables and types (see “2. Variables and Types”).
+
+##### Numbers that get too big
+
+Going past the biggest value **wraps around** to the smallest (and the other way). It never stops the game. Writing a number that doesn't fit, straight into the code, is an error instead (`uint8 z = 300;`).
+
+<!-- check: output -->
+
+```cpp
+#include <stdio>
+
+int main(){
+    int big = 2147483647;
+    big = big + 1;
+    print(big);
+    uint8 small = 250;
+    small += 10;
+    print(small);
+    return 0;
+}
+```
+
+```text
+-2147483648
+4
+```
+
+##### Dividing whole numbers
+
+- `int / int` gives an `int`: the decimals are **cut off** (toward zero), not rounded. `7 / 2` is `3`, and `-7 / 2` is `-3`.
+- `%` gives what's left over, with the **sign of the left number**: `-7 % 2` is `-1`, and `7 % -2` is `1`.
+- Dividing a whole number by `0` (or `% 0`) stops the game with "division by zero".
+- Numbers written straight into the code are the exception: on their own they adapt to where the result goes. `float half = 7 / 2;` is `3.5`, but with a variable, `int seven = 7; float half = seven / 2;` is `3.0`. When in doubt, write `7.0 / 2`.
+
+<!-- check: output -->
+
+```cpp
+#include <stdio>
+
+int main(){
+    int seven = 7;
+    print(seven / 2);
+    print(-seven / 2);
+    print(-seven % 2);
+    print(seven % -2);
+    float a = seven / 2;
+    float b = 7 / 2;
+    float c = seven / 2.0;
+    print("{a} {b} {c}");
+    return 0;
+}
+```
+
+```text
+3
+-3
+-1
+1
+3.0 3.5 3.5
+```
+
+<!-- check: runtime-error exit 1 -->
+
+```cpp
+int main(){
+    int zero = 0;
+    int x = 10 / zero;
+    return 0;
+}
+```
+
+```text
+Runtime error in main.frg:3: division by zero
+```
+
+#### Decimal numbers
+
+- `float` keeps about 7 digits, `double` about 16. Text shows the shortest form that reads back as the same number.
+- Dividing a decimal number by zero doesn't stop the game: it gives `inf` (or `-inf`, or `nan` for `0.0 / 0`).
+- `int(...)` cuts off the decimals (toward zero): `int(2.9)` is `2`, `int(-2.9)` is `-2`.
+- `math.round(...)` rounds halves away from zero: `2.5` becomes `3`, and `-2.5` becomes `-3`.
+- Decimals are often a tiny bit off (`0.1` is really `0.100000001...`), so compare them with a small margin: `math.abs(a - b) < 0.001`. Forge warns about `==` on decimals.
+
+<!-- check: output -->
+
+```cpp
+#include <stdio>
+#include <math>
+
+int main(){
+    float third = 1.0 / 3;
+    double precise = 1.0 / 3;
+    print(third);
+    print(precise);
+    float zero = 0;
+    print(1.0 / zero);
+    print(int(2.9));
+    print(int(-2.9));
+    print(math.round(2.5));
+    print(math.round(-2.5));
+    return 0;
+}
+```
+
+```text
+0.33333334
+0.3333333333333333
+inf
+2
+-2
+3.0
+-3.0
+```
+
+### Text
+
+- `text.length` counts **bytes**, not letters. Letters outside plain English (`é`, `ß`, emoji) take 2 to 4 bytes each, so `"héllo".length` is 6.
+- Comparing text with `<` and `>` goes character by character by their code numbers: every capital letter comes before every small one, so `"Zebra" < "apple"` is `true`. Use `.lower()` on both sides to compare without caring about capitals.
+- `text[i]` doesn't work; use `text.charAt(i)` (it gives a one-character `string`).
+- `+` joins text, but only with text: `"HP: " + 5` is an error. Put the value inside the text instead: `"HP: {hp}"`.
+
+<!-- check: output -->
+
+```cpp
+#include <stdio>
+
+int main(){
+    print("hello".length);
+    print("héllo".length);
+    print("apple" < "banana");
+    print("Zebra" < "apple");
+    print("Zebra".lower() < "apple".lower());
+    print("forge".charAt(0));
+    return 0;
+}
+```
+
+```text
+5
+6
+true
+true
+false
+f
+```
+
+### Copies and shared objects
+
+When you put a value in another variable, pass it to a function, or put it in a list, Forge either **copies** it or **shares** it:
+
+| Type | Assigning / passing it |
+|---|---|
+| numbers, `bool`, `string`, enums | copied |
+| `vec2`, `vec3`, `color`, `rect` and your own `struct`s | copied: changing the copy doesn't change the original |
+| `list<...>` and `map<...>` | **copied too**, with everything in them |
+| your own `class` objects | **shared**: both names are the same object, so a change through one is seen through the other |
+
+<!-- check: output -->
+
+```cpp
+#include <stdio>
+
+struct Point {
+    int x = 0;
+}
+
+class Player {
+    int hp = 10;
+}
+
+void hurtPoint(Point p){
+    p.x = 99;
+}
+
+void hurtPlayer(Player p){
+    p.hp = 1;
+}
+
+void addItem(list<int> items){
+    items.add(4);
+}
+
+int main(){
+    Point a = Point();
+    hurtPoint(a);
+    print("struct after the function: {a.x}");
+
+    Player hero = Player();
+    hurtPlayer(hero);
+    print("class after the function: {hero.hp}");
+
+    list<int> mine = [1, 2, 3];
+    addItem(mine);
+    list<int> other = mine;
+    other.add(5);
+    print("list: {mine}, the copy: {other}");
+    return 0;
+}
+```
+
+```text
+struct after the function: 0
+class after the function: 1
+list: [1, 2, 3], the copy: [1, 2, 3, 5]
+```
+
+To let a function change a struct, list or number, **give back the new value** and store it: `scores = withBonus(scores);`. Or keep it in a class object, which the function can change directly.
+
+A class object stays alive as long as anything still holds it (a variable, a field or a list), and is freed as soon as nothing does. Two objects that hold each other are never freed; use `Weak` (see “9. Structs and Classes”) for one of the two.
+
+### Loops
+
+- `for (int i in 1..5)` counts 1, 2, 3, 4, 5: **both ends are included**.
+- A range that goes down, like `5..1`, counts nothing. To count down, use `for (int i = 5; i >= 1; i--)`.
+- `for (Item x in items)` gives a **copy** of each struct item; changing `x` doesn't change the list (Forge warns about it). Loop with a number to change the items: `items[i].hp = 0;`.
+- Items **added** to the list during a `for ... in` loop are visited too.
+- **Removing** items during a `for ... in` loop skips the item right after each removed one. Use `items.removeWhere(...)` instead, or loop with a number from the end down.
+
+<!-- check: output -->
+
+```cpp
+#include <stdio>
+
+int main(){
+    for (int i in 1..3) {
+        print("up {i}");
+    }
+    for (int i in 3..1) {
+        print("this never prints");
+    }
+    list<int> grows = [1, 2];
+    for (int x in grows) {
+        if (x == 1) {
+            grows.add(3);
+        }
+        print("saw {x}");
+    }
+    list<int> shrinks = [1, 2, 3, 4];
+    for (int x in shrinks) {
+        if (x == 2) {
+            shrinks.remove(2);
+        }
+        print("visited {x}");
+    }
+    print(shrinks);
+    return 0;
+}
+```
+
+```text
+up 1
+up 2
+up 3
+saw 1
+saw 2
+saw 3
+visited 1
+visited 2
+visited 4
+[1, 3, 4]
+```
+
+### null
+
+Only optional types (with a `?`, like `Player?` or `int?`) can be `null`. Using a `null` value as if it were there stops the game with a runtime error that names it. Check first with `if (x != null)`, or give a backup with `x ?? backup`.
+
+<!-- check: runtime-error exit 1 -->
+
+```cpp
+class Player {
+    int hp = 10;
+}
+
+int main(){
+    Player? hero = null;
+    int hp = hero.hp;
+    return 0;
+}
+```
+
+```text
+Runtime error in main.frg:7: 'hero' is null
+```
+
+### A frame, step by step
+
+A game with a window runs in **frames**, normally 60 a second. With `window.run()`, every frame does this, in this order:
+
+1. Show the frame drawn last time, and read the keyboard, mouse and controllers.
+2. If the player clicked the window's X (or `window.close()` was called), stop: `window.run()` returns, and `main` carries on after it.
+3. Clear the screen to the background color.
+4. Wake up every task (see “11. Tasks”) whose `wait(...)` is over.
+5. Call `update(dt)`. `dt` is the time since the last frame, in seconds (about `0.0167` at 60 frames a second). On the very first frame it's `0`.
+6. Call `draw()`, unless `update` closed the window.
+
+Calling a task starts it straight away: it runs until its first `wait`, then the caller carries on.
+
+Input is read once per frame, in step 1, so it can't change halfway through `update`. `keyPressed` is `true` on exactly one frame (the first one the key is down), `keyDown` on every frame it's down, and `keyReleased` on the first frame it's up again.
+
+This game prints what happens in its first 4 frames, with Space held down during frames 1 and 2 (see Testing a game that opens a window (see “Testing a game that opens a window”)):
+
+<!-- check: output frames=4 input=SPACE:1-2 -->
+
+```cpp
+#include <window>
+#include <input>
+#include <stdio>
+
+int frame = 0;
+
+task ticker(){
+    for (int i in 1..2) {
+        print("  the task runs (frame {frame})");
+        wait(0);
+    }
+}
+
+int main(){
+    window.open(320, 200, "Frames");
+    ticker();
+    print("before window.run()");
+    window.run();
+    print("after window.run(): {frame} frames");
+    return 0;
+}
+
+void update(float dt){
+    string first = dt > 0 ? "" : " (dt is 0)";
+    print("update {frame}{first}");
+    if (input.keyPressed(Key.SPACE)) {
+        print("  Space was pressed");
+    }
+    if (input.keyDown(Key.SPACE)) {
+        print("  Space is down");
+    }
+    if (input.keyReleased(Key.SPACE)) {
+        print("  Space was let go");
+    }
+}
+
+void draw(){
+    print("draw {frame}");
+    frame++;
+}
+```
+
+```text
+  the task runs (frame 0)
+before window.run()
+  the task runs (frame 0)
+update 0 (dt is 0)
+draw 0
+update 1
+  Space was pressed
+  Space is down
+draw 1
+update 2
+  Space is down
+draw 2
+update 3
+  Space was let go
+draw 3
+after window.run(): 4 frames
+```
+
+With your own loop (`while (!window.shouldClose()) { ... }`), each call to `window.shouldClose()` does steps 1 to 4, and your loop's body is steps 5 and 6.
+
+### Stopping the game
+
+No single key closes a Forge game: **Escape is a normal key**, so games can use it for a pause menu. A game stops in one of these ways:
+
+| What happens | What stops | What runs after it |
+|---|---|---|
+| The player clicks the window's X, or presses Alt+F4 | `window.run()` returns, or `window.shouldClose()` gives `true` | the rest of `main` (save the game there!) |
+| Your code calls `window.close()` | the same, at the end of this frame: `draw()` isn't called after an `update` that closed the window | the rest of `main` |
+| `main` returns a number | the whole program; an open window closes | nothing. The number is the exit code (see “Commands: everything `frg` can do” › “Exit codes”) |
+| A runtime error that no `try` catches | the whole program, with the error's message | nothing. The exit code is 1 |
+| `throw "message";` that no `try` catches | the same as a runtime error | nothing. The exit code is 1 |
+
+So the pattern for "the player wants to quit" is the same however they ask: let `window.run()` (or your loop) end, then do your last things in `main`.
+
+#### Closing from your own code
+
+`window.close()` is how the game itself decides to stop, for example from a Quit button or after the last level. In `window.run()`, `update` finishes, `draw` is skipped, and `window.run()` returns:
+
+<!-- check: output exit 3 frames=60 -->
+
+```cpp
+#include <window>
+#include <graphics2d>
+#include <stdio>
+
+int frames = 0;
+
+int main(){
+    window.open(320, 200, "Quit after 3 frames");
+    window.run();
+    print("window.run() returned after {frames} frames");
+    return 3;
+}
+
+void update(float dt){
+    frames++;
+    if (frames == 3) {
+        print("closing");
+        window.close();
+        print("update still finishes");
+    }
+}
+
+void draw(){
+    graphics2d.drawRect(10, 10, 20, 20, color.RED);
+}
+```
+
+```text
+closing
+update still finishes
+window.run() returned after 3 frames
+```
+
+#### Your own loop
+
+With your own loop, `window.close()` makes the next `window.shouldClose()` give back `true`, so the loop ends. Everything after `window.close()` in that turn of the loop still runs, but **drawing after it is an error**, because the window is gone (use `break` to leave the loop straight away).
+
+<!-- check: output frames=60 -->
+
+```cpp
+#include <window>
+#include <graphics2d>
+#include <stdio>
+
+int main(){
+    window.open(320, 200, "My own loop");
+    int frames = 0;
+    while (!window.shouldClose()) {
+        frames++;
+        graphics2d.drawRect(10, 10, 20, 20, color.RED);
+        if (frames == 4) {
+            window.close();
+        }
+    }
+    print("the loop ended after {frames} frames");
+    return 0;
+}
+```
+
+```text
+the loop ended after 4 frames
+```
+
+<!-- check: runtime-error exit 1 frames=60 -->
+
+```cpp
+#include <window>
+#include <graphics2d>
+
+int main(){
+    window.open(320, 200, "Drawing after closing");
+    while (!window.shouldClose()) {
+        window.close();
+        graphics2d.drawRect(10, 10, 20, 20, color.RED);
+    }
+    return 0;
+}
+```
+
+```text
+Runtime error in graphics2d.drawRect(): the window has been closed (by window.close(), or by the player), so there's nothing to draw on - check window.shouldClose() before drawing, or stop drawing after closing it
+  called from main.frg:8 (in main)
+```
+
+#### The player clicks the X
+
+Here the player "clicks the X" on frame 5 (with scripted input), and the game saves before it ends. Escape, held during frames 1 to 3, doesn't close anything: the game reads it like any key.
+
+<!-- check: output frames=60 input=ESCAPE:1-3,CLOSE:5-5 -->
+
+```cpp
+#include <window>
+#include <input>
+#include <stdio>
+
+int frames = 0;
+
+int main(){
+    window.open(320, 200, "Quitting");
+    window.run();
+    print("the player closed the window after {frames} frames - saving");
+    return 0;
+}
+
+void update(float dt){
+    frames++;
+    if (input.keyPressed(Key.ESCAPE)) {
+        print("Escape: open the pause menu");
+    }
+}
+
+void draw(){
+}
+```
+
+```text
+Escape: open the pause menu
+the player closed the window after 5 frames - saving
+```
+
+#### A window after a window
+
+After `window.close()`, `window.open(...)` opens a new window, so a game can show a launcher window, close it, and open the game's own:
+
+<!-- check: output frames=60 -->
+
+```cpp
+#include <window>
+#include <graphics2d>
+#include <stdio>
+
+int main(){
+    window.open(320, 200, "Launcher");
+    int frames = 0;
+    while (!window.shouldClose() and frames < 3) {
+        frames++;
+    }
+    window.close();
+    print("the launcher closed");
+    window.open(640, 360, "The game");
+    frames = 0;
+    while (!window.shouldClose() and frames < 3) {
+        graphics2d.drawText("Playing", 10, 10, 20, color.WHITE);
+        frames++;
+    }
+    print("the game's window is done");
+    return 0;
+}
+```
+
+```text
+the launcher closed
+the game's window is done
+```
+
+### Testing a game that opens a window
+
+Three environment variables (see “Commands: everything `frg` can do” › “Environment variables”) let a test play a game without anyone at the keyboard:
+
+- `FRG_AUTOTEST_FRAMES=N` runs **exactly N frames** (frames 0 to N-1), then closes the window as if the player had clicked the X. So `window.run()` returns, and the rest of `main` runs.
+- `FRG_AUTOTEST_SHOT=name.png` saves a picture of the last frame (normally `autotest.png`, in the game's folder).
+- `FRG_AUTOTEST_INPUT=SPACE:1-2,CLOSE:5-5` holds keys and mouse buttons during those frames, both ends included. `CLOSE` clicks the window's X.
+
+Forge's own tests use these to check the examples on this page, and every example game, on every change.
+
+<!-- docs/reference/commands.md -->
+
+## Commands: everything `frg` can do
+
+`frg` is the program that turns your `.frg` files into a game. You type its commands in a **terminal** (also called a command line or console). This page lists every command, every option, what each one prints, which files it makes, and what it means when something goes wrong.
+
+The error messages on this page are checked against the real `frg` every time Forge's tests run, so they're exactly what you'll see.
+
+### Where to type commands
+
+- **In VS Code:** open the terminal with **Ctrl+`** (the key above Tab), or the menu *Terminal > New Terminal*. It starts in the folder you have open.
+- **In Windows:** open **PowerShell** or **Terminal** from the Start menu.
+
+`frg` has to be on your `PATH` (see Getting Started (see “Getting Started” › “What you need”)). Check with:
+
+```text
+frg version
+```
+
+which prints `Forge 0.9.1` (or whichever version you have). If it says `frg is not recognized`, the folder with `frg.exe` isn't on your `PATH`.
+
+#### Moving between folders
+
+Most commands work on "the game in this folder". Moving around in a terminal:
+
+| Type | What it does |
+|---|---|
+| `cd mygame` | go into the folder `mygame` |
+| `cd ..` | go up one folder |
+| `cd D:\games\mygame` | go to that exact folder |
+| `ls` (PowerShell) or `dir` | list what's in this folder |
+| `pwd` | show which folder you're in |
+| Tab | finish a folder or file name you started typing |
+| Up arrow | bring back the last command |
+| Ctrl+C | stop the program that's running (a game started with `frg run`, for example) |
+
+### All the commands
+
+| Command | What it does |
+|---|---|
+| `frg new <name>` (see “frg new”) | makes a new game folder with a `main.frg` |
+| [`frg build [folder]`](#frg-build) | checks the game and turns it into `build/<name>.exe` |
+| [`frg run [folder]`](#frg-run) | builds the game, then runs it |
+| [`frg check [folder]`](#frg-check) | only looks for errors (fast, makes no files) |
+| [`frg test [folder]`](#frg-test) | runs the tests in the game's `tests` folder |
+| [`frg fmt [folders or files]`](#frg-fmt) | tidies the layout of `.frg` files |
+| [`frg package [folder]`](#frg-package) | makes a finished build and zips it, ready to share |
+| `frg cache` (see “frg cache”) | shows the build cache; `frg cache clear` deletes it |
+| `frg version` (see “frg version and frg help”) | shows which Forge this is |
+| `frg help` (see “frg version and frg help”) | shows the list of commands |
+| `frg query ...` (see “frg query”) | answers questions about the code, for editors like VS Code |
+
+#### The `[folder]` part
+
+`[folder]` (in square brackets) means you **can** give it, but don't have to. It's the game's top folder: the one with `main.frg` in it. Without it, `frg` uses the folder the terminal is in. These do the same thing:
+
+```text
+cd D:\games\mygame
+frg run
+```
+
+```text
+frg run D:\games\mygame
+```
+
+The game's name is its folder's name: a game in `D:\games\space_rocks` becomes `space_rocks.exe`.
+
+---
+
+### frg new
+
+```text
+frg new <name> [--template console | window | platformer | 3d]
+```
+
+Makes a new folder called `<name>`, with a `main.frg` to start from.
+
+| Template | What `main.frg` holds |
+|---|---|
+| `console` (the default) | a program that prints `Hello, World!` |
+| `window` | a window with a square you move with the arrow keys |
+| `platformer` | a small platformer with physics |
+| `3d` | a 3D scene with a camera |
+
+What it prints:
+
+```text
+     Created mygame/main.frg
+
+To run it:
+    cd mygame
+    frg run
+```
+
+Rules for the name: only letters, numbers and `_`, and it can't start with a number (it becomes the `.exe`'s name). The folder must not exist yet.
+
+<!-- check: command fails new 2fast -->
+
+```text
+error: '2fast' can't be the name of a game
+  hint: use only letters, numbers and _, and don't start with a number - for example: frg new my_game
+```
+
+<!-- check: command fails new x --template windw -->
+
+```text
+error: there's no template called 'windw'
+  hint: did you mean window? The templates are console, window, platformer and 3d
+```
+
+<!-- check: command fails new -->
+
+```text
+error: frg new needs a name
+  hint: for example: frg new mygame, or frg new mygame --template platformer
+```
+
+---
+
+### frg build
+
+```text
+frg build [folder] [--release | --debug] [--console | --no-console]
+```
+
+Reads every `.frg` file of the game, checks it for mistakes, translates it to C++, and has g++ turn that into `build/<name>.exe`. It doesn't run the game.
+
+What it prints, when it works:
+
+```text
+   Compiling mygame (3 files)
+    Finished build/mygame.exe in 1.15s
+```
+
+- `(3 files)` counts your `.frg` files.
+- If nothing changed since the last build, it says `(nothing changed)` and takes a fraction of a second.
+- A big game is split into parts that are compiled at the same time; it then says how many had to be compiled again, like `(2 of 8 parts compiled)`.
+- The very first build that uses a library also prints `Preparing Forge's runtime for these libraries (only the first time, to make later builds faster)` and takes longer. See frg cache (see “frg cache”).
+
+If the game has mistakes, it prints each one and stops without making an `.exe`:
+
+<!-- check: command fails build {game} -->
+
+```cpp
+int main(){
+    int score = "ten";
+    return 0;
+}
+```
+
+```text
+error: 'score' needs an int, but this is a string
+  --> main.frg:2:17
+   |
+ 2 |     int score = "ten";
+   |                 ^^^^^
+
+Build failed: 1 error.
+```
+
+Every error message is explained in Error messages (see “Error messages”). Warnings (yellow) are printed too, but they never stop the build.
+
+#### What a build makes
+
+```text
+mygame/
+    main.frg
+    build/
+        mygame.exe          the game
+        forge/              the C++ Forge made from your code (you never need to open it)
+        tests/              only after frg test: the game with its tests
+```
+
+You can delete `build/` whenever you like; the next build makes it again (and takes a little longer).
+
+#### The options
+
+| Option | What it changes | Use it for |
+|---|---|---|
+| (none) | a normal build, with a console window for `print()` and errors | making and testing your game |
+| `--release` | optimized more, made smaller, and **no console window** | the finished game you give to players |
+| `--debug` | not optimized, and every line knows its `.frg` line | pausing the game in a debugger (VS Code's **Forge: Debug Game**, F6) |
+| `--no-console` | no console window | seeing the game the way players will, while still testing |
+| `--console` | keep the console window | a `--release` build where you still want to see `print()` |
+
+Rules:
+
+- `--release` and `--debug` can't be used together.
+- `--console` and `--no-console` can't be used together.
+- `--release` turns the console off unless you also write `--console`.
+- Without a console, `print()` output goes nowhere, and a runtime error appears in a message box instead.
+
+How each kind of build is made, for the curious (these are the g++ settings):
+
+| Build | Speed of the game | g++ settings |
+|---|---|---|
+| normal | fast | `-O1` |
+| `--release` | fastest | `-O2 -s` (and `-mwindows`: no console) |
+| `--debug` | slow, but the debugger can see everything | `-O0 -g` |
+
+In every build, whole numbers that go past their biggest value wrap around instead of breaking the game (`-fwrapv`): see How Forge behaves (see “How Forge behaves, exactly” › “Numbers that get too big”).
+
+<!-- check: command fails build --release --debug -->
+
+```text
+error: --release and --debug can't both be used
+  hint: --debug is for finding mistakes with a debugger, --release for the finished game
+```
+
+<!-- check: command fails build --fast -->
+
+```text
+error: there's no option called --fast
+  hint: the options are --release, --debug, --console and --no-console
+```
+
+<!-- check: command fails build nofolder -->
+
+```text
+error: the folder 'nofolder' doesn't exist
+```
+
+<!-- check: command fails build {game} -->
+
+```cpp
+// file: player.frg
+void jump(){
+}
+```
+
+```text
+error: there's no main.frg in D:\games\mygame
+  hint: every Forge game needs a main.frg in its top folder. Make a new game with: frg new mygame
+```
+
+---
+
+### frg run
+
+```text
+frg run [folder] [--release | --debug] [--console | --no-console]
+```
+
+Builds the game exactly like frg build (see “frg build”) (with the same options), then starts it. If the build fails, the game isn't started.
+
+```text
+   Compiling mygame (1 file)
+    Finished build/mygame.exe in 0.78s
+     Running mygame.exe
+Hello, World!
+```
+
+- The game runs **in its own folder** (the one with `main.frg`), so `assets.loadTexture("hero.png")` finds `hero.png` there.
+- `print()` output shows in the terminal.
+- Ctrl+C in the terminal stops the game.
+- When the game ends, `frg run` ends too. If `main` returned something other than `0`, it says so:
+
+<!-- check: command fails run {game} -->
+
+```cpp
+#include <stdio>
+
+int main(){
+    print("Hello, World!");
+    return 4;
+}
+```
+
+```text
+Hello, World!
+
+[mygame.exe exited with code 4]
+```
+
+`frg run`'s own exit code is the game's exit code, so scripts can tell how the game ended (see Exit codes (see “Exit codes”)).
+
+Running the `.exe` yourself (double-clicking `build/mygame.exe`) works too. The game looks for its files in the folder it was started from, then next to the `.exe`, then one folder up (which is the game's folder, since the `.exe` is in `build/`).
+
+---
+
+### frg check
+
+```text
+frg check [folder]
+```
+
+Looks for mistakes without building anything, so it's much faster than `frg build`. It checks the `tests` folder too. VS Code runs it every time you save.
+
+<!-- check: command check {game} -->
+
+```cpp
+int main(){
+    return 0;
+}
+```
+
+```text
+     Checked mygame: no errors
+```
+
+With warnings it says `no errors, 2 warnings`. With errors it prints them, then `1 error found.`, and its exit code is 1.
+
+<!-- check: command fails check --nope -->
+
+```text
+error: there's no option called --nope
+  hint: frg check only takes a folder: frg check [folder]
+```
+
+`frg check --machine` prints the errors in a form that's easy for programs to read (one per line, with the file, line and column). It's what the VS Code extension uses.
+
+---
+
+### frg test
+
+```text
+frg test [folder] [--debug] [--console | --no-console]
+```
+
+Builds the game together with its `tests` folder (into `build/tests/<name>_tests.exe`), then runs every function in `tests` whose name starts with `test`. The game's own `main` doesn't run. How to write tests: `<testing>` (see “`<testing>`: Testing Your Game's Code”).
+
+<!-- check: command fails test {game} -->
+
+```cpp
+int main(){
+    return 0;
+}
+```
+
+```cpp
+// file: tests/math_test.frg
+#include <testing>
+
+void testAdding(){
+    testing.check(1 + 1 == 2);
+}
+
+void testBroken(){
+    int hp = 10;
+    testing.check(hp - 3 == 8);
+}
+```
+
+```text
+   Compiling mygame (2 files)
+     Testing mygame_tests.exe
+  PASS  testAdding  (tests/math_test.frg)
+  FAIL  testBroken  (tests/math_test.frg)
+        tests/math_test.frg:10: testing.check(hp - 3 == 8);
+          left side: 7, right side: 8
+
+1 test passed, 1 failed (2 checks).
+```
+
+The exit code is 0 when every test passed, and 1 when any failed.
+
+<!-- check: command fails test {game} -->
+
+```cpp
+int main(){
+    return 0;
+}
+```
+
+```text
+error: there's no tests folder in D:\games\mygame
+  hint: make a folder called tests next to main.frg, with files like tests/player_test.frg holding functions like void testJump(){ ... } that use testing.check(...) (they need #include <testing>)
+```
+
+---
+
+### frg fmt
+
+```text
+frg fmt [folders or files] [--check | --print]
+```
+
+Tidies the **layout** of `.frg` files: indentation (4 spaces), `int main(){` braces, spaces, and blank lines. It never changes what the code does: it compares the code before and after, word by word, and refuses to save if anything but spacing would change. VS Code's **Format Document** (Shift+Alt+F) uses it.
+
+| How you run it | What it does |
+|---|---|
+| `frg fmt` | tidies every `.frg` file in this folder and the folders inside it (not `build/`, `dist/` or hidden folders) |
+| `frg fmt player.frg enemies` | tidies those files, and every `.frg` file in those folders |
+| `frg fmt --check` | changes nothing; lists the files that aren't tidy. Exit code 1 if there are any |
+| `frg fmt --print main.frg` | changes nothing; prints the tidied file |
+
+What it prints:
+
+```text
+      Tidied player.frg
+```
+
+or, when everything is already tidy:
+
+<!-- check: command fmt --check {game} -->
+
+```cpp
+int main(){
+    return 0;
+}
+```
+
+```text
+Tidy 1 file is already tidy
+```
+
+A file that can't be read as Forge (a `{` that's never closed, for example) is left alone, with an error saying why.
+
+---
+
+### frg package
+
+```text
+frg package [folder] [--console]
+```
+
+Makes the finished game, ready to give to players:
+
+1. a `--release` build (no console, unless you add `--console`);
+2. a folder `dist/<name>/` with the `.exe` and **every file the game might load** (images, sounds, levels, `icon.png`...), keeping their folders;
+3. `dist/<name>.zip` of that folder.
+
+```text
+      Copied mygame.exe and 12 files into dist/mygame/
+    Packaged dist/mygame.zip
+
+Your game is ready to share:
+    D:\games\mygame\dist\mygame.zip
+Players unzip it and double-click mygame.exe.
+```
+
+Left out of the package: `.frg` files, the `build/` and `dist/` folders, hidden files and folders (like `.git`), shader source files (`.vert`, `.frag` and so on; their compiled `.spv` files are included), and `save.txt` in the top folder, so players don't start with your saved game.
+
+Making the `.zip` uses `tar.exe`, which comes with Windows 10 and newer. If it's missing, the folder is still made, and you can zip it yourself.
+
+---
+
+### frg cache
+
+```text
+frg cache
+frg cache clear
+```
+
+The first build that uses a set of libraries prepares Forge's runtime for them, and keeps the result in the **build cache** (`bin\cache` next to `frg.exe`), so later builds are fast. Forge keeps it under about 400 MB by deleting the sets that haven't been used for the longest.
+
+```text
+       Cache D:\forge\bin\cache
+    358 MB in 4 sets (Forge keeps it under about 400 MB)
+    It makes builds faster. To delete it: frg cache clear
+```
+
+`frg cache clear` deletes it all. Nothing breaks: the next build just prepares it again. Use it if you need the disk space, or if builds act strangely after updating Forge.
+
+<!-- check: command fails cache tidy -->
+
+```text
+error: frg cache doesn't know 'tidy'
+  hint: use frg cache to see how big the build cache is, or frg cache clear to delete it
+```
+
+---
+
+### frg version and frg help
+
+`frg version` (or `frg --version`) prints the version, like `Forge 0.9.1`.
+
+`frg help` (or `frg --help`, `frg -h`, or `frg` on its own) prints the list of commands and options.
+
+<!-- check: command fails launch -->
+
+```text
+error: unknown command 'launch'
+  hint: try frg build, frg run, or frg new <name>
+```
+
+---
+
+### frg query
+
+```text
+frg query <question> <folder> <file> <line> <column> [--stdin] [new name]
+```
+
+For editors, not for typing yourself: it's how VS Code's autocomplete, hover help, go to definition, find all uses, rename and outline work. `<question>` is one of `definition`, `references`, `hover`, `complete`, `rename` and `symbols`, and the answer is printed as JSON. With `--stdin`, the file's text is read from standard input (the editor's unsaved version).
+
+---
+
+### Exit codes
+
+Every program gives back a number when it ends, its **exit code**: 0 means it went well. Scripts and editors use it. In PowerShell, `$LASTEXITCODE` shows the last one.
+
+| Command | Exit code |
+|---|---|
+| `frg build`, `frg check`, `frg new`, `frg package`, `frg cache` | 0 if it worked, 1 if it didn't |
+| `frg run` | the game's own exit code (what `main` returned), or 1 if the build failed |
+| `frg test` | 0 if every test passed, 1 if any failed or the build failed |
+| `frg fmt` | 0 if it worked; with `--check`, 1 if any file isn't tidy |
+| a game | what `main` returned; 1 if it stopped with a runtime error |
+
+A game that crashed (instead of stopping with a Forge runtime error) shows a large number in hex, like `[mygame.exe crashed (code 0xC0000005)]`. That's a bug in Forge, not in your game: please report it.
+
+### Environment variables
+
+Settings you can give `frg` or a game for one run. In PowerShell, set one and run, then remove it:
+
+```text
+$env:FRG_VERBOSE = 1; frg build; Remove-Item Env:FRG_VERBOSE
+```
+
+| Variable | For | What it does |
+|---|---|---|
+| `FRG_VERBOSE=1` | `frg build` | shows how long each step of the build took |
+| `FRG_AUTOTEST_FRAMES=N` | a game with a window | runs the game for N frames, then closes the window |
+| `FRG_AUTOTEST_SHOT=name.png` | a game with a window | the picture saved of frame N (normally `autotest.png`) |
+| `FRG_AUTOTEST_INPUT=...` | a game with a window | pretends keys and buttons are held during certain frames (below) |
+
+#### Scripted input
+
+`FRG_AUTOTEST_INPUT` is a list of `NAME:first-last`, separated by commas. Each one holds that key or button down from frame `first` to frame `last` (both included). Frames count from 0.
+
+```text
+$env:FRG_AUTOTEST_FRAMES = 120
+$env:FRG_AUTOTEST_INPUT = "RIGHT:10-60,SPACE:30-31,MOUSE_LEFT:50-50,CLOSE:100-100"
+.\build\mygame.exe
+```
+
+| Name | What it pretends |
+|---|---|
+| `A` ... `Z`, `NUM0` ... `NUM9`, `SPACE`, `ENTER`, `ESCAPE`, `LEFT`, `F1` ... (every `Key` (see “`<input>`: Keyboard, Mouse and Controllers” › “Keyboard”) name) | that key |
+| `MOUSE_LEFT`, `MOUSE_RIGHT`, `MOUSE_MIDDLE` | that mouse button |
+| `CLOSE` | the player clicking the window's X: `window.shouldClose()` is `true` from that frame |
+
+While a key is scripted, the real key is ignored. Pressing (`keyPressed`) happens on the first frame of each range, and letting go (`keyReleased`) on the frame after the last. This is how Forge's own tests play games: see Testing a game that opens a window (see “How Forge behaves, exactly” › “Testing a game that opens a window”).
+
+### The same things in VS Code
+
+With a `.frg` file open, the Forge extension runs these commands for you. Open the command list with **Ctrl+Shift+P** and type "Forge":
+
+| VS Code | Key | Runs |
+|---|---|---|
+| Forge: Run Game | F5 (or the ▶ button) | `frg run` |
+| Forge: Debug Game | F6 | `frg build --debug`, then starts the debugger |
+| Forge: Build Game | Ctrl+Shift+B | `frg build` |
+| Forge: Build Release | | `frg build --release` |
+| Forge: Check for Errors | (and every time you save) | `frg check --machine` |
+| Forge: Run Tests | | `frg test` |
+| Forge: Package Game | | `frg package` |
+| Forge: Turn the Console On/Off | | adds or removes `--no-console` |
+| Format Document | Shift+Alt+F | `frg fmt --stdin` |
+
+The settings (File > Preferences > Settings, search "forge"): `forge.path` (where `frg.exe` is, if VS Code can't find it), `forge.console` (show the console window, on by default) and `forge.checkOnSave` (check for errors on save, on by default).
+
+### Scripts for working on Forge itself
+
+Only needed if you change Forge, not to make games. Run them from Forge's own folder, in PowerShell 7 (`pwsh`):
+
+| Script | What it does |
+|---|---|
+| `cmake -S . -B build -G Ninja` then `cmake --build build` | builds `bin\frg.exe` from `src\` |
+| `.\tests\run_tests.ps1` | runs every test in `tests\cases`, then checks the examples in the docs. `.\tests\run_tests.ps1 strings` runs just `strings.test` |
+| `.\tests\check_doc_examples.ps1` | checks only the docs' examples (the `<!-- check: ... -->` ones). `-Page docs\reference\rules.md` checks one page |
+| `.\docs\make-all-docs.ps1` | rebuilds `docs\FORGE_ALL_DOCS.md` from every docs page |
+| `.\editors\vscode\package.ps1 -Install` | builds the VS Code extension and installs it |
+| `.\editors\windows\register-frg-files.ps1` | gives `.frg` files Forge's icon in File Explorer |
+
+<!-- docs/reference/error-messages.md -->
+
+## Error messages
+
+Every message Forge can show while building or running a game, with a small example that causes it, what it means, and how to fix it. Each example is built (and run) by Forge's tests, so the messages here are exactly what Forge prints.
+
+To find a message, search this page (Ctrl+F) for a few words of it. Parts in quotes, like `'score'`, change with your code.
+
+### How a message is laid out
+
+<!-- check: error -->
+
+```cpp
+int main(){
+    int score = "ten";
+    return 0;
+}
+```
+
+```text
+error: 'score' needs an int, but this is a string
+  --> main.frg:2:17
+   |
+ 2 |     int score = "ten";
+   |                 ^^^^^
+  hint: use int(...) to turn text into a number
+```
+
+1. **`error:`** is what's wrong. Errors stop the build; **`warning:`** is something that's probably a mistake, but the game still builds.
+2. **`-->`** is the file, the line and the column (how many characters into the line).
+3. The line itself, with **`^^^`** under the exact part.
+4. **`hint:`** (not always there) is how to fix it.
+
+Forge shows every error it finds in a file at once, up to the first mistake in each function's punctuation. After fixing those, a few more can show up: the ones in code that couldn't be read until the punctuation was right.
+
+Runtime errors happen while the game runs. They show the file and line, and the calls that led there (`called from ...`), and stop the game with exit code 1. A `try { ... } catch (Error e) { ... }` around the code catches them instead.
+
+**The C++ compiler rejected Forge's output**: if you ever see an error from g++ (with C++ code in it) instead of a Forge message, that's a bug in Forge, not in your game. Please report it, with the code that caused it.
+
+### Writing code: punctuation, braces and text
+
+#### `missing ';' at the end of this line`
+
+A statement has to end with `;`. The arrow points at where it was expected, usually the end of the line before.
+
+<!-- check: error -->
+
+```cpp
+int main(){
+    int lives = 3
+    lives--;
+    return 0;
+}
+```
+
+```text
+error: missing ';' at the end of this line
+  --> main.frg:2:18
+   |
+ 2 |     int lives = 3
+   |                  ^
+```
+
+**Fix:** add `;` at the end of the line the error points at.
+
+#### `expected a value, but found ';'`
+
+Forge read something it didn't expect at this point. The message says what it wanted and what it found instead.
+
+<!-- check: error -->
+
+```cpp
+int main(){
+    int lives = ;
+    return 0;
+}
+```
+
+```text
+error: expected a value, but found ';'
+  --> main.frg:2:17
+   |
+ 2 |     int lives = ;
+   |                 ^
+```
+
+**Fix:** finish what the line started: here, give `lives` a value (`int lives = 3;`).
+
+#### `this '{' is never closed`
+
+A `{` was opened and never closed. The arrow points at the `{`, not at where the `}` is missing.
+
+<!-- check: error -->
+
+```cpp
+int main(){
+    if (true) {
+        return 1;
+    return 0;
+}
+```
+
+```text
+error: this '{' is never closed
+  --> main.frg:1:11
+   |
+ 1 | int main(){
+   |           ^
+  hint: add a matching '}'
+```
+
+**Fix:** add the missing `}`. `frg fmt` indents the code by its braces, which shows where one is missing.
+
+#### `this '}' doesn't close anything`
+
+A `}` with no `{` before it to close.
+
+<!-- check: error -->
+
+```cpp
+int main(){
+    return 0;
+}
+}
+```
+
+```text
+error: this '}' doesn't close anything
+  --> main.frg:4:1
+   |
+ 4 | }
+   | ^
+  hint: remove it - or, if a function or type ends too early, look for an extra '}' above it
+```
+
+**Fix:** remove the extra `}`, or add the `{` it was meant to close.
+
+#### `'if' needs { } around its code`
+
+`if`, `else`, `while` and `for` always need `{ }`, even around a single line.
+
+<!-- check: error -->
+
+```cpp
+int main(){
+    int lives = 3;
+    if (lives > 0) lives--;
+    return 0;
+}
+```
+
+```text
+error: 'if' needs { } around its code
+  --> main.frg:3:20
+   |
+ 3 |     if (lives > 0) lives--;
+   |                    ^^^^^
+  hint: for example: if (...) { ... }
+```
+
+**Fix:** put braces around it: `if (lives > 0) { lives--; }`.
+
+#### `'=' sets a variable - to compare two values, use '=='`
+
+A single `=` sets a variable. Comparing is `==` (or the word `equals`).
+
+<!-- check: error -->
+
+```cpp
+int main(){
+    int x = 0;
+    if (x = 5) {
+        x++;
+    }
+    return 0;
+}
+```
+
+```text
+error: '=' sets a variable - to compare two values, use '=='
+  --> main.frg:3:11
+   |
+ 3 |     if (x = 5) {
+   |           ^
+```
+
+**Fix:** write `if (x == 5)`.
+
+#### `this 'else' doesn't belong to an 'if'`
+
+`else` has to come straight after the `}` of an `if`, with nothing in between.
+
+<!-- check: error -->
+
+```cpp
+int main(){
+    int x = 0;
+    if (x > 0) {
+        x--;
+    }
+    x++;
+    else {
+        x++;
+    }
+    return 0;
+}
+```
+
+```text
+error: this 'else' doesn't belong to an 'if'
+  --> main.frg:7:5
+   |
+ 7 |     else {
+   |     ^^^^
+  hint: else has to come right after the } of an if
+```
+
+**Fix:** move whatever is between the `}` and `else` (here, `x++;`) somewhere else.
+
+#### `this ';' is on its own, so it doesn't end anything`
+
+A `;` with nothing before it. In C++ `};` is common, but in Forge a `}` is never followed by `;`.
+
+<!-- check: error -->
+
+```cpp
+int main(){
+    int x = 0;
+    if (x > 0) {
+        x--;
+    };
+    return 0;
+}
+```
+
+```text
+error: this ';' is on its own, so it doesn't end anything
+  --> main.frg:5:6
+   |
+ 5 |     };
+   |      ^
+  hint: remove it - a '}' doesn't need a ';' after it
+```
+
+**Fix:** remove the `;`.
+
+#### `text in Forge uses double quotes`
+
+Text is written in double quotes.
+
+<!-- check: error -->
+
+```cpp
+#include <stdio>
+
+int main(){
+    print('hello');
+    return 0;
+}
+```
+
+```text
+error: text in Forge uses double quotes
+  --> main.frg:4:11
+   |
+ 4 |     print('hello');
+   |           ^
+  hint: write "hello" instead of 'hello'
+```
+
+**Fix:** write `"hello"`. One letter is text too: `"a"`.
+
+#### `this text is missing its closing "`
+
+Text has to start and end on the same line.
+
+<!-- check: error -->
+
+```cpp
+#include <stdio>
+
+int main(){
+    print("hello);
+    return 0;
+}
+```
+
+```text
+error: this text is missing its closing "
+  --> main.frg:4:11
+   |
+ 4 |     print("hello);
+   |           ^
+  hint: text has to start and end on the same line
+```
+
+**Fix:** add the closing `"`. For text over several lines, use `\n`, or raw text between `"""`.
+
+#### `unknown escape '\g'`
+
+A `\` in text starts an escape, and only some letters can follow it.
+
+<!-- check: error -->
+
+```cpp
+#include <stdio>
+
+int main(){
+    print("C:\games");
+    return 0;
+}
+```
+
+```text
+error: unknown escape '\g'
+  --> main.frg:4:14
+   |
+ 4 |     print("C:\games");
+   |              ^^
+  hint: the escapes are \n (new line), \t (tab), \\ (backslash), \" (quote), \{ and \}
+```
+
+**Fix:** write `\\` for a backslash: `"C:\\games"`, or use `/`: `"C:/games"`.
+
+#### `this text is missing its closing "`
+
+In text, `{` starts a value to show, like `{score}`. Without its `}`, Forge reads the rest of the line as part of that value, so the text never seems to end.
+
+<!-- check: error -->
+
+```cpp
+#include <stdio>
+
+int main(){
+    print("score: {score");
+    return 0;
+}
+```
+
+```text
+error: this text is missing its closing "
+  --> main.frg:4:11
+   |
+ 4 |     print("score: {score");
+   |           ^
+  hint: text has to start and end on the same line
+```
+
+**Fix:** close it (`{score}`), or write `{{` or `\{` to show a `{`.
+
+#### `Forge uses ''' for multi-line comments, not /* */`
+
+Forge's comments over several lines start and end with three backticks.
+
+<!-- check: error -->
+
+```cpp
+/* the player */
+int main(){
+    return 0;
+}
+```
+
+```text
+error: Forge uses ``` for multi-line comments, not /* */
+  --> main.frg:1:1
+   |
+ 1 | /* the player */
+   | ^^
+  hint: start the comment with ``` and end it with ```
+```
+
+**Fix:** write the comment between ``` and ```, or use `//` on each line.
+
+#### `this ''' comment is never closed`
+
+A comment started with three backticks never ends.
+
+<!-- check: error -->
+
+~~~cpp
+```
+the start of a comment
+int main(){
+    return 0;
+}
+~~~
+
+```text
+error: this ``` comment is never closed
+  --> main.frg:1:1
+   |
+ 1 | ```
+   | ^^^
+  hint: add ``` where the comment should end
+```
+
+**Fix:** add three backticks where the comment should end.
+
+#### `unexpected letter right after a number`
+
+A number with a letter stuck to it, like `10px` or `3d`. Names can't start with a digit, and numbers have no units.
+
+<!-- check: error -->
+
+```cpp
+int main(){
+    int width = 10px;
+    return 0;
+}
+```
+
+```text
+error: unexpected letter right after a number
+  --> main.frg:2:19
+   |
+ 2 |     int width = 10px;
+   |                   ^
+  hint: put a space or an operator between them
+```
+
+**Fix:** remove the letters (`int width = 10;`), or rename the variable so it doesn't start with a digit.
+
+#### `unexpected character '@'`
+
+A character Forge doesn't use anywhere, like `@`, `$` or `#` in the middle of code.
+
+<!-- check: error -->
+
+```cpp
+int main(){
+    int cost = 5 @ 2;
+    return 0;
+}
+```
+
+```text
+error: unexpected character '@'
+  --> main.frg:2:18
+   |
+ 2 |     int cost = 5 @ 2;
+   |                  ^
+```
+
+**Fix:** remove it. If it came from copying code from somewhere else, check that line.
+
+#### `this code has to go inside a function`
+
+Only declarations can be at the top level of a file: variables, functions, types and `#include`s. Code that does something goes inside a function.
+
+<!-- check: error -->
+
+```cpp
+#include <stdio>
+
+print("hello");
+
+int main(){
+    return 0;
+}
+```
+
+```text
+error: this code has to go inside a function
+  --> main.frg:3:1
+   |
+ 3 | print("hello");
+   | ^^^^^
+  hint: put it inside main(){ ... } - or, if you're making a new function, give it a return type like 'void print()'
+```
+
+**Fix:** move it into `main` (or a function `main` calls).
+
+#### `Forge doesn't need function declarations - just write the function with its { body }`
+
+In C and C++ a function is often declared first, then written later. Forge doesn't need that: every function can be used from anywhere.
+
+<!-- check: error -->
+
+```cpp
+int add(int a, int b);
+
+int main(){
+    return 0;
+}
+```
+
+```text
+error: Forge doesn't need function declarations - just write the function with its { body }
+  --> main.frg:1:22
+   |
+ 1 | int add(int a, int b);
+   |                      ^
+  hint: functions can be used before or after the place they're written
+```
+
+**Fix:** remove the declaration; just write the function with its `{ }`.
+
+#### `make one variable per line`
+
+Each variable gets its own line in Forge.
+
+<!-- check: error -->
+
+```cpp
+int main(){
+    int a, b;
+    return 0;
+}
+```
+
+```text
+error: make one variable per line
+  --> main.frg:2:10
+   |
+ 2 |     int a, b;
+   |          ^
+  hint: for example: int a = 1;  int b = 2;
+```
+
+**Fix:** write `int a = 0;` and `int b = 0;` on two lines.
+
+#### `struct types have to be made outside of functions`
+
+Types (structs, classes, enums, interfaces) are made at the top level of a file, not inside a function.
+
+<!-- check: error -->
+
+```cpp
+int main(){
+    struct Point {
+        int x = 0;
+    }
+    return 0;
+}
+```
+
+```text
+error: struct types have to be made outside of functions
+  --> main.frg:2:5
+   |
+ 2 |     struct Point {
+   |     ^^^^^^
+  hint: move it to the top level of the file
+```
+
+**Fix:** move the type outside `main`.
+
+#### `nothing inside { }`
+
+A `{ }` in text has to hold a value to show.
+
+<!-- check: error -->
+
+```cpp
+#include <stdio>
+
+int main(){
+    print("{}");
+    return 0;
+}
+```
+
+```text
+error: nothing inside { }
+  --> main.frg:4:12
+   |
+ 4 |     print("{}");
+   |            ^^
+  hint: put a value inside, like {score}
+```
+
+**Fix:** put a value inside (`{score}`), or write `{{}}` to show the braces.
+
+#### `unexpected '++' inside { }`
+
+`++` and `--` change a variable, so they're statements of their own, not part of a value.
+
+<!-- check: error -->
+
+```cpp
+#include <stdio>
+
+int main(){
+    int u = 5;
+    print("{u++}");
+    return 0;
+}
+```
+
+```text
+error: unexpected '++' inside { }
+  --> main.frg:5:14
+   |
+ 5 |     print("{u++}");
+   |              ^^
+```
+
+**Fix:** do it on its own line first: `u++;` then `print("{u}");`.
+
+#### `'new' isn't available yet`
+
+Words that Forge keeps for the future can't be used yet.
+
+<!-- check: error -->
+
+```cpp
+int main(){
+    int x = new int(5);
+    return 0;
+}
+```
+
+```text
+error: 'new' isn't available yet
+  --> main.frg:2:13
+   |
+ 2 |     int x = new int(5);
+   |             ^^^
+  hint: it's saved for a future version of Forge
+```
+
+**Fix:** objects are made by calling their type: `Enemy()`, not `new Enemy()`.
+
+### Writing code: if, loops, switch, try
+
+#### `expected 'case' or 'default' inside the switch, but found 'n'`
+
+Inside a `switch`, every part starts with `case value:` or `default:`.
+
+<!-- check: error -->
+
+```cpp
+int main(){
+    int n = 1;
+    switch (n) {
+        n++;
+    }
+    return 0;
+}
+```
+
+```text
+error: expected 'case' or 'default' inside the switch, but found 'n'
+  --> main.frg:4:9
+   |
+ 4 |         n++;
+   |         ^
+
+error: expected a function, a variable, a type or an #include, but found 'return'
+  --> main.frg:6:5
+   |
+ 6 |     return 0;
+   |     ^^^^^^
+```
+
+**Fix:** start the part with `case 1:` (or `default:`).
+
+#### `a switch doesn't need 'break'`
+
+In Forge each `case` stops by itself at the next one, so `break` isn't needed (and isn't allowed) in a switch.
+
+<!-- check: error -->
+
+```cpp
+int main(){
+    int n = 1;
+    switch (n) {
+        case 1:
+            n++;
+            break;
+    }
+    return 0;
+}
+```
+
+```text
+error: a switch doesn't need 'break'
+  --> main.frg:6:13
+   |
+ 6 |             break;
+   |             ^^^^^
+  hint: in Forge, each case stops by itself at the next case - remove this break
+```
+
+**Fix:** remove the `break`.
+
+#### `this switch already has a default`
+
+A switch can have only one `default`.
+
+<!-- check: error -->
+
+```cpp
+int main(){
+    int n = 1;
+    switch (n) {
+        default:
+            n++;
+        default:
+            n--;
+    }
+    return 0;
+}
+```
+
+```text
+error: this switch already has a default
+  --> main.frg:6:9
+   |
+ 6 |         default:
+   |         ^^^^^^^
+```
+
+**Fix:** merge the two.
+
+#### `switch works on whole numbers, text and enums, but this is a float`
+
+`switch` works on whole numbers, text and enums.
+
+<!-- check: error -->
+
+```cpp
+int main(){
+    float speed = 1.5;
+    switch (speed) {
+        case 1.5:
+            speed = 0;
+    }
+    return 0;
+}
+```
+
+```text
+error: switch works on whole numbers, text and enums, but this is a float
+  --> main.frg:3:13
+   |
+ 3 |     switch (speed) {
+   |             ^^^^^
+```
+
+**Fix:** use `if` / `else if` for decimal numbers.
+
+#### `a 'do { ... }' needs 'while (...)' after its closing }`
+
+`do { ... }` needs `while (condition);` after its `}`.
+
+<!-- check: error -->
+
+```cpp
+int main(){
+    int n = 0;
+    do {
+        n++;
+    }
+    return 0;
+}
+```
+
+```text
+error: a 'do { ... }' needs 'while (...)' after its closing }
+  --> main.frg:6:5
+   |
+ 6 |     return 0;
+   |     ^^^^^^
+  hint: for example: do { ... } while (lives > 0);
+```
+
+**Fix:** add the condition: `} while (n < 3);`.
+
+#### `a 'try { ... }' needs 'catch (Error e) { ... }' after its closing }`
+
+`try { ... }` needs a `catch` part after it.
+
+<!-- check: error -->
+
+```cpp
+int main(){
+    try {
+        int x = 1;
+    }
+    return 0;
+}
+```
+
+```text
+error: a 'try { ... }' needs 'catch (Error e) { ... }' after its closing }
+  --> main.frg:5:5
+   |
+ 5 |     return 0;
+   |     ^^^^^^
+  hint: the catch part runs if something goes wrong in the try part
+```
+
+**Fix:** add `catch (Error e) { ... }` after the `}`.
+
+#### `this 'catch' doesn't belong to a 'try'`
+
+`catch` has to come straight after the `}` of a `try`.
+
+<!-- check: error -->
+
+```cpp
+int main(){
+    catch (Error e) {
+        int x = 1;
+    }
+    return 0;
+}
+```
+
+```text
+error: this 'catch' doesn't belong to a 'try'
+  --> main.frg:2:5
+   |
+ 2 |     catch (Error e) {
+   |     ^^^^^
+  hint: catch has to come right after the } of a try
+```
+
+**Fix:** put a `try { ... }` before it, or remove it.
+
+#### `catch takes an Error, like: catch (Error message)`
+
+`catch` always catches an `Error`.
+
+<!-- check: error -->
+
+```cpp
+int main(){
+    try {
+        int x = 1;
+    } catch (string message) {
+        int y = 2;
+    }
+    return 0;
+}
+```
+
+```text
+error: catch takes an Error, like: catch (Error message)
+  --> main.frg:4:14
+   |
+ 4 |     } catch (string message) {
+   |              ^^^^^^
+  hint: e.message is the error's text, and e.where is the file and line it happened on
+```
+
+**Fix:** write `catch (Error e)`, and use `e.message` for the text.
+
+#### `throw takes text (the error message), but this is an int`
+
+`throw` takes the error's message, as text.
+
+<!-- check: error -->
+
+```cpp
+int main(){
+    throw 404;
+    return 0;
+}
+```
+
+```text
+error: throw takes text (the error message), but this is an int
+  --> main.frg:2:11
+   |
+ 2 |     throw 404;
+   |           ^^^
+  hint: for example: throw "the save file is broken";
+```
+
+**Fix:** `throw "page 404 not found";`.
+
+#### `'break' can only be used inside a loop`
+
+`break` and `continue` only make sense inside a loop.
+
+<!-- check: error -->
+
+```cpp
+int main(){
+    break;
+    return 0;
+}
+```
+
+```text
+error: 'break' can only be used inside a loop
+  --> main.frg:2:5
+   |
+ 2 |     break;
+   |     ^^^^^
+```
+
+**Fix:** remove it, or use `return` to leave the function.
+
+#### `for (... in ...) goes through a list, but this is an int`
+
+A `for (... in ...)` loop goes through a list (or a range like `1..10`).
+
+<!-- check: error -->
+
+```cpp
+int main(){
+    int count = 5;
+    for (int i in count) {
+        count--;
+    }
+    return 0;
+}
+```
+
+```text
+error: for (... in ...) goes through a list, but this is an int
+  --> main.frg:3:19
+   |
+ 3 |     for (int i in count) {
+   |                   ^^^^^
+```
+
+**Fix:** count with a range: `for (int i in 1..count)`, or loop through a list.
+
+#### `a counting loop counts whole numbers, so 'x' has to be an int`
+
+The numbers in a range loop are whole numbers.
+
+<!-- check: error -->
+
+```cpp
+int main(){
+    for (float x in 1..5) {
+        int y = 0;
+    }
+    return 0;
+}
+```
+
+```text
+error: a counting loop counts whole numbers, so 'x' has to be an int
+  --> main.frg:2:10
+   |
+ 2 |     for (float x in 1..5) {
+   |          ^^^^^
+  hint: write it as: for (int x in ...)
+```
+
+**Fix:** use `int` for the loop variable, and work out the decimal inside: `float x = i * 0.5;`.
+
+#### `for (... in ...) goes through a list, but this is a map<string, int>`
+
+A loop over a map goes through its keys.
+
+<!-- check: error -->
+
+```cpp
+int main(){
+    map<string, int> ages = {"Ana": 12};
+    for (int age in ages) {
+        age++;
+    }
+    return 0;
+}
+```
+
+```text
+error: for (... in ...) goes through a list, but this is a map<string, int>
+  --> main.frg:3:21
+   |
+ 3 |     for (int age in ages) {
+   |                     ^^^^
+  hint: go through its keys: for (K key in m.keys())
+```
+
+**Fix:** `for (string name in ages.keys()) { int age = ages[name]; }`.
+
+#### `the condition of 'if' must be true or false, but this is an int`
+
+The thing between `if (` and `)` has to be `true` or `false`. Forge doesn't treat numbers or objects as true/false.
+
+<!-- check: error -->
+
+```cpp
+int main(){
+    int lives = 3;
+    if (lives) {
+        lives--;
+    }
+    return 0;
+}
+```
+
+```text
+error: the condition of 'if' must be true or false, but this is an int
+  --> main.frg:3:9
+   |
+ 3 |     if (lives) {
+   |         ^^^^^
+  hint: compare it, like (x > 0)
+```
+
+**Fix:** compare it: `if (lives > 0)`, or for an optional, `if (target != null)`.
+
+### Names
+
+#### `unknown name 'scroe'`
+
+Nothing with this name exists here. Often a typo (Forge suggests the closest name), or a variable made inside `{ }` and used outside them.
+
+<!-- check: error -->
+
+```cpp
+int main(){
+    int score = 0;
+    scroe++;
+    return 0;
+}
+```
+
+```text
+error: unknown name 'scroe'
+  --> main.frg:3:5
+   |
+ 3 |     scroe++;
+   |     ^^^^^
+```
+
+**Fix:** fix the spelling, or make the variable where both places can see it.
+
+#### `unknown type 'Enemey'`
+
+The type isn't known: a typo, a type in another file without its file name in front, or a library not included.
+
+<!-- check: error -->
+
+```cpp
+class Enemy {
+    int hp = 10;
+}
+
+int main(){
+    Enemey e = Enemey();
+    return 0;
+}
+```
+
+```text
+error: unknown type 'Enemey'
+  --> main.frg:6:5
+   |
+ 6 |     Enemey e = Enemey();
+   |     ^^^^^^
+  hint: did you mean 'Enemy'?
+
+error: unknown name 'Enemey'
+  --> main.frg:6:16
+   |
+ 6 |     Enemey e = Enemey();
+   |                ^^^^^^
+  hint: did you mean 'Enemy'?
+```
+
+**Fix:** fix the spelling. A type from another file is written `file.Type`.
+
+#### `'print' is part of the stdio library, which this file doesn't include`
+
+A function from a library needs that library's `#include`.
+
+<!-- check: error -->
+
+```cpp
+int main(){
+    print("hi");
+    return 0;
+}
+```
+
+```text
+error: 'print' is part of the stdio library, which this file doesn't include
+  --> main.frg:2:5
+   |
+ 2 |     print("hi");
+   |     ^^^^^
+  hint: add #include <stdio> at the top of main.frg
+```
+
+**Fix:** add `#include <stdio>` at the top of the file. Each file includes what it uses.
+
+#### `this file doesn't include the math library`
+
+Using a library (here `math`) without including it in this file.
+
+<!-- check: error -->
+
+```cpp
+int main(){
+    float r = math.sqrt(16);
+    return 0;
+}
+```
+
+```text
+error: this file doesn't include the math library
+  --> main.frg:2:15
+   |
+ 2 |     float r = math.sqrt(16);
+   |               ^^^^
+  hint: add #include <math> at the top of main.frg
+```
+
+**Fix:** add `#include <math>` at the top of this file.
+
+#### `there's no library called <maths>`
+
+There's no library with that name.
+
+<!-- check: error -->
+
+```cpp
+#include <maths>
+
+int main(){
+    return 0;
+}
+```
+
+```text
+error: there's no library called <maths>
+  --> main.frg:1:11
+   |
+ 1 | #include <maths>
+   |           ^^^^^
+  hint: did you mean <math>?
+```
+
+**Fix:** check the spelling. The libraries are listed in the library overview (see “Library Overview”).
+
+#### `there's already a variable called 'score' here`
+
+Two variables with the same name where both can be seen.
+
+<!-- check: error -->
+
+```cpp
+int main(){
+    int score = 0;
+    int score = 5;
+    return 0;
+}
+```
+
+```text
+error: there's already a variable called 'score' here
+  --> main.frg:3:9
+   |
+ 3 |     int score = 5;
+   |         ^^^^^
+  hint: pick a different name - or to change the existing one, leave off the type: score = ...;
+```
+
+**Fix:** give the second one another name, or leave off the type to change the first one: `score = 5;`.
+
+#### `'score' is defined twice in this file`
+
+Two functions, globals or types with the same name in one file.
+
+<!-- check: error -->
+
+```cpp
+int score = 0;
+int score = 1;
+
+int main(){
+    return 0;
+}
+```
+
+```text
+error: 'score' is defined twice in this file
+  --> main.frg:2:5
+   |
+ 2 | int score = 1;
+   |     ^^^^^
+  hint: the first one is on line 1
+```
+
+**Fix:** rename one of them.
+
+#### `'window' is the name of a Forge library`
+
+A name can't be a library's name, since `window.open` would be ambiguous.
+
+<!-- check: error -->
+
+```cpp
+int main(){
+    int window = 3;
+    return 0;
+}
+```
+
+```text
+error: 'window' is the name of a Forge library
+  --> main.frg:2:9
+   |
+ 2 |     int window = 3;
+   |         ^^^^^^
+  hint: pick a different name
+```
+
+**Fix:** pick another name, like `windowCount`.
+
+#### `'string' is a built-in type name, so it can't be used as a name`
+
+Type names like `int`, `string` and `list` can't be used as names.
+
+<!-- check: error -->
+
+```cpp
+int main(){
+    int string = 3;
+    return 0;
+}
+```
+
+```text
+error: 'string' is a built-in type name, so it can't be used as a name
+  --> main.frg:2:9
+   |
+ 2 |     int string = 3;
+   |         ^^^^^^
+```
+
+**Fix:** pick another name.
+
+#### `'enemies' is a file, not a value`
+
+A file's name is used to reach what's inside it (`enemies.spawn()`), so it isn't a value itself.
+
+<!-- check: error -->
+
+```cpp
+// file: main.frg
+#include <stdio>
+
+int main(){
+    print(enemies);
+    return 0;
+}
+```
+
+```cpp
+// file: enemies.frg
+int count = 3;
+```
+
+```text
+error: 'enemies' is a file, not a value
+  --> main.frg:5:11
+   |
+ 5 |     print(enemies);
+   |           ^^^^^^^
+  hint: use it to reach things inside it, like enemies.something
+```
+
+**Fix:** use something inside it: `enemies.count`, `enemies.spawn()`.
+
+#### `'this' only works inside the methods of a struct or class`
+
+`this` means "the object this method belongs to", so it only exists inside methods.
+
+<!-- check: error -->
+
+```cpp
+int main(){
+    int x = this.x;
+    return 0;
+}
+```
+
+```text
+error: 'this' only works inside the methods of a struct or class
+  --> main.frg:2:13
+   |
+ 2 |     int x = this.x;
+   |             ^^^^
+```
+
+**Fix:** use it in a struct's or class's method, or remove it.
+
+#### `'code' is private to Safe`
+
+Something marked `private` can only be used inside the type (or file) it belongs to.
+
+<!-- check: error -->
+
+```cpp
+class Safe {
+    private int code = 1234;
+}
+
+int main(){
+    Safe s = Safe();
+    int c = s.code;
+    return 0;
+}
+```
+
+```text
+error: 'code' is private to Safe
+  --> main.frg:7:15
+   |
+ 7 |     int c = s.code;
+   |               ^^^^
+  hint: only Safe's own methods (and classes that inherit from it) can use it
+```
+
+**Fix:** use it from inside `Safe`, or remove `private` if other code needs it.
+
+### Types and values
+
+#### `'score' needs an int, but this is a string`
+
+A value of one type was put where another type is needed. The hint says how to convert, when that's possible.
+
+<!-- check: error -->
+
+```cpp
+int main(){
+    int score = "ten";
+    return 0;
+}
+```
+
+```text
+error: 'score' needs an int, but this is a string
+  --> main.frg:2:17
+   |
+ 2 |     int score = "ten";
+   |                 ^^^^^
+  hint: use int(...) to turn text into a number
+```
+
+**Fix:** give a value of the right type, or convert: `int("10")`, `string(10)`, `float(n)`.
+
+#### `'x' needs an int, but this is a float`
+
+Decimal numbers don't turn into whole numbers by themselves, since the decimals would be lost.
+
+<!-- check: error -->
+
+```cpp
+int main(){
+    int x = 2.5;
+    return 0;
+}
+```
+
+```text
+error: 'x' needs an int, but this is a float
+  --> main.frg:2:13
+   |
+ 2 |     int x = 2.5;
+   |             ^^^
+  hint: use int(...) to turn it into a whole number (the decimals get cut off)
+```
+
+**Fix:** say how: `int(2.5)` (cuts off: 2), `math.round(2.5)` (3), `math.floor`, `math.ceil`.
+
+#### `can't add text and an int with +`
+
+`+` on text only joins two pieces of text.
+
+<!-- check: error -->
+
+```cpp
+#include <stdio>
+
+int main(){
+    int hp = 5;
+    print("HP: " + hp);
+    return 0;
+}
+```
+
+```text
+error: can't add text and an int with +
+  --> main.frg:5:18
+   |
+ 5 |     print("HP: " + hp);
+   |                  ^
+  hint: put the value inside the text instead, like "Score: {score}"
+```
+
+**Fix:** put the value inside the text: `"HP: {hp}"`.
+
+#### `can't use '*' on a bool and an int`
+
+Math works on numbers (and on `vec2`, `vec3`...), not on text, bools or objects without math methods.
+
+<!-- check: error -->
+
+```cpp
+int main(){
+    bool done = true;
+    int x = done * 2;
+    return 0;
+}
+```
+
+```text
+error: can't use '*' on a bool and an int
+  --> main.frg:3:18
+   |
+ 3 |     int x = done * 2;
+   |                  ^
+```
+
+**Fix:** use a number, or `done ? 2 : 0`.
+
+#### `this list needs an int, but this is a string`
+
+A list holds one type of item.
+
+<!-- check: error -->
+
+```cpp
+int main(){
+    list<int> xs = [1, "two", 3];
+    return 0;
+}
+```
+
+```text
+error: this list needs an int, but this is a string
+  --> main.frg:2:24
+   |
+ 2 |     list<int> xs = [1, "two", 3];
+   |                        ^^^^^
+  hint: use int(...) to turn text into a number
+```
+
+**Fix:** make every item the same type.
+
+#### `Forge can't tell what kind of list [] is`
+
+`[]` on its own doesn't say what the list will hold.
+
+<!-- check: error -->
+
+```cpp
+#include <stdio>
+
+int main(){
+    print([]);
+    return 0;
+}
+```
+
+```text
+error: Forge can't tell what kind of list [] is
+  --> main.frg:4:11
+   |
+ 4 |     print([]);
+   |           ^
+  hint: say the type first, like: list<int> numbers = [];
+```
+
+**Fix:** write the type where it's made: `list<int> xs = [];`.
+
+#### `list positions are whole numbers, but this is a float`
+
+List positions are whole numbers.
+
+<!-- check: error -->
+
+```cpp
+int main(){
+    list<int> xs = [1, 2, 3];
+    int x = xs[1.5];
+    return 0;
+}
+```
+
+```text
+error: list positions are whole numbers, but this is a float
+  --> main.frg:3:16
+   |
+ 3 |     int x = xs[1.5];
+   |                ^^^
+```
+
+**Fix:** use `int(...)` to make the position a whole number.
+
+#### `[ ] only works on lists and maps, but this is an int`
+
+`[ ]` reads an item of a list or map.
+
+<!-- check: error -->
+
+```cpp
+int main(){
+    int n = 5;
+    int x = n[0];
+    return 0;
+}
+```
+
+```text
+error: [ ] only works on lists and maps, but this is an int
+  --> main.frg:3:14
+   |
+ 3 |     int x = n[0];
+   |              ^
+```
+
+**Fix:** use a list, or remove the `[0]`.
+
+#### `text can't be used with [ ]`
+
+Text can't be read with `[ ]`.
+
+<!-- check: error -->
+
+```cpp
+int main(){
+    string name = "Ana";
+    string first = name[0];
+    return 0;
+}
+```
+
+```text
+error: text can't be used with [ ]
+  --> main.frg:3:24
+   |
+ 3 |     string first = name[0];
+   |                        ^
+  hint: use text.charAt(i) or text.substring(start, count)
+```
+
+**Fix:** `name.charAt(0)` gives the first letter, `name.substring(0, 2)` the first two.
+
+#### `this number doesn't fit in a uint8`
+
+A number written in the code is too big (or negative) for its type.
+
+<!-- check: error -->
+
+```cpp
+int main(){
+    uint8 level = 300;
+    return 0;
+}
+```
+
+```text
+error: this number doesn't fit in a uint8
+  --> main.frg:2:19
+   |
+ 2 |     uint8 level = 300;
+   |                   ^^^
+  hint: uint8 can only hold 0 and positive whole numbers
+```
+
+**Fix:** use a bigger type (`int`), or a number that fits (0 to 255 for `uint8`).
+
+#### `'MAX_HP' is const, so it can't be changed`
+
+`const` variables can't change after they're made.
+
+<!-- check: error -->
+
+```cpp
+const int MAX_HP = 100;
+
+int main(){
+    MAX_HP = 200;
+    return 0;
+}
+```
+
+```text
+error: 'MAX_HP' is const, so it can't be changed
+  --> main.frg:4:5
+   |
+ 4 |     MAX_HP = 200;
+   |     ^^^^^^
+```
+
+**Fix:** remove `const` if it has to change.
+
+#### `only variables, fields and list items can be changed`
+
+Only variables, fields and list items can be set. Not a function's result, a number, or a calculation.
+
+<!-- check: error -->
+
+```cpp
+int main(){
+    int x = 1;
+    x + 1 = 3;
+    return 0;
+}
+```
+
+```text
+error: only variables, fields and list items can be changed
+  --> main.frg:3:7
+   |
+ 3 |     x + 1 = 3;
+   |       ^
+```
+
+**Fix:** set a variable: `x = 3 - 1;`.
+
+#### `length can't be changed directly`
+
+`length` is read-only.
+
+<!-- check: error -->
+
+```cpp
+int main(){
+    list<int> xs = [1, 2, 3];
+    xs.length = 0;
+    return 0;
+}
+```
+
+```text
+error: length can't be changed directly
+  --> main.frg:3:8
+   |
+ 3 |     xs.length = 0;
+   |        ^^^^^^
+  hint: use add, remove or clear instead
+```
+
+**Fix:** use `xs.clear()`, `add` or `remove`.
+
+#### `void means 'nothing', so a variable can't be void`
+
+`void` means "nothing": it's only for functions that give nothing back.
+
+<!-- check: error -->
+
+```cpp
+int main(){
+    void nothing = 0;
+    return 0;
+}
+```
+
+```text
+error: void means 'nothing', so a variable can't be void
+  --> main.frg:2:5
+   |
+ 2 |     void nothing = 0;
+   |     ^^^^
+  hint: use a type like int, float, bool or string
+```
+
+**Fix:** use a real type.
+
+#### `map keys have to be numbers, text, bools or enums - not a Point`
+
+Map keys are numbers, text, bools or enums.
+
+<!-- check: error -->
+
+```cpp
+struct Point {
+    int x = 0;
+}
+
+int main(){
+    map<Point, int> scores = {};
+    return 0;
+}
+```
+
+```text
+error: map keys have to be numbers, text, bools or enums - not a Point
+  --> main.frg:6:9
+   |
+ 6 |     map<Point, int> scores = {};
+   |         ^^^^^
+
+error: Forge can't tell what { } should make here
+  --> main.frg:6:30
+   |
+ 6 |     map<Point, int> scores = {};
+   |                              ^
+  hint: { } builds structs, classes and maps, but <error> is none of those
+```
+
+**Fix:** use a number or text as the key (like a name or an id).
+
+#### `both sides of ? : need the same type, but they're an int and a string`
+
+`? :` picks one of two values, so both have to be the same type.
+
+<!-- check: error -->
+
+```cpp
+int main(){
+    int lives = 3;
+    int x = lives > 0 ? 1 : "none";
+    return 0;
+}
+```
+
+```text
+error: both sides of ? : need the same type, but they're an int and a string
+  --> main.frg:3:23
+   |
+ 3 |     int x = lives > 0 ? 1 : "none";
+   |                       ^
+```
+
+**Fix:** make both sides the same type.
+
+#### `'p' can't be null, because a Player isn't optional`
+
+Only optional types (with `?`) can be `null`.
+
+<!-- check: error -->
+
+```cpp
+class Player {
+    int hp = 10;
+}
+
+int main(){
+    Player p = null;
+    return 0;
+}
+```
+
+```text
+error: 'p' can't be null, because a Player isn't optional
+  --> main.frg:6:16
+   |
+ 6 |     Player p = null;
+   |                ^^^^
+  hint: null can only go in an optional type - add ? to the type, like Player?
+```
+
+**Fix:** make it optional: `Player? p = null;`.
+
+#### `{...:.2} shows decimals, so it needs a float or a double, but this is an int`
+
+`{value:.2}` shows a decimal number with 2 decimals, so the value has to be a `float` or `double`.
+
+<!-- check: error -->
+
+```cpp
+#include <stdio>
+
+int main(){
+    int hp = 5;
+    print("{hp:.2}");
+    return 0;
+}
+```
+
+```text
+error: {...:.2} shows decimals, so it needs a float or a double, but this is an int
+  --> main.frg:5:13
+   |
+ 5 |     print("{hp:.2}");
+   |             ^^
+  hint: turn it into a decimal number first, like {float(hp):.2}
+```
+
+**Fix:** use `{float(hp):.2}`, or leave off the `:.2`.
+
+#### `can't use '==' on a Button: its field 'onClick' is a Function<void()>, and function values can't be compared`
+
+Some types can't be compared with `==`: function values, `Weak` values, tasks, and structs that hold them.
+
+<!-- check: error -->
+
+```cpp
+struct Button {
+    string name;
+    Function<void()> onClick;
+}
+
+int main(){
+    Button b = Button("ok", () { });
+    bool same = b == b;
+    return 0;
+}
+```
+
+```text
+error: can't use '==' on a Button: its field 'onClick' is a Function<void()>, and function values can't be compared
+  --> main.frg:8:19
+   |
+ 8 |     bool same = b == b;
+   |                   ^^
+  hint: give Button a method that says when two of them are equal: bool equals(Button other) { ... } - or compare one of its fields instead
+```
+
+**Fix:** compare a field instead (`a.name == b.name`), or give the struct `bool equals(Button other) { ... }`.
+
+#### `contains() compares the items with ==, but a Button can't be compared: its field 'onClick' is a Function<void()>, and function values can't be compared`
+
+`list.contains`, `indexOf` and `remove` compare with `==`, so the items must be comparable.
+
+<!-- check: error -->
+
+```cpp
+struct Button {
+    string name;
+    Function<void()> onClick;
+}
+
+int main(){
+    list<Button> buttons = [];
+    bool has = buttons.contains(Button("ok", () { }));
+    return 0;
+}
+```
+
+```text
+error: contains() compares the items with ==, but a Button can't be compared: its field 'onClick' is a Function<void()>, and function values can't be compared
+  --> main.frg:8:24
+   |
+ 8 |     bool has = buttons.contains(Button("ok", () { }));
+   |                        ^^^^^^^^
+  hint: give Button a method that says when two of them are equal: bool equals(Button other) { ... } - or compare one of its fields instead
+```
+
+**Fix:** use `any((Button b) { return b.name == "ok"; })`, or give `Button` an `equals` method.
+
+#### `Forge doesn't have pointers (Pointer<T> was removed)`
+
+Forge doesn't have pointers.
+
+<!-- check: error -->
+
+```cpp
+int main(){
+    int score = 0;
+    Pointer<int> p = score;
+    return 0;
+}
+```
+
+```text
+error: Forge doesn't have pointers (Pointer<T> was removed)
+  --> main.frg:3:5
+   |
+ 3 |     Pointer<int> p = score;
+   |     ^^^^^^^^^^^^
+  hint: to let a function change a number, return the new value: score = addOne(score); - or keep the value in a class object, which functions can change
+```
+
+**Fix:** to let a function change a number, give back the new value: `score = addOne(score);`. Or keep it in a class object.
+
+### Functions and calls
+
+#### `add() needs 2 values, but got 3`
+
+A function was called with the wrong number of values.
+
+<!-- check: error -->
+
+```cpp
+int add(int a, int b){
+    return a + b;
+}
+
+int main(){
+    int x = add(1, 2, 3);
+    return 0;
+}
+```
+
+```text
+error: add() needs 2 values, but got 3
+  --> main.frg:6:13
+   |
+ 6 |     int x = add(1, 2, 3);
+   |             ^^^
+  hint: it's written as: int add(int a, int b)
+```
+
+**Fix:** give exactly the values it takes. The hint shows the function's parameters.
+
+#### `'n' in twice() needs an int, but this is a string`
+
+A value given to a function is the wrong type.
+
+<!-- check: error -->
+
+```cpp
+int twice(int n){
+    return n * 2;
+}
+
+int main(){
+    int x = twice("4");
+    return 0;
+}
+```
+
+```text
+error: 'n' in twice() needs an int, but this is a string
+  --> main.frg:6:19
+   |
+ 6 |     int x = twice("4");
+   |                   ^^^
+  hint: use int(...) to turn text into a number
+```
+
+**Fix:** give the type it takes, or convert it.
+
+#### `none of the versions of area() take these values`
+
+Several functions share this name (overloading), and none takes these values.
+
+<!-- check: error -->
+
+```cpp
+int area(int side){
+    return side * side;
+}
+
+int area(int w, int h){
+    return w * h;
+}
+
+int main(){
+    int x = area("big");
+    return 0;
+}
+```
+
+```text
+error: none of the versions of area() take these values
+  --> main.frg:10:13
+    |
+ 10 |     int x = area("big");
+    |             ^^^^
+  hint: it can be used as:
+      int area(int side)
+      int area(int w, int h)
+```
+
+**Fix:** use one of the versions the hint lists.
+
+#### `'sign' doesn't always return a value`
+
+A function that gives back a value has to `return` one on every way through it, including after the last `if`.
+
+<!-- check: error -->
+
+```cpp
+int sign(int n){
+    if (n > 0) {
+        return 1;
+    }
+}
+
+int main(){
+    return 0;
+}
+```
+
+```text
+error: 'sign' doesn't always return a value
+  --> main.frg:1:5
+   |
+ 1 | int sign(int n){
+   |     ^^^^
+  hint: add a return at the end, like 'return 0;'
+```
+
+**Fix:** add a `return` at the end.
+
+#### `'reset' is a void function, so it can't return a value`
+
+A `void` function gives nothing back, so `return` can't have a value.
+
+<!-- check: error -->
+
+```cpp
+void reset(){
+    return 5;
+}
+
+int main(){
+    return 0;
+}
+```
+
+```text
+error: 'reset' is a void function, so it can't return a value
+  --> main.frg:2:12
+   |
+ 2 |     return 5;
+   |            ^
+  hint: remove the value, or change 'void' to the type it should return
+```
+
+**Fix:** write `return;`, or change `void` to the type it gives back.
+
+#### `'five' has to return an int`
+
+A function that gives back a value needs one in every `return`.
+
+<!-- check: error -->
+
+```cpp
+int five(){
+    return;
+}
+
+int main(){
+    return 0;
+}
+```
+
+```text
+error: 'five' has to return an int
+  --> main.frg:2:5
+   |
+ 2 |     return;
+   |     ^^^^^^
+  hint: for example: return 0;
+```
+
+**Fix:** `return 5;`.
+
+#### `'speed' is a variable, not a function`
+
+A variable that isn't a function value can't be called with `( )`.
+
+<!-- check: error -->
+
+```cpp
+int main(){
+    int speed = 5;
+    speed();
+    return 0;
+}
+```
+
+```text
+error: 'speed' is a variable, not a function
+  --> main.frg:3:5
+   |
+ 3 |     speed();
+   |     ^^^^^
+```
+
+**Fix:** remove the `( )`, or call the function you meant.
+
+#### `main.frg needs a main function`
+
+Every game starts in `main`, in `main.frg`.
+
+<!-- check: error -->
+
+```cpp
+int start(){
+    return 0;
+}
+```
+
+```text
+error: main.frg needs a main function
+  --> main.frg:1:1
+   |
+ 1 | int start(){
+   | ^
+  hint: every game starts in main:
+
+      int main(){
+          return 0;
+      }
+```
+
+**Fix:** rename the function to `main`, or add `int main(){ ... return 0; }`.
+
+#### `main has to return an int (0 means success, 1 means an error)`
+
+`main` gives back a whole number: 0 means the game ended normally.
+
+<!-- check: error -->
+
+```cpp
+void main(){
+}
+```
+
+```text
+error: main has to return an int (0 means success, 1 means an error)
+  --> main.frg:1:1
+   |
+ 1 | void main(){
+   | ^^^^
+  hint: write it as: int main()
+```
+
+**Fix:** write `int main(){ ... return 0; }`.
+
+#### `main can't take parameters`
+
+`main` takes no parameters.
+
+<!-- check: error -->
+
+```cpp
+int main(int level){
+    return 0;
+}
+```
+
+```text
+error: main can't take parameters
+  --> main.frg:1:5
+   |
+ 1 | int main(int level){
+   |     ^^^^
+  hint: write it as: int main()
+```
+
+**Fix:** remove the parameter.
+
+#### `'y' needs a default value too`
+
+After a parameter with a default value, every parameter needs one.
+
+<!-- check: error -->
+
+```cpp
+void spawn(int x = 0, int y){
+}
+
+int main(){
+    return 0;
+}
+```
+
+```text
+error: 'y' needs a default value too
+  --> main.frg:1:27
+   |
+ 1 | void spawn(int x = 0, int y){
+   |                           ^
+  hint: once a parameter has a default value, the ones after it need one as well
+```
+
+**Fix:** give `y` a default too, or move it before `x`.
+
+#### `print() takes one value`
+
+`print` shows one value. Several go inside one piece of text.
+
+<!-- check: error -->
+
+```cpp
+#include <stdio>
+
+int main(){
+    int x = 1;
+    int y = 2;
+    print(x, y);
+    return 0;
+}
+```
+
+```text
+error: print() takes one value
+  --> main.frg:6:5
+   |
+ 6 |     print(x, y);
+   |     ^^^^^
+  hint: to show several values, put them in the text: print("x = {x}, y = {y}")
+```
+
+**Fix:** `print("x = {x}, y = {y}");`.
+
+#### `window.run() calls update(float dt) and draw() every frame, so main.frg needs both`
+
+`window.run()` calls your `update(float dt)` and `draw()` every frame, so `main.frg` needs both.
+
+<!-- check: error -->
+
+```cpp
+#include <window>
+
+int main(){
+    window.open(320, 200, "game");
+    window.run();
+    return 0;
+}
+```
+
+```text
+error: window.run() calls update(float dt) and draw() every frame, so main.frg needs both
+  --> main.frg:5:12
+   |
+ 5 |     window.run();
+   |            ^^^
+  hint: add them to main.frg:
+
+      void update(float dt){
+          // move things here
+      }
+
+      void draw(){
+          // draw things here
+      }
+```
+
+**Fix:** add `void update(float dt){ }` and `void draw(){ }` to `main.frg`.
+
+#### `for window.run(), update has to be written as: void update(float dt)`
+
+`window.run()` calls `update` with the frame's time, so it has to take a `float`.
+
+<!-- check: error -->
+
+```cpp
+#include <window>
+
+int main(){
+    window.open(320, 200, "game");
+    window.run();
+    return 0;
+}
+
+void update(){
+}
+
+void draw(){
+}
+```
+
+```text
+error: for window.run(), update has to be written as: void update(float dt)
+  --> main.frg:9:6
+   |
+ 9 | void update(){
+   |      ^^^^^^
+```
+
+**Fix:** write `void update(float dt)`.
+
+#### `this line doesn't do anything`
+
+A value on its own line that isn't used: it calculates something and throws it away.
+
+<!-- check: error -->
+
+```cpp
+int main(){
+    int x = 1;
+    x + 1;
+    return 0;
+}
+```
+
+```text
+error: this line doesn't do anything
+  --> main.frg:3:7
+   |
+ 3 |     x + 1;
+   |       ^
+  hint: a line should call a function or change a variable
+```
+
+**Fix:** store it (`x = x + 1;`), or remove the line.
+
+#### `a function value can't change 'count', a local variable from outside it`
+
+A function value gets a copy of the local variables around it, so changing one inside it would change only its copy.
+
+<!-- check: error -->
+
+```cpp
+int main(){
+    int count = 0;
+    Function<void()> add = () { count++; };
+    return 0;
+}
+```
+
+```text
+error: a function value can't change 'count', a local variable from outside it
+  --> main.frg:3:33
+   |
+ 3 |     Function<void()> add = () { count++; };
+   |                                 ^^^^^
+  hint: it only gets a copy of the variables around it. To share a value, use a global variable or a field
+```
+
+**Fix:** use a global variable or a class object's field for values that have to be shared.
+
+#### `'twice' needs 1 value, but got 2`
+
+A number of values doesn't match the function value's type.
+
+<!-- check: error -->
+
+```cpp
+int main(){
+    Function<int(int)> twice = (int n) { return n * 2; };
+    int x = twice(1, 2);
+    return 0;
+}
+```
+
+```text
+error: 'twice' needs 1 value, but got 2
+  --> main.frg:3:13
+   |
+ 3 |     int x = twice(1, 2);
+   |             ^^^^^
+  hint: it's a Function<int(int)>
+```
+
+**Fix:** give exactly the values in its `Function<...>` type.
+
+#### `only a type can be followed by types inside < >, like Box<int>(5)`
+
+Only types can have `<types>` after their name.
+
+<!-- check: error -->
+
+```cpp
+int twice(int n){
+    return n * 2;
+}
+
+int main(){
+    int x = twice<int>(3);
+    return 0;
+}
+```
+
+```text
+error: only a type can be followed by types inside < >, like Box<int>(5)
+  --> main.frg:6:13
+   |
+ 6 |     int x = twice<int>(3);
+   |             ^^^^^^^^^^
+  hint: 'twice' isn't a type, so write it without the < >
+```
+
+**Fix:** remove the `<int>`.
+
+### Structs, classes and enums
+
+#### `Enemy has no field or method called 'hpp'`
+
+The type has nothing with this name. Forge suggests the closest one.
+
+<!-- check: error -->
+
+```cpp
+class Enemy {
+    int hp = 10;
+}
+
+int main(){
+    Enemy e = Enemy();
+    e.hpp = 5;
+    return 0;
+}
+```
+
+```text
+error: Enemy has no field or method called 'hpp'
+  --> main.frg:7:7
+   |
+ 7 |     e.hpp = 5;
+   |       ^^^
+  hint: did you mean 'hp'?
+```
+
+**Fix:** fix the spelling.
+
+#### `'e' needs a starting value`
+
+A class object has to start as something: Forge can't make one up.
+
+<!-- check: error -->
+
+```cpp
+class Enemy {
+    int hp = 10;
+}
+
+int main(){
+    Enemy e;
+    return 0;
+}
+```
+
+```text
+error: 'e' needs a starting value
+  --> main.frg:6:11
+   |
+ 6 |     Enemy e;
+   |           ^
+  hint: make one, like: Enemy e = Enemy(...);  - or if it can be empty, make it optional: Enemy? e = null;
+```
+
+**Fix:** make one (`Enemy e = Enemy();`), or let it be empty: `Enemy? e = null;`.
+
+#### `the field 'weapon' needs a starting value`
+
+A class-type field needs a starting value too.
+
+<!-- check: error -->
+
+```cpp
+class Weapon {
+    int damage = 1;
+}
+
+class Player {
+    Weapon weapon;
+}
+
+int main(){
+    return 0;
+}
+```
+
+```text
+error: the field 'weapon' needs a starting value
+  --> main.frg:6:12
+   |
+ 6 |     Weapon weapon;
+   |            ^^^^^^
+  hint: give it one (Weapon weapon = Weapon(...);) or make it optional (Weapon? weapon;)
+```
+
+**Fix:** give it one (`Weapon weapon = Weapon();`), or make it optional (`Weapon? weapon;`).
+
+#### `Point(...) takes either nothing or all 2 of its fields, but got 1`
+
+Without a constructor, `Type(...)` takes all of its fields, in order, or none of them.
+
+<!-- check: error -->
+
+```cpp
+struct Point {
+    int x = 0;
+    int y = 0;
+}
+
+int main(){
+    Point p = Point(5);
+    return 0;
+}
+```
+
+```text
+error: Point(...) takes either nothing or all 2 of its fields, but got 1
+  --> main.frg:7:15
+   |
+ 7 |     Point p = Point(5);
+   |               ^^^^^
+  hint: its fields, in order, are: int x, int y - or give Point a constructor
+```
+
+**Fix:** give both (`Point(5, 0)`), none (`Point()`), or write a constructor.
+
+#### `Shape is an abstract class, so it can't be made directly`
+
+Abstract classes and interfaces only describe what other classes have; you make one of those.
+
+<!-- check: error -->
+
+```cpp
+abstract class Shape {
+    abstract float area();
+}
+
+int main(){
+    Shape s = Shape();
+    return 0;
+}
+```
+
+```text
+error: Shape is an abstract class, so it can't be made directly
+  --> main.frg:6:15
+   |
+ 6 |     Shape s = Shape();
+   |               ^^^^^
+  hint: make one of the classes that inherit from it instead
+```
+
+**Fix:** make a class that inherits from it and writes `area()`, and make that.
+
+#### `Tree has to have the method 'draw', because Drawable (an interface it has) says so`
+
+A class that has an interface (or inherits an abstract class) has to write each of its methods.
+
+<!-- check: error -->
+
+```cpp
+interface Drawable {
+    void draw();
+}
+
+class Tree : Drawable {
+    int height = 3;
+}
+
+int main(){
+    return 0;
+}
+```
+
+```text
+error: Tree has to have the method 'draw', because Drawable (an interface it has) says so
+  --> main.frg:5:7
+   |
+ 5 | class Tree : Drawable {
+   |       ^^^^
+  hint: add it to Tree: void draw() { ... }
+```
+
+**Fix:** add the method: `void draw(){ ... }`.
+
+#### `struct 'Node' ends up containing itself through 'next'`
+
+A struct is stored inside whatever holds it, so it can't hold itself (it would be infinitely big).
+
+<!-- check: error -->
+
+```cpp
+struct Node {
+    int value = 0;
+    Node next;
+}
+
+int main(){
+    return 0;
+}
+```
+
+```text
+error: struct 'Node' ends up containing itself through 'next'
+  --> main.frg:3:10
+   |
+ 3 |     Node next;
+   |          ^^^^
+  hint: a struct is stored inside whatever holds it, so it can't contain itself - use a class instead
+```
+
+**Fix:** make it a class, and the field optional: `Node? next;`.
+
+#### `structs can't inherit from other types`
+
+Only classes can inherit from other classes.
+
+<!-- check: error -->
+
+```cpp
+struct Base {
+    int x = 0;
+}
+
+struct Child : Base {
+    int y = 0;
+}
+
+int main(){
+    return 0;
+}
+```
+
+```text
+error: structs can't inherit from other types
+  --> main.frg:5:14
+   |
+ 5 | struct Child : Base {
+   |              ^
+  hint: use a class if you need inheritance
+```
+
+**Fix:** make both classes, or put a `Base` field in the struct.
+
+#### `a class can only inherit from one class, but C already inherits from A`
+
+A class inherits from at most one class (it can have many interfaces).
+
+<!-- check: error -->
+
+```cpp
+class A {
+}
+
+class B {
+}
+
+class C : A, B {
+}
+
+int main(){
+    return 0;
+}
+```
+
+```text
+error: a class can only inherit from one class, but C already inherits from A
+  --> main.frg:7:14
+   |
+ 7 | class C : A, B {
+   |              ^
+  hint: the others after the : must be interfaces
+```
+
+**Fix:** inherit from one, and make the other an interface, or a field.
+
+#### `this constructor of Boss is private`
+
+A `private` constructor can only be used by the type's own methods.
+
+<!-- check: error -->
+
+```cpp
+class Boss {
+    private Boss(){
+    }
+}
+
+int main(){
+    Boss b = Boss();
+    return 0;
+}
+```
+
+```text
+error: this constructor of Boss is private
+  --> main.frg:7:14
+   |
+ 7 |     Boss b = Boss();
+   |              ^^^^
+  hint: only Boss's own methods can use it
+```
+
+**Fix:** use the method the type gives for making one, or remove `private`.
+
+#### `a static method belongs to the type, not to one object, so it can't use the field 'hp'`
+
+A static method belongs to the type, not to one object, so it has no `this` and no fields.
+
+<!-- check: error -->
+
+```cpp
+class Enemy {
+    int hp = 10;
+    static int total(){
+        return hp;
+    }
+}
+
+int main(){
+    return 0;
+}
+```
+
+```text
+error: a static method belongs to the type, not to one object, so it can't use the field 'hp'
+  --> main.frg:4:16
+   |
+ 4 |         return hp;
+   |                ^^
+  hint: make it a normal method (without static), or give it the object as a parameter
+```
+
+**Fix:** remove `static`, or give it the object as a parameter.
+
+#### `super only works inside a class that inherits from another class`
+
+`super` reaches the class this one inherits from, so it needs one.
+
+<!-- check: error -->
+
+```cpp
+class Enemy {
+    void hit(){
+        super.hit();
+    }
+}
+
+int main(){
+    return 0;
+}
+```
+
+```text
+error: super only works inside a class that inherits from another class
+  --> main.frg:3:9
+   |
+ 3 |         super.hit();
+   |         ^^^^^
+```
+
+**Fix:** remove it, or make the class inherit from one.
+
+#### `'is' checks what kind of class an object is, but this is an int`
+
+`is` and `as` check what kind of class an object is, so they only work on class objects.
+
+<!-- check: error -->
+
+```cpp
+class Enemy {
+}
+
+int main(){
+    int n = 5;
+    bool b = n is Enemy;
+    return 0;
+}
+```
+
+```text
+error: 'is' checks what kind of class an object is, but this is an int
+  --> main.frg:6:16
+   |
+ 6 |     bool b = n is Enemy;
+   |                ^^
+```
+
+**Fix:** use them on a class object.
+
+#### `the enum State has no value called 'JUMPING'`
+
+The value isn't one of the enum's.
+
+<!-- check: error -->
+
+```cpp
+enum State { IDLE, RUNNING }
+
+int main(){
+    State s = State.JUMPING;
+    return 0;
+}
+```
+
+```text
+error: the enum State has no value called 'JUMPING'
+  --> main.frg:4:21
+   |
+ 4 |     State s = State.JUMPING;
+   |                     ^^^^^^^
+  hint: its values are: IDLE, RUNNING
+```
+
+**Fix:** use one of the values the hint lists, or add it to the enum.
+
+#### `Forge needs to know what T is for this Box`
+
+A generic type has to know what its `T` is.
+
+<!-- check: error -->
+
+```cpp
+#include <stdio>
+
+class Box<T> {
+    T item;
+    Box(T item){
+        this.item = item;
+    }
+}
+
+int main(){
+    print(Box(5).item);
+    return 0;
+}
+```
+
+```text
+error: Forge needs to know what T is for this Box
+  --> main.frg:11:11
+    |
+ 11 |     print(Box(5).item);
+    |           ^^^
+  hint: say it here, like Box<int>(...), or make it where its type is written: Box<int> b = Box(...);
+```
+
+**Fix:** say it (`Box<int>(5)`), or make it where its type is written: `Box<int> b = Box(5);`.
+
+#### `can't use '*' on a T and an int`
+
+Inside a generic type, a `T` could be anything, so only what every type can do works on it.
+
+<!-- check: error -->
+
+```cpp
+class Box<T> {
+    T item;
+    Box(T item){
+        this.item = item;
+    }
+    T doubled(){
+        return item * 2;
+    }
+}
+
+int main(){
+    return 0;
+}
+```
+
+```text
+error: can't use '*' on a T and an int
+  --> main.frg:7:21
+   |
+ 7 |         return item * 2;
+   |                     ^
+```
+
+**Fix:** do the math outside the Box, where the type is known.
+
+#### `toText() decides how a Point is shown, so it has to be written as: string toText()`
+
+`toText()` decides how an object looks in text, so it has to be written exactly like this.
+
+<!-- check: error -->
+
+```cpp
+struct Point {
+    int x = 0;
+    int toText(){
+        return x;
+    }
+}
+
+int main(){
+    return 0;
+}
+```
+
+```text
+error: toText() decides how a Point is shown, so it has to be written as: string toText()
+  --> main.frg:3:9
+   |
+ 3 |     int toText(){
+   |         ^^^^^^
+```
+
+**Fix:** `string toText(){ return "({x})"; }`.
+
+#### `Weak only works with classes, but int isn't one`
+
+`Weak` holds a class object without keeping it alive, so it only works with classes.
+
+<!-- check: error -->
+
+```cpp
+int main(){
+    Weak<int> w = Weak(5);
+    return 0;
+}
+```
+
+```text
+error: Weak only works with classes, but int isn't one
+  --> main.frg:2:10
+   |
+ 2 |     Weak<int> w = Weak(5);
+   |          ^^^
+  hint: structs, numbers and text are copied, so there's nothing to point at
+
+error: Weak(...) needs a class object, but this is an int
+  --> main.frg:2:24
+   |
+ 2 |     Weak<int> w = Weak(5);
+   |                        ^
+  hint: structs, numbers and text are copied, so there's nothing to point at
+```
+
+**Fix:** use `Weak` with a class, like `Weak<Player>`.
+
+### Files, folders and libraries
+
+#### `unknown name 'jump'`
+
+Something from another file is used without the file's name in front. In Forge it's always `file.name`.
+
+<!-- check: error -->
+
+```cpp
+// file: main.frg
+int main(){
+    jump();
+    return 0;
+}
+```
+
+```cpp
+// file: player.frg
+void jump(){
+}
+```
+
+```text
+error: unknown name 'jump'
+  --> main.frg:3:5
+   |
+ 3 |     jump();
+   |     ^^^^
+  hint: 'jump' is in player.frg - use player.jump
+```
+
+**Fix:** write `player.jump();` (the file is `player.frg`).
+
+#### `the folder 'enemies' isn't part of the game yet`
+
+A subfolder's files join the game when a file next to that folder includes it.
+
+<!-- check: error -->
+
+```cpp
+// file: main.frg
+int main(){
+    enemies.goblin.spawn();
+    return 0;
+}
+```
+
+```cpp
+// file: enemies/goblin.frg
+void spawn(){
+}
+```
+
+```text
+error: the folder 'enemies' isn't part of the game yet
+  --> main.frg:3:5
+   |
+ 3 |     enemies.goblin.spawn();
+   |     ^^^^^^^
+  hint: add #include <"enemies"> to a file in the top folder, like main.frg
+```
+
+**Fix:** add `#include <"enemies">` at the top of `main.frg`.
+
+#### `includes look like #include <stdio> or #include <"folder">`
+
+`#include` takes a library in `< >`, or a folder in `<" ">`.
+
+<!-- check: error -->
+
+```cpp
+#include "stdio"
+
+int main(){
+    return 0;
+}
+```
+
+```text
+error: includes look like #include <stdio> or #include <"folder">
+  --> main.frg:1:10
+   |
+ 1 | #include "stdio"
+   |          ^^^^^^^
+  hint: files in the same folder are already included automatically
+```
+
+**Fix:** `#include <stdio>`, or for a folder `#include <"enemies">`. Files in the same folder need no include.
+
+#### `unknown directive after '#'`
+
+Forge has only `#include`; there's no `#define`, `#if` or `#pragma`.
+
+<!-- check: error -->
+
+```cpp
+#define MAX 10
+
+int main(){
+    return 0;
+}
+```
+
+```text
+error: unknown directive after '#'
+  --> main.frg:1:2
+   |
+ 1 | #define MAX 10
+   |  ^^^^^^
+  hint: the only one is #include
+```
+
+**Fix:** use a constant: `const int MAX = 10;`.
+
+#### `<OpenGL> is a separate toolkit, so it can't be used together with Forge's engine (<window>)`
+
+A game uses the engine (`<window>`, `<graphics2d>`...) or one low-level toolkit, not both.
+
+<!-- check: error -->
+
+```cpp
+#include <window>
+#include <OpenGL>
+
+int main(){
+    return 0;
+}
+```
+
+```text
+error: <OpenGL> is a separate toolkit, so it can't be used together with Forge's engine (<window>)
+  --> main.frg:2:11
+   |
+ 2 | #include <OpenGL>
+   |           ^^^^^^
+  hint: a game either uses the engine (<window>, <input>, <graphics2d>, <graphics3d>, <assets>, <ui>) or one toolkit, which opens its own window and does its own drawing - OpenGL has its own window, keyboard and mouse functions
+```
+
+**Fix:** pick one. See Low-Level Toolkits (see “Low-Level Toolkits: OpenGL, DirectX and Vulkan”).
+
+#### `the <network> library isn't built yet`
+
+This library is planned, but not part of Forge yet.
+
+<!-- check: error -->
+
+```cpp
+#include <network>
+
+int main(){
+    return 0;
+}
+```
+
+```text
+error: the <network> library isn't built yet
+  --> main.frg:1:11
+   |
+ 1 | #include <network>
+   |           ^^^^^^^
+  hint: it's planned for a later version of Forge
+```
+
+**Fix:** see the roadmap (the file `ROADMAP.md` in the Forge folder) for when it's coming.
+
+### Tasks
+
+#### `wait() only works inside a task function`
+
+`wait()` only works inside a `task` function.
+
+<!-- check: error -->
+
+```cpp
+int main(){
+    wait(1);
+    return 0;
+}
+```
+
+```text
+error: wait() only works inside a task function
+  --> main.frg:2:5
+   |
+ 2 |     wait(1);
+   |     ^^^^
+  hint: change 'int main()' to 'task main()' - then calling it starts it, and it keeps going on its own
+```
+
+**Fix:** move the code into a task: `task later(){ wait(1); ... }`, and call it.
+
+#### `wait() needs a number of seconds (or a task to wait for), but this is a string`
+
+`wait()` takes a number of seconds (or a task to wait for).
+
+<!-- check: error -->
+
+```cpp
+task blink(){
+    wait("soon");
+}
+
+int main(){
+    return 0;
+}
+```
+
+```text
+error: wait() needs a number of seconds (or a task to wait for), but this is a string
+  --> main.frg:2:10
+   |
+ 2 |     wait("soon");
+   |          ^^^^^^
+```
+
+**Fix:** `wait(0.5);`.
+
+### Warnings
+
+#### `comparing decimal numbers with '==' often gives the wrong answer`
+
+Decimal numbers are rarely exactly equal, so `==` on them often gives `false` when you'd expect `true`.
+
+<!-- check: warning -->
+
+```cpp
+#include <stdio>
+
+int main(){
+    float x = 0.1 + 0.2;
+    if (x == 0.3) {
+        print("equal");
+    }
+    return 0;
+}
+```
+
+```text
+warning: comparing decimal numbers with '==' often gives the wrong answer
+  --> main.frg:5:11
+   |
+ 5 |     if (x == 0.3) {
+   |           ^^
+  hint: decimals are often a tiny bit off (0.1 + 0.2 isn't exactly 0.3), so check whether they're close instead: math.abs(a - b) < 0.001 (needs #include <math>)
+```
+
+**Fix:** check whether they're close: `math.abs(x - 0.3) < 0.001`.
+
+#### `this divides two whole numbers, so the decimals are cut off before it becomes a decimal number`
+
+Dividing two whole numbers cuts off the decimals before the result becomes a decimal number.
+
+<!-- check: warning -->
+
+```cpp
+#include <stdio>
+
+int main(){
+    int hits = 7;
+    int shots = 10;
+    float ratio = hits / shots;
+    print(ratio);
+    return 0;
+}
+```
+
+```text
+warning: this divides two whole numbers, so the decimals are cut off before it becomes a decimal number
+  --> main.frg:6:24
+   |
+ 6 |     float ratio = hits / shots;
+   |                        ^
+  hint: turn one side into a decimal number first, like float(hits) / shots
+```
+
+**Fix:** `float(hits) / shots`.
+
+#### `the variable 'unused' is never used`
+
+A variable that's made but never used is often a typo, or left over.
+
+<!-- check: warning -->
+
+```cpp
+int main(){
+    int unused = 5;
+    return 0;
+}
+```
+
+```text
+warning: the variable 'unused' is never used
+  --> main.frg:2:9
+   |
+ 2 |     int unused = 5;
+   |         ^^^^^^
+  hint: remove it if you don't need it
+```
+
+**Fix:** use it, or remove it.
+
+#### `this code can never run, because it comes after 'return'`
+
+Code right after `return`, `break`, `continue` or `throw` can never run.
+
+<!-- check: warning -->
+
+```cpp
+int five(){
+    return 5;
+    int never = 1;
+}
+
+int main(){
+    return 0;
+}
+```
+
+```text
+warning: this code can never run, because it comes after 'return'
+  --> main.frg:3:9
+   |
+ 3 |     int never = 1;
+   |         ^^^^^
+  hint: remove it, or move it above the 'return'
+
+warning: the variable 'never' is never used
+  --> main.frg:3:9
+   |
+ 3 |     int never = 1;
+   |         ^^^^^
+  hint: remove it if you don't need it
+```
+
+**Fix:** remove it, or move it above the `return`.
+
+#### `this changes 'e', which is only a copy of the item in the list, so the change is lost`
+
+A `for (... in ...)` loop gives a copy of each struct, so changing it doesn't change the list.
+
+<!-- check: warning -->
+
+```cpp
+struct Enemy {
+    int hp = 10;
+}
+
+int main(){
+    list<Enemy> enemies = [Enemy()];
+    for (Enemy e in enemies) {
+        e.hp = 0;
+    }
+    return 0;
+}
+```
+
+```text
+warning: this changes 'e', which is only a copy of the item in the list, so the change is lost
+  --> main.frg:8:9
+   |
+ 8 |         e.hp = 0;
+   |         ^
+  hint: a for (... in ...) loop gives you a copy of each struct. To change the list itself, loop with a number and use list[i], like: for (int i = 0; i < list.length; i++) { list[i]... }
+```
+
+**Fix:** loop with a number: `for (int i = 0; i < enemies.length; i++) { enemies[i].hp = 0; }`. (With a class instead of a struct, the loop gives the objects themselves.)
+
+#### `this counts one past the last position, because both ends of a range are included`
+
+A range includes both ends, so `0..list.length` goes one past the last item.
+
+<!-- check: warning -->
+
+```cpp
+#include <stdio>
+
+int main(){
+    list<int> xs = [1, 2, 3];
+    for (int i in 0..xs.length) {
+        print(i);
+    }
+    return 0;
+}
+```
+
+```text
+warning: this counts one past the last position, because both ends of a range are included
+  --> main.frg:5:25
+   |
+ 5 |     for (int i in 0..xs.length) {
+   |                         ^^^^^^
+  hint: lists start at 0, so write: 0..xs.length - 1
+```
+
+**Fix:** `0..xs.length - 1`, or `for (int x in xs)`.
+
+#### `toString() is called toText() in Forge now`
+
+`toString()` was renamed `toText()`. It still works for now.
+
+<!-- check: warning -->
+
+```cpp
+struct Point {
+    int x = 0;
+    string toString(){
+        return "({x})";
+    }
+}
+
+int main(){
+    return 0;
+}
+```
+
+```text
+warning: toString() is called toText() in Forge now
+  --> main.frg:3:12
+   |
+ 3 |     string toString(){
+   |            ^^^^^^^^
+  hint: rename it to toText - toString still works for now
+```
+
+**Fix:** rename it to `toText`.
+
+### Runtime errors (while the game runs)
+
+#### `position 3 is outside the list (it has 3 items, at positions 0 to 2)`
+
+A position outside the list. Positions go from 0 to `length - 1`.
+
+<!-- check: runtime-error exit 1 -->
+
+```cpp
+int main(){
+    list<int> xs = [1, 2, 3];
+    int x = xs[3];
+    return 0;
+}
+```
+
+```text
+Runtime error in main.frg:3: position 3 is outside the list (it has 3 items, at positions 0 to 2)
+```
+
+**Fix:** check first: `if (i < xs.length)`. The last item is `xs[xs.length - 1]`, or `xs.last()`.
+
+#### `position 0 is outside the list: the list is empty`
+
+Any position in an empty list.
+
+<!-- check: runtime-error exit 1 -->
+
+```cpp
+int main(){
+    list<int> xs = [];
+    int x = xs[0];
+    return 0;
+}
+```
+
+```text
+Runtime error in main.frg:3: position 0 is outside the list: the list is empty
+```
+
+**Fix:** check `xs.isEmpty()` (or `xs.length > 0`) first.
+
+#### `pop() was used on an empty list`
+
+`first()`, `last()` and `pop()` need at least one item.
+
+<!-- check: runtime-error exit 1 -->
+
+```cpp
+int main(){
+    list<int> xs = [];
+    int x = xs.pop();
+    return 0;
+}
+```
+
+```text
+Runtime error in main.frg:3: pop() was used on an empty list
+```
+
+**Fix:** check `xs.isEmpty()` first.
+
+#### `the key isn't in the map (use .has(key) to check first, or .get(key, backup))`
+
+Reading a key that isn't in the map.
+
+<!-- check: runtime-error exit 1 -->
+
+```cpp
+int main(){
+    map<string, int> ages = {"Ana": 12};
+    int a = ages["Ben"];
+    return 0;
+}
+```
+
+```text
+Runtime error in main.frg:3: the key isn't in the map (use .has(key) to check first, or .get(key, backup))
+```
+
+**Fix:** check with `ages.has("Ben")`, or give a backup: `ages.get("Ben", 0)`.
+
+#### `division by zero`
+
+A whole number divided by zero (or `% 0`).
+
+<!-- check: runtime-error exit 1 -->
+
+```cpp
+int main(){
+    int zero = 0;
+    int x = 10 / zero;
+    return 0;
+}
+```
+
+```text
+Runtime error in main.frg:3: division by zero
+```
+
+**Fix:** check the number isn't 0 first. (Decimal numbers divided by 0 give `inf` instead.)
+
+#### `'hero' is null`
+
+An optional value (`Type?`) was used while it was `null`.
+
+<!-- check: runtime-error exit 1 -->
+
+```cpp
+class Player {
+    int hp = 10;
+}
+
+int main(){
+    Player? hero = null;
+    int hp = hero.hp;
+    return 0;
+}
+```
+
+```text
+Runtime error in main.frg:7: 'hero' is null
+```
+
+**Fix:** check `if (hero != null)` first, or give a backup: `hero ?? Player()`.
+
+#### `couldn't turn "ten" into an int`
+
+Text that isn't a number was turned into one.
+
+<!-- check: runtime-error exit 1 -->
+
+```cpp
+int main(){
+    int n = int("ten");
+    return 0;
+}
+```
+
+```text
+Runtime error in main.frg:2: couldn't turn "ten" into an int
+```
+
+**Fix:** check with `"ten".isInt()` first.
+
+#### `position 5 is outside the text (it has 3 characters)`
+
+A position outside the text.
+
+<!-- check: runtime-error exit 1 -->
+
+```cpp
+int main(){
+    string s = "abc";
+    string c = s.charAt(5);
+    return 0;
+}
+```
+
+```text
+Runtime error in main.frg:3: position 5 is outside the text (it has 3 characters)
+```
+
+**Fix:** positions go from 0 to `length - 1`.
+
+#### `this function value is empty - give it a function before calling it`
+
+A function value that was never given a function.
+
+<!-- check: runtime-error exit 1 -->
+
+```cpp
+struct Button {
+    string name;
+    Function<void()> onClick;
+}
+
+int main(){
+    Button b = Button();
+    b.onClick();
+    return 0;
+}
+```
+
+```text
+Runtime error in main.frg:8: this function value is empty - give it a function before calling it
+```
+
+**Fix:** give it one first: `b.onClick = () { ... };`, or make the button with one: `Button("ok", () { ... })`.
+
+#### `the level file is broken`
+
+`throw` that no `try` catches stops the game with its message.
+
+<!-- check: runtime-error exit 1 -->
+
+```cpp
+int main(){
+    throw "the level file is broken";
+    return 0;
+}
+```
+
+```text
+Runtime error in main.frg:2: the level file is broken
+```
+
+**Fix:** catch it with `try { ... } catch (Error e) { ... }`, or fix what caused it.
+
+#### `the window isn't open yet - call window.open(width, height, "title") first`
+
+Drawing (or anything else that needs the window) before `window.open(...)`.
+
+<!-- check: runtime-error exit 1 -->
+
+```cpp
+#include <graphics2d>
+
+int main(){
+    graphics2d.drawRect(0, 0, 10, 10, color.RED);
+    return 0;
+}
+```
+
+```text
+Runtime error in graphics2d.drawRect(): the window isn't open yet - call window.open(width, height, "title") first
+  called from main.frg:4 (in main)
+```
+
+**Fix:** call `window.open(width, height, "title")` first (it needs `#include <window>`).
+
+#### `can't find the file 'hero.png' - put it in the game's folder (next to main.frg), or check the spelling`
+
+A file the game loads isn't in the game's folder.
+
+<!-- check: runtime-error exit 1 -->
+
+```cpp
+#include <window>
+#include <assets>
+
+int main(){
+    window.open(320, 200, "game");
+    Texture t = assets.loadTexture("hero.png");
+    return 0;
+}
+```
+
+```text
+Runtime error in assets.loadTexture(): can't find the file 'hero.png' - put it in the game's folder (next to main.frg), or check the spelling
+  called from main.frg:6 (in main)
+```
+
+**Fix:** put the file next to `main.frg` (or in a folder there, and write the path: `"art/hero.png"`), and check the spelling.
+
+---
+
+# Part F: Guides
 
 <!-- docs/guides/game-loop.md -->
 
@@ -9161,7 +14419,7 @@ Both emitters are made by small functions (`makeDust`, `makeSparkles`) that set 
 
 ---
 
-# Part F: Under the hood
+# Part G: Under the hood
 
 <!-- docs/how-forge-works.md -->
 
@@ -9371,7 +14629,7 @@ Each question starts `frg` again and reads the whole game, which takes a fractio
 
 ---
 
-# Part G: The cheat sheet (everything on one page)
+# Part H: The cheat sheet (everything on one page)
 
 <!-- docs/LANGUAGE.md -->
 
@@ -10123,7 +15381,7 @@ void draw(){
 }
 ```
 
-The screen is cleared to the background color before each frame (`window.setBackground(color)` changes it). The window closes when the player clicks its X, or when your code calls `window.close()`; Escape is a normal key (it doesn't close anything).
+The screen is cleared to the background color before each frame (`window.setBackground(color)` changes it). The window closes when the player clicks its X (or presses Alt+F4), or when your code calls `window.close()`; Escape is a normal key (it doesn't close anything). After either, `window.run()` returns and `main` carries on (every way a game stops (see “How Forge behaves, exactly” › “Stopping the game”)).
 
 See `examples/platformer` for a complete game. The other examples are `shapes` (2D drawing), `sprites` (images and sound), `menu` (scenes and UI), `world3d` (3D) and `voxel` (a creative-mode block world, built from meshes).
 

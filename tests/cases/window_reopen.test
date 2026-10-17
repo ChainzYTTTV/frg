@@ -1,0 +1,31 @@
+=== main.frg
+#include <window>
+#include <graphics2d>
+#include <stdio>
+
+``` After window.close(), window.open() makes a new window: a launcher, then the game. ```
+int main(){
+    window.open(320, 200, "Launcher");
+    int frames = 0;
+    while (!window.shouldClose() and frames < 3) {
+        frames++;
+    }
+    window.close();
+    window.close();
+    print("the launcher closed (twice is fine)");
+    window.open(640, 360, "Game");
+    print("a new window: {window.width()} x {window.height()}");
+    frames = 0;
+    while (!window.shouldClose() and frames < 3) {
+        graphics2d.drawText("Playing", 10, 10, 20, color.WHITE);
+        frames++;
+    }
+    print("the game's window is done");
+    return 0;
+}
+=== window
+frames: 60
+=== output
+the launcher closed (twice is fine)
+a new window: 640 x 360
+the game's window is done

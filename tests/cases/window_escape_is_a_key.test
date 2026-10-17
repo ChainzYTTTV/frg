@@ -1,0 +1,30 @@
+=== main.frg
+#include <window>
+#include <input>
+#include <stdio>
+
+``` Escape is a normal key: holding it (and pressing it again) doesn't close the window. Only the X does. ```
+int frames = 0;
+int escapes = 0;
+
+int main(){
+    window.open(320, 200, "Escape");
+    window.run();
+    print("{frames} frames, Escape pressed {escapes} times, the window stayed open");
+    return 0;
+}
+
+void update(float dt){
+    frames++;
+    if (input.keyPressed(Key.ESCAPE)) {
+        escapes++;
+    }
+}
+
+void draw(){
+}
+=== window
+frames: 20
+input: ESCAPE:2-4,ESCAPE:8-8,Q:10-12,F4:11-11,ENTER:12-12
+=== output
+20 frames, Escape pressed 2 times, the window stayed open

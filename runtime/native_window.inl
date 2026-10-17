@@ -209,7 +209,8 @@ void open(int32_t width, int32_t height, const std::string& title, void (*presen
     QueryPerformanceCounter(&s.start);
     s.last = s.start;
     parseAutotest();
-    ShowWindow(s.hwnd, SW_SHOW);
+    // FRG_AUTOTEST_HIDDEN=1: tests run the game without its window showing up on the screen.
+    if (!std::getenv("FRG_AUTOTEST_HIDDEN")) ShowWindow(s.hwnd, SW_SHOW);
     UpdateWindow(s.hwnd);
 }
 

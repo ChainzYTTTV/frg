@@ -917,6 +917,10 @@ bool Checker::assignable(Expr* e, Type* T, const std::string& dest) {
         hint = "a " + S->name + " isn't a kind of " + T->name;
     else if (S->kind == TK::List && T->kind == TK::List)
         hint = "the items in the list have to be exactly " + T->elem->name;
+    if (S->kind == TK::Null) {
+        reportError(e->loc, dest + " can't be null, because " + aType(T) + " isn't optional", hint);
+        return false;
+    }
     reportError(e->loc, dest + " needs " + aType(T) + ", but this is " + aType(S), hint);
     return false;
 }

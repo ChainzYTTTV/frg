@@ -1,0 +1,23 @@
+=== main.frg
+#include <window>
+#include <stdio>
+
+``` window.run() after the window was closed is an error that says so. ```
+int main(){
+    window.open(320, 200, "Closed");
+    window.close();
+    window.run();
+    return 0;
+}
+
+void update(float dt){
+}
+
+void draw(){
+}
+=== window
+frames: 60
+=== exit code
+1
+=== runtime error
+Runtime error in window.run(): the window has been closed, so there's no game to run

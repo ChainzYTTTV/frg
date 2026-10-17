@@ -11,6 +11,8 @@ Most mistakes are compile errors, so they're caught before you ever see the game
 
 Forge also gives **warnings**: code that works, but probably doesn't do what you meant. A warning never stops the game from building. See [Warnings](#warnings) below.
 
+> **Every message:** [Error messages](../reference/error-messages.md) lists every error and warning Forge has, each with an example that causes it and how to fix it. This chapter explains how to read them, and the most common ones.
+
 ## Reading a compile error
 
 ```

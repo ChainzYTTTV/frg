@@ -13,7 +13,7 @@ Where the parts disagree, the detailed pages (B to G) are more precise, and the 
 - **Part A: The teaching brief (for an AI tutor)**: Teaching Brief: the Forge Programming Language
 - **Part B: Start here**: Forge Documentation - Getting Started
 - **Part C: The language**: 1. The Basics - 2. Variables and Types - 3. Text - 4. Operators - 5. Making Decisions and Repeating - 6. Functions - 7. Files and Folders - 8. Lists and Maps - 9. Structs and Classes - 10. Enums and Optionals - 11. Tasks - 12. Errors - 13. Reserved Words - 14. Coming From Other Languages
-- **Part D: The libraries**: Library Overview - Built-in Types: vec2, vec3, vec4, color, rect - <stdio>: Console Input and Output - <math>: Math Functions - <random>: Random Numbers - <window>: The Game Window - <input>: Keyboard, Mouse and Controllers - <graphics2d>: 2D Drawing - <graphics3d>: 3D Drawing - <assets>: Images, Animations and Fonts - <audio>: Sounds and Music - <physics>: Boxes, Gravity and Collisions - <time>: Clock, Date and Timers - <file>: Reading and Writing Text Files - <save>: Remembering Things Between Runs - <tween>: Smooth Changes Over Time - <particles>: Dust, Sparks and Explosions - <tilemap>: Levels Drawn as Text - <scenes>: Menus, Levels and Game Over - <ui>: Buttons, Checkboxes, Sliders and Text Boxes - <ECS>: Entities and Components - <tasks>: Tasks Without a Window - <testing>: Testing Your Game's Code - Low-Level Toolkits: OpenGL, DirectX and Vulkan - <OpenGL>: Drawing with OpenGL Yourself - <DirectX>: Drawing with Direct3D 11 Yourself - <Vulkan>: Drawing with Vulkan Yourself
+- **Part D: The libraries**: Library Overview - Built-in Types: vec2, vec3, vec4, color, rect - <stdio>: Console Input and Output - <math>: Math Functions - <random>: Random Numbers - <window>: The Game Window - <input>: Keyboard, Mouse and Controllers - <graphics2d>: 2D Drawing - <graphics3d>: 3D Drawing - <assets>: Images, Animations and Fonts - <audio>: Sounds and Music - <physics>: Boxes, Balls, Ramps, Gravity and Collisions - <time>: Clock, Date and Timers - <file>: Reading and Writing Text Files - <save>: Remembering Things Between Runs - <tween>: Smooth Changes Over Time - <particles>: Dust, Sparks and Explosions - <tilemap>: Levels Drawn as Text - <scenes>: Menus, Levels and Game Over - <ui>: Buttons, Checkboxes, Sliders and Text Boxes - <ECS>: Entities and Components - <tasks>: Tasks Without a Window - <testing>: Testing Your Game's Code - Low-Level Toolkits: OpenGL, DirectX and Vulkan - <OpenGL>: Drawing with OpenGL Yourself - <DirectX>: Drawing with Direct3D 11 Yourself - <Vulkan>: Drawing with Vulkan Yourself
 - **Part E: Reference (exact rules, every command, every error message)**: Syntax: every way to write Forge - How Forge behaves, exactly - Commands: everything frg can do - Error messages
 - **Part F: Guides**: The Game Loop - Sprites and Animation - Platformer Walkthrough
 - **Part G: Under the hood**: How Forge Works
@@ -1731,7 +1731,7 @@ Everything that isn't the core language lives in a library you `#include`. See t
 | `<graphics3d>` (see “`<graphics3d>`: 3D Drawing”) | Cameras, 3D shapes and 3D models |
 | `<assets>` (see “`<assets>`: Images, Animations and Fonts”) | Loading images and fonts, and sprite-sheet animation |
 | `<audio>` (see “`<audio>`: Sounds and Music”) | Sound effects and music |
-| `<physics>` (see “`<physics>`: Boxes, Gravity and Collisions”) | Gravity and collisions for boxes |
+| `<physics>` (see “`<physics>`: Boxes, Balls, Ramps, Gravity and Collisions”) | Gravity and collisions for boxes |
 | `<time>` (see “`<time>`: Clock, Date and Timers”) | The clock, the date, and timers |
 | `<save>` (see “`<save>`: Remembering Things Between Runs”) | Remembering values between runs: high scores, settings, progress |
 | `<testing>` (see “`<testing>`: Testing Your Game's Code”) | Checking your game's code with `frg test` |
@@ -4071,7 +4071,7 @@ print(g.info());           // a goblin carrying 5 gold
 - **Replacing a method:** write a method with the same name, the same parameter types and the same return type. Calls use the real object's version, even through an `Entity` variable. A replacement that doesn't match exactly is an error that shows what it should look like.
 - A child can't add a field with the same name as one of its parent's fields.
 - Only classes inherit; `struct A : B` is an error. A class inherits from one parent, and that parent can have its own parent.
-- You can inherit from some built-in classes too, like `Body` (see “`<physics>`: Boxes, Gravity and Collisions”), `Scene` (see “`<scenes>`: Menus, Levels and Game Over”) and `Component` (see “`<ECS>`: Entities and Components”).
+- You can inherit from some built-in classes too, like `Body` (see “`<physics>`: Boxes, Balls, Ramps, Gravity and Collisions”), `Scene` (see “`<scenes>`: Menus, Levels and Game Over”) and `Component` (see “`<ECS>`: Entities and Components”).
 
 #### super
 
@@ -5128,7 +5128,7 @@ How libraries work:
 | `<graphics3d>` (see “`<graphics3d>`: 3D Drawing”) | 3D camera, cubes, spheres, grids, 3D models | yes |
 | `<assets>` (see “`<assets>`: Images, Animations and Fonts”) | Loading images (`Texture`) and fonts (`Font`), and sprite-sheet animation (`Animation`) | to draw them |
 | `<audio>` (see “`<audio>`: Sounds and Music”) | Sound effects (`Sound`) and music (`Music`) | no |
-| `<physics>` (see “`<physics>`: Boxes, Gravity and Collisions”) | Box bodies with gravity and collisions | no |
+| `<physics>` (see “`<physics>`: Boxes, Balls, Ramps, Gravity and Collisions”) | Box bodies with gravity and collisions | no |
 | `<time>` (see “`<time>`: Clock, Date and Timers”) | The clock and date, `sleep`, and the `Timer` class | no |
 | `<save>` (see “`<save>`: Remembering Things Between Runs”) | Remembering values (high scores, settings) between runs | no |
 | `<testing>` (see “`<testing>`: Testing Your Game's Code”) | `testing.check(...)` in tests that `frg test` runs | no |
@@ -6641,13 +6641,13 @@ void draw(){
 
 <!-- docs/libraries/physics.md -->
 
-## `<physics>`: Boxes, Gravity and Collisions
+## `<physics>`: Boxes, Balls, Ramps, Gravity and Collisions
 
 ```cpp
 #include <physics>
 ```
 
-Simple 2D physics made for platformers. Every **body** is an axis-aligned box (never rotated). Each step, moving bodies fall with gravity, move by their velocity, and get pushed out of anything solid they run into.
+Simple 2D physics made for platformers. A **body** is a box (never rotated), a ball (`circle = true`), or for floors, a ramp (`slope`). Each step, moving bodies fall with gravity, move by their velocity, and get pushed out of anything solid they run into.
 
 It works in screen coordinates (see “`<graphics2d>`: 2D Drawing” › “Coordinates”): y grows **downward**, so gravity pulls toward +y and jumping means a **negative** y velocity.
 
@@ -6673,6 +6673,10 @@ physics.add(crate);
 | `solid` | `bool` | `false` for things that shouldn't push or be pushed, like coins and trigger zones. (`true` to start with.) |
 | `oneWay` | `bool` | for static bodies: `true` makes a **one-way platform** that you can jump up through from below and walk through sideways, but land on from above. (`false` to start with.) |
 | `gravityScale` | `float` | how strongly gravity pulls this body: 1 is normal, 0 floats, 2 is twice as heavy |
+| `circle` | `bool` | `true` makes it a **ball**: a circle as wide as the box (the smaller of width and height), in the middle of it. (`false` to start with.) |
+| `slope` | `int` | for static bodies: `1` makes a **ramp** that rises to the right (low at the left, high at the right edge), `-1` one that rises to the left, `0` a box. (`0` to start with.) |
+| `bounce` | `float` | how much speed it keeps when it hits something: `0` stops (to start with), `0.5` bounces back at half the speed, `1` as fast as it came |
+| `layer` | `int` | its collision layer, `0` to `31` (`0` to start with). See Layers (see “Layers: what hits what”). |
 | `onGround` | `bool` | **set by Forge:** true if it landed on something during the last step |
 | `onCeiling` | `bool` | **set by Forge:** true if it bumped its head |
 | `onWall` | `bool` | **set by Forge:** true if it hit something sideways |
@@ -6694,6 +6698,8 @@ physics.add(crate);
 | `physics.gravity()` | the current gravity |
 | `physics.clear()` | removes every body |
 | `physics.count()` | how many bodies are in the world |
+| `physics.collide(int layerA, int layerB, bool on)` | `false`: bodies on these two layers pass through each other. `true`: they collide again (they all do, to start with) |
+| `physics.collides(int layerA, int layerB)` | whether they collide |
 
 Bodies only move during `physics.step`, and only if they've been added.
 
@@ -6819,11 +6825,48 @@ class Player : Body {
 Player hero = Player(80, 300, 32, 32);
 ```
 
+#### Ramps
+
+A static body with `slope` set is a ramp: its top goes diagonally from one corner of its box to the other. Bodies walk up and down it and stay `onGround` the whole way; the tall side of the ramp is a wall. Put a platform at the top so there's somewhere to go.
+
+```cpp
+Body ramp = Body(200, 300, 150, 100);    // from (200, 400) at the bottom-left up to (350, 300)
+ramp.isStatic = true;
+ramp.slope = 1;                          // rises to the right
+physics.add(ramp);
+```
+
+#### Balls and bounce
+
+`circle = true` makes a body round, and `bounce` makes it bounce. Balls roll down ramps and bounce off each other.
+
+```cpp
+Body ball = Body(100, 50, 32, 32);       // a ball 32 pixels across
+ball.circle = true;
+ball.bounce = 0.7;                       // loses 30% of its speed at each bounce
+physics.add(ball);
+```
+
+Draw it with `graphics2d.drawCircle(ball.center(), ball.size.x / 2, color.ORANGE)`. `bounce` works for boxes too.
+
+#### Layers: what hits what
+
+Every body has a `layer` (`0` to `31`). Normally everything collides with everything. `physics.collide(a, b, false)` makes bodies on layers `a` and `b` pass through each other, and `a` and `b` can be the same layer:
+
+```cpp
+// layer 0: the level and the player, 1: enemies, 2: the player's bullets
+physics.collide(2, 2, false);            // bullets don't hit each other
+physics.collide(1, 1, false);            // enemies walk through each other
+```
+
+Layers only change what pushes what: `overlaps()` still says whether two bodies touch, whatever their layers, so a bullet can still check whether it hit an enemy.
+
 ### Limits
 
-- Boxes only: no circles, slopes or rotation.
+- Boxes, balls and ramps, but nothing turns: a box on a ramp stays upright, and balls slide down ramps rather than spin.
 - Static bodies don't move by themselves, but you can change their `position` yourself (moving platforms). Bodies standing on one aren't carried along automatically.
-- There's no bounciness or friction: set `velocity` yourself for those effects.
+- There's no friction: set `velocity` yourself for that (`bounce` is there).
+- A moving ball and a moving box push each other apart as two boxes.
 
 <!-- docs/libraries/time.md -->
 
@@ -7374,7 +7417,7 @@ Keeping each level in its own file makes it easy to have many levels: `level1.tx
 
 | Method | Gives back | What it does |
 |---|---|---|
-| `addBodies(string tiles, bool oneWay = false)` | `list<Body>` | makes static physics (see “`<physics>`: Boxes, Gravity and Collisions”) bodies for those tiles, adds them to the physics world, and gives them back. With `true`, they're one-way platforms |
+| `addBodies(string tiles, bool oneWay = false)` | `list<Body>` | makes static physics (see “`<physics>`: Boxes, Balls, Ramps, Gravity and Collisions”) bodies for those tiles, adds them to the physics world, and gives them back. With `true`, they're one-way platforms |
 | `solidAreas(string tiles)` | `list<rect>` | the rectangles `addBodies` would use, if you want to do something else with them |
 
 Neighbouring tiles are **merged** into bigger rectangles: a row of 30 wall tiles becomes one body, and a solid block becomes one box. That keeps the number of bodies small, which keeps physics fast, and stops players from catching on the seams between tiles.
@@ -14646,7 +14689,7 @@ void build(){
 }
 ```
 
-- `addBodies("#")` makes static physics bodies for the `#` tiles. Neighbouring tiles are **merged**: a row of 12 ground tiles becomes one long body, not 12 small ones. `addBodies("=", true)` does the same for the planks, and `true` makes them one-way (see “`<physics>`: Boxes, Gravity and Collisions” › “One-way platforms”).
+- `addBodies("#")` makes static physics bodies for the `#` tiles. Neighbouring tiles are **merged**: a row of 12 ground tiles becomes one long body, not 12 small ones. `addBodies("=", true)` does the same for the planks, and `true` makes them one-way (see “`<physics>`: Boxes, Balls, Ramps, Gravity and Collisions” › “One-way platforms”).
 - `find("C")` gives the top-left corner of every `C` tile. Each coin is kept as the middle of its tile, half a tile further right and down.
 - `find("P")[0]` is the first (and only) `P`: the player's start.
 

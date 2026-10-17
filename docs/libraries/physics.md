@@ -1,10 +1,10 @@
-# `<physics>`: Boxes, Gravity and Collisions
+# `<physics>`: Boxes, Balls, Ramps, Gravity and Collisions
 
 ```cpp
 #include <physics>
 ```
 
-Simple 2D physics made for platformers. Every **body** is an axis-aligned box (never rotated). Each step, moving bodies fall with gravity, move by their velocity, and get pushed out of anything solid they run into.
+Simple 2D physics made for platformers. A **body** is a box (never rotated), a ball (`circle = true`), or for floors, a ramp (`slope`). Each step, moving bodies fall with gravity, move by their velocity, and get pushed out of anything solid they run into.
 
 It works in [screen coordinates](graphics2d.md#coordinates): y grows **downward**, so gravity pulls toward +y and jumping means a **negative** y velocity.
 
@@ -30,6 +30,10 @@ physics.add(crate);
 | `solid` | `bool` | `false` for things that shouldn't push or be pushed, like coins and trigger zones. (`true` to start with.) |
 | `oneWay` | `bool` | for static bodies: `true` makes a **one-way platform** that you can jump up through from below and walk through sideways, but land on from above. (`false` to start with.) |
 | `gravityScale` | `float` | how strongly gravity pulls this body: 1 is normal, 0 floats, 2 is twice as heavy |
+| `circle` | `bool` | `true` makes it a **ball**: a circle as wide as the box (the smaller of width and height), in the middle of it. (`false` to start with.) |
+| `slope` | `int` | for static bodies: `1` makes a **ramp** that rises to the right (low at the left, high at the right edge), `-1` one that rises to the left, `0` a box. (`0` to start with.) |
+| `bounce` | `float` | how much speed it keeps when it hits something: `0` stops (to start with), `0.5` bounces back at half the speed, `1` as fast as it came |
+| `layer` | `int` | its collision layer, `0` to `31` (`0` to start with). See [Layers](#layers-what-hits-what). |
 | `onGround` | `bool` | **set by Forge:** true if it landed on something during the last step |
 | `onCeiling` | `bool` | **set by Forge:** true if it bumped its head |
 | `onWall` | `bool` | **set by Forge:** true if it hit something sideways |
@@ -51,6 +55,8 @@ physics.add(crate);
 | `physics.gravity()` | the current gravity |
 | `physics.clear()` | removes every body |
 | `physics.count()` | how many bodies are in the world |
+| `physics.collide(int layerA, int layerB, bool on)` | `false`: bodies on these two layers pass through each other. `true`: they collide again (they all do, to start with) |
+| `physics.collides(int layerA, int layerB)` | whether they collide |
 
 Bodies only move during `physics.step`, and only if they've been added.
 
@@ -176,8 +182,45 @@ class Player : Body {
 Player hero = Player(80, 300, 32, 32);
 ```
 
+### Ramps
+
+A static body with `slope` set is a ramp: its top goes diagonally from one corner of its box to the other. Bodies walk up and down it and stay `onGround` the whole way; the tall side of the ramp is a wall. Put a platform at the top so there's somewhere to go.
+
+```cpp
+Body ramp = Body(200, 300, 150, 100);    // from (200, 400) at the bottom-left up to (350, 300)
+ramp.isStatic = true;
+ramp.slope = 1;                          // rises to the right
+physics.add(ramp);
+```
+
+### Balls and bounce
+
+`circle = true` makes a body round, and `bounce` makes it bounce. Balls roll down ramps and bounce off each other.
+
+```cpp
+Body ball = Body(100, 50, 32, 32);       // a ball 32 pixels across
+ball.circle = true;
+ball.bounce = 0.7;                       // loses 30% of its speed at each bounce
+physics.add(ball);
+```
+
+Draw it with `graphics2d.drawCircle(ball.center(), ball.size.x / 2, color.ORANGE)`. `bounce` works for boxes too.
+
+### Layers: what hits what
+
+Every body has a `layer` (`0` to `31`). Normally everything collides with everything. `physics.collide(a, b, false)` makes bodies on layers `a` and `b` pass through each other, and `a` and `b` can be the same layer:
+
+```cpp
+// layer 0: the level and the player, 1: enemies, 2: the player's bullets
+physics.collide(2, 2, false);            // bullets don't hit each other
+physics.collide(1, 1, false);            // enemies walk through each other
+```
+
+Layers only change what pushes what: `overlaps()` still says whether two bodies touch, whatever their layers, so a bullet can still check whether it hit an enemy.
+
 ## Limits
 
-- Boxes only: no circles, slopes or rotation.
+- Boxes, balls and ramps, but nothing turns: a box on a ramp stays upright, and balls slide down ramps rather than spin.
 - Static bodies don't move by themselves, but you can change their `position` yourself (moving platforms). Bodies standing on one aren't carried along automatically.
-- There's no bounciness or friction: set `velocity` yourself for those effects.
+- There's no friction: set `velocity` yourself for that (`bounce` is there).
+- A moving ball and a moving box push each other apart as two boxes.

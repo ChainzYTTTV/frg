@@ -1,0 +1,179 @@
+=== main.frg
+#include <physics>
+#include <math>
+#include <stdio>
+
+``` Collision layers, ramps (slope), circles and bounce. ```
+
+void run(float seconds){
+    for (int i in 1..int(seconds * 60)) {
+        physics.step(1.0 / 60);
+    }
+}
+
+Body floor(){
+    Body f = Body(-500, 300, 2000, 50);
+    f.isStatic = true;
+    physics.add(f);
+    return f;
+}
+
+void layers(){
+    physics.clear();
+    floor();
+    Body bullet = Body(0, 0, 10, 10);
+    bullet.layer = 2;
+    Body other = Body(0, 100, 10, 10);
+    other.layer = 2;
+    other.isStatic = true;
+    physics.add(bullet);
+    physics.add(other);
+    print("collides 2/2 at first: {physics.collides(2, 2)}");
+    physics.collide(2, 2, false);
+    run(1);
+    print("bullets pass through each other: {bullet.position.y > 150}");
+    print("and still land on the floor (layer 0): {bullet.onGround and math.abs(bullet.position.y - 290) < 0.5}");
+    physics.collide(2, 2, true);
+    try {
+        physics.collide(0, 32, false);
+    } catch (Error e) {
+        print("error: {e.message}");
+    }
+}
+
+void ramps(){
+    physics.clear();
+    floor();
+    // a ramp rising to the right: from the floor (y 300) up to y 200, between x 100 and 200; a ledge after it
+    Body ramp = Body(100, 200, 100, 100);
+    ramp.isStatic = true;
+    ramp.slope = 1;
+    physics.add(ramp);
+    Body ledge = Body(200, 200, 300, 100);
+    ledge.isStatic = true;
+    physics.add(ledge);
+    Body box = Body(20, 280, 20, 20);
+    physics.add(box);
+    run(0.2);
+    box.velocity = vec2(120, box.velocity.y);
+    float lowest = 1000;
+    bool alwaysOnGround = true;
+    for (int i in 1..120) {
+        box.velocity = vec2(120, box.velocity.y);
+        physics.step(1.0 / 60);
+        if (box.position.x > 110 and box.position.x < 170 and !box.onGround) {
+            alwaysOnGround = false;
+        }
+    }
+    print("walked up the ramp onto the ledge: {box.position.x > 250 and math.abs(box.position.y + 20 - 200) < 1}");
+    print("on the ground all the way up: {alwaysOnGround}");
+    // and back down
+    alwaysOnGround = true;
+    for (int i in 1..120) {
+        box.velocity = vec2(-120, box.velocity.y);
+        physics.step(1.0 / 60);
+        if (box.position.x > 110 and box.position.x < 170 and !box.onGround) {
+            alwaysOnGround = false;
+        }
+    }
+    print("walked back down to the floor: {box.position.x < 90 and math.abs(box.position.y + 20 - 300) < 1}");
+    print("on the ground all the way down: {alwaysOnGround}");
+    // the tall side of a ramp rising to the left is a wall
+    physics.clear();
+    floor();
+    Body wallRamp = Body(100, 200, 100, 100);
+    wallRamp.isStatic = true;
+    wallRamp.slope = -1;          // tall at x 100
+    physics.add(wallRamp);
+    Body runner = Body(40, 280, 20, 20);
+    physics.add(runner);
+    for (int i in 1..90) {
+        runner.velocity = vec2(150, runner.velocity.y);
+        physics.step(1.0 / 60);
+    }
+    print("the tall side stops it: {math.abs(runner.position.x + 20 - 100) < 0.5 and runner.onWall}");
+}
+
+void circles(){
+    physics.clear();
+    floor();
+    Body ball = Body(0, 0, 40, 40);
+    ball.circle = true;
+    physics.add(ball);
+    run(2);
+    print("a ball rests on the floor: {ball.onGround and math.abs(ball.position.y + 40 - 300) < 0.5}");
+    // a bouncy one comes back up
+    physics.clear();
+    floor();
+    Body bouncy = Body(0, 0, 40, 40);
+    bouncy.circle = true;
+    bouncy.bounce = 0.8;
+    physics.add(bouncy);
+    bool hit = false;
+    float highest = 1000;
+    for (int i in 1..120) {
+        physics.step(1.0 / 60);
+        if (bouncy.onGround) {
+            hit = true;
+        }
+        if (hit) {
+            highest = math.min(highest, bouncy.position.y);
+        }
+    }
+    print("a bouncy ball bounces back up: {hit and highest < 150}");
+    // a ball on a ramp rolls down it
+    physics.clear();
+    floor();
+    Body ramp = Body(100, 100, 200, 200);
+    ramp.isStatic = true;
+    ramp.slope = -1;              // high at the left (x 100, y 100), down to the floor at x 300
+    physics.add(ramp);
+    Body roller = Body(110, 60, 30, 30);
+    roller.circle = true;
+    physics.add(roller);
+    run(2);
+    print("a ball rolls down a ramp: {roller.position.x > 300}");
+    // two balls bounce off each other
+    physics.clear();
+    physics.setGravity(vec2(0, 0));
+    Body a = Body(0, 0, 20, 20);
+    a.circle = true;
+    a.bounce = 1;
+    a.velocity = vec2(100, 0);
+    Body b = Body(100, 0, 20, 20);
+    b.circle = true;
+    b.bounce = 1;
+    physics.add(a);
+    physics.add(b);
+    run(1.5);
+    print("the moving ball stopped and the still one moved on: {math.abs(a.velocity.x) < 1 and b.velocity.x > 99}");
+    physics.setGravity(vec2(0, 980));
+    // overlaps follows the round shape: a box at the corner of a ball's box doesn't touch the ball
+    Body round = Body(0, 0, 100, 100);
+    round.circle = true;
+    Body corner = Body(92, 92, 20, 20);
+    Body side = Body(95, 40, 20, 20);
+    print("overlaps: corner {round.overlaps(corner)}, side {round.overlaps(side)}");
+}
+
+int main(){
+    layers();
+    ramps();
+    circles();
+    return 0;
+}
+=== output
+collides 2/2 at first: true
+bullets pass through each other: true
+and still land on the floor (layer 0): true
+error: layers go from 0 to 31, but this one is 32
+walked up the ramp onto the ledge: true
+on the ground all the way up: true
+walked back down to the floor: true
+on the ground all the way down: true
+the tall side stops it: true
+a ball rests on the floor: true
+a bouncy ball bounces back up: true
+a ball rolls down a ramp: true
+the moving ball stopped and the still one moved on: true
+overlaps: corner false, side true

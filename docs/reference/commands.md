@@ -512,6 +512,7 @@ $env:FRG_VERBOSE = 1; frg build; Remove-Item Env:FRG_VERBOSE
 | `FRG_AUTOTEST_FRAMES=N` | a game with a window | runs the game for N frames, then closes the window |
 | `FRG_AUTOTEST_SHOT=name.png` | a game with a window | the picture saved of frame N (normally `autotest.png`) |
 | `FRG_AUTOTEST_INPUT=...` | a game with a window | pretends keys and buttons are held during certain frames (below) |
+| `FRG_AUTOTEST_HIDDEN=1` | a game with a window | runs without showing the window, and without sound (for tests that check what the game prints) |
 
 ### Scripted input
 

@@ -47,7 +47,7 @@ inline ::Rectangle rl(core::rect_ r) { return ::Rectangle{r.x_, r.y_, r.width_, 
 //                              MOUSE@x/y:N-M puts the pointer at (x, y) from frame N on (once any MOUSE@ is given,
 //                              the real mouse is ignored). TURN@dx/dy:N-M makes mouseDelta() (dx, dy) during those
 //                              frames, and (0, 0) on the others.
-// FRG_AUTOTEST_HIDDEN=1        the window isn't shown (for tests that only check what the game prints)
+// FRG_AUTOTEST_HIDDEN=1        the window isn't shown, and sounds are silent (for tests that check what the game prints)
 namespace autotest {
 struct Hold {
     int key;

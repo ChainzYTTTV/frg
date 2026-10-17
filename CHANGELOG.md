@@ -4,6 +4,10 @@ What changed in each version of Forge. Plans for later versions are in the [road
 
 ## Unreleased
 
+**Toolkits**
+- **Textures in `<Vulkan>`:** `loadTexture(path)`, `bindTexture(texture)` and `setTextureFilter(smooth)`. Every pipeline has room for one texture (`layout(set = 0, binding = 0) uniform sampler2D`).
+- **Drawing into a texture** in `<OpenGL>` (framebuffers and renderbuffers: `genFramebuffer`, `bindFramebuffer`, `framebufferTexture2D`, `checkFramebufferStatus`, `texImage2D`...) and `<DirectX>` (`createRenderTexture(width, height)` and `setRenderTarget(texture)`).
+
 **Engine**
 - **Sprite effects:** `graphics2d.beginFlash(color, amount)` (the "got hit" flash), `beginOutline(color, thickness)`, `beginGlow(color, size)` and `endEffect()` for textures and animations, without writing a shader.
 - **`<physics>`: balls, ramps, bounce and layers.** `circle = true` makes a body a ball; `slope = 1` / `-1` makes a static body a ramp that bodies walk up and down (staying `onGround`); `bounce` (0-1) makes things bounce; every body has a `layer`, and `physics.collide(a, b, false)` makes two layers pass through each other ("bullets don't hit bullets"). `overlaps()` follows the round shapes. The debug view draws balls and ramps. Boxes behave exactly as before.

@@ -32,6 +32,15 @@ struct VertexShader {
     ID3DBlob* code;  // kept for creating input layouts
 };
 
+// A texture that can be drawn into (createRenderTexture), with its own depth buffer.
+struct RenderTarget {
+    int32_t texture = 0;  // its handle in State::textures
+    ID3D11RenderTargetView* rtv = nullptr;
+    ID3D11Texture2D* depthTex = nullptr;
+    ID3D11DepthStencilView* dsv = nullptr;
+    int32_t width = 0, height = 0;
+};
+
 struct State {
     ID3D11Device* device = nullptr;
     ID3D11DeviceContext* ctx = nullptr;
@@ -52,6 +61,9 @@ struct State {
     std::vector<ID3D11Buffer*> buffers;
     std::vector<int32_t> bufferFloats;  // constant buffer sizes
     std::vector<ID3D11ShaderResourceView*> textures;
+    std::vector<RenderTarget> targets;
+    int32_t current = 0;               // the render texture being drawn into (0: the window)
+    int32_t screenW = 0, screenH = 0;
 };
 
 State& st() {
@@ -126,6 +138,9 @@ ID3DBlob* compile(const std::string& hlsl, const std::string& entry, const char*
 void openWindow_(int32_t width, int32_t height, const std::string& title) {
     native::open(width, height, title, &present, &screenshot);
     State& s = st();
+    s.screenW = width;
+    s.screenH = height;
+    s.current = 0;
 
     DXGI_SWAP_CHAIN_DESC sd{};
     sd.BufferCount = 1;
@@ -221,6 +236,13 @@ void closeWindow_() {
     for (auto* l : s.layouts) l->Release();
     for (auto* b : s.buffers) b->Release();
     for (auto* t : s.textures) t->Release();
+    for (auto& t : s.targets) {
+        release(t.rtv);
+        release(t.dsv);
+        release(t.depthTex);
+    }
+    s.targets.clear();
+    s.current = 0;
     s.vertexShaders.clear();
     s.pixelShaders.clear();
     s.layouts.clear();
@@ -264,9 +286,17 @@ void clear_(float r, float g, float b, float a) {
     need("DirectX.clear()");
     State& s = st();
     const float c[4] = {r, g, b, a};
-    s.ctx->OMSetRenderTargets(1, &s.rtv, s.dsv);
-    s.ctx->ClearRenderTargetView(s.rtv, c);
-    s.ctx->ClearDepthStencilView(s.dsv, D3D11_CLEAR_DEPTH | D3D11_CLEAR_STENCIL, 1.0f, 0);
+    // whatever is being drawn into: the window, or a render texture
+    ID3D11RenderTargetView* rtv = s.rtv;
+    ID3D11DepthStencilView* dsv = s.dsv;
+    for (auto& t : s.targets)
+        if (t.texture == s.current) {
+            rtv = t.rtv;
+            dsv = t.dsv;
+        }
+    s.ctx->OMSetRenderTargets(1, &rtv, dsv);
+    s.ctx->ClearRenderTargetView(rtv, c);
+    s.ctx->ClearDepthStencilView(dsv, D3D11_CLEAR_DEPTH | D3D11_CLEAR_STENCIL, 1.0f, 0);
 }
 
 void setDepthTest_(bool on) {
@@ -463,6 +493,68 @@ void setTexture_(int32_t slot, int32_t texture) {
     need("DirectX.setTexture()");
     ID3D11ShaderResourceView* view = lookup(st().textures, texture, "DirectX.setTexture()", "texture");
     st().ctx->PSSetShaderResources((UINT)slot, 1, &view);
+}
+
+// A texture to draw into (setRenderTarget) and then use like any other (setTexture). It has its own depth buffer.
+int32_t createRenderTexture_(int32_t width, int32_t height) {
+    const char* what = "DirectX.createRenderTexture()";
+    need(what);
+    if (width <= 0 || height <= 0) native::fail(what, "the size has to be more than 0, but it's " + str(width) + " x " + str(height));
+    State& s = st();
+    D3D11_TEXTURE2D_DESC td{};
+    td.Width = (UINT)width;
+    td.Height = (UINT)height;
+    td.MipLevels = 1;
+    td.ArraySize = 1;
+    td.Format = DXGI_FORMAT_R8G8B8A8_UNORM;
+    td.SampleDesc.Count = 1;
+    td.Usage = D3D11_USAGE_DEFAULT;
+    td.BindFlags = D3D11_BIND_RENDER_TARGET | D3D11_BIND_SHADER_RESOURCE;
+    ID3D11Texture2D* tex = nullptr;
+    check(s.device->CreateTexture2D(&td, nullptr, &tex), what, "create the render texture");
+    RenderTarget t;
+    t.width = width;
+    t.height = height;
+    ID3D11ShaderResourceView* view = nullptr;
+    HRESULT hr = s.device->CreateShaderResourceView(tex, nullptr, &view);
+    if (SUCCEEDED(hr)) hr = s.device->CreateRenderTargetView(tex, nullptr, &t.rtv);
+    tex->Release();
+    check(hr, what, "create the render texture's views");
+    D3D11_TEXTURE2D_DESC dd = td;
+    dd.Format = DXGI_FORMAT_D24_UNORM_S8_UINT;
+    dd.BindFlags = D3D11_BIND_DEPTH_STENCIL;
+    check(s.device->CreateTexture2D(&dd, nullptr, &t.depthTex), what, "create the render texture's depth buffer");
+    check(s.device->CreateDepthStencilView(t.depthTex, nullptr, &t.dsv), what, "create the render texture's depth view");
+    s.textures.push_back(view);
+    t.texture = (int32_t)s.textures.size();
+    s.targets.push_back(t);
+    return t.texture;
+}
+
+// Draws into this render texture from now on (0: the window again). The viewport is set to its size.
+void setRenderTarget_(int32_t texture) {
+    const char* what = "DirectX.setRenderTarget()";
+    need(what);
+    State& s = st();
+    // a texture can't be read while it's drawn into: the textures given to the pixel shader are taken away
+    ID3D11ShaderResourceView* none[8] = {};
+    s.ctx->PSSetShaderResources(0, 8, none);
+    if (texture == 0) {
+        s.current = 0;
+        s.ctx->OMSetRenderTargets(1, &s.rtv, s.dsv);
+        D3D11_VIEWPORT vp{0, 0, (float)s.screenW, (float)s.screenH, 0, 1};
+        s.ctx->RSSetViewports(1, &vp);
+        return;
+    }
+    for (auto& t : s.targets)
+        if (t.texture == texture) {
+            s.current = texture;
+            s.ctx->OMSetRenderTargets(1, &t.rtv, t.dsv);
+            D3D11_VIEWPORT vp{0, 0, (float)t.width, (float)t.height, 0, 1};
+            s.ctx->RSSetViewports(1, &vp);
+            return;
+        }
+    native::fail(what, "texture " + str(texture) + " can't be drawn into - make one that can with DirectX.createRenderTexture(width, height) (0 is the window)");
 }
 
 void setTextureFilter_(bool smooth) {

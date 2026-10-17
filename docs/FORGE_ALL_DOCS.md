@@ -8336,6 +8336,49 @@ OpenGL.texParameteri(OpenGL.TEXTURE_2D, OpenGL.TEXTURE_MAG_FILTER, OpenGL.NEARES
 
 In the fragment shader, read the texture with a `uniform sampler2D` and `texture(...)`. A `sampler2D` reads texture unit 0 unless you set it with `uniform1i`.
 
+### Framebuffers: drawing into a texture
+
+A **framebuffer** is somewhere to draw other than the window: draw a scene into a texture, then use that texture like any other (a security-camera screen, a mirror, a minimap, or effects over the whole picture).
+
+| Function | What it does |
+|---|---|
+| `texImage2D(int target, int width, int height)` | gives the bound texture an empty picture of this size (RGBA, smooth filtering), ready to be drawn into |
+| `genFramebuffer()` | a new framebuffer |
+| `bindFramebuffer(int target, int framebuffer)` | draws into it from now on (`FRAMEBUFFER`); `0` is the window |
+| `framebufferTexture2D(int target, int attachment, int textarget, int texture)` | the texture its colors go into (`COLOR_ATTACHMENT0`, `TEXTURE_2D`) |
+| `checkFramebufferStatus(int target)` | `FRAMEBUFFER_COMPLETE` when it's ready to draw into |
+| `genRenderbuffer()`, `bindRenderbuffer(int target, int renderbuffer)` | a buffer that's drawn into but never read: a depth buffer (`RENDERBUFFER`) |
+| `renderbufferStorage(int target, int format, int width, int height)` | gives it a size, for depth `DEPTH_COMPONENT24` |
+| `framebufferRenderbuffer(int target, int attachment, int rbtarget, int renderbuffer)` | uses it for the framebuffer's depth (`DEPTH_ATTACHMENT`) |
+| `deleteFramebuffer(int framebuffer)`, `deleteRenderbuffer(int renderbuffer)` | frees them |
+
+```cpp
+// once: a 256 x 256 texture to draw into, with a depth buffer
+int picture = OpenGL.genTexture();
+OpenGL.bindTexture(OpenGL.TEXTURE_2D, picture);
+OpenGL.texImage2D(OpenGL.TEXTURE_2D, 256, 256);
+int fb = OpenGL.genFramebuffer();
+OpenGL.bindFramebuffer(OpenGL.FRAMEBUFFER, fb);
+OpenGL.framebufferTexture2D(OpenGL.FRAMEBUFFER, OpenGL.COLOR_ATTACHMENT0, OpenGL.TEXTURE_2D, picture);
+int depth = OpenGL.genRenderbuffer();
+OpenGL.bindRenderbuffer(OpenGL.RENDERBUFFER, depth);
+OpenGL.renderbufferStorage(OpenGL.RENDERBUFFER, OpenGL.DEPTH_COMPONENT24, 256, 256);
+OpenGL.framebufferRenderbuffer(OpenGL.FRAMEBUFFER, OpenGL.DEPTH_ATTACHMENT, OpenGL.RENDERBUFFER, depth);
+OpenGL.bindFramebuffer(OpenGL.FRAMEBUFFER, 0);
+
+// every frame: draw into the texture, then use it on the window
+OpenGL.bindFramebuffer(OpenGL.FRAMEBUFFER, fb);
+OpenGL.viewport(0, 0, 256, 256);                    // the texture's size
+OpenGL.clear(OpenGL.COLOR_BUFFER_BIT bitor OpenGL.DEPTH_BUFFER_BIT);
+// ... draw the scene ...
+OpenGL.bindFramebuffer(OpenGL.FRAMEBUFFER, 0);
+OpenGL.viewport(0, 0, OpenGL.width(), OpenGL.height());
+OpenGL.bindTexture(OpenGL.TEXTURE_2D, picture);
+// ... draw something with the texture on it ...
+```
+
+Remember the `viewport`: it's the size being drawn into, and it doesn't change by itself when the framebuffer does.
+
 ### Constants
 
 | Group | Names |
@@ -8349,6 +8392,7 @@ In the fragment shader, read the texture with a `uniform sampler2D` and `texture
 | depth | `LESS`, `LEQUAL`, `ALWAYS` |
 | culling | `FRONT`, `BACK`, `FRONT_AND_BACK` |
 | textures | `TEXTURE_2D`, `TEXTURE0`-`TEXTURE3`, `TEXTURE_MIN_FILTER`, `TEXTURE_MAG_FILTER`, `TEXTURE_WRAP_S`, `TEXTURE_WRAP_T`, `NEAREST`, `LINEAR`, `NEAREST_MIPMAP_NEAREST`, `LINEAR_MIPMAP_LINEAR`, `REPEAT`, `CLAMP_TO_EDGE` |
+| framebuffers | `FRAMEBUFFER`, `RENDERBUFFER`, `COLOR_ATTACHMENT0`, `DEPTH_ATTACHMENT`, `DEPTH_COMPONENT24`, `FRAMEBUFFER_COMPLETE` |
 | errors | `NO_ERROR`, `INVALID_ENUM`, `INVALID_VALUE`, `INVALID_OPERATION`, `OUT_OF_MEMORY` |
 
 They have the same numbers as in real OpenGL, so a value from a tutorial can be used as a plain number too.
@@ -8357,7 +8401,6 @@ They have the same numbers as in real OpenGL, so a value from a tutorial can be 
 
 This toolkit covers the parts of OpenGL that most games and tutorials use. It doesn't have:
 
-- framebuffers (drawing into a texture);
 - uniform buffers, instancing, or geometry shaders;
 - 3D textures and cube maps.
 
@@ -8550,6 +8593,30 @@ SamplerState samp : register(s0);
 float4 c = tex.Sample(samp, uv);
 ```
 
+### Render textures: drawing into a texture
+
+A **render texture** is a texture you can draw into, then use like any other (a security-camera screen, a mirror, a minimap, or effects over the whole picture).
+
+| Function | What it does |
+|---|---|
+| `createRenderTexture(int width, int height)` | a texture of this size that can be drawn into, with its own depth buffer; gives back its handle |
+| `setRenderTarget(int texture)` | draws into this render texture from now on (and `clear` clears it); `0` is the window again. The viewport changes to its size |
+
+```cpp
+int picture = DirectX.createRenderTexture(256, 256);    // once
+
+// every frame
+DirectX.setRenderTarget(picture);
+DirectX.clear(0, 0, 0, 1);
+// ... draw the scene ...
+DirectX.setRenderTarget(0);
+DirectX.clear(0.1, 0.1, 0.15, 1);
+DirectX.setTexture(0, picture);
+// ... draw something with the texture on it ...
+```
+
+A texture can't be read while it's being drawn into, so `setRenderTarget` takes the textures away from the pixel shader: call `setTexture` again after it.
+
 ### Matrices
 
 The helpers are listed in Matrices (see “Low-Level Toolkits: OpenGL, DirectX and Vulkan” › “Matrices”). DirectX's `perspective` and `orthographic` put depth from 0 to 1, as Direct3D expects.
@@ -8565,7 +8632,6 @@ The helpers are listed in Matrices (see “Low-Level Toolkits: OpenGL, DirectX a
 
 This toolkit covers what most games and tutorials need. It doesn't have:
 
-- render targets (drawing into a texture);
 - geometry, hull or compute shaders;
 - instancing;
 - vertex buffers that change after they're made.
@@ -8813,6 +8879,35 @@ Vulkan.drawIndexed(36);
 
 Every graphics card allows at least **32 floats** (two matrices) of push constants. Asking for more than the card allows stops `createPipeline` with an error that says the card's limit.
 
+### Textures
+
+| Function | What it does |
+|---|---|
+| `loadTexture(string path)` | loads a `.png` (or `.jpg`, `.bmp`...) from the game's folder onto the graphics card and gives back its handle |
+| `bindTexture(int texture)` | the draws after it read this texture (call it after `bindPipeline`, inside the frame) |
+| `setTextureFilter(bool smooth)` | `true` (the start) blends pixels when a texture is stretched; `false` keeps them sharp, for pixel art. It's for the textures bound after it |
+
+Every pipeline has room for one texture. In the fragment shader it's set 0, binding 0:
+
+```glsl
+layout(set = 0, binding = 0) uniform sampler2D picture;
+// ...
+outColor = texture(picture, uv);
+```
+
+Texture coordinate `(0, 0)` is the image's **top-left** corner, and the texture repeats past its edges. For see-through pictures, call `setBlending(true)` **before** `createPipeline` (it's a setting for the pipelines made after it).
+
+```cpp
+Vulkan.setBlending(true);
+int pipeline = Vulkan.createPipeline(vs, fs, [2, 2]);       // position, then texture coordinates
+int player = Vulkan.loadTexture("player.png");
+// ... in the frame:
+Vulkan.bindPipeline(pipeline);
+Vulkan.bindTexture(player);
+Vulkan.bindVertexBuffer(square);
+Vulkan.draw(6);
+```
+
 ### Matrices
 
 The helpers are listed in Matrices (see “Low-Level Toolkits: OpenGL, DirectX and Vulkan” › “Matrices”). Vulkan's `perspective` and `orthographic` put depth from 0 to 1. They also flip y, so that up is up on screen, like in OpenGL. The usual way is to multiply `projection × view × model` in the game and push the result as one `mat4`:
@@ -8834,7 +8929,7 @@ Vulkan.pushConstants(pipeline, Vulkan.multiply(camera, Vulkan.rotate(angle, vec3
 
 This first version of the toolkit covers drawing shapes with your own shaders. It doesn't have:
 
-- **textures** (images) or uniform buffers: they need *descriptor sets*, which aren't here yet. Colors come from the corners and from push constants.
+- uniform buffers, or more than one texture at a time. Other numbers go to the shaders as push constants.
 - buffers that change after they're made;
 - compute shaders, or drawing into images other than the window;
 - multisampling (smoothed edges).

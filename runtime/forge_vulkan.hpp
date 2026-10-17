@@ -49,6 +49,9 @@ int32_t createVertexBuffer_(const List<float>& data);
 int32_t createIndexBuffer_(const List<int32_t>& indices);
 
 // ---- recording a frame
+int32_t loadTexture_(const std::string& path);
+void bindTexture_(int32_t texture);
+void setTextureFilter_(bool smooth);
 bool beginFrame_(float r, float g, float b, float a);
 void bindPipeline_(int32_t pipeline);
 void bindVertexBuffer_(int32_t buffer);

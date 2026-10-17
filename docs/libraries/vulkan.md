@@ -237,6 +237,35 @@ Vulkan.drawIndexed(36);
 
 Every graphics card allows at least **32 floats** (two matrices) of push constants. Asking for more than the card allows stops `createPipeline` with an error that says the card's limit.
 
+## Textures
+
+| Function | What it does |
+|---|---|
+| `loadTexture(string path)` | loads a `.png` (or `.jpg`, `.bmp`...) from the game's folder onto the graphics card and gives back its handle |
+| `bindTexture(int texture)` | the draws after it read this texture (call it after `bindPipeline`, inside the frame) |
+| `setTextureFilter(bool smooth)` | `true` (the start) blends pixels when a texture is stretched; `false` keeps them sharp, for pixel art. It's for the textures bound after it |
+
+Every pipeline has room for one texture. In the fragment shader it's set 0, binding 0:
+
+```glsl
+layout(set = 0, binding = 0) uniform sampler2D picture;
+// ...
+outColor = texture(picture, uv);
+```
+
+Texture coordinate `(0, 0)` is the image's **top-left** corner, and the texture repeats past its edges. For see-through pictures, call `setBlending(true)` **before** `createPipeline` (it's a setting for the pipelines made after it).
+
+```cpp
+Vulkan.setBlending(true);
+int pipeline = Vulkan.createPipeline(vs, fs, [2, 2]);       // position, then texture coordinates
+int player = Vulkan.loadTexture("player.png");
+// ... in the frame:
+Vulkan.bindPipeline(pipeline);
+Vulkan.bindTexture(player);
+Vulkan.bindVertexBuffer(square);
+Vulkan.draw(6);
+```
+
 ## Matrices
 
 The helpers are listed in [Matrices](toolkits.md#matrices). Vulkan's `perspective` and `orthographic` put depth from 0 to 1. They also flip y, so that up is up on screen, like in OpenGL. The usual way is to multiply `projection × view × model` in the game and push the result as one `mat4`:
@@ -258,7 +287,7 @@ Vulkan.pushConstants(pipeline, Vulkan.multiply(camera, Vulkan.rotate(angle, vec3
 
 This first version of the toolkit covers drawing shapes with your own shaders. It doesn't have:
 
-- **textures** (images) or uniform buffers: they need *descriptor sets*, which aren't here yet. Colors come from the corners and from push constants.
+- uniform buffers, or more than one texture at a time. Other numbers go to the shaders as push constants.
 - buffers that change after they're made;
 - compute shaders, or drawing into images other than the window;
 - multisampling (smoothed edges).

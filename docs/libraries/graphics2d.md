@@ -164,3 +164,11 @@ void drawHealthBar(float x, float y, int hp, int maxHp){
     graphics2d.drawText("{hp}/{maxHp}", x + 8, y + 2, 16, color.WHITE);
 }
 ```
+
+## Limits
+
+- Shapes are drawn upright: there are no turned rectangles, shapes with more than three corners, gradients or rounded corners. Pictures can be turned (`Texture.drawRotated`), and so can the whole view (`Camera2D`'s `rotation`).
+- `drawCircleOutline` is one pixel thin, and only takes `x` and `y` (no `vec2` version yet).
+- `drawText` uses the built-in pixel font. For other fonts, load one with [`assets.loadFont`](assets.md#font).
+- Sprite effects change pictures only (textures and animations), never shapes or text, and an outline stays inside the picture's own size.
+- There's no drawing limited to a rectangle (clipping) and no blend modes, apart from see-through colors.

@@ -11,6 +11,8 @@ on:
 jobs:
   test:
     runs-on: windows-latest
+    env:
+      FRG_NO_UPDATE_CHECK: "1"   # CI builds never look for a newer Forge
     steps:
       - uses: actions/checkout@v4
 
@@ -66,6 +68,71 @@ jobs:
             examples/
             !examples/*/build/forge/
           retention-days: 7
+
+  # Builds the installer (installer/build.ps1), installs it on this machine, makes and builds a game with the
+  # installed Forge with no other g++ on the PATH (so it has to use its own), and uninstalls it again.
+  # The release workflow attaches the installer to the release.
+  installer:
+    needs: test
+    runs-on: windows-latest
+    env:
+      FRG_NO_UPDATE_CHECK: "1"
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Get w64devkit and Inno Setup
+        shell: pwsh
+        run: |
+          $url = "https://github.com/skeeto/w64devkit/releases/download/v2.0.0/w64devkit-x64-2.0.0.exe"
+          Invoke-WebRequest $url -OutFile "$env:RUNNER_TEMP\w64devkit.exe"
+          & "$env:RUNNER_TEMP\w64devkit.exe" -y "-o$env:RUNNER_TEMP" | Out-Null
+          "$env:RUNNER_TEMP\w64devkit\bin" | Out-File -Append -Encoding utf8 $env:GITHUB_PATH
+          if (-not (Test-Path "${env:ProgramFiles(x86)}\Inno Setup 6\ISCC.exe")) { choco install innosetup -y --no-progress }
+
+      - name: Build frg
+        shell: pwsh
+        run: |
+          cmake -S . -B build -G Ninja
+          cmake --build build
+
+      - name: Build the installer
+        shell: pwsh
+        run: .\installer\build.ps1 -W64devkit "$env:RUNNER_TEMP\w64devkit"
+
+      - name: Install it, make a game with it, uninstall it
+        shell: pwsh
+        run: |
+          $setup = Get-ChildItem installer\out\Forge-*-setup.exe | Select-Object -First 1
+          $dir = "$env:RUNNER_TEMP\ForgeInstalled"
+          Start-Process $setup.FullName -ArgumentList "/VERYSILENT", "/SUPPRESSMSGBOXES", "/NORESTART", "/CURRENTUSER", "/DIR=`"$dir`"", "/TASKS=path,fileicons" -Wait
+          if (-not (Test-Path "$dir\bin\frg.exe")) { throw "frg.exe wasn't installed" }
+          if (-not (Test-Path "$dir\w64devkit\bin\g++.exe")) { throw "the compiler wasn't installed" }
+          $userPath = [Environment]::GetEnvironmentVariable("Path", "User")
+          if ($userPath -notlike "*$dir\bin*") { throw "Forge wasn't added to the PATH" }
+
+          # no other g++: the installed frg has to find its own
+          $env:PATH = ($env:PATH -split ';' | Where-Object { $_ -notmatch 'w64devkit|mingw|msys|strawberry|cygwin' }) -join ';'
+          if (Get-Command g++ -ErrorAction SilentlyContinue) { throw "another g++ is still on the PATH: $((Get-Command g++).Source)" }
+          & "$dir\bin\frg.exe" version
+          Set-Location $env:RUNNER_TEMP
+          & "$dir\bin\frg.exe" new smoke --template window
+          & "$dir\bin\frg.exe" build smoke
+          if ($LASTEXITCODE -ne 0 -or -not (Test-Path smoke\build\smoke.exe)) { throw "the installed Forge couldn't build a game" }
+
+          Start-Process "$dir\unins000.exe" -ArgumentList "/VERYSILENT", "/SUPPRESSMSGBOXES", "/NORESTART" -Wait
+          # the uninstaller works from a copy of itself, so wait for it to finish
+          for ($i = 0; $i -lt 60 -and (Test-Path "$dir\bin\frg.exe"); $i++) { Start-Sleep 1 }
+          if (Test-Path "$dir\bin\frg.exe") { throw "the uninstaller left frg.exe" }
+          $userPath = [Environment]::GetEnvironmentVariable("Path", "User")
+          if ($userPath -like "*$dir\bin*") { throw "the uninstaller left Forge on the PATH" }
+          Write-Host "Installed, built a game and uninstalled: all good."
+
+      - name: Keep the installer
+        uses: actions/upload-artifact@v4
+        with:
+          name: installer
+          path: installer/out/*.exe
+          retention-days: 30
 
   # Runs every example for 180 frames with scripted keys and saves the last frame as a picture.
   # GitHub's Windows machines have no graphics card, so this runs the Windows .exe files on Linux under Wine,

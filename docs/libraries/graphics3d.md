@@ -327,3 +327,13 @@ void draw(){
     graphics3d.drawSphere(vec3(0, 3 + math.abs(math.sin(t * 3)), 0), 0.5, color.ORANGE);
 }
 ```
+
+## Limits
+
+- **One light**, shining from a direction like the sun. There are no lamps (lights at a place) or spotlights, and **no shadows**.
+- The camera is always a perspective camera: there's no flat (orthographic or isometric) view.
+- Models are drawn as they were made: their animations aren't played, and their materials are used as loaded (the `tint` colors them).
+- A mesh can't be changed after `makeMesh` (make a new one), and it has one texture.
+- See-through things aren't sorted: draw them after everything solid, the farthest first, or they can hide what's behind them.
+- Culling only skips things that are completely out of view; it doesn't skip things hidden behind walls.
+- `toScreen` gives meaningless numbers for points behind the camera, so check that a point is in front first (the `dot` of its direction from the camera and the camera's direction is above 0).

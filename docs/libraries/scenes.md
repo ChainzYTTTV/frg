@@ -93,3 +93,7 @@ if (scenes.current() is Level) {
 ```
 
 See [examples/menu](../../examples/menu/main.frg) for a menu with buttons, using [`<ui>`](ui.md).
+
+## Limits
+
+- One scene at a time: a pause menu can't sit on top of a game scene as a second scene. Draw the menu from the game scene instead, while it's paused.

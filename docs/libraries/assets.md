@@ -128,3 +128,10 @@ Fonts are prepared for drawing the first time they're used, which needs the wind
 ## Memory
 
 Textures and fonts are freed automatically when nothing uses them anymore, and everything is cleaned up when the window closes. There's no need to unload anything.
+
+## Limits
+
+- Pictures are drawn with **sharp pixels** when they're made bigger (each pixel becomes a block). That's what pixel art wants; there's no setting for smooth stretching. (Fonts are smooth.)
+- A texture can't be changed after it's loaded, and its pixels can't be read. To draw into a picture, the low-level toolkits have render textures ([OpenGL](opengl.md#framebuffers-drawing-into-a-texture), [DirectX](directx.md#render-textures-drawing-into-a-texture)).
+- **Loaded fonts only have basic English characters**: the letters A-Z and a-z, digits and the usual punctuation (the 95 characters of ASCII). Accented letters (é, ü), other alphabets and emoji don't show.
+- An `Animation`'s frames are all the same size, one after another in the sheet. A `.gif` loads as one picture (its first frame), not as an animation.

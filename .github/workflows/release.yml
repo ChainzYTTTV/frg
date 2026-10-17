@@ -19,6 +19,7 @@ on:
 
 permissions:
   contents: write
+  actions: read   # to get the installer the tests run built
 
 jobs:
   release:
@@ -53,6 +54,7 @@ jobs:
             found { print }
           ' CHANGELOG.md > notes.md
           if [ ! -s notes.md ]; then echo "Forge $version." > notes.md; fi
+          printf '\n**To install:** download `Forge-%s-setup.exe` below and run it. It includes everything Forge needs (its own C++ compiler too). Already have Forge? Run it to update; your games and settings stay.\n\n' "$version" >> notes.md
           echo "Full list of changes: [CHANGELOG.md](https://github.com/${GITHUB_REPOSITORY}/blob/$tag/CHANGELOG.md)" >> notes.md
 
           if git ls-remote --exit-code --tags origin "refs/tags/$tag" > /dev/null; then
@@ -62,3 +64,27 @@ jobs:
             gh release create "$tag" --target "$SHA" --title "Forge $version" --notes-file notes.md
           fi
           echo "Made release $tag."
+
+      # The installer the tests run built and tested (tests.yml, "installer"), attached once per version.
+      - name: Get the installer from the tests run
+        if: github.event_name == 'workflow_run'
+        uses: actions/download-artifact@v4
+        with:
+          name: installer
+          path: installer-out
+          run-id: ${{ github.event.workflow_run.id }}
+          github-token: ${{ github.token }}
+
+      - name: Attach the installer to the release
+        if: github.event_name == 'workflow_run'
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          version="$(sed -n 's/.*kVersion = "\([^"]*\)".*/\1/p' src/main.cpp)"
+          tag="v$version"
+          if gh release view "$tag" --json assets -q '.assets[].name' | grep -q -- '-setup.exe$'; then
+            echo "$tag already has its installer."
+            exit 0
+          fi
+          for f in installer-out/*-setup.exe; do gh release upload "$tag" "$f"; done
+          echo "Attached the installer to $tag."

@@ -127,3 +127,9 @@ task showMenu(){
 ## Why it works like this
 
 A tween is a value you update and read, like a [`Timer`](time.md). A tween doesn't run code by itself when it ends: check `isDone()` instead (or keep a [function value](../language/06-functions.md#functions-as-values) and call it when `isDone()` becomes true). That also means it works the same way in every kind of game loop, and in tasks.
+
+## Limits
+
+- A `Tween` changes one decimal number (`float`). For a position or a color, use one tween and `lerp` with its `value()` as `t`.
+- Five kinds of easing (`LINEAR`, `IN`, `OUT`, `IN_OUT`, `BOUNCE`).
+- It only moves when you call `update(dt)`.

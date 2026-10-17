@@ -84,3 +84,8 @@ if (input.keyPressed(Key.R) and !ui.isTyping()) {
 - Draw controls after the game world, so they appear on top.
 
 See [examples/menu](../../examples/menu/main.frg) for a full menu screen.
+
+## Limits
+
+- `textBox`: typing adds letters at the end and Backspace removes the last one. There's no moving the cursor inside the text, selecting, copying or pasting.
+- Controls use the built-in pixel font, and each one goes where its `rect` says: there's no automatic layout and no scrolling lists.

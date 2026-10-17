@@ -86,3 +86,8 @@ void loadGame(){
 
 - Files are text only (no images or raw bytes).
 - `int(text)` stops the game if the text isn't a number. If players might edit your save files, check values before converting.
+
+## Limits
+
+- Text only: no pictures or raw bytes.
+- `files(folder)` lists the files in a folder, not the folders inside it. There's no making or deleting a folder by itself; `write` and `append` make the folders a file needs.

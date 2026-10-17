@@ -132,7 +132,7 @@ inline std::shared_ptr<Sound_> loadSound_(const std::string& path) {
     auto s = std::make_shared<Sound_>();
     if (!ensureDevice()) return s;
     s->sound = LoadSound(file.c_str());
-    if (s->sound.frameCount == 0) panic("audio.loadSound()", "couldn't read '" + path + "' as a sound (use .wav, .ogg, .mp3, .flac or .qoi)");
+    if (s->sound.frameCount == 0) panic("audio.loadSound()", "couldn't read '" + path + "' as a sound (use .wav, .ogg, .mp3, .flac or .qoa)");
     s->loaded = true;
     liveSounds().push_back(s.get());
     return s;

@@ -148,3 +148,8 @@ Games read three environment variables, so they can be tested without anyone at 
 | `FRG_AUTOTEST_FRAMES=90` | stop after 90 frames |
 | `FRG_AUTOTEST_SHOT=shot.png` | take this screenshot just before stopping |
 | `FRG_AUTOTEST_INPUT=RIGHT:10-60,SPACE:30-31` | pretend these keys are held during those frames (mouse buttons are `MOUSE_LEFT`, `MOUSE_RIGHT`, `MOUSE_MIDDLE`, `MOUSE_BACK` and `MOUSE_FORWARD`) |
+
+## Limits
+
+- One window per game, and **its size is fixed**: the player can't drag its edges to resize it. `toggleFullscreen()` is the only other size.
+- The window's icon comes from `icon.png` when the game is built; it can't be changed while the game runs.

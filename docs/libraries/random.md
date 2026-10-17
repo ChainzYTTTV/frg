@@ -46,3 +46,8 @@ int damage = random.chance(0.1) ? 20 : 10;
 // spawn somewhere along the top of the screen
 vec2 spawn = vec2(random.range(0.0, 960.0), -20);
 ```
+
+## Limits
+
+- Not for secrets: don't make passwords or codes that people mustn't guess with it.
+- `random.seed(n)` gives the same numbers every time with the same Forge; a different version of Forge may give different ones.

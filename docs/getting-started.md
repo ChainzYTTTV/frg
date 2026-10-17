@@ -7,9 +7,18 @@ This page gets you from nothing to a running game, and covers every `frg` comman
 | | Why |
 |---|---|
 | **Windows 10 or 11** | Forge only builds Windows games for now |
-| **w64devkit**, with its `bin` folder on your PATH | Forge turns your code into C++ and uses w64devkit's `g++` to make the `.exe` |
-| **Forge itself** (`frg.exe`), with its `bin` folder on your PATH | So you can type `frg` in any terminal |
+| **Forge** | The installer has everything: `frg`, its own C++ compiler (w64devkit's `g++`, which Forge uses to make `.exe` files), the docs and the examples |
 | **VS Code** (optional, recommended) | With the Forge extension: colors, errors as you save, a Run button |
+
+### Installing
+
+1. Get `Forge-<version>-setup.exe` from the [releases page](https://github.com/ChainzYTTTV/frg/releases/latest) and run it. It installs for your Windows account only, so it doesn't need admin rights.
+2. Keep the three choices ticked: Forge on your PATH (so `frg` works in any terminal), the Forge icon for `.frg` files, and the VS Code extension (only shown if VS Code is installed).
+3. Open a **new** terminal (one opened before installing doesn't know about Forge yet).
+
+It goes into `%LOCALAPPDATA%\Programs\Forge`. To remove it: Windows Settings > Apps > Forge > Uninstall. That also takes it off your PATH and puts `.frg` files back to a plain icon; your games aren't touched.
+
+**Updates** are optional. Once a day `frg` notices when a newer Forge is out and says so in one line after a build. `frg update` installs it if you want; see [frg update](reference/commands.md#frg-update). Running a newer installer over an older Forge updates it in place.
 
 To check that everything is set up, open a terminal and run:
 
@@ -18,7 +27,11 @@ frg version
 g++ --version
 ```
 
-The first should print `Forge 0.9.4` and the second should print a GCC version. If `frg` isn't found, add Forge's `bin` folder to your PATH and restart the terminal.
+The first should print `Forge 0.9.4`. If `frg` isn't found, open a new terminal; if it's still not found, run the installer again with "Add Forge to my PATH" ticked.
+
+### Without the installer
+
+You can also use Forge from a copy of its folder: put its `bin` folder on your PATH, and install [w64devkit](https://github.com/skeeto/w64devkit) with its `bin` folder on your PATH too (Forge uses its `g++`). `g++ --version` should then print a GCC version. An installed Forge always uses the compiler that came with it, whatever else is on the PATH.
 
 ### Building Forge from source
 

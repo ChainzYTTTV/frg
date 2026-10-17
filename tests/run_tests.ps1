@@ -37,6 +37,8 @@ $root = Split-Path -Parent $PSScriptRoot
 $frg = Join-Path $root "bin\frg.exe"
 $work = Join-Path ([IO.Path]::GetTempPath()) "forge-tests"
 [Console]::OutputEncoding = [Text.Encoding]::UTF8
+# the tests never look for a newer Forge (no network, and no update notes in the output)
+$env:FRG_NO_UPDATE_CHECK = "1"
 
 function Invoke-Frg([string]$command, [string]$dir, [string[]]$extra = @()) {
     $psi = [Diagnostics.ProcessStartInfo]::new($frg)

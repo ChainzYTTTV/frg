@@ -12,7 +12,7 @@ Plays sound effects and music. Audio files go in the game folder and are found t
 |---|---|---|
 | For | short effects: jump, hit, coin | long tracks: background music |
 | Loaded | completely into memory | streamed from the file a bit at a time while it plays |
-| Formats | `.wav`, `.ogg`, `.mp3`, `.flac`, `.qoi` | `.ogg`, `.mp3`, `.wav`, `.flac`, `.xm`, `.mod` |
+| Formats | `.wav`, `.ogg`, `.mp3`, `.flac`, `.qoa` | `.ogg`, `.mp3`, `.wav`, `.flac`, `.xm`, `.mod` |
 | Loops by default | no | yes |
 
 ## Loading
@@ -102,3 +102,9 @@ void update(float dt){
 void draw(){
 }
 ```
+
+## Limits
+
+- **One `Sound` plays one copy at a time**: playing it while it's still playing starts it again from the beginning. For sounds that overlap (fast gunfire, many coins at once), load the same file into two or three `Sound`s and take turns.
+- There's no left/right panning, no sounds placed in a 3D world, and no effects (echo, filters).
+- Music can't jump to a point in the track: `position()` only says where it is.

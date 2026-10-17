@@ -145,3 +145,10 @@ class Poison : Component {
     }
 }
 ```
+
+## Limits
+
+- Components are found by their class's name, written as text (`get("Health")`): a typo isn't an error, it just finds nothing (`null`).
+- An entity can have two components of the same class, but `get` and `remove` only ever reach the first one.
+- Components run in the order they were added; there's no way to choose another order.
+- Entities and components are kept in plain lists, made for the number of things a game has on screen (hundreds), not for huge simulations.

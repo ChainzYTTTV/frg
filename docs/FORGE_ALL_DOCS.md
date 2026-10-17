@@ -1791,9 +1791,18 @@ This page gets you from nothing to a running game, and covers every `frg` comman
 | | Why |
 |---|---|
 | **Windows 10 or 11** | Forge only builds Windows games for now |
-| **w64devkit**, with its `bin` folder on your PATH | Forge turns your code into C++ and uses w64devkit's `g++` to make the `.exe` |
-| **Forge itself** (`frg.exe`), with its `bin` folder on your PATH | So you can type `frg` in any terminal |
+| **Forge** | The installer has everything: `frg`, its own C++ compiler (w64devkit's `g++`, which Forge uses to make `.exe` files), the docs and the examples |
 | **VS Code** (optional, recommended) | With the Forge extension: colors, errors as you save, a Run button |
+
+#### Installing
+
+1. Get `Forge-<version>-setup.exe` from the [releases page](https://github.com/ChainzYTTTV/frg/releases/latest) and run it. It installs for your Windows account only, so it doesn't need admin rights.
+2. Keep the three choices ticked: Forge on your PATH (so `frg` works in any terminal), the Forge icon for `.frg` files, and the VS Code extension (only shown if VS Code is installed).
+3. Open a **new** terminal (one opened before installing doesn't know about Forge yet).
+
+It goes into `%LOCALAPPDATA%\Programs\Forge`. To remove it: Windows Settings > Apps > Forge > Uninstall. That also takes it off your PATH and puts `.frg` files back to a plain icon; your games aren't touched.
+
+**Updates** are optional. Once a day `frg` notices when a newer Forge is out and says so in one line after a build. `frg update` installs it if you want; see frg update (see “Commands: everything `frg` can do” › “frg update”). Running a newer installer over an older Forge updates it in place.
 
 To check that everything is set up, open a terminal and run:
 
@@ -1802,7 +1811,11 @@ frg version
 g++ --version
 ```
 
-The first should print `Forge 0.9.4` and the second should print a GCC version. If `frg` isn't found, add Forge's `bin` folder to your PATH and restart the terminal.
+The first should print `Forge 0.9.4`. If `frg` isn't found, open a new terminal; if it's still not found, run the installer again with "Add Forge to my PATH" ticked.
+
+#### Without the installer
+
+You can also use Forge from a copy of its folder: put its `bin` folder on your PATH, and install [w64devkit](https://github.com/skeeto/w64devkit) with its `bin` folder on your PATH too (Forge uses its `g++`). `g++ --version` should then print a GCC version. An installed Forge always uses the compiler that came with it, whatever else is on the PATH.
 
 #### Building Forge from source
 
@@ -5515,6 +5528,11 @@ int damage = random.chance(0.1) ? 20 : 10;
 vec2 spawn = vec2(random.range(0.0, 960.0), -20);
 ```
 
+### Limits
+
+- Not for secrets: don't make passwords or codes that people mustn't guess with it.
+- `random.seed(n)` gives the same numbers every time with the same Forge; a different version of Forge may give different ones.
+
 <!-- docs/libraries/window.md -->
 
 ## `<window>`: The Game Window
@@ -5667,6 +5685,11 @@ Games read three environment variables, so they can be tested without anyone at 
 | `FRG_AUTOTEST_FRAMES=90` | stop after 90 frames |
 | `FRG_AUTOTEST_SHOT=shot.png` | take this screenshot just before stopping |
 | `FRG_AUTOTEST_INPUT=RIGHT:10-60,SPACE:30-31` | pretend these keys are held during those frames (mouse buttons are `MOUSE_LEFT`, `MOUSE_RIGHT`, `MOUSE_MIDDLE`, `MOUSE_BACK` and `MOUSE_FORWARD`) |
+
+### Limits
+
+- One window per game, and **its size is fixed**: the player can't drag its edges to resize it. `toggleFullscreen()` is the only other size.
+- The window's icon comes from `icon.png` when the game is built; it can't be changed while the game runs.
 
 <!-- docs/libraries/input.md -->
 
@@ -5929,6 +5952,13 @@ if (input.keyPressed(Key.P)) {
 }
 ```
 
+### Limits
+
+- **Only the keys in the table (see “Keys”) can be read**: letters, the number row, the arrows, Space, Enter, Escape, Backspace, Tab, the Shift / Control / Alt keys and F1-F12. The number pad, punctuation keys (like `,` `.` `-` `=`), Delete, Home, End, Page Up / Down, Insert, Caps Lock and the Windows key can't.
+- Typing text is done with `ui.textBox` (see “`<ui>`: Buttons, Checkboxes, Sliders and Text Boxes” › “Typing text: textBox”).
+- Up to four controllers (`gamepad` 0 to 3). Their buttons have the Xbox names; controllers can't vibrate.
+- No touch screens.
+
 <!-- docs/libraries/graphics2d.md -->
 
 ## `<graphics2d>`: 2D Drawing
@@ -6097,6 +6127,14 @@ void drawHealthBar(float x, float y, int hp, int maxHp){
     graphics2d.drawText("{hp}/{maxHp}", x + 8, y + 2, 16, color.WHITE);
 }
 ```
+
+### Limits
+
+- Shapes are drawn upright: there are no turned rectangles, shapes with more than three corners, gradients or rounded corners. Pictures can be turned (`Texture.drawRotated`), and so can the whole view (`Camera2D`'s `rotation`).
+- `drawCircleOutline` is one pixel thin, and only takes `x` and `y` (no `vec2` version yet).
+- `drawText` uses the built-in pixel font. For other fonts, load one with `assets.loadFont` (see “`<assets>`: Images, Animations and Fonts” › “Font”).
+- Sprite effects change pictures only (textures and animations), never shapes or text, and an outline stays inside the picture's own size.
+- There's no drawing limited to a rectangle (clipping) and no blend modes, apart from see-through colors.
 
 <!-- docs/libraries/graphics3d.md -->
 
@@ -6430,6 +6468,16 @@ void draw(){
 }
 ```
 
+### Limits
+
+- **One light**, shining from a direction like the sun. There are no lamps (lights at a place) or spotlights, and **no shadows**.
+- The camera is always a perspective camera: there's no flat (orthographic or isometric) view.
+- Models are drawn as they were made: their animations aren't played, and their materials are used as loaded (the `tint` colors them).
+- A mesh can't be changed after `makeMesh` (make a new one), and it has one texture.
+- See-through things aren't sorted: draw them after everything solid, the farthest first, or they can hide what's behind them.
+- Culling only skips things that are completely out of view; it doesn't skip things hidden behind walls.
+- `toScreen` gives meaningless numbers for points behind the camera, so check that a point is in front first (the `dot` of its direction from the camera and the camera's direction is above 0).
+
 <!-- docs/libraries/assets.md -->
 
 ## `<assets>`: Images, Animations and Fonts
@@ -6563,6 +6611,13 @@ Fonts are prepared for drawing the first time they're used, which needs the wind
 
 Textures and fonts are freed automatically when nothing uses them anymore, and everything is cleaned up when the window closes. There's no need to unload anything.
 
+### Limits
+
+- Pictures are drawn with **sharp pixels** when they're made bigger (each pixel becomes a block). That's what pixel art wants; there's no setting for smooth stretching. (Fonts are smooth.)
+- A texture can't be changed after it's loaded, and its pixels can't be read. To draw into a picture, the low-level toolkits have render textures (OpenGL (see “`<OpenGL>`: Drawing with OpenGL Yourself” › “Framebuffers: drawing into a texture”), DirectX (see “`<DirectX>`: Drawing with Direct3D 11 Yourself” › “Render textures: drawing into a texture”)).
+- **Loaded fonts only have basic English characters**: the letters A-Z and a-z, digits and the usual punctuation (the 95 characters of ASCII). Accented letters (é, ü), other alphabets and emoji don't show.
+- An `Animation`'s frames are all the same size, one after another in the sheet. A `.gif` loads as one picture (its first frame), not as an animation.
+
 <!-- docs/libraries/audio.md -->
 
 ## `<audio>`: Sounds and Music
@@ -6579,7 +6634,7 @@ Plays sound effects and music. Audio files go in the game folder and are found t
 |---|---|---|
 | For | short effects: jump, hit, coin | long tracks: background music |
 | Loaded | completely into memory | streamed from the file a bit at a time while it plays |
-| Formats | `.wav`, `.ogg`, `.mp3`, `.flac`, `.qoi` | `.ogg`, `.mp3`, `.wav`, `.flac`, `.xm`, `.mod` |
+| Formats | `.wav`, `.ogg`, `.mp3`, `.flac`, `.qoa` | `.ogg`, `.mp3`, `.wav`, `.flac`, `.xm`, `.mod` |
 | Loops by default | no | yes |
 
 ### Loading
@@ -6669,6 +6724,12 @@ void update(float dt){
 void draw(){
 }
 ```
+
+### Limits
+
+- **One `Sound` plays one copy at a time**: playing it while it's still playing starts it again from the beginning. For sounds that overlap (fast gunfire, many coins at once), load the same file into two or three `Sound`s and take turns.
+- There's no left/right panning, no sounds placed in a 3D world, and no effects (echo, filters).
+- Music can't jump to a point in the track: `position()` only says where it is.
 
 <!-- docs/libraries/physics.md -->
 
@@ -6961,6 +7022,10 @@ Timer roundTimer = Timer(60);
 graphics2d.drawText("{int(roundTimer.left())}", 20, 20, 32, color.WHITE);
 ```
 
+### Limits
+
+- `Timer` and `time.now()` measure **real time**: they keep counting while your game shows its own pause menu, or while the window is being dragged. For a countdown that pauses, keep a `float` and take away `dt` in `update` only while the game isn't paused.
+
 <!-- docs/libraries/file.md -->
 
 ## `<file>`: Reading and Writing Text Files
@@ -7051,6 +7116,11 @@ void loadGame(){
 
 - Files are text only (no images or raw bytes).
 - `int(text)` stops the game if the text isn't a number. If players might edit your save files, check values before converting.
+
+### Limits
+
+- Text only: no pictures or raw bytes.
+- `files(folder)` lists the files in a folder, not the folders inside it. There's no making or deleting a folder by itself; `write` and `append` make the folders a file needs.
 
 <!-- docs/libraries/save.md -->
 
@@ -7281,6 +7351,12 @@ task showMenu(){
 
 A tween is a value you update and read, like a `Timer` (see “`<time>`: Clock, Date and Timers”). A tween doesn't run code by itself when it ends: check `isDone()` instead (or keep a function value (see “6. Functions” › “Functions as values”) and call it when `isDone()` becomes true). That also means it works the same way in every kind of game loop, and in tasks.
 
+### Limits
+
+- A `Tween` changes one decimal number (`float`). For a position or a color, use one tween and `lerp` with its `value()` as `t`.
+- Five kinds of easing (`LINEAR`, `IN`, `OUT`, `IN_OUT`, `BOUNCE`).
+- It only moves when you call `update(dt)`.
+
 <!-- docs/libraries/particles.md -->
 
 ## `<particles>`: Dust, Sparks and Explosions
@@ -7378,6 +7454,11 @@ boom.burst(80);
 One emitter can be moved around and reused: set its `position`, then `burst`. Particles already flying stay where they are.
 
 examples/platformer (the file `examples/platformer/` in the Forge folder) uses an emitter for dust when the player lands (in `player.frg`) and one for sparkles when a coin is collected (in `level.frg`).
+
+### Limits
+
+- Particles are colored circles (going from `startColor` to `endColor`): they can't be pictures.
+- 2D only, and particles don't collide with anything.
 
 <!-- docs/libraries/tilemap.md -->
 
@@ -7597,6 +7678,10 @@ if (scenes.current() is Level) {
 
 See examples/menu (the file `examples/menu/main.frg` in the Forge folder) for a menu with buttons, using `<ui>` (see “`<ui>`: Buttons, Checkboxes, Sliders and Text Boxes”).
 
+### Limits
+
+- One scene at a time: a pause menu can't sit on top of a game scene as a second scene. Draw the menu from the game scene instead, while it's paused.
+
 <!-- docs/libraries/ui.md -->
 
 ## `<ui>`: Buttons, Checkboxes, Sliders and Text Boxes
@@ -7685,6 +7770,11 @@ if (input.keyPressed(Key.R) and !ui.isTyping()) {
 - Draw controls after the game world, so they appear on top.
 
 See examples/menu (the file `examples/menu/main.frg` in the Forge folder) for a full menu screen.
+
+### Limits
+
+- `textBox`: typing adds letters at the end and Backspace removes the last one. There's no moving the cursor inside the text, selecting, copying or pasting.
+- Controls use the built-in pixel font, and each one goes where its `rect` says: there's no automatic layout and no scrolling lists.
 
 <!-- docs/libraries/ecs.md -->
 
@@ -7836,6 +7926,13 @@ class Poison : Component {
 }
 ```
 
+### Limits
+
+- Components are found by their class's name, written as text (`get("Health")`): a typo isn't an error, it just finds nothing (`null`).
+- An entity can have two components of the same class, but `get` and `remove` only ever reach the first one.
+- Components run in the order they were added; there's no way to choose another order.
+- Entities and components are kept in plain lists, made for the number of things a game has on screen (hundreds), not for huge simulations.
+
 <!-- docs/libraries/tasks.md -->
 
 ## `<tasks>`: Tasks Without a Window
@@ -7890,6 +7987,10 @@ Notes:
 - `tasks.runAll()` returns straight away if there are no tasks, and stops if the only tasks left are waiting on each other.
 - A task that loops forever (`while (true) { wait(1); }`) makes `runAll` run forever. Stop it first, or use `update`.
 - In a windowed game, don't call `tasks.update` yourself; the window already does, and calling it too would move time forward twice.
+
+### Limits
+
+- With a window open, every task's `wait` moves on with every frame, **even while your game shows its own pause menu**. A task that should stop during a pause has to check (for example `while (paused) { wait(); }`, which waits a frame at a time).
 
 <!-- docs/libraries/testing.md -->
 
@@ -10048,6 +10149,7 @@ Most commands work on "the game in this folder". Moving around in a terminal:
 | [`frg fmt [folders or files]`](#frg-fmt) | tidies the layout of `.frg` files |
 | [`frg package [folder]`](#frg-package) | makes a finished build and zips it, ready to share |
 | `frg cache` (see “frg cache”) | shows the build cache; `frg cache clear` deletes it |
+| `frg update` (see “frg update”) | checks for a newer Forge, and installs it if you want |
 | `frg version` (see “frg version and frg help”) | shows which Forge this is |
 | `frg help` (see “frg version and frg help”) | shows the list of commands |
 | `frg query ...` (see “frg query”) | answers questions about the code, for editors like VS Code |
@@ -10463,6 +10565,25 @@ error: frg cache doesn't know 'tidy'
 
 ---
 
+### frg update
+
+Checks GitHub for a newer Forge. If there is one, it says what's new and asks whether to download and start its installer (`y` to do it; anything else, or just Enter, doesn't). The installer updates Forge in place and keeps your games, settings and build cache. **Updating is never required**: an older Forge keeps working.
+
+```text
+frg update            check now
+frg update --off      stop the daily check (frg update still checks when you ask)
+frg update --on       turn the daily check back on
+```
+
+The daily check: once a day, when you build, run, test, package or make a game, `frg` also asks GitHub (in the background, at most a few seconds, never stopping the command) whether a newer Forge is out. If it is, a short note comes at the end:
+
+```text
+    Update  Forge 0.9.5 is out (you have 0.9.4). Updating is optional: run frg update to get it,
+            or frg update --off to stop these notes.
+```
+
+It asks only for the number of the latest release (from `api.github.com`), sends nothing about you or your games, and does nothing at all without a network. It keeps its date and answer in `update.txt` next to `frg.exe`. `FRG_NO_UPDATE_CHECK=1` skips it for one run (Forge's own tests use that).
+
 ### frg version and frg help
 
 `frg version` (or `frg --version`) prints the version, like `Forge 0.9.4`.
@@ -10513,6 +10634,7 @@ $env:FRG_VERBOSE = 1; frg build; Remove-Item Env:FRG_VERBOSE
 | Variable | For | What it does |
 |---|---|---|
 | `FRG_VERBOSE=1` | `frg build` | shows how long each step of the build took |
+| `FRG_NO_UPDATE_CHECK=1` | every command | doesn't look for a newer Forge (see frg update (see “frg update”)) |
 | `FRG_AUTOTEST_FRAMES=N` | a game with a window | runs the game for N frames, then closes the window |
 | `FRG_AUTOTEST_SHOT=name.png` | a game with a window | the picture saved of frame N (normally `autotest.png`) |
 | `FRG_AUTOTEST_INPUT=...` | a game with a window | pretends keys and buttons are held during certain frames (below) |

@@ -50,3 +50,7 @@ Notes:
 - `tasks.runAll()` returns straight away if there are no tasks, and stops if the only tasks left are waiting on each other.
 - A task that loops forever (`while (true) { wait(1); }`) makes `runAll` run forever. Stop it first, or use `update`.
 - In a windowed game, don't call `tasks.update` yourself; the window already does, and calling it too would move time forward twice.
+
+## Limits
+
+- With a window open, every task's `wait` moves on with every frame, **even while your game shows its own pause menu**. A task that should stop during a pause has to check (for example `while (paused) { wait(); }`, which waits a frame at a time).

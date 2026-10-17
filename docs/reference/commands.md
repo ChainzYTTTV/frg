@@ -44,6 +44,7 @@ Most commands work on "the game in this folder". Moving around in a terminal:
 | [`frg fmt [folders or files]`](#frg-fmt) | tidies the layout of `.frg` files |
 | [`frg package [folder]`](#frg-package) | makes a finished build and zips it, ready to share |
 | [`frg cache`](#frg-cache) | shows the build cache; `frg cache clear` deletes it |
+| [`frg update`](#frg-update) | checks for a newer Forge, and installs it if you want |
 | [`frg version`](#frg-version-and-frg-help) | shows which Forge this is |
 | [`frg help`](#frg-version-and-frg-help) | shows the list of commands |
 | [`frg query ...`](#frg-query) | answers questions about the code, for editors like VS Code |
@@ -459,6 +460,25 @@ error: frg cache doesn't know 'tidy'
 
 ---
 
+## frg update
+
+Checks GitHub for a newer Forge. If there is one, it says what's new and asks whether to download and start its installer (`y` to do it; anything else, or just Enter, doesn't). The installer updates Forge in place and keeps your games, settings and build cache. **Updating is never required**: an older Forge keeps working.
+
+```text
+frg update            check now
+frg update --off      stop the daily check (frg update still checks when you ask)
+frg update --on       turn the daily check back on
+```
+
+The daily check: once a day, when you build, run, test, package or make a game, `frg` also asks GitHub (in the background, at most a few seconds, never stopping the command) whether a newer Forge is out. If it is, a short note comes at the end:
+
+```text
+    Update  Forge 0.9.5 is out (you have 0.9.4). Updating is optional: run frg update to get it,
+            or frg update --off to stop these notes.
+```
+
+It asks only for the number of the latest release (from `api.github.com`), sends nothing about you or your games, and does nothing at all without a network. It keeps its date and answer in `update.txt` next to `frg.exe`. `FRG_NO_UPDATE_CHECK=1` skips it for one run (Forge's own tests use that).
+
 ## frg version and frg help
 
 `frg version` (or `frg --version`) prints the version, like `Forge 0.9.4`.
@@ -509,6 +529,7 @@ $env:FRG_VERBOSE = 1; frg build; Remove-Item Env:FRG_VERBOSE
 | Variable | For | What it does |
 |---|---|---|
 | `FRG_VERBOSE=1` | `frg build` | shows how long each step of the build took |
+| `FRG_NO_UPDATE_CHECK=1` | every command | doesn't look for a newer Forge (see [frg update](#frg-update)) |
 | `FRG_AUTOTEST_FRAMES=N` | a game with a window | runs the game for N frames, then closes the window |
 | `FRG_AUTOTEST_SHOT=name.png` | a game with a window | the picture saved of frame N (normally `autotest.png`) |
 | `FRG_AUTOTEST_INPUT=...` | a game with a window | pretends keys and buttons are held during certain frames (below) |

@@ -25,9 +25,11 @@ add_executable(frg
     src/query.cpp
     src/format.cpp
     src/templates.cpp
+    src/update.cpp
 )
 target_compile_options(frg PRIVATE -Wall -Wextra -Wno-missing-field-initializers)
 target_link_options(frg PRIVATE -static)
+target_link_libraries(frg PRIVATE winhttp)   # the update check (src/update.cpp)
 
 # The runtime folder is copied next to frg.exe on every build, so a change to a runtime file alone is picked up too.
 # (copy_directory_if_different only copies changed files, so unchanged files keep their dates and the build cache.)

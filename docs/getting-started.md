@@ -18,7 +18,7 @@ frg version
 g++ --version
 ```
 
-The first should print `Forge 0.9.3` and the second should print a GCC version. If `frg` isn't found, add Forge's `bin` folder to your PATH and restart the terminal.
+The first should print `Forge 0.9.4` and the second should print a GCC version. If `frg` isn't found, add Forge's `bin` folder to your PATH and restart the terminal.
 
 ### Building Forge from source
 

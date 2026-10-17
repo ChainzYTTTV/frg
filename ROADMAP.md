@@ -134,7 +134,7 @@ These were decided by Forge's designer (2026-10-16). Build them this way.
 | The side mouse buttons (`MouseButton.BACK` / `FORWARD`) | games couldn't use them, so players couldn't bind them | done |
 | Clearer errors for reserved words and name clashes | "expected a parameter name" didn't say why; one clash gave many errors | done |
 
-## 0.9.x: Engine extras
+## 0.9.4: Engine extras
 
 | Feature | Why | Size |
 |---|---|---|
@@ -143,7 +143,6 @@ These were decided by Forge's designer (2026-10-16). Build them this way.
 | Simple 3D lighting | 3D shapes stop looking flat | done (`graphics3d.setLight`) |
 | Custom shaders on sprites in the engine (glow, flash white, outlines) | effects without a low-level toolkit | done (`beginFlash`, `beginOutline`, `beginGlow`) |
 | Textures in `<Vulkan>`, and drawing into textures in `<OpenGL>` and `<DirectX>` | fills the toolkits' gaps | done |
-| Test the toolkits on NVIDIA and laptop graphics | only one AMD card has run them so far | S |
 
 ## 1.0.0: Ready for other people
 
@@ -154,7 +153,7 @@ These were decided by Forge's designer (2026-10-16). Build them this way.
 | An installer that includes g++, and gives `.frg` files their icon in File Explorer (`editors/windows/register-frg-files.ps1`) | one-step setup | M |
 | A final check of every name and rule | they can't change after 1.0 | M |
 | A full review of the docs and the teaching brief | the docs are how people learn Forge | M |
-| Testing on Windows 10 and 11, on several PCs | no surprises for new users | S |
+| Testing on Windows 10 and 11, on several PCs, and the toolkits on NVIDIA and laptop graphics | no surprises for new users; only one AMD card has run the toolkits so far | S |
 
 ## After 1.0 (ideas)
 

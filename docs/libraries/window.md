@@ -147,4 +147,4 @@ Games read three environment variables, so they can be tested without anyone at 
 |---|---|
 | `FRG_AUTOTEST_FRAMES=90` | stop after 90 frames |
 | `FRG_AUTOTEST_SHOT=shot.png` | take this screenshot just before stopping |
-| `FRG_AUTOTEST_INPUT=RIGHT:10-60,SPACE:30-31` | pretend these keys are held during those frames (mouse buttons are `MOUSE_LEFT`, `MOUSE_RIGHT` and `MOUSE_MIDDLE`) |
+| `FRG_AUTOTEST_INPUT=RIGHT:10-60,SPACE:30-31` | pretend these keys are held during those frames (mouse buttons are `MOUSE_LEFT`, `MOUSE_RIGHT`, `MOUSE_MIDDLE`, `MOUSE_BACK` and `MOUSE_FORWARD`) |

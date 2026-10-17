@@ -54,7 +54,7 @@ Escape is a normal key: it doesn't close the window, so a game can use it for a 
 | `input.mouseDelta()` | `vec2` | how far the mouse moved since the last frame, in pixels (right and down are positive) |
 | `input.isMouseInWindow()` | `bool` | the pointer is over the window |
 
-Buttons: `MouseButton.LEFT`, `MouseButton.RIGHT`, `MouseButton.MIDDLE`.
+Buttons: `MouseButton.LEFT`, `MouseButton.RIGHT`, `MouseButton.MIDDLE`, and the two side (thumb) buttons many mice have: `MouseButton.BACK` (the one nearer you) and `MouseButton.FORWARD`.
 
 ```cpp
 if (input.mousePressed(MouseButton.LEFT)) {

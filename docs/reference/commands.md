@@ -133,7 +133,7 @@ What it prints, when it works:
 - `(3 files)` counts your `.frg` files.
 - If nothing changed since the last build, it says `(nothing changed)` and takes a fraction of a second.
 - A big game is split into parts that are compiled at the same time; it then says how many had to be compiled again, like `(2 of 8 parts compiled)`.
-- The very first build that uses a library also prints `Preparing Forge's runtime for these libraries (only the first time, to make later builds faster)` and takes longer. See [frg cache](#frg-cache).
+- The first build of each kind (normal, `--debug`, `--release`) also prints `Preparing Forge's runtime for this kind of build (once each for normal, --debug and --release builds, and again after Forge is updated)` and takes longer. See [frg cache](#frg-cache).
 
 If the game has mistakes, it prints each one and stops without making an `.exe`:
 
@@ -440,11 +440,11 @@ frg cache
 frg cache clear
 ```
 
-The first build that uses a set of libraries prepares Forge's runtime for them, and keeps the result in the **build cache** (`bin\cache` next to `frg.exe`), so later builds are fast. Forge keeps it under about 400 MB by deleting the sets that haven't been used for the longest.
+The first build that uses a set of libraries prepares Forge's runtime for them, and keeps the result in the **build cache** (`bin\cache` next to `frg.exe`), so later builds are fast. Forge keeps it under about 1 GB by deleting the sets that haven't been used for the longest.
 
 ```text
        Cache D:\forge\bin\cache
-    358 MB in 4 sets (Forge keeps it under about 400 MB)
+    358 MB in 4 sets (Forge keeps it under about 1.0 GB)
     It makes builds faster. To delete it: frg cache clear
 ```
 
@@ -527,7 +527,7 @@ $env:FRG_AUTOTEST_INPUT = "RIGHT:10-60,SPACE:30-31,MOUSE_LEFT:50-50,CLOSE:100-10
 | Name | What it pretends |
 |---|---|
 | `A` ... `Z`, `NUM0` ... `NUM9`, `SPACE`, `ENTER`, `ESCAPE`, `LEFT`, `F1` ... (every [`Key`](../libraries/input.md#keyboard) name) | that key |
-| `MOUSE_LEFT`, `MOUSE_RIGHT`, `MOUSE_MIDDLE` | that mouse button |
+| `MOUSE_LEFT`, `MOUSE_RIGHT`, `MOUSE_MIDDLE`, `MOUSE_BACK`, `MOUSE_FORWARD` | that mouse button (BACK and FORWARD are the side buttons) |
 | `CLOSE` | the player clicking the window's X: `window.shouldClose()` is `true` from that frame |
 | `MOUSE@x/y` | the pointer at (x, y) in the window, from the first frame of the range on (`MOUSE@400/300:10-10`). Once any `MOUSE@` is given, the real mouse is ignored |
 | `TURN@dx/dy` | the mouse moving by (dx, dy) on each frame of the range: what `input.mouseDelta()` gives, for testing mouse-look (`TURN@-5/0:20-40` turns left). On other frames it's (0, 0) |

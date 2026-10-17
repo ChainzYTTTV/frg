@@ -228,14 +228,18 @@ static std::string sizeText(uintmax_t bytes) {
     char buf[32];
     if (bytes < 1024 * 1024)
         std::snprintf(buf, sizeof buf, "%.0f KB", bytes / 1024.0);
+    else if (bytes >= 1024ull * 1024 * 1024)
+        std::snprintf(buf, sizeof buf, "%.1f GB", bytes / (1024.0 * 1024.0 * 1024.0));
     else
         std::snprintf(buf, sizeof buf, "%.0f MB", bytes / (1024.0 * 1024.0));
     return buf;
 }
 
-// The cache next to frg.exe is kept under about 400 MB: after a build, the sets used least recently are deleted
-// until it fits. (Each set of prepared headers is about 100 MB.) The ones this build used always stay.
-static const uintmax_t kCacheLimit = 400ull * 1024 * 1024;
+// The cache next to frg.exe is kept under about 1 GB: after a build, the sets used least recently are deleted
+// until it fits. The ones this build used always stay. Each set of prepared headers is 100-150 MB, and a game
+// that's built normally, with --debug and with --release needs three (six, with programs that don't open a
+// window). With 400 MB they pushed each other out, so switching between kinds of build prepared them every time.
+static const uintmax_t kCacheLimit = 1024ull * 1024 * 1024;
 
 static void limitCache() {
     fs::path root = exeDir() / "cache";
@@ -545,7 +549,7 @@ static bool build(const fs::path& dir, fs::path& exeOut, const BuildOptions& opt
         f << pchText;
     }
     if (!fs::exists(pch)) {
-        printStatus("Preparing", "Forge's runtime for these libraries (only the first time, to make later builds faster)");
+        printStatus("Preparing", "Forge's runtime for this kind of build (once each for normal, --debug and --release builds, and again after Forge is updated)");
         if (compileTo(flags + L" -x c++-header " + quote(pchHeader), pch) == -1) {
             reportPlainError("couldn't find g++, which Forge uses to make .exe files",
                              "install w64devkit and make sure its bin folder is on your PATH");

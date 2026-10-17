@@ -42,7 +42,7 @@ inline ::Rectangle rl(core::rect_ r) { return ::Rectangle{r.x_, r.y_, r.width_, 
 // ---------------------------------------------------------------- automated testing
 // FRG_AUTOTEST_FRAMES=N        stop after N frames (taking a screenshot first, see below)
 // FRG_AUTOTEST_SHOT=name.png   the screenshot's file name (saved in the game's folder)
-// FRG_AUTOTEST_INPUT=RIGHT:10-60,SPACE:30-31   hold keys during those frames (and MOUSE_LEFT, MOUSE_RIGHT, MOUSE_MIDDLE).
+// FRG_AUTOTEST_INPUT=RIGHT:10-60,SPACE:30-31   hold keys during those frames (and MOUSE_LEFT, MOUSE_RIGHT, MOUSE_MIDDLE, MOUSE_BACK, MOUSE_FORWARD).
 //                              CLOSE:N-N clicks the window's X button at frame N.
 //                              MOUSE@x/y:N-M puts the pointer at (x, y) from frame N on (once any MOUSE@ is given,
 //                              the real mouse is ignored). TURN@dx/dy:N-M makes mouseDelta() (dx, dy) during those
@@ -294,7 +294,7 @@ enum class Key_ : int32_t {
     LEFT_SHIFT_, RIGHT_SHIFT_, LEFT_CONTROL_, RIGHT_CONTROL_, LEFT_ALT_, RIGHT_ALT_,
     F1_, F2_, F3_, F4_, F5_, F6_, F7_, F8_, F9_, F10_, F11_, F12_,
 };
-enum class MouseButton_ : int32_t { LEFT_, RIGHT_, MIDDLE_ };
+enum class MouseButton_ : int32_t { LEFT_, RIGHT_, MIDDLE_, BACK_, FORWARD_ };
 // Named like an Xbox controller. Keep the order in sync with GamepadButton in src/prelude.cpp.
 enum class GamepadButton_ : int32_t {
     A_, B_, X_, Y_, LEFT_BUMPER_, RIGHT_BUMPER_, LEFT_TRIGGER_, RIGHT_TRIGGER_,
@@ -323,8 +323,15 @@ inline int rlKey(Key_ k) {
     return KEY_F1 + (i - 51);
 }
 
+// BACK and FORWARD are the two side (thumb) buttons: raylib calls them SIDE and EXTRA (Windows' XBUTTON1 / 2).
 inline int rlButton(MouseButton_ b) {
-    return b == MouseButton_::LEFT_ ? MOUSE_BUTTON_LEFT : b == MouseButton_::RIGHT_ ? MOUSE_BUTTON_RIGHT : MOUSE_BUTTON_MIDDLE;
+    switch (b) {
+        case MouseButton_::LEFT_: return MOUSE_BUTTON_LEFT;
+        case MouseButton_::RIGHT_: return MOUSE_BUTTON_RIGHT;
+        case MouseButton_::MIDDLE_: return MOUSE_BUTTON_MIDDLE;
+        case MouseButton_::BACK_: return MOUSE_BUTTON_SIDE;
+        default: return MOUSE_BUTTON_EXTRA;
+    }
 }
 
 // Keys held down by FRG_AUTOTEST_INPUT: returns -1 if the key isn't scripted, otherwise 0/1 for `frameOffset` frames ago.
@@ -492,7 +499,9 @@ inline std::string frg$str(GamepadButton_ b) {
 
 inline std::string frg$str(Key_ k) { return keyNames()[(int)k]; }
 inline std::string frg$str(MouseButton_ b) {
-    return b == MouseButton_::LEFT_ ? "LEFT" : b == MouseButton_::RIGHT_ ? "RIGHT" : "MIDDLE";
+    static const char* names[] = {"LEFT", "RIGHT", "MIDDLE", "BACK", "FORWARD"};
+    int i = (int)b;
+    return i >= 0 && i < 5 ? names[i] : "MouseButton(?)";
 }
 }  // namespace input
 
@@ -520,8 +529,8 @@ inline void window::parseAutotestInput(const char* spec) {
                 if (what == "MOUSE" || what == "TURN")
                     autotest::st().moves.push_back({what == "TURN", x, y, std::atol(item.c_str() + colon + 1), std::atol(item.c_str() + dash + 1)});
             }
-            const char* buttons[] = {"MOUSE_LEFT", "MOUSE_RIGHT", "MOUSE_MIDDLE"};
-            for (int b = 0; b < 3; b++)
+            const char* buttons[] = {"MOUSE_LEFT", "MOUSE_RIGHT", "MOUSE_MIDDLE", "MOUSE_BACK", "MOUSE_FORWARD"};
+            for (int b = 0; b < 5; b++)
                 if (name == buttons[b])
                     autotest::st().holds.push_back({1000 + b, std::atol(item.c_str() + colon + 1), std::atol(item.c_str() + dash + 1)});
         }

@@ -1,0 +1,50 @@
+=== main.frg
+#include <window>
+#include <input>
+#include <stdio>
+
+``` The side (thumb) mouse buttons: MouseButton.BACK and MouseButton.FORWARD, scripted as MOUSE_BACK / MOUSE_FORWARD. ```
+
+int frame = 0;
+
+int main(){
+    print(MouseButton.BACK);
+    print(MouseButton.FORWARD);
+    print(int(MouseButton.FORWARD));
+    window.open(400, 300, "side buttons");
+    window.run();
+    return 0;
+}
+
+void update(float dt){
+    string s = "frame {frame}:";
+    for (MouseButton b in [MouseButton.BACK, MouseButton.FORWARD]) {
+        if (input.mousePressed(b)) {
+            s += " {b} pressed";
+        }
+        if (input.mouseDown(b)) {
+            s += " {b} down";
+        }
+        if (input.mouseReleased(b)) {
+            s += " {b} released";
+        }
+    }
+    print(s);
+    frame++;
+}
+
+void draw(){
+}
+=== window
+frames: 6
+input: MOUSE_BACK:1-2,MOUSE_FORWARD:3-3
+=== output
+BACK
+FORWARD
+4
+frame 0:
+frame 1: BACK pressed BACK down
+frame 2: BACK down
+frame 3: BACK released FORWARD pressed FORWARD down
+frame 4: FORWARD released
+frame 5:

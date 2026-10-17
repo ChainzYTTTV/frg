@@ -122,13 +122,13 @@ In VS Code, the **Forge: Turn the Console On/Off** command switches the console 
 
 ### Why the first build is slower
 
-The very first time you build a game (and the first time with `--release` or without a console), Forge shows:
+The very first time you build a game (and the first time with `--debug`, `--release` or without a console), Forge shows:
 
 ```
-   Preparing Forge's runtime for these libraries (only the first time, to make later builds faster)
+   Preparing Forge's runtime for this kind of build (once each for normal, --debug and --release builds, and again after Forge is updated)
 ```
 
-It's getting Forge's own code ready once, so every build after that is quicker, for all your games. It's kept in a `cache` folder next to `frg.exe`. Each kind of game (console, window, release...) gets its own prepared set of about 100 MB, and Forge keeps the whole folder under about **400 MB** by deleting the sets that haven't been used for the longest time. When Forge (or w64devkit) is updated, the old sets are deleted by themselves too.
+It's getting Forge's own code ready once, so every build after that is quicker, for all your games. It's kept in a `cache` folder next to `frg.exe`. Each kind of build (normal, `--debug`, `--release`, with or without a window) gets its own prepared set of 100-150 MB, and Forge keeps the whole folder under about **1 GB** by deleting the sets that haven't been used for the longest time. When Forge (or w64devkit) is updated, the old sets are deleted by themselves too, so the message shows once more after an update.
 
 ```
 frg cache          // shows where the cache is and how big it is

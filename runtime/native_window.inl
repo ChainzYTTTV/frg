@@ -35,7 +35,7 @@ struct Win {
     bool inFrame = false;
     int w = 0, h = 0;
     bool keys[256] = {}, prevKeys[256] = {};
-    bool mouse[3] = {}, prevMouse[3] = {};
+    bool mouse[5] = {}, prevMouse[5] = {};     // left, right, middle, back, forward
     float mx = 0, my = 0, wheel = 0, wheelAcc = 0;
     LARGE_INTEGER freq{}, start{}, last{};
     double dt = 0;
@@ -99,6 +99,9 @@ LRESULT CALLBACK wndProc(HWND hwnd, UINT msg, WPARAM wp, LPARAM lp) {
         case WM_RBUTTONUP: s.mouse[1] = false; return 0;
         case WM_MBUTTONDOWN: s.mouse[2] = true; return 0;
         case WM_MBUTTONUP: s.mouse[2] = false; return 0;
+        // the side (thumb) buttons: XBUTTON1 is back, XBUTTON2 forward (these messages want TRUE back)
+        case WM_XBUTTONDOWN:
+        case WM_XBUTTONUP: s.mouse[GET_XBUTTON_WPARAM(wp) == XBUTTON1 ? 3 : 4] = msg == WM_XBUTTONDOWN; return TRUE;
         case WM_MOUSEMOVE:
             s.mx = (float)(short)LOWORD(lp);
             s.my = (float)(short)HIWORD(lp);
@@ -163,7 +166,9 @@ std::string keyName(Key_ k) {
     return i >= 0 && i < kKeyCount ? kKeyNames[i] : "Key(?)";
 }
 std::string buttonName(MouseButton_ b) {
-    return b == MouseButton_::LEFT_ ? "LEFT" : b == MouseButton_::RIGHT_ ? "RIGHT" : "MIDDLE";
+    static const char* names[] = {"LEFT", "RIGHT", "MIDDLE", "BACK", "FORWARD"};
+    int i = (int)b;
+    return i >= 0 && i < 5 ? names[i] : "MouseButton(?)";
 }
 
 void fail(const char* where, const std::string& msg) { panic(where, msg); }

@@ -141,7 +141,7 @@ enum Key {
     F1, F2, F3, F4, F5, F6, F7, F8, F9, F10, F11, F12
 }
 
-enum MouseButton { LEFT, RIGHT, MIDDLE }
+enum MouseButton { LEFT, RIGHT, MIDDLE, BACK, FORWARD }
 )FRG"
 
 // The window, keyboard and mouse functions every low-level toolkit has.

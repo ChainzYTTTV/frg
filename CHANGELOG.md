@@ -11,12 +11,14 @@ Found while building a full 3D first-person game in Forge.
 - `graphics3d.clearDepth()`: 3D drawn after it shows in front of everything drawn before it, for a first-person gun that never sinks into walls.
 - `graphics3d.pushTransform(position, axis, degrees, scale)` and `popTransform()`: turn, move and scale everything drawn between them (characters facing where they walk, a gun tilting while it reloads). They nest, and a missing `popTransform` is a clear error.
 - `FRG_AUTOTEST_HIDDEN=1` is silent too: a hidden test window plays no sound.
+- **The side mouse buttons:** `MouseButton.BACK` (the thumb button nearer you) and `MouseButton.FORWARD`, in the engine and in the OpenGL / DirectX / Vulkan toolkits. Tests can script them as `MOUSE_BACK` and `MOUSE_FORWARD`.
 
 **Language**
 - A reserved word where a name goes says so: `int add(int a, int negative)` gives "'negative' is a reserved word in Forge, so it can't be a parameter name" instead of "expected a parameter name". The same for fields, methods and other names.
 - A variable named like a function (or a global) in the same file gives one error, on that line. The lines that use the variable no longer each add a misleading "'feed' is a function".
 
 **Tools**
+- **Builds stop preparing Forge's runtime over and over.** Each kind of build (normal, `--debug`, `--release`) needs its own prepared runtime of 100-150 MB, and the build cache was capped at 400 MB, so they pushed each other out: switching between kinds of build showed "Preparing Forge's runtime ... (only the first time)" every time. The cache is now kept under about 1 GB, and the message says what it really is: once for each kind of build, and again after Forge is updated.
 - `FRG_AUTOTEST_INPUT` can move the pointer (`MOUSE@400/300:10-10`) and the mouse (`TURN@-5/0:20-40`), so tests can click through menus and check mouse-look.
 
 **Docs**

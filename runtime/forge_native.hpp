@@ -17,7 +17,7 @@ enum class Key_ : int32_t {
     LEFT_SHIFT_, RIGHT_SHIFT_, LEFT_CONTROL_, RIGHT_CONTROL_, LEFT_ALT_, RIGHT_ALT_,
     F1_, F2_, F3_, F4_, F5_, F6_, F7_, F8_, F9_, F10_, F11_, F12_,
 };
-enum class MouseButton_ : int32_t { LEFT_, RIGHT_, MIDDLE_ };
+enum class MouseButton_ : int32_t { LEFT_, RIGHT_, MIDDLE_, BACK_, FORWARD_ };
 
 std::string keyName(Key_ k);
 std::string buttonName(MouseButton_ b);

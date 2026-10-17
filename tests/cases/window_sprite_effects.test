@@ -1,0 +1,66 @@
+=== main.frg
+#include <window>
+#include <graphics2d>
+#include <assets>
+#include <stdio>
+
+``` Sprite effects: beginFlash, beginOutline, beginGlow and endEffect, on textures and animations. ```
+
+Texture tiles = assets.loadTexture("tiles.png");
+Animation anim = Animation(tiles, 16, 16, 4, 8);
+int frame = 0;
+
+int main(){
+    window.open(400, 300, "effects");
+    try {
+        graphics2d.beginFlash(color.WHITE, 2);
+    } catch (Error e) {
+        print("flash: {e.message}");
+    }
+    try {
+        graphics2d.beginOutline(color.YELLOW, 0);
+    } catch (Error e) {
+        print("outline: {e.message}");
+    }
+    try {
+        graphics2d.beginGlow(color(80, 255, 220), 100);
+    } catch (Error e) {
+        print("glow: {e.message}");
+    }
+    window.run();
+    return 0;
+}
+
+void update(float dt){
+    anim.update(dt);
+}
+
+void draw(){
+    graphics2d.clear(color.BLACK);
+    tiles.draw(10, 10);
+    graphics2d.beginFlash(color.WHITE);
+    tiles.drawScaled(10, 40, 2);
+    anim.draw(10, 80);
+    graphics2d.beginOutline(color.YELLOW, 2);
+    tiles.drawRotated(vec2(200, 60), 30);
+    tiles.drawPart(rect(0, 0, 16, 16), rect(150, 120, 32, 32));
+    graphics2d.beginGlow(color(80, 255, 220), 6);
+    tiles.draw(250, 200);
+    anim.drawScaled(300, 200, 2);
+    graphics2d.endEffect();
+    tiles.draw(10, 250);
+    graphics2d.drawRect(0, 0, 4, 4, color.RED);
+    frame++;
+    if (frame == 3) {
+        print("drew 3 frames with every effect");
+    }
+}
+=== tiles.png (base64)
+iVBORw0KGgoAAAANSUhEUgAAAEAAAAAQCAYAAACm53kpAAAAOElEQVR4nO3QwQAAIAAEsAMLJ4jAgsiqIO7ZHhNYMs9tjNIq7VIECBAgQIAAAQIECBAgQICA/wIew7sUlxJp2dYAAAAASUVORK5CYII=
+=== window
+frames: 4
+=== output
+flash: the amount goes from 0 (no flash) to 1 (all one color), but it's 2.0
+outline: the outline is 1 to 4 pixels thick, but this is 0.0
+glow: the glow is 1 to 32 pixels wide, but this is 100.0
+drew 3 frames with every effect

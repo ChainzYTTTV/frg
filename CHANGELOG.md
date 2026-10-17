@@ -5,6 +5,7 @@ What changed in each version of Forge. Plans for later versions are in the [road
 ## Unreleased
 
 **Engine**
+- **Sprite effects:** `graphics2d.beginFlash(color, amount)` (the "got hit" flash), `beginOutline(color, thickness)`, `beginGlow(color, size)` and `endEffect()` for textures and animations, without writing a shader.
 - **`<physics>`: balls, ramps, bounce and layers.** `circle = true` makes a body a ball; `slope = 1` / `-1` makes a static body a ramp that bodies walk up and down (staying `onGround`); `bounce` (0-1) makes things bounce; every body has a `layer`, and `physics.collide(a, b, false)` makes two layers pass through each other ("bullets don't hit bullets"). `overlaps()` follows the round shapes. The debug view draws balls and ramps. Boxes behave exactly as before.
 - **3D light:** `graphics3d.setLight(direction, light, ambient)` lights every shape, mesh and model from one direction (like the sun), with a soft light everywhere, so 3D stops looking flat. `lightOff()` and `isLit()`. Lines and outlines stay unlit; see-through shapes stay see-through.
 - **3D culling:** anything entirely outside what the camera sees (behind it, off to a side, too far) isn't drawn, so big 3D worlds only cost what's in view. On by default; it follows `pushTransform`. `graphics3d.setCulling(false)` turns it off, and `graphics3d.culledLastFrame()` counts what was skipped.

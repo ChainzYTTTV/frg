@@ -1,0 +1,102 @@
+=== main.frg
+#include <OpenGL>
+#include <stdio>
+
+string TRI_VS = """
+#version 330 core
+layout (location = 0) in vec2 position;
+layout (location = 1) in vec3 color;
+out vec3 vColor;
+void main() { gl_Position = vec4(position, 0.0, 1.0); vColor = color; }
+""";
+string TRI_FS = """
+#version 330 core
+in vec3 vColor;
+out vec4 fragColor;
+void main() { fragColor = vec4(vColor, 1.0); }
+""";
+string QUAD_VS = """
+#version 330 core
+layout (location = 0) in vec2 position;
+layout (location = 1) in vec2 uv;
+out vec2 vUv;
+void main() { gl_Position = vec4(position, 0.0, 1.0); vUv = uv; }
+""";
+string QUAD_FS = """
+#version 330 core
+in vec2 vUv;
+uniform sampler2D picture;
+out vec4 fragColor;
+void main() { fragColor = texture(picture, vUv); }
+""";
+
+int main(){
+    OpenGL.openWindow(640, 360, "Framebuffer");
+    int tri = OpenGL.buildProgram(TRI_VS, TRI_FS);
+    int quad = OpenGL.buildProgram(QUAD_VS, QUAD_FS);
+    int triVao = OpenGL.genVertexArray();
+    OpenGL.bindVertexArray(triVao);
+    OpenGL.bindBuffer(OpenGL.ARRAY_BUFFER, OpenGL.genBuffer());
+    OpenGL.bufferData(OpenGL.ARRAY_BUFFER, [-0.8, -0.8, 1, 0, 0, 0.8, -0.8, 0, 1, 0, 0, 0.8, 0, 0, 1], OpenGL.STATIC_DRAW);
+    OpenGL.vertexAttribPointer(0, 2, 5, 0);
+    OpenGL.enableVertexAttribArray(0);
+    OpenGL.vertexAttribPointer(1, 3, 5, 2);
+    OpenGL.enableVertexAttribArray(1);
+    int quadVao = OpenGL.genVertexArray();
+    OpenGL.bindVertexArray(quadVao);
+    OpenGL.bindBuffer(OpenGL.ARRAY_BUFFER, OpenGL.genBuffer());
+    // two copies of the texture, side by side
+    OpenGL.bufferData(OpenGL.ARRAY_BUFFER, [-0.9, -0.5, 0, 0, -0.1, -0.5, 1, 0, -0.1, 0.5, 1, 1, -0.9, -0.5, 0, 0, -0.1, 0.5, 1, 1, -0.9, 0.5, 0, 1,
+                                            0.1, -0.5, 0, 0, 0.9, -0.5, 1, 0, 0.9, 0.5, 1, 1, 0.1, -0.5, 0, 0, 0.9, 0.5, 1, 1, 0.1, 0.5, 0, 1], OpenGL.STATIC_DRAW);
+    OpenGL.vertexAttribPointer(0, 2, 4, 0);
+    OpenGL.enableVertexAttribArray(0);
+    OpenGL.vertexAttribPointer(1, 2, 4, 2);
+    OpenGL.enableVertexAttribArray(1);
+
+    // the texture to draw into, and a framebuffer with it (and a depth buffer)
+    int target = OpenGL.genTexture();
+    OpenGL.bindTexture(OpenGL.TEXTURE_2D, target);
+    OpenGL.texImage2D(OpenGL.TEXTURE_2D, 256, 256);
+    int fb = OpenGL.genFramebuffer();
+    OpenGL.bindFramebuffer(OpenGL.FRAMEBUFFER, fb);
+    OpenGL.framebufferTexture2D(OpenGL.FRAMEBUFFER, OpenGL.COLOR_ATTACHMENT0, OpenGL.TEXTURE_2D, target);
+    int depth = OpenGL.genRenderbuffer();
+    OpenGL.bindRenderbuffer(OpenGL.RENDERBUFFER, depth);
+    OpenGL.renderbufferStorage(OpenGL.RENDERBUFFER, OpenGL.DEPTH_COMPONENT24, 256, 256);
+    OpenGL.framebufferRenderbuffer(OpenGL.FRAMEBUFFER, OpenGL.DEPTH_ATTACHMENT, OpenGL.RENDERBUFFER, depth);
+    print("complete: {OpenGL.checkFramebufferStatus(OpenGL.FRAMEBUFFER) == OpenGL.FRAMEBUFFER_COMPLETE}");
+    OpenGL.bindFramebuffer(OpenGL.FRAMEBUFFER, 0);
+    print("errors: {OpenGL.getError()}");
+
+    while (!OpenGL.shouldClose()) {
+        // 1: the triangle, into the texture
+        OpenGL.bindFramebuffer(OpenGL.FRAMEBUFFER, fb);
+        OpenGL.viewport(0, 0, 256, 256);
+        OpenGL.clearColor(1, 1, 0.6, 1);
+        OpenGL.clear(OpenGL.COLOR_BUFFER_BIT);
+        OpenGL.useProgram(tri);
+        OpenGL.bindVertexArray(triVao);
+        OpenGL.drawArrays(OpenGL.TRIANGLES, 0, 3);
+        // 2: the texture, twice, on the screen
+        OpenGL.bindFramebuffer(OpenGL.FRAMEBUFFER, 0);
+        OpenGL.viewport(0, 0, OpenGL.width(), OpenGL.height());
+        OpenGL.clearColor(0.1, 0.1, 0.15, 1);
+        OpenGL.clear(OpenGL.COLOR_BUFFER_BIT);
+        OpenGL.useProgram(quad);
+        OpenGL.bindTexture(OpenGL.TEXTURE_2D, target);
+        OpenGL.bindVertexArray(quadVao);
+        OpenGL.drawArrays(OpenGL.TRIANGLES, 0, 12);
+    }
+    print("errors at the end: {OpenGL.getError()}");
+    OpenGL.deleteFramebuffer(fb);
+    OpenGL.deleteRenderbuffer(depth);
+    OpenGL.deleteTexture(target);
+    OpenGL.closeWindow();
+    return 0;
+}
+=== window
+frames: 3
+=== output
+complete: true
+errors: 0
+errors at the end: 0

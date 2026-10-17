@@ -550,6 +550,23 @@ void activeTexture(int unit);
 void texParameteri(int target, int name, int value);
 void generateMipmap(int target);
 int loadTexture(string path);
+void texImage2D(int target, int width, int height);
+int genFramebuffer();
+void bindFramebuffer(int target, int framebuffer);
+void framebufferTexture2D(int target, int attachment, int textarget, int texture);
+int checkFramebufferStatus(int target);
+void deleteFramebuffer(int framebuffer);
+int genRenderbuffer();
+void bindRenderbuffer(int target, int renderbuffer);
+void renderbufferStorage(int target, int format, int width, int height);
+void framebufferRenderbuffer(int target, int attachment, int rbtarget, int renderbuffer);
+void deleteRenderbuffer(int renderbuffer);
+const int FRAMEBUFFER = 36160;
+const int RENDERBUFFER = 36161;
+const int COLOR_ATTACHMENT0 = 36064;
+const int DEPTH_ATTACHMENT = 36096;
+const int DEPTH_COMPONENT24 = 33190;
+const int FRAMEBUFFER_COMPLETE = 36053;
 
 list<float> identity();
 list<float> multiply(list<float> a, list<float> b);
@@ -640,6 +657,8 @@ void drawIndexed(int indexCount, int startIndex = 0);
 int loadTexture(string path);
 void setTexture(int slot, int texture);
 void setTextureFilter(bool smooth);
+int createRenderTexture(int width, int height);
+void setRenderTarget(int texture);
 
 list<float> identity();
 list<float> multiply(list<float> a, list<float> b);
@@ -673,6 +692,9 @@ int createPipeline(int vertexShader, int fragmentShader, list<int> attributeSize
 int createVertexBuffer(list<float> data);
 int createIndexBuffer(list<int> indices);
 
+int loadTexture(string path);
+void bindTexture(int texture);
+void setTextureFilter(bool smooth);
 bool beginFrame(float r, float g, float b, float a);
 void bindPipeline(int pipeline);
 void bindVertexBuffer(int buffer);

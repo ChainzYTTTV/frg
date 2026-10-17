@@ -18,6 +18,12 @@
 #include "forge_vulkan.hpp"
 #include "native_window.inl"
 
+extern "C" {
+FrgRlImage LoadImage(const char* fileName);   // raylib's, for loadTexture
+void UnloadImage(FrgRlImage image);
+void ImageFormat(FrgRlImage* image, int newFormat);
+}
+
 namespace frg::Vulkan {
 
 namespace {
@@ -98,7 +104,19 @@ namespace {
     X(vkCmdDraw)                    \
     X(vkCmdDrawIndexed)             \
     X(vkCmdPipelineBarrier)         \
-    X(vkCmdCopyImageToBuffer)
+    X(vkCmdCopyImageToBuffer)       \
+    X(vkCmdCopyBufferToImage)       \
+    X(vkFreeCommandBuffers)         \
+    X(vkQueueWaitIdle)              \
+    X(vkCreateSampler)              \
+    X(vkDestroySampler)             \
+    X(vkCreateDescriptorSetLayout)  \
+    X(vkDestroyDescriptorSetLayout) \
+    X(vkCreateDescriptorPool)       \
+    X(vkDestroyDescriptorPool)      \
+    X(vkAllocateDescriptorSets)     \
+    X(vkUpdateDescriptorSets)       \
+    X(vkCmdBindDescriptorSets)
 
 #define FRG_VK_DECLARE(name) PFN_##name name = nullptr;
 PFN_vkGetInstanceProcAddr vkGetInstanceProcAddr = nullptr;
@@ -118,6 +136,15 @@ struct Pipeline {
     VkPipeline pipeline = VK_NULL_HANDLE;
     VkPipelineLayout layout = VK_NULL_HANDLE;
     int32_t pushFloats = 0;
+};
+
+// An image from loadTexture, ready to read in a fragment shader: `layout(set = 0, binding = 0) uniform sampler2D`.
+// It has two descriptor sets: read smoothly, or with sharp pixels (setTextureFilter).
+struct Texture {
+    VkImage image = VK_NULL_HANDLE;
+    VkDeviceMemory memory = VK_NULL_HANDLE;
+    VkImageView view = VK_NULL_HANDLE;
+    VkDescriptorSet sets[2] = {VK_NULL_HANDLE, VK_NULL_HANDLE};
 };
 
 struct Frame {
@@ -172,6 +199,15 @@ struct State {
     std::vector<VkShaderModule> shaders;
     std::vector<Pipeline> pipelines;
     std::vector<Buffer> buffers;
+
+    // textures: every pipeline has room for one (set 0, binding 0)
+    VkDescriptorSetLayout textureLayout = VK_NULL_HANDLE;
+    VkSampler samplers[2] = {VK_NULL_HANDLE, VK_NULL_HANDLE};   // smooth, sharp pixels
+    std::vector<VkDescriptorPool> descriptorPools;
+    uint32_t setsLeft = 0;                // in the newest pool
+    std::vector<Texture> textures;
+    bool smooth = true;
+    int32_t currentPipeline = 0;          // bound with bindPipeline (bindTexture needs its layout)
 };
 
 State& st() {
@@ -247,6 +283,97 @@ VkImageView makeView(VkImage image, VkFormat format, VkImageAspectFlags aspect) 
     VkImageView view = VK_NULL_HANDLE;
     check(vkCreateImageView(st().device, &vi, nullptr, &view), "Vulkan.openWindow()", "make an image view");
     return view;
+}
+
+// ---- textures
+
+// The descriptor set layout every pipeline has (one texture), and the two samplers. Made the first time either is needed.
+void ensureTextureLayout() {
+    State& s = st();
+    if (s.textureLayout) return;
+    const char* what = "Vulkan.createPipeline()";
+    VkDescriptorSetLayoutBinding b{};
+    b.binding = 0;
+    b.descriptorType = VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER;
+    b.descriptorCount = 1;
+    b.stageFlags = VK_SHADER_STAGE_FRAGMENT_BIT;
+    VkDescriptorSetLayoutCreateInfo li{VK_STRUCTURE_TYPE_DESCRIPTOR_SET_LAYOUT_CREATE_INFO};
+    li.bindingCount = 1;
+    li.pBindings = &b;
+    check(vkCreateDescriptorSetLayout(s.device, &li, nullptr, &s.textureLayout), what, "make the texture layout");
+    for (int i = 0; i < 2; i++) {
+        VkSamplerCreateInfo si{VK_STRUCTURE_TYPE_SAMPLER_CREATE_INFO};
+        si.magFilter = si.minFilter = i == 0 ? VK_FILTER_LINEAR : VK_FILTER_NEAREST;
+        si.mipmapMode = VK_SAMPLER_MIPMAP_MODE_NEAREST;
+        si.addressModeU = si.addressModeV = si.addressModeW = VK_SAMPLER_ADDRESS_MODE_REPEAT;
+        si.maxLod = 0;
+        check(vkCreateSampler(s.device, &si, nullptr, &s.samplers[i]), what, "make a sampler");
+    }
+}
+
+// Two descriptor sets for a texture, from the newest pool (a new pool when it's full).
+void allocateSets(VkDescriptorSet out[2], const char* what) {
+    State& s = st();
+    if (s.setsLeft < 2) {
+        VkDescriptorPoolSize size{VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER, 128};
+        VkDescriptorPoolCreateInfo pi{VK_STRUCTURE_TYPE_DESCRIPTOR_POOL_CREATE_INFO};
+        pi.maxSets = 128;
+        pi.poolSizeCount = 1;
+        pi.pPoolSizes = &size;
+        VkDescriptorPool pool = VK_NULL_HANDLE;
+        check(vkCreateDescriptorPool(s.device, &pi, nullptr, &pool), what, "make a descriptor pool");
+        s.descriptorPools.push_back(pool);
+        s.setsLeft = 128;
+    }
+    VkDescriptorSetLayout layouts[2] = {s.textureLayout, s.textureLayout};
+    VkDescriptorSetAllocateInfo ai{VK_STRUCTURE_TYPE_DESCRIPTOR_SET_ALLOCATE_INFO};
+    ai.descriptorPool = s.descriptorPools.back();
+    ai.descriptorSetCount = 2;
+    ai.pSetLayouts = layouts;
+    check(vkAllocateDescriptorSets(s.device, &ai, out), what, "get descriptor sets for the texture");
+    s.setsLeft -= 2;
+}
+
+// Records one-off commands (copying a picture to the graphics card), runs them and waits for them to finish.
+template <class F>
+void runOnce(F record, const char* what) {
+    State& s = st();
+    VkCommandBufferAllocateInfo cai{VK_STRUCTURE_TYPE_COMMAND_BUFFER_ALLOCATE_INFO};
+    cai.commandPool = s.pool;
+    cai.level = VK_COMMAND_BUFFER_LEVEL_PRIMARY;
+    cai.commandBufferCount = 1;
+    VkCommandBuffer cmd = VK_NULL_HANDLE;
+    check(vkAllocateCommandBuffers(s.device, &cai, &cmd), what, "make a command buffer");
+    VkCommandBufferBeginInfo bi{VK_STRUCTURE_TYPE_COMMAND_BUFFER_BEGIN_INFO};
+    bi.flags = VK_COMMAND_BUFFER_USAGE_ONE_TIME_SUBMIT_BIT;
+    vkBeginCommandBuffer(cmd, &bi);
+    record(cmd);
+    check(vkEndCommandBuffer(cmd), what, "finish the commands");
+    VkSubmitInfo si{VK_STRUCTURE_TYPE_SUBMIT_INFO};
+    si.commandBufferCount = 1;
+    si.pCommandBuffers = &cmd;
+    check(vkQueueSubmit(s.queue, 1, &si, VK_NULL_HANDLE), what, "send the commands to the graphics card");
+    vkQueueWaitIdle(s.queue);
+    vkFreeCommandBuffers(s.device, s.pool, 1, &cmd);
+}
+
+void destroyTextures() {
+    State& s = st();
+    for (Texture& t : s.textures) {
+        if (t.view) vkDestroyImageView(s.device, t.view, nullptr);
+        if (t.image) vkDestroyImage(s.device, t.image, nullptr);
+        if (t.memory) vkFreeMemory(s.device, t.memory, nullptr);
+    }
+    s.textures.clear();
+    for (VkDescriptorPool p : s.descriptorPools) vkDestroyDescriptorPool(s.device, p, nullptr);
+    s.descriptorPools.clear();
+    s.setsLeft = 0;
+    for (VkSampler& sm : s.samplers) {
+        if (sm) vkDestroySampler(s.device, sm, nullptr);
+        sm = VK_NULL_HANDLE;
+    }
+    if (s.textureLayout) vkDestroyDescriptorSetLayout(s.device, s.textureLayout, nullptr);
+    s.textureLayout = VK_NULL_HANDLE;
 }
 
 // ---- the swapchain, and everything sized to match it
@@ -577,6 +704,8 @@ void closeWindow_() {
         }
         for (auto m : s.shaders) vkDestroyShaderModule(s.device, m, nullptr);
         for (auto& b : s.buffers) destroyBuffer(b);
+        destroyTextures();
+        s.currentPipeline = 0;
         s.pipelines.clear();
         s.shaders.clear();
         s.buffers.clear();
@@ -723,6 +852,9 @@ int32_t createPipeline_(int32_t vertexShader, int32_t fragmentShader, const List
         native::fail(what, "this graphics card allows 0 to " + str((int64_t)maxFloats) + " push-constant floats");
     VkPushConstantRange range{VK_SHADER_STAGE_VERTEX_BIT | VK_SHADER_STAGE_FRAGMENT_BIT, 0, (uint32_t)pushConstantFloats * 4};
     VkPipelineLayoutCreateInfo li{VK_STRUCTURE_TYPE_PIPELINE_LAYOUT_CREATE_INFO};
+    ensureTextureLayout();   // every pipeline can read one texture (set 0, binding 0), whether it does or not
+    li.setLayoutCount = 1;
+    li.pSetLayouts = &s.textureLayout;
     if (pushConstantFloats > 0) {
         li.pushConstantRangeCount = 1;
         li.pPushConstantRanges = &range;
@@ -770,6 +902,103 @@ int32_t createIndexBuffer_(const List<int32_t>& indices) {
 
 // Starts recording this frame's drawing, cleared to one color. False means skip drawing this frame
 // (the window is minimized, or its images are being remade) - just go round the loop again.
+// Loads a picture from the game's folder onto the graphics card. (0, 0) in the shader is its top-left corner.
+int32_t loadTexture_(const std::string& path) {
+    const char* what = "Vulkan.loadTexture()";
+    need(what);
+    State& s = st();
+    std::string file = native::findGameFile(path);
+    if (file.empty()) native::fail(what, "can't find the file '" + path + "' - put it in the game's folder (next to main.frg)");
+    FrgRlImage img = LoadImage(file.c_str());
+    if (!img.data) native::fail(what, "couldn't read '" + path + "' as an image");
+    ImageFormat(&img, 7);  // RGBA, 8 bits each
+    uint32_t w = (uint32_t)img.width, h = (uint32_t)img.height;
+    Buffer staging = makeBuffer((VkDeviceSize)w * h * 4, VK_BUFFER_USAGE_TRANSFER_SRC_BIT, img.data, what);
+    UnloadImage(img);
+    ensureTextureLayout();
+
+    Texture t;
+    VkImageCreateInfo ii{VK_STRUCTURE_TYPE_IMAGE_CREATE_INFO};
+    ii.imageType = VK_IMAGE_TYPE_2D;
+    ii.format = VK_FORMAT_R8G8B8A8_UNORM;
+    ii.extent = {w, h, 1};
+    ii.mipLevels = 1;
+    ii.arrayLayers = 1;
+    ii.samples = VK_SAMPLE_COUNT_1_BIT;
+    ii.tiling = VK_IMAGE_TILING_OPTIMAL;
+    ii.usage = VK_IMAGE_USAGE_TRANSFER_DST_BIT | VK_IMAGE_USAGE_SAMPLED_BIT;
+    ii.sharingMode = VK_SHARING_MODE_EXCLUSIVE;
+    ii.initialLayout = VK_IMAGE_LAYOUT_UNDEFINED;
+    check(vkCreateImage(s.device, &ii, nullptr, &t.image), what, "create the texture");
+    VkMemoryRequirements req;
+    vkGetImageMemoryRequirements(s.device, t.image, &req);
+    VkMemoryAllocateInfo ai{VK_STRUCTURE_TYPE_MEMORY_ALLOCATE_INFO};
+    ai.allocationSize = req.size;
+    ai.memoryTypeIndex = findMemory(req.memoryTypeBits, VK_MEMORY_PROPERTY_DEVICE_LOCAL_BIT, what);
+    check(vkAllocateMemory(s.device, &ai, nullptr, &t.memory), what, "get memory for the texture");
+    vkBindImageMemory(s.device, t.image, t.memory, 0);
+
+    // copy it in: undefined -> ready to copy into -> copied -> ready for shaders to read
+    runOnce([&](VkCommandBuffer cmd) {
+        VkImageMemoryBarrier bar{VK_STRUCTURE_TYPE_IMAGE_MEMORY_BARRIER};
+        bar.oldLayout = VK_IMAGE_LAYOUT_UNDEFINED;
+        bar.newLayout = VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL;
+        bar.srcQueueFamilyIndex = bar.dstQueueFamilyIndex = VK_QUEUE_FAMILY_IGNORED;
+        bar.image = t.image;
+        bar.subresourceRange = {VK_IMAGE_ASPECT_COLOR_BIT, 0, 1, 0, 1};
+        bar.dstAccessMask = VK_ACCESS_TRANSFER_WRITE_BIT;
+        vkCmdPipelineBarrier(cmd, VK_PIPELINE_STAGE_TOP_OF_PIPE_BIT, VK_PIPELINE_STAGE_TRANSFER_BIT, 0, 0, nullptr, 0, nullptr, 1, &bar);
+        VkBufferImageCopy region{};
+        region.imageSubresource = {VK_IMAGE_ASPECT_COLOR_BIT, 0, 0, 1};
+        region.imageExtent = {w, h, 1};
+        vkCmdCopyBufferToImage(cmd, staging.buffer, t.image, VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL, 1, &region);
+        bar.oldLayout = VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL;
+        bar.newLayout = VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL;
+        bar.srcAccessMask = VK_ACCESS_TRANSFER_WRITE_BIT;
+        bar.dstAccessMask = VK_ACCESS_SHADER_READ_BIT;
+        vkCmdPipelineBarrier(cmd, VK_PIPELINE_STAGE_TRANSFER_BIT, VK_PIPELINE_STAGE_FRAGMENT_SHADER_BIT, 0, 0, nullptr, 0, nullptr, 1, &bar);
+    }, what);
+    destroyBuffer(staging);
+
+    VkImageViewCreateInfo vi{VK_STRUCTURE_TYPE_IMAGE_VIEW_CREATE_INFO};
+    vi.image = t.image;
+    vi.viewType = VK_IMAGE_VIEW_TYPE_2D;
+    vi.format = VK_FORMAT_R8G8B8A8_UNORM;
+    vi.subresourceRange = {VK_IMAGE_ASPECT_COLOR_BIT, 0, 1, 0, 1};
+    check(vkCreateImageView(s.device, &vi, nullptr, &t.view), what, "make the texture's view");
+
+    allocateSets(t.sets, what);
+    for (int i = 0; i < 2; i++) {
+        VkDescriptorImageInfo info{s.samplers[i], t.view, VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL};
+        VkWriteDescriptorSet wr{VK_STRUCTURE_TYPE_WRITE_DESCRIPTOR_SET};
+        wr.dstSet = t.sets[i];
+        wr.dstBinding = 0;
+        wr.descriptorCount = 1;
+        wr.descriptorType = VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER;
+        wr.pImageInfo = &info;
+        vkUpdateDescriptorSets(s.device, 1, &wr, 0, nullptr);
+    }
+    s.textures.push_back(t);
+    return (int32_t)s.textures.size();
+}
+
+// The draws after this read this texture (in the pipeline bound with bindPipeline).
+void bindTexture_(int32_t texture) {
+    const char* what = "Vulkan.bindTexture()";
+    needRecording(what);
+    State& s = st();
+    if (s.currentPipeline == 0) native::fail(what, "bind a pipeline first (Vulkan.bindPipeline), then its texture");
+    Texture& t = lookup(s.textures, texture, what, "texture");
+    Pipeline& p = lookup(s.pipelines, s.currentPipeline, what, "pipeline");
+    vkCmdBindDescriptorSets(s.frames[s.frame].cmd, VK_PIPELINE_BIND_POINT_GRAPHICS, p.layout, 0, 1, &t.sets[s.smooth ? 0 : 1], 0, nullptr);
+}
+
+// true (the start): smooth when stretched; false: sharp pixels, for pixel art. For the textures bound after it.
+void setTextureFilter_(bool smooth) {
+    need("Vulkan.setTextureFilter()");
+    st().smooth = smooth;
+}
+
 bool beginFrame_(float r, float g, float b, float a) {
     const char* what = "Vulkan.beginFrame()";
     need(what);
@@ -814,6 +1043,7 @@ void bindPipeline_(int32_t pipeline) {
     needRecording("Vulkan.bindPipeline()");
     State& s = st();
     vkCmdBindPipeline(s.frames[s.frame].cmd, VK_PIPELINE_BIND_POINT_GRAPHICS, lookup(s.pipelines, pipeline, "Vulkan.bindPipeline()", "pipeline").pipeline);
+    s.currentPipeline = pipeline;
 }
 
 void bindVertexBuffer_(int32_t buffer) {

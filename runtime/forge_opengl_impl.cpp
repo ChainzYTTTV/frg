@@ -54,7 +54,17 @@ namespace {
     X(PFNGLVERTEXATTRIBPOINTERPROC, glVertexAttribPointer)                           \
     X(PFNGLENABLEVERTEXATTRIBARRAYPROC, glEnableVertexAttribArray)                   \
     X(PFNGLACTIVETEXTUREPROC, glActiveTexture)                                       \
-    X(PFNGLGENERATEMIPMAPPROC, glGenerateMipmap)
+    X(PFNGLGENERATEMIPMAPPROC, glGenerateMipmap)                                     \
+    X(PFNGLGENFRAMEBUFFERSPROC, glGenFramebuffers)                                   \
+    X(PFNGLBINDFRAMEBUFFERPROC, glBindFramebuffer)                                   \
+    X(PFNGLFRAMEBUFFERTEXTURE2DPROC, glFramebufferTexture2D)                         \
+    X(PFNGLCHECKFRAMEBUFFERSTATUSPROC, glCheckFramebufferStatus)                     \
+    X(PFNGLDELETEFRAMEBUFFERSPROC, glDeleteFramebuffers)                             \
+    X(PFNGLGENRENDERBUFFERSPROC, glGenRenderbuffers)                                 \
+    X(PFNGLBINDRENDERBUFFERPROC, glBindRenderbuffer)                                 \
+    X(PFNGLRENDERBUFFERSTORAGEPROC, glRenderbufferStorage)                           \
+    X(PFNGLFRAMEBUFFERRENDERBUFFERPROC, glFramebufferRenderbuffer)                   \
+    X(PFNGLDELETERENDERBUFFERSPROC, glDeleteRenderbuffers)
 
 #define FRG_DECLARE(type, name) type p_##name = nullptr;
 FRG_GL_FUNCS(FRG_DECLARE)
@@ -302,6 +312,55 @@ void deleteTexture_(int32_t texture) {
     glDeleteTextures(1, &id);
 }
 void activeTexture_(int32_t unit) { need("OpenGL.activeTexture()"); p_glActiveTexture((GLenum)unit); }
+
+// An empty RGBA texture of this size for the bound texture (to draw into with a framebuffer). Its filters are set
+// to LINEAR, since an empty texture has no mipmaps.
+void texImage2D_(int32_t target, int32_t width, int32_t height) {
+    need("OpenGL.texImage2D()");
+    if (width <= 0 || height <= 0) panic("OpenGL.texImage2D()", "the size has to be more than 0, but it's " + std::to_string(width) + " x " + std::to_string(height));
+    glTexImage2D((GLenum)target, 0, GL_RGBA8, width, height, 0, GL_RGBA, GL_UNSIGNED_BYTE, nullptr);
+    glTexParameteri((GLenum)target, GL_TEXTURE_MIN_FILTER, GL_LINEAR);
+    glTexParameteri((GLenum)target, GL_TEXTURE_MAG_FILTER, GL_LINEAR);
+}
+
+// ---- framebuffers: drawing into a texture instead of the window
+int32_t genFramebuffer_() {
+    need("OpenGL.genFramebuffer()");
+    GLuint id = 0;
+    p_glGenFramebuffers(1, &id);
+    return (int32_t)id;
+}
+void bindFramebuffer_(int32_t target, int32_t framebuffer) { need("OpenGL.bindFramebuffer()"); p_glBindFramebuffer((GLenum)target, (GLuint)framebuffer); }
+void framebufferTexture2D_(int32_t target, int32_t attachment, int32_t textarget, int32_t texture) {
+    need("OpenGL.framebufferTexture2D()");
+    p_glFramebufferTexture2D((GLenum)target, (GLenum)attachment, (GLenum)textarget, (GLuint)texture, 0);
+}
+int32_t checkFramebufferStatus_(int32_t target) { need("OpenGL.checkFramebufferStatus()"); return (int32_t)p_glCheckFramebufferStatus((GLenum)target); }
+void deleteFramebuffer_(int32_t framebuffer) {
+    need("OpenGL.deleteFramebuffer()");
+    GLuint id = (GLuint)framebuffer;
+    p_glDeleteFramebuffers(1, &id);
+}
+int32_t genRenderbuffer_() {
+    need("OpenGL.genRenderbuffer()");
+    GLuint id = 0;
+    p_glGenRenderbuffers(1, &id);
+    return (int32_t)id;
+}
+void bindRenderbuffer_(int32_t target, int32_t renderbuffer) { need("OpenGL.bindRenderbuffer()"); p_glBindRenderbuffer((GLenum)target, (GLuint)renderbuffer); }
+void renderbufferStorage_(int32_t target, int32_t format, int32_t width, int32_t height) {
+    need("OpenGL.renderbufferStorage()");
+    p_glRenderbufferStorage((GLenum)target, (GLenum)format, width, height);
+}
+void framebufferRenderbuffer_(int32_t target, int32_t attachment, int32_t rbtarget, int32_t renderbuffer) {
+    need("OpenGL.framebufferRenderbuffer()");
+    p_glFramebufferRenderbuffer((GLenum)target, (GLenum)attachment, (GLenum)rbtarget, (GLuint)renderbuffer);
+}
+void deleteRenderbuffer_(int32_t renderbuffer) {
+    need("OpenGL.deleteRenderbuffer()");
+    GLuint id = (GLuint)renderbuffer;
+    p_glDeleteRenderbuffers(1, &id);
+}
 void texParameteri_(int32_t target, int32_t name, int32_t value) {
     need("OpenGL.texParameteri()");
     glTexParameteri((GLenum)target, (GLenum)name, value);

@@ -183,6 +183,30 @@ SamplerState samp : register(s0);
 float4 c = tex.Sample(samp, uv);
 ```
 
+## Render textures: drawing into a texture
+
+A **render texture** is a texture you can draw into, then use like any other (a security-camera screen, a mirror, a minimap, or effects over the whole picture).
+
+| Function | What it does |
+|---|---|
+| `createRenderTexture(int width, int height)` | a texture of this size that can be drawn into, with its own depth buffer; gives back its handle |
+| `setRenderTarget(int texture)` | draws into this render texture from now on (and `clear` clears it); `0` is the window again. The viewport changes to its size |
+
+```cpp
+int picture = DirectX.createRenderTexture(256, 256);    // once
+
+// every frame
+DirectX.setRenderTarget(picture);
+DirectX.clear(0, 0, 0, 1);
+// ... draw the scene ...
+DirectX.setRenderTarget(0);
+DirectX.clear(0.1, 0.1, 0.15, 1);
+DirectX.setTexture(0, picture);
+// ... draw something with the texture on it ...
+```
+
+A texture can't be read while it's being drawn into, so `setRenderTarget` takes the textures away from the pixel shader: call `setTexture` again after it.
+
 ## Matrices
 
 The helpers are listed in [Matrices](toolkits.md#matrices). DirectX's `perspective` and `orthographic` put depth from 0 to 1, as Direct3D expects.
@@ -198,7 +222,6 @@ The helpers are listed in [Matrices](toolkits.md#matrices). DirectX's `perspecti
 
 This toolkit covers what most games and tutorials need. It doesn't have:
 
-- render targets (drawing into a texture);
 - geometry, hull or compute shaders;
 - instancing;
 - vertex buffers that change after they're made.

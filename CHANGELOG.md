@@ -2,7 +2,13 @@
 
 What changed in each version of Forge. Plans for later versions are in the [roadmap](ROADMAP.md).
 
-## Unreleased
+## 0.9.4 (2026-10-17)
+
+The engine extras before 1.0: 3D culling and light, balls and ramps in `<physics>`, sprite effects, and textures for the low-level toolkits.
+
+**Toolkits**
+- **Textures in `<Vulkan>`:** `loadTexture(path)`, `bindTexture(texture)` and `setTextureFilter(smooth)`. Every pipeline has room for one texture (`layout(set = 0, binding = 0) uniform sampler2D`).
+- **Drawing into a texture** in `<OpenGL>` (framebuffers and renderbuffers: `genFramebuffer`, `bindFramebuffer`, `framebufferTexture2D`, `checkFramebufferStatus`, `texImage2D`...) and `<DirectX>` (`createRenderTexture(width, height)` and `setRenderTarget(texture)`).
 
 **Engine**
 - **Sprite effects:** `graphics2d.beginFlash(color, amount)` (the "got hit" flash), `beginOutline(color, thickness)`, `beginGlow(color, size)` and `endEffect()` for textures and animations, without writing a shader.

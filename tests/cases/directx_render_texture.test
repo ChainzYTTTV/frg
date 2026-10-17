@@ -1,0 +1,62 @@
+=== main.frg
+#include <DirectX>
+#include <stdio>
+
+string SHADER = """
+struct VertexIn { float2 position : POSITION; float3 color : COLOR; };
+struct PixelIn { float4 position : SV_POSITION; float3 color : COLOR; };
+PixelIn vsMain(VertexIn v) { PixelIn o; o.position = float4(v.position, 0.0, 1.0); o.color = v.color; return o; }
+float4 psMain(PixelIn p) : SV_TARGET { return float4(p.color, 1.0); }
+
+struct QuadIn { float2 position : POSITION; float2 uv : TEXCOORD; };
+struct QuadPixel { float4 position : SV_POSITION; float2 uv : TEXCOORD; };
+Texture2D picture : register(t0);
+SamplerState samp : register(s0);
+QuadPixel quadVs(QuadIn v) { QuadPixel o; o.position = float4(v.position, 0.0, 1.0); o.uv = v.uv; return o; }
+float4 quadPs(QuadPixel p) : SV_TARGET { return picture.Sample(samp, p.uv); }
+""";
+
+int main(){
+    DirectX.openWindow(640, 360, "Render texture");
+    int vs = DirectX.compileVertexShader(SHADER, "vsMain");
+    int ps = DirectX.compilePixelShader(SHADER, "psMain");
+    int layout = DirectX.createInputLayout(vs, ["POSITION", "COLOR"], [2, 3]);
+    int tri = DirectX.createVertexBuffer([-0.8, -0.8, 1, 0, 0, 0, 0.8, 0, 0, 1, 0.8, -0.8, 0, 1, 0]);
+    int qvs = DirectX.compileVertexShader(SHADER, "quadVs");
+    int qps = DirectX.compilePixelShader(SHADER, "quadPs");
+    int qlayout = DirectX.createInputLayout(qvs, ["POSITION", "TEXCOORD"], [2, 2]);
+    // two copies, side by side (uv (0, 0) is the top-left)
+    int quads = DirectX.createVertexBuffer([-0.9, 0.5, 0, 0, -0.1, 0.5, 1, 0, -0.1, -0.5, 1, 1, -0.9, 0.5, 0, 0, -0.1, -0.5, 1, 1, -0.9, -0.5, 0, 1,
+                                            0.1, 0.5, 0, 0, 0.9, 0.5, 1, 0, 0.9, -0.5, 1, 1, 0.1, 0.5, 0, 0, 0.9, -0.5, 1, 1, 0.1, -0.5, 0, 1]);
+    int target = DirectX.createRenderTexture(256, 256);
+    print("render texture handle: {target > 0}");
+    try {
+        DirectX.setRenderTarget(999);
+    } catch (Error e) {
+        print("bad: {e.message}");
+    }
+    while (!DirectX.shouldClose()) {
+        DirectX.setRenderTarget(target);
+        DirectX.clear(1, 1, 0.6, 1);
+        DirectX.setShaders(vs, ps);
+        DirectX.setInputLayout(layout);
+        DirectX.setVertexBuffer(tri, 5);
+        DirectX.draw(3);
+        DirectX.setRenderTarget(0);
+        DirectX.clear(0.1, 0.1, 0.15, 1);
+        DirectX.setShaders(qvs, qps);
+        DirectX.setInputLayout(qlayout);
+        DirectX.setVertexBuffer(quads, 4);
+        DirectX.setTexture(0, target);
+        DirectX.draw(12);
+    }
+    print("done");
+    DirectX.closeWindow();
+    return 0;
+}
+=== window
+frames: 3
+=== output
+render texture handle: true
+bad: texture 999 can't be drawn into - make one that can with DirectX.createRenderTexture(width, height) (0 is the window)
+done

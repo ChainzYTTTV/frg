@@ -18,6 +18,8 @@ inline std::string frg$str(MouseButton_ b) { return native::buttonName(b); }
 void openWindow_(int32_t width, int32_t height, const std::string& title);
 void closeWindow_();
 inline bool shouldClose_() { return native::shouldClose(); }
+int32_t createRenderTexture_(int32_t width, int32_t height);
+void setRenderTarget_(int32_t texture);
 inline int32_t width_() { return native::width(); }
 inline int32_t height_() { return native::height(); }
 inline float deltaTime_() { return native::deltaTime(); }

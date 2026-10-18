@@ -2,9 +2,9 @@
 
 What changed in each version of Forge. Plans for later versions are in the [roadmap](ROADMAP.md).
 
-## Unreleased
+## 0.9.5 (2026-10-18)
 
-Names settled for 1.0. Code written for 0.9.4 that uses an old name gets an error saying what it's called now, and how to change it everywhere at once (Replace in Files, with Match Case and Match Whole Word).
+3D physics, and the names settled for 1.0. Code written for 0.9.4 that uses an old name gets an error saying what it's called now, and how to change it everywhere at once (Replace in Files, with Match Case and Match Whole Word).
 
 **Language**
 - **A library's name only blocks names in the files that `#include` it.** A file without `#include <time>` can have a variable called `time`, and a library added in a later Forge never breaks a game (`network` isn't reserved any more either). Files and folders can be named like libraries too.

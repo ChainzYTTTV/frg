@@ -1234,7 +1234,7 @@ error: unknown type 'Camera'
   hint: it's called Camera3D since Forge 0.9.5 - change 'Camera' to 'Camera3D' everywhere at once: in VS Code, Replace in Files (Ctrl+Shift+H), with Match Case (Alt+C) and Match Whole Word (Alt+W) turned on, so only this exact name changes
 ```
 
-**Fix:** change every `Camera` to `Camera3D` at once, with Replace in Files (Ctrl+Shift+H). Turn on **Match Case**, or a variable called `camera` would become `camera3D`, and **Match Whole Word**, or `CameraShake` would become `Camera3DShake`. The other renamed names: `graphics3d.setCulling` / `isCulling` (now `setViewCulling` / `isViewCulling`), `time.clock` (now `timeOfDay`) and a font's `measure` (now `textWidth`).
+**Fix:** change every `Camera` to `Camera3D` at once, with Replace in Files (Ctrl+Shift+H). Turn on **Match Case**, or a variable called `camera` would become `camera3D`, and **Match Whole Word**, or `CameraShake` would become `Camera3DShake`. Look over the matches before Replace All: text in quotes, like `"Security Camera"`, matches too and should stay. The other renamed names: `graphics3d.setCulling` / `isCulling` (now `setViewCulling` / `isViewCulling`), `time.clock` (now `timeOfDay`) and a font's `measure` (now `textWidth`).
 
 ### `'string' is a built-in type name, so it can't be used as a name`
 

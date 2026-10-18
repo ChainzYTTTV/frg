@@ -226,18 +226,23 @@ Text files read and written with [`<file>`](libraries/file.md) work differently:
 
 ## Forge Edit: a light editor
 
-Forge comes with its own small code editor, **Forge Edit**, for computers where VS Code is slow (it needs far less memory). It's dark, knows Forge's colors, shows errors as you save, runs the game, and has all of these docs inside it.
+Forge comes with its own small code editor, **Forge Edit**, for computers where VS Code is slow (it needs far less memory). It's dark, knows Forge's colors, shows errors as you type, runs the game, and has all of these docs inside it.
 
 Open it from the Start menu (Windows) or the apps menu (Linux), or in a terminal: `forge-edit` (or `forge-edit path/to/mygame`). It opens the game folder it had open last time; **Ctrl+O** opens another one (type its path; Tab finishes a folder's name).
+
+- **Left:** the game's folders and files. Click a folder to open or close it. **+ File** and **+ Folder** make one in the folder you clicked last.
+- **Middle:** the code, with **Problems** and **Output** under it.
+- **Right:** the docs (F1 opens and closes them), with a search box.
+- Drag the edges between them to make any part bigger or smaller. Forge Edit remembers the sizes, the text size and the folder.
 
 | Keys | What they do |
 |---|---|
 | **F5** | save everything and run the game (what it prints shows in **Output**) |
 | **Shift+F5** | stop the game |
-| **F8** | check the game for errors (it also does this every time you save) |
-| **F1** | Forge's docs, with a search box (Esc goes back to the code) |
+| **F8** | check the game for errors (it also does this a moment after you stop typing) |
+| **F1** | open or close the docs, with a search box (Enter opens the first page that has the words) |
 | **Ctrl+S** / **Ctrl+Shift+S** | save this file / save every file |
-| **Ctrl+N** | a new file (like `enemy.frg`, or `levels/one.txt` for one in a folder) |
+| **Ctrl+N** / **Ctrl+Shift+N** | a new file (like `enemy.frg`) / a new folder |
 | **Ctrl+O** | open another game folder |
 | **Ctrl+F** | find (Enter: the next one, Shift+Enter: the one before) |
 | **Ctrl+G** | go to a line |
@@ -248,7 +253,7 @@ Open it from the Start menu (Windows) or the apps menu (Linux), or in a terminal
 | **Ctrl+W**, **Ctrl+Tab** | close this file, go to the next one |
 | **Ctrl+=** / **Ctrl+-** | bigger / smaller text |
 
-Errors get a red wavy line, a dot next to the line number, and a line in **Problems**: click it to go there. Forge Edit only writes spaces (a tab in a file becomes 4 spaces). It doesn't have autocomplete or a debugger; VS Code does.
+Errors get a red wavy line, a dot next to the line number, a red file name on the left, and a line in **Problems**: click it to go there. They show up a moment after you stop typing, without saving anything: Forge Edit checks a copy of the game with your changes. It only writes spaces (a tab in a file becomes 4 spaces). It doesn't have autocomplete or a debugger; VS Code does.
 
 ## VS Code
 

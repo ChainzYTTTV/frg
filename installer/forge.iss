@@ -54,7 +54,7 @@ Source: "stage\*"; DestDir: "{app}"; Flags: recursesubdirs createallsubdirs igno
 ; made by frg as it's used: the build cache and the update check's note
 Type: filesandordirs; Name: "{app}\bin\cache"
 Type: files; Name: "{app}\bin\update.txt"
-Type: files; Name: "{app}\bin\forge-edit-folder.txt"
+Type: files; Name: "{app}\bin\forge-edit-settings.txt"
 
 [Icons]
 ; Forge Edit, the light code editor, in the Start menu (it opens the game folder it had open last)

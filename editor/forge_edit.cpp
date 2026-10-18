@@ -2,10 +2,13 @@
 //
 //   forge-edit [game folder]
 //
-// The game's files are on the left; the bottom panel shows Problems (frg check, after every save) and Output (frg run).
-// F5 runs the game, Shift+F5 stops it, F8 checks it, F1 opens Forge's docs (the docs folder next to bin/).
-// Testing: FORGE_EDIT_OPEN=file opens a file, FORGE_EDIT_DOCS=1 starts in the docs, FORGE_EDIT_SHOT=picture.png
-// FORGE_EDIT_FRAMES=n takes a screenshot after n frames and quits, FORGE_EDIT_RUN=1 presses Run at the start.
+// The game's folders and files are on the left, the docs on the right (F1), and the bottom panel shows Problems and
+// Output. The game is checked as you type (a copy with the unsaved changes, so nothing is saved for you). F5 runs the
+// game, Shift+F5 stops it, F8 checks it. The panels' sizes, the text size and the last folder are remembered in
+// forge-edit-settings.txt next to forge-edit.
+// Testing: FORGE_EDIT_OPEN=file opens a file, FORGE_EDIT_DOCS=1 opens the docs, FORGE_EDIT_SHOT=picture.png
+// FORGE_EDIT_FRAMES=n takes a screenshot after n frames and quits, FORGE_EDIT_RUN=1 presses Run at the start,
+// FORGE_EDIT_EXPAND=1 opens every folder.
 #include "raylib.h"
 
 #include "process.hpp"
@@ -18,6 +21,8 @@
 #include <cstring>
 #include <filesystem>
 #include <fstream>
+#include <map>
+#include <set>
 #include <sstream>
 #include <string>
 #include <vector>
@@ -31,7 +36,10 @@ static const Color kPanel = {43, 45, 48, 255};
 static const Color kPanelDark = {36, 37, 40, 255};
 static const Color kBorder = {57, 59, 64, 255};
 static const Color kText = {212, 212, 212, 255};
+static const Color kSoft = {190, 190, 190, 255};
 static const Color kDim = {133, 133, 133, 255};
+static const Color kHover = {50, 52, 56, 255};
+static const Color kChosen = {55, 58, 62, 255};
 static const Color kKeyword = {197, 134, 192, 255};
 static const Color kType = {78, 201, 176, 255};
 static const Color kString = {206, 145, 120, 255};
@@ -98,6 +106,21 @@ static std::vector<std::string> splitLines(const std::string& text) {
     lines.push_back(cur);
     return lines;
 }
+static std::string joinLines(const std::vector<std::string>& lines) {
+    std::string out;
+    for (size_t i = 0; i < lines.size(); i++) out += lines[i] + (i + 1 < lines.size() ? "\n" : "");
+    return out;
+}
+static std::string typed(int codepoint) {
+    int n = 0;
+    const char* u = CodepointToUTF8(codepoint, &n);
+    return std::string(u, n);
+}
+static bool inList(const std::string& w, std::initializer_list<const char*> words) {
+    for (const char* k : words)
+        if (w == k) return true;
+    return false;
+}
 
 // ---------------------------------------------------------------- fonts
 
@@ -115,14 +138,14 @@ static std::vector<int> fontCodepoints() {
     std::vector<int> cps;
     for (int c = 32; c < 127; c++) cps.push_back(c);
     for (int c = 160; c < 256; c++) cps.push_back(c);
-    for (int c : {0x2014, 0x2013, 0x2192, 0x2190, 0x2191, 0x2193, 0x2022, 0x2026, 0x2713, 0x2717, 0x00D7, 0x2264, 0x2265, 0x2260,
-                  0x201C, 0x201D, 0x2018, 0x2019, 0x25B6, 0x25A0})
+    for (int c : {0x2014, 0x2013, 0x2192, 0x2190, 0x2191, 0x2193, 0x2022, 0x2026, 0x2713, 0x2717, 0x2264, 0x2265, 0x2260,
+                  0x201C, 0x201D, 0x2018, 0x2019, 0x25B6, 0x25BC, 0x25B8, 0x25BE, 0x25A0})
         cps.push_back(c);
     return cps;
 }
 
 static void loadMono() {
-    if (F.mono.texture.id) UnloadFont(F.mono);
+    if (F.mono.texture.id && !F.monoPath.empty()) UnloadFont(F.mono);
     std::vector<int> cps = fontCodepoints();
     F.mono = F.monoPath.empty() ? GetFontDefault() : LoadFontEx(F.monoPath.string().c_str(), (int)F.size, cps.data(), (int)cps.size());
     if (!F.monoPath.empty()) SetTextureFilter(F.mono.texture, TEXTURE_FILTER_POINT);
@@ -151,6 +174,12 @@ static void text(const Font& f, const std::string& s, float x, float y, float si
 static float textW(const Font& f, const std::string& s, float size) { return MeasureTextEx(f, s.c_str(), size, 0).x; }
 static void ui(const std::string& s, float x, float y, Color c = kText, float size = 15) { text(F.sans, s, x, y, size, c); }
 static float uiW(const std::string& s, float size = 15) { return textW(F.sans, s, size); }
+// Shortens text with "..." until it fits in `w`.
+static std::string fit(std::string s, float w, float size) {
+    if (uiW(s, size) <= w) return s;
+    while (s.size() > 1 && uiW(s + "...", size) > w) s.erase(prevPos(s, (int)s.size()));
+    return s + "...";
+}
 
 // ---------------------------------------------------------------- Forge's colors
 
@@ -160,11 +189,6 @@ struct Span {
     Tok tok;
 };
 
-static bool inList(const std::string& w, std::initializer_list<const char*> words) {
-    for (const char* k : words)
-        if (w == k) return true;
-    return false;
-}
 static bool isKeyword(const std::string& w) {
     return inList(w, {"if", "else", "while", "for", "in", "do", "return", "break", "continue", "switch", "case", "default",
                       "class", "struct", "enum", "interface", "abstract", "static", "private", "const", "true", "false",
@@ -201,12 +225,10 @@ static void highlight(const std::string& s, int& state, std::vector<Span>& out) 
         char c = s[i];
         if (s.compare(i, 3, "```") == 0) {
             state = 1;
-            int at = i;
-            closeBlock("```", Tok::Comment, at + 3);
+            closeBlock("```", Tok::Comment, i + 3);
         } else if (s.compare(i, 3, "\"\"\"") == 0) {
             state = 2;
-            int at = i;
-            closeBlock("\"\"\"", Tok::String, at + 3);
+            closeBlock("\"\"\"", Tok::String, i + 3);
         } else if (c == '/' && i + 1 < n && s[i + 1] == '/') {
             out.push_back({i, n, Tok::Comment});
             i = n;
@@ -288,10 +310,18 @@ struct Problem {
     std::string message, hint;
 };
 
+// One row of the file tree: a folder or a file.
+struct Entry {
+    fs::path path;
+    std::string rel;   // like "enemies/goblin.frg"
+    int depth;
+    bool dir;
+};
+
 // ---------------------------------------------------------------- the editor's state
 
 enum class Panel { Problems, Output };
-enum class Prompt { None, Find, NewFile, GoToLine, OpenFolder };
+enum class Prompt { None, Find, NewFile, NewFolder, GoToLine, OpenFolder };
 
 struct DocPage {
     fs::path path;
@@ -310,33 +340,40 @@ struct Editor {
     fs::path root, exeDir, frg, docsDir;
     std::vector<Doc> docs;
     int active = -1;
-    std::vector<fs::path> files;   // the game's files, for the side bar
-    double filesAt = -100;
+    std::vector<Entry> tree;
+    std::set<std::string> openFolders;
+    std::string chosenFolder;   // where a new file or folder goes ("" = the game's folder)
+    double treeAt = -100;
     std::vector<Problem> problems;
     std::string output;
     Panel panel = Panel::Problems;
-    float panelH = 190;
+    float sideW = 240, docsW = 440, panelH = 190;
+    bool docsOpen = false;
     float outputScroll = 0;
     bool followOutput = true;
     RunningProcess* run = nullptr;
     RunningProcess* check = nullptr;
     std::string checkOut;
     bool checkAgain = false;
+    int editCount = 0, checkedCount = -1;   // a check runs a moment after the text changes
+    double lastChange = 0;
+    std::map<std::string, std::string> mirror;   // what's in the checked copy, by file
     Prompt prompt = Prompt::None;
     std::string promptText, findText;
     std::string status;
     double statusAt = -100;
     bool dragging = false;
+    int resizing = 0;   // 1 the file list, 2 the docs, 3 the bottom panel
     double lastClick = 0;
     bool quitWarned = false;
     float sideScroll = 0;
-    // docs
-    bool docsMode = false;
+    // the docs
     std::vector<DocPage> pages;
-    int page = -1;
+    int page = -1;   // -1: the list of pages
     std::string docSearch;
+    bool searchFocus = false;
     std::vector<DocItem> layout;
-    float layoutW = 0, layoutH = 0, docScroll = 0;
+    float layoutW = 0, layoutH = 0, docScroll = 0, listScroll = 0;
 };
 static Editor E;
 
@@ -354,8 +391,6 @@ static std::string relName(const fs::path& p) {
 }
 
 static bool samePath(const fs::path& a, const fs::path& b) {
-    std::error_code ec;
-    if (fs::exists(a, ec) && fs::exists(b, ec)) return fs::equivalent(a, b, ec);
     return a.lexically_normal() == b.lexically_normal();
 }
 
@@ -364,72 +399,75 @@ static bool isTextFile(const fs::path& p) {
     return inList(e, {".frg", ".txt", ".md", ".json", ".csv", ".vert", ".frag", ".comp", ".geom", ".glsl", ".hlsl", ".cfg", ".ini", ""});
 }
 
-static void refreshFiles() {
-    E.files.clear();
+static bool skipFolder(const std::string& name) { return name == "build" || name == "dist" || name.starts_with("."); }
+
+// The game's folders and files, folders first at each level (main.frg first of all).
+static void addFolder(const fs::path& dir, int depth) {
+    std::vector<fs::directory_entry> items;
     std::error_code ec;
-    for (auto it = fs::recursive_directory_iterator(E.root, ec); it != fs::recursive_directory_iterator(); it.increment(ec)) {
-        if (ec) break;
-        std::string name = it->path().filename().string();
-        if (it->is_directory(ec)) {
-            if (name == "build" || name == "dist" || name.starts_with(".")) it.disable_recursion_pending();
-            continue;
-        }
-        if (!name.starts_with(".") && isTextFile(it->path())) E.files.push_back(it->path());
-        if (E.files.size() > 2000) break;
-    }
-    std::sort(E.files.begin(), E.files.end(), [](const fs::path& a, const fs::path& b) {
-        std::string ra = relName(a), rb = relName(b);
-        bool ma = ra == "main.frg", mb = rb == "main.frg";
-        if (ma != mb) return ma;
-        int da = (int)std::count(ra.begin(), ra.end(), '/'), db = (int)std::count(rb.begin(), rb.end(), '/');
-        if (da != db) return da < db;
-        return lower(ra) < lower(rb);
+    for (const auto& e : fs::directory_iterator(dir, ec)) items.push_back(e);
+    std::sort(items.begin(), items.end(), [](const fs::directory_entry& a, const fs::directory_entry& b) {
+        std::error_code ec2;
+        bool da = a.is_directory(ec2), db = b.is_directory(ec2);
+        if (da != db) return da;
+        std::string na = a.path().filename().string(), nb = b.path().filename().string();
+        if ((na == "main.frg") != (nb == "main.frg")) return na == "main.frg";
+        return lower(na) < lower(nb);
     });
-    E.filesAt = GetTime();
+    for (const auto& e : items) {
+        if (E.tree.size() > 4000) return;
+        std::string name = e.path().filename().string();
+        bool isDir = e.is_directory(ec);
+        if (name.starts_with(".") || (isDir && skipFolder(name))) continue;
+        E.tree.push_back({e.path(), relName(e.path()), depth, isDir});
+        if (isDir) addFolder(e.path(), depth + 1);
+    }
+}
+
+static void refreshTree() {
+    E.tree.clear();
+    addFolder(E.root, 0);
+    E.treeAt = GetTime();
+}
+
+// Opens the folders a file is in, in the tree.
+static void revealInTree(const fs::path& p) {
+    std::string rel = relName(p);
+    for (size_t at = rel.find('/'); at != std::string::npos; at = rel.find('/', at + 1)) E.openFolders.insert(rel.substr(0, at));
 }
 
 static void openFile(const fs::path& p, int line = -1, int col = 0) {
+    revealInTree(p);
+    int found = -1;
     for (int i = 0; i < (int)E.docs.size(); i++)
-        if (samePath(E.docs[i].path, p)) {
-            E.active = i;
-            E.docsMode = false;
-            if (line >= 0) {
-                Doc& d = E.docs[i];
-                d.cur = {std::clamp(line, 0, (int)d.lines.size() - 1), 0};
-                d.cur.col = std::min(col, (int)d.lines[d.cur.line].size());
-                d.sel = false;
-                d.scrollY = std::max(0.0f, (d.cur.line - 5) * F.lineH);
-            }
-            return;
-        }
-    Doc d;
-    d.path = p;
-    std::string t = readFileText(p);
-    // tabs become 4 spaces (the editor only writes spaces)
-    std::string expanded;
-    for (char c : t) expanded += c == '\t' ? std::string("    ") : std::string(1, c);
-    d.lines = splitLines(expanded);
+        if (samePath(E.docs[i].path, p)) found = i;
+    if (found < 0) {
+        Doc d;
+        d.path = p;
+        std::string t = readFileText(p);
+        std::string expanded;   // tabs become 4 spaces (the editor only writes spaces)
+        for (char c : t) expanded += c == '\t' ? std::string("    ") : std::string(1, c);
+        d.lines = splitLines(expanded);
+        E.docs.push_back(std::move(d));
+        found = (int)E.docs.size() - 1;
+    }
+    E.active = found;
     if (line >= 0) {
+        Doc& d = E.docs[found];
         d.cur = {std::clamp(line, 0, (int)d.lines.size() - 1), 0};
         d.cur.col = std::min(col, (int)d.lines[d.cur.line].size());
+        d.sel = false;
         d.scrollY = std::max(0.0f, (d.cur.line - 5) * F.lineH);
     }
-    E.docs.push_back(std::move(d));
-    E.active = (int)E.docs.size() - 1;
-    E.docsMode = false;
 }
 
-static void startCheck();
-
 static bool saveDoc(Doc& d) {
-    std::string out;
-    for (size_t i = 0; i < d.lines.size(); i++) out += d.lines[i] + (i + 1 < d.lines.size() ? "\n" : "");
     std::ofstream f(d.path, std::ios::binary);
     if (!f) {
         say("couldn't save " + relName(d.path));
         return false;
     }
-    f << out;
+    f << joinLines(d.lines);
     d.dirty = false;
     return true;
 }
@@ -439,21 +477,98 @@ static void saveAll() {
         if (d.dirty) saveDoc(d);
 }
 
+// ---------------------------------------------------------------- settings
+
+static fs::path settingsFile() { return E.exeDir / "forge-edit-settings.txt"; }
+
+static void saveSettings() {
+    std::ofstream f(settingsFile(), std::ios::binary);
+    if (!f) return;
+    f << "folder=" << E.root.string() << "\nfiles=" << (int)E.sideW << "\ndocs=" << (int)E.docsW << "\npanel=" << (int)E.panelH
+      << "\ndocsOpen=" << (E.docsOpen ? 1 : 0) << "\ntextSize=" << (int)F.size << "\n";
+}
+
+static std::map<std::string, std::string> loadSettings() {
+    std::map<std::string, std::string> s;
+    for (const std::string& line : splitLines(readFileText(settingsFile()))) {
+        size_t eq = line.find('=');
+        if (eq != std::string::npos) s[line.substr(0, eq)] = line.substr(eq + 1);
+    }
+    return s;
+}
+
 // ---------------------------------------------------------------- frg: checking and running
+
+static std::string hashName(const std::string& s) {
+    unsigned long long h = 1469598103934665603ull;
+    for (unsigned char c : s) h = (h ^ c) * 1099511628211ull;
+    char buf[17];
+    std::snprintf(buf, sizeof buf, "%016llx", h);
+    return buf;
+}
+
+// The game is checked as a copy in the temp folder: its folders and .frg files, with what's typed but not saved yet.
+// (frg check only reads .frg files and looks at folders.) Only files that changed are written again.
+static fs::path mirrorDir() {
+    std::error_code ec;
+    return fs::temp_directory_path(ec) / "forge-edit-check" / hashName(E.root.string());
+}
+
+static bool syncMirror() {
+    fs::path m = mirrorDir();
+    std::error_code ec;
+    fs::create_directories(m, ec);
+    if (ec) return false;
+    std::set<std::string> wanted;
+    for (const Entry& e : E.tree) {
+        if (e.dir) {
+            fs::create_directories(m / e.rel, ec);
+            continue;
+        }
+        if (e.path.extension() != ".frg") continue;
+        wanted.insert(e.rel);
+        std::string content;
+        bool open = false;
+        for (const Doc& d : E.docs)
+            if (samePath(d.path, e.path)) {
+                content = joinLines(d.lines);
+                open = true;
+            }
+        if (!open) content = readFileText(e.path);
+        auto it = E.mirror.find(e.rel);
+        if (it != E.mirror.end() && it->second == content && fs::exists(m / e.rel, ec)) continue;
+        std::ofstream f(m / e.rel, std::ios::binary);
+        f << content;
+        E.mirror[e.rel] = content;
+    }
+    // .frg files that were deleted or renamed in the game
+    for (auto it = E.mirror.begin(); it != E.mirror.end();) {
+        if (!wanted.count(it->first)) {
+            fs::remove(m / it->first, ec);
+            it = E.mirror.erase(it);
+        } else {
+            ++it;
+        }
+    }
+    return true;
+}
 
 static void startCheck() {
     if (E.check) {
         E.checkAgain = true;
         return;
     }
+    E.checkedCount = E.editCount;
     if (!fs::exists(E.root / "main.frg")) return;
+    if (!syncMirror()) return;
     E.checkOut.clear();
-    E.check = startProcess({E.frg.string(), "check", E.root.string(), "--machine"}, E.root.string());
+    E.check = startProcess({E.frg.string(), "check", mirrorDir().string(), "--machine"}, mirrorDir().string());
     if (!E.check) say("couldn't start frg - is Forge installed?");
 }
 
 static void finishCheck() {
     E.problems.clear();
+    fs::path m = mirrorDir().lexically_normal();
     std::stringstream ss(E.checkOut);
     std::string line;
     while (std::getline(ss, line)) {
@@ -479,13 +594,14 @@ static void finishCheck() {
             }
             return o;
         };
-        Problem p{f[0] == "W", fs::path(unescape(f[1])), std::atoi(f[2].c_str()), std::atoi(f[3].c_str()),
-                  std::atoi(f[4].c_str()), unescape(f[5]), f.size() > 6 ? unescape(f[6]) : ""};
-        E.problems.push_back(p);
+        // a file in the checked copy is the same file in the game's folder
+        fs::path file = fs::path(unescape(f[1])).lexically_normal();
+        fs::path rel = file.lexically_relative(m);
+        if (!rel.empty() && rel.native()[0] != '.') file = E.root / rel;
+        E.problems.push_back({f[0] == "W", file, std::atoi(f[2].c_str()), std::atoi(f[3].c_str()), std::atoi(f[4].c_str()),
+                              unescape(f[5]), f.size() > 6 ? unescape(f[6]) : ""});
     }
     std::stable_sort(E.problems.begin(), E.problems.end(), [](const Problem& a, const Problem& b) { return !a.warning && b.warning; });
-    int errors = (int)std::count_if(E.problems.begin(), E.problems.end(), [](const Problem& p) { return !p.warning; });
-    if (errors && !E.run) E.panel = Panel::Problems;
 }
 
 static void startRun() {
@@ -494,27 +610,25 @@ static void startRun() {
         E.run = nullptr;
     }
     saveAll();
+    E.panel = Panel::Output;
     if (!fs::exists(E.root / "main.frg")) {
         E.output = "There's no main.frg in " + E.root.string() + ", so there's no game to run here.\n";
-        E.panel = Panel::Output;
         return;
     }
     E.output.clear();
     E.followOutput = true;
-    E.panel = Panel::Output;
     E.run = startProcess({E.frg.string(), "run", E.root.string()}, E.root.string());
     if (!E.run) E.output = "Couldn't start frg. Is Forge installed, with frg next to forge-edit or on the PATH?\n";
-    startCheck();
 }
 
 static void pollProcesses() {
     if (E.run) {
-        std::string got = takeOutput(E.run);
-        for (char c : got)
+        for (char c : takeOutput(E.run))
             if (c != '\r') E.output += c;
         int code;
         if (processEnded(E.run, &code)) {
-            E.output += takeOutput(E.run);
+            for (char c : takeOutput(E.run))
+                if (c != '\r') E.output += c;
             E.output += "\n[the game ended" + (code ? " with code " + std::to_string(code) : std::string()) + "]\n";
             freeProcess(E.run);
             E.run = nullptr;
@@ -535,6 +649,8 @@ static void pollProcesses() {
             }
         }
     }
+    // checking as you type: a moment after the last change
+    if (E.editCount != E.checkedCount && !E.check && GetTime() - E.lastChange > 1.2) startCheck();
 }
 
 // ---------------------------------------------------------------- the open folder
@@ -549,23 +665,19 @@ static fs::path expandHome(const std::string& s) {
     return fs::path(s);
 }
 
-// The folder open last time is kept next to forge-edit, so opening it from a menu goes straight back to the game.
-static fs::path lastFolderFile() { return E.exeDir / "forge-edit-folder.txt"; }
-static void rememberFolder() {
-    std::ofstream f(lastFolderFile(), std::ios::binary);
-    if (f) f << E.root.string() << "\n";
-}
-
 static void openFolder(const fs::path& dir) {
     saveAll();
     E.docs.clear();
     E.active = -1;
     E.problems.clear();
+    E.mirror.clear();
+    E.openFolders.clear();
+    E.chosenFolder.clear();
     E.root = fs::absolute(dir).lexically_normal();
     if (!E.root.has_filename()) E.root = E.root.parent_path();
-    rememberFolder();
+    saveSettings();
     SetWindowTitle(("Forge Edit - " + E.root.filename().string()).c_str());
-    refreshFiles();
+    refreshTree();
     if (fs::exists(E.root / "main.frg")) openFile(E.root / "main.frg");
     startCheck();
     E.sideScroll = 0;
@@ -573,11 +685,11 @@ static void openFolder(const fs::path& dir) {
 
 // Tab in the folder prompt: finishes the folder name being typed, if only one folder starts like that.
 static void completeFolder() {
-    fs::path typed = expandHome(E.promptText);
-    std::string text = E.promptText;
-    bool endsInSlash = !text.empty() && (text.back() == '/' || text.back() == '\\');
-    fs::path dir = endsInSlash ? typed : typed.parent_path();
-    std::string start = endsInSlash ? "" : typed.filename().string();
+    fs::path t = expandHome(E.promptText);
+    std::string txt = E.promptText;
+    bool endsInSlash = !txt.empty() && (txt.back() == '/' || txt.back() == '\\');
+    fs::path dir = endsInSlash ? t : t.parent_path();
+    std::string start = endsInSlash ? "" : t.filename().string();
     std::vector<std::string> found;
     std::error_code ec;
     for (const auto& e : fs::directory_iterator(dir.empty() ? fs::path(".") : dir, ec))
@@ -591,7 +703,7 @@ static void completeFolder() {
         }
         return;
     }
-    E.promptText = text.substr(0, text.size() - start.size()) + found[0] + "/";
+    E.promptText = txt.substr(0, txt.size() - start.size()) + found[0] + "/";
 }
 
 // ---------------------------------------------------------------- editing
@@ -611,6 +723,8 @@ static void remember(Doc& d, int kind) {
     d.lastKind = kind;
     d.lastEdit = now;
     d.dirty = true;
+    E.editCount++;
+    E.lastChange = now;
 }
 
 static std::string selectedText(const Doc& d) {
@@ -646,8 +760,7 @@ static void insertText(Doc& d, const std::string& t) {
     size_t at = 0;
     for (;;) {
         size_t nl = clean.find('\n', at);
-        std::string piece = clean.substr(at, nl == std::string::npos ? std::string::npos : nl - at);
-        d.lines[d.cur.line] += piece;
+        d.lines[d.cur.line] += clean.substr(at, nl == std::string::npos ? std::string::npos : nl - at);
         d.cur.col = (int)d.lines[d.cur.line].size();
         if (nl == std::string::npos) break;
         d.lines.insert(d.lines.begin() + d.cur.line + 1, "");
@@ -669,16 +782,14 @@ static void newline(Doc& d) {
     remember(d, 0);
     deleteSel(d);
     std::string& line = d.lines[d.cur.line];
-    int ind = indentOf(line);
-    ind = std::min(ind, d.cur.col);
+    int ind = std::min(indentOf(line), d.cur.col);
     std::string before = line.substr(0, d.cur.col);
     std::string after = line.substr(d.cur.col);
     size_t lastChar = before.find_last_not_of(' ');
     bool opens = lastChar != std::string::npos && (before[lastChar] == '{' || before[lastChar] == '(' || before[lastChar] == '[');
     size_t firstAfter = after.find_first_not_of(' ');
     bool closes = firstAfter != std::string::npos && (after[firstAfter] == '}' || after[firstAfter] == ')' || after[firstAfter] == ']');
-    if (firstAfter != std::string::npos) after = after.substr(firstAfter);
-    else after.clear();
+    after = firstAfter != std::string::npos ? after.substr(firstAfter) : "";
     line = before;
     std::string pad(ind + (opens ? 4 : 0), ' ');
     d.lines.insert(d.lines.begin() + d.cur.line + 1, pad + (opens && closes ? "" : after));
@@ -706,7 +817,7 @@ static void backspace(Doc& d, bool word) {
         while (from > 0 && line[from - 1] == ' ') from--;
         while (from > 0 && isWord((unsigned char)line[from - 1])) from--;
         if (from == d.cur.col) from = prevPos(line, d.cur.col);
-    } else if (d.cur.col <= indentOf(line) && d.cur.col > 0) {
+    } else if (d.cur.col <= indentOf(line)) {
         from = ((d.cur.col - 1) / 4) * 4;   // back to the previous indent step
     } else {
         from = prevPos(line, d.cur.col);
@@ -730,10 +841,16 @@ static void deleteForward(Doc& d) {
     line.erase(d.cur.col, nextPos(line, d.cur.col) - d.cur.col);
 }
 
+static void selectedLines(const Doc& d, int& a, int& b) {
+    a = hasSel(d) ? selStart(d).line : d.cur.line;
+    b = hasSel(d) ? selEnd(d).line : d.cur.line;
+    if (hasSel(d) && selEnd(d).col == 0 && b > a) b--;
+}
+
 static void indentLines(Doc& d, bool out) {
     remember(d, 0);
-    int a = hasSel(d) ? selStart(d).line : d.cur.line, b = hasSel(d) ? selEnd(d).line : d.cur.line;
-    if (hasSel(d) && selEnd(d).col == 0 && b > a) b--;
+    int a, b;
+    selectedLines(d, a, b);
     for (int l = a; l <= b; l++) {
         if (out) {
             int n = std::min(4, indentOf(d.lines[l]));
@@ -750,8 +867,8 @@ static void indentLines(Doc& d, bool out) {
 
 static void toggleComment(Doc& d) {
     remember(d, 0);
-    int a = hasSel(d) ? selStart(d).line : d.cur.line, b = hasSel(d) ? selEnd(d).line : d.cur.line;
-    if (hasSel(d) && selEnd(d).col == 0 && b > a) b--;
+    int a, b;
+    selectedLines(d, a, b);
     bool all = true;
     int ind = 1 << 30;
     for (int l = a; l <= b; l++) {
@@ -788,6 +905,8 @@ static void undoRedo(Doc& d, bool redo) {
     d.sel = false;
     d.dirty = true;
     d.lastKind = 0;
+    E.editCount++;
+    E.lastChange = GetTime();
 }
 
 static bool findNext(Doc& d, const std::string& what, bool back) {
@@ -814,19 +933,23 @@ static bool findNext(Doc& d, const std::string& what, bool back) {
 // ---------------------------------------------------------------- layout
 
 struct Layout {
-    float top = 36, side = 230, status = 24;
-    float W, H, panelY, editX, editY, editW, editH, gutter;
+    float top = 36, tabs = 28, status = 24;
+    float W, H, panelY, editX, editY, editW, editH, docsX, gutter;
 };
 static Layout L;
 
 static void computeLayout() {
     L.W = (float)GetScreenWidth();
     L.H = (float)GetScreenHeight();
-    E.panelH = std::clamp(E.panelH, 60.0f, L.H - 200);
+    E.sideW = std::clamp(E.sideW, 140.0f, std::max(140.0f, L.W * 0.45f));
+    E.docsW = std::clamp(E.docsW, 260.0f, std::max(260.0f, L.W - E.sideW - 300));
+    E.panelH = std::clamp(E.panelH, 60.0f, std::max(60.0f, L.H - 220));
+    float docs = E.docsOpen ? E.docsW : 0;
+    L.docsX = L.W - docs;
     L.panelY = L.H - L.status - E.panelH;
-    L.editX = L.side;
-    L.editY = L.top + 28;   // tabs
-    L.editW = L.W - L.side;
+    L.editX = E.sideW;
+    L.editY = L.top + L.tabs;
+    L.editW = L.docsX - E.sideW;
     L.editH = L.panelY - L.editY;
     Doc* d = cur();
     int digits = d ? std::max(3, (int)std::to_string(d->lines.size()).size()) : 3;
@@ -859,7 +982,26 @@ static Pos posAtMouse(const Doc& d) {
 
 // ---------------------------------------------------------------- docs
 
-static std::string plainInline(const std::string& s);
+// Markdown, simply: **bold** and `code` marks and links become plain text.
+static std::string plainInline(const std::string& s) {
+    std::string o;
+    for (size_t i = 0; i < s.size(); i++) {
+        if (s.compare(i, 2, "**") == 0) { i++; continue; }
+        if (s[i] == '`') continue;
+        if (s[i] == '[') {
+            size_t close = s.find("](", i);
+            size_t end = close == std::string::npos ? std::string::npos : s.find(')', close);
+            if (end != std::string::npos) {
+                o += s.substr(i + 1, close - i - 1);
+                i = end;
+                continue;
+            }
+        }
+        if (s[i] == '\\' && i + 1 < s.size() && std::ispunct((unsigned char)s[i + 1])) { o += s[++i]; continue; }
+        o += s[i];
+    }
+    return o;
+}
 
 static void loadDocs() {
     E.pages.clear();
@@ -873,13 +1015,9 @@ static void loadDocs() {
         p.rel = fs::relative(p.path, E.docsDir, ec).generic_string();
         std::string t = readFileText(p.path);
         p.textLower = lower(t);
-        std::stringstream ss(t);
-        std::string line;
-        while (std::getline(ss, line))
+        for (const std::string& line : splitLines(t))
             if (line.starts_with("# ")) {
-                p.title = line.substr(2);
-                if (!p.title.empty() && p.title.back() == '\r') p.title.pop_back();
-                p.title = plainInline(p.title);
+                p.title = plainInline(line.substr(2));
                 break;
             }
         if (p.title.empty()) p.title = p.rel;
@@ -902,33 +1040,12 @@ static void loadDocs() {
     });
 }
 
-// Markdown, simply: **bold** and `code` marks and links become plain text.
-static std::string plainInline(const std::string& s) {
-    std::string o;
-    for (size_t i = 0; i < s.size(); i++) {
-        if (s.compare(i, 2, "**") == 0) { i++; continue; }
-        if (s[i] == '`') continue;
-        if (s[i] == '[') {
-            size_t close = s.find("](", i);
-            size_t end = close == std::string::npos ? std::string::npos : s.find(')', close);
-            if (end != std::string::npos) {
-                o += s.substr(i + 1, close - i - 1);
-                i = end;
-                continue;
-            }
-        }
-        if (s[i] == '\\' && i + 1 < s.size() && std::ispunct((unsigned char)s[i + 1])) { o += s[++i]; continue; }
-        o += s[i];
-    }
-    return o;
-}
-
 static void layoutDocs(float width) {
     E.layout.clear();
     E.layoutW = width;
     if (E.page < 0 || E.page >= (int)E.pages.size()) return;
     std::vector<std::string> lines = splitLines(readFileText(E.pages[E.page].path));
-    float base = 17, y = 16, left = 24, right = width - 24;
+    float base = 16, y = 10, left = 14, right = width - 14;
     auto wrap = [&](const std::string& s, float x, float size, Color c) {
         std::string lineText;
         float spaceW = uiW(" ", size);
@@ -953,7 +1070,7 @@ static void layoutDocs(float width) {
     bool inCode = false;
     float codeTop = 0;
     size_t codeItem = 0;
-    for (std::string line : lines) {
+    for (const std::string& line : lines) {
         if (line.starts_with("```") || line.starts_with("~~~")) {
             if (!inCode) {
                 inCode = true;
@@ -978,7 +1095,7 @@ static void layoutDocs(float width) {
         int h = 0;
         while (h < (int)line.size() && line[h] == '#') h++;
         if (h > 0 && h < (int)line.size() && line[h] == ' ') {
-            float size = h == 1 ? 30 : h == 2 ? 24 : h == 3 ? 20 : 18;
+            float size = h == 1 ? 26 : h == 2 ? 21 : h == 3 ? 18 : 17;
             y += h == 1 ? 4 : 12;
             wrap(plainInline(line.substr(h + 1)), left, size, h <= 2 ? kAccent : kText);
             y += 4;
@@ -986,8 +1103,7 @@ static void layoutDocs(float width) {
         }
         if (line.starts_with("|")) {
             if (line.find("---") != std::string::npos && line.find_first_not_of("|-: ") == std::string::npos) continue;
-            // a table row: its cells, one after another
-            std::string cells;
+            std::string cells;   // a table row: its cells, one after another
             std::stringstream ss(line);
             std::string cell;
             bool first = true;
@@ -1000,20 +1116,20 @@ static void layoutDocs(float width) {
             wrap(cells, left, base - 1, kText);
             continue;
         }
-        if (line.starts_with("> ")) { wrap(plainInline(line.substr(2)), left + 16, base, kDim); continue; }
+        if (line.starts_with("> ")) { wrap(plainInline(line.substr(2)), left + 12, base, kDim); continue; }
         int ind = indentOf(line);
         std::string t = line.substr(ind);
         if (t.starts_with("- ") || t.starts_with("* ")) {
-            float x = left + ind * 6;
+            float x = left + ind * 5;
             E.layout.push_back({x, y, "\xE2\x80\xA2", false, base, kAccent});
-            wrap(plainInline(t.substr(2)), x + 16, base, kText);
+            wrap(plainInline(t.substr(2)), x + 14, base, kText);
             continue;
         }
         size_t dot = t.find(". ");
         if (dot != std::string::npos && dot > 0 && dot < 4 && std::all_of(t.begin(), t.begin() + dot, ::isdigit)) {
-            float x = left + ind * 6;
+            float x = left + ind * 5;
             E.layout.push_back({x, y, t.substr(0, dot + 1), false, base, kAccent});
-            wrap(plainInline(t.substr(dot + 2)), x + 22, base, kText);
+            wrap(plainInline(t.substr(dot + 2)), x + 20, base, kText);
             continue;
         }
         wrap(plainInline(t), left, base, kText);
@@ -1025,6 +1141,12 @@ static void openPage(int i) {
     E.page = i;
     E.docScroll = 0;
     E.layoutW = 0;   // lay it out again
+}
+
+static void toggleDocs() {
+    E.docsOpen = !E.docsOpen;
+    if (E.docsOpen && E.pages.empty()) loadDocs();
+    E.searchFocus = E.docsOpen;
 }
 
 // ---------------------------------------------------------------- drawing
@@ -1039,7 +1161,7 @@ static bool button(const std::string& label, float x, float y, float w, float h,
 static void drawTopBar() {
     DrawRectangle(0, 0, (int)L.W, (int)L.top, kPanel);
     ui("Forge Edit", 12, 10, kAccent, 16);
-    float x = L.side;
+    float x = std::max(110.0f, E.sideW);
     if (button(E.run ? "\xE2\x96\xA0 Stop (Shift+F5)" : "\xE2\x96\xB6 Run (F5)", x, 5, 140, 26)) {
         if (E.run) stopProcess(E.run);
         else startRun();
@@ -1050,129 +1172,141 @@ static void drawTopBar() {
         startCheck();
     }
     x += 108;
-    if (button(E.docsMode ? "Code (Esc)" : "Docs (F1)", x, 5, 100, 26)) {
-        E.docsMode = !E.docsMode;
-        if (E.docsMode && E.pages.empty()) loadDocs();
-        if (E.docsMode && E.page < 0 && !E.pages.empty()) openPage(0);
-    }
+    if (button(E.docsOpen ? "Close docs (F1)" : "Docs (F1)", x, 5, 130, 26)) toggleDocs();
     std::string folder = E.root.filename().string();
-    ui(folder, L.W - uiW(folder) - 12, 10, kDim);
+    if (x + 150 < L.W - uiW(folder) - 12) ui(folder, L.W - uiW(folder) - 12, 10, kDim);
     DrawLine(0, (int)L.top, (int)L.W, (int)L.top, kBorder);
 }
 
+static void closeTab(int i) {
+    if (E.docs[i].dirty) saveDoc(E.docs[i]);
+    E.docs.erase(E.docs.begin() + i);
+    if (E.active >= (int)E.docs.size()) E.active = (int)E.docs.size() - 1;
+}
+
 static void drawTabs() {
-    DrawRectangle((int)L.side, (int)L.top, (int)(L.W - L.side), 28, kPanelDark);
-    float x = L.side;
+    DrawRectangle((int)L.editX, (int)L.top, (int)L.editW, (int)L.tabs, kPanelDark);
+    BeginScissorMode((int)L.editX, (int)L.top, (int)L.editW, (int)L.tabs);
+    float x = L.editX;
     for (int i = 0; i < (int)E.docs.size(); i++) {
         std::string name = E.docs[i].path.filename().string() + (E.docs[i].dirty ? " \xE2\x80\xA2" : "");
         float w = uiW(name, 14) + 40;
-        bool act = i == E.active && !E.docsMode;
-        DrawRectangleRec({x, L.top, w, 28}, act ? kBg : kPanelDark);
+        bool act = i == E.active;
+        DrawRectangleRec({x, L.top, w, L.tabs}, act ? kBg : kPanelDark);
         if (act) DrawRectangle((int)x, (int)L.top, (int)w, 2, kAccent);
         ui(name, x + 12, L.top + 6, act ? kText : kDim, 14);
         bool overX = mouseIn(x + w - 22, L.top + 4, 18, 20);
         ui("\xC3\x97", x + w - 18, L.top + 5, overX ? kText : kDim, 15);
-        if (mouseIn(x, L.top, w, 28)) {
+        if (mouseIn(x, L.top, w, L.tabs) && mouseIn(L.editX, L.top, L.editW, L.tabs)) {
             if ((IsMouseButtonPressed(MOUSE_BUTTON_LEFT) && overX) || IsMouseButtonPressed(MOUSE_BUTTON_MIDDLE)) {
-                if (E.docs[i].dirty) saveDoc(E.docs[i]);
-                E.docs.erase(E.docs.begin() + i);
-                if (E.active >= (int)E.docs.size()) E.active = (int)E.docs.size() - 1;
-                return;
+                closeTab(i);
+                break;
             }
-            if (IsMouseButtonPressed(MOUSE_BUTTON_LEFT)) {
-                E.active = i;
-                E.docsMode = false;
-            }
+            if (IsMouseButtonPressed(MOUSE_BUTTON_LEFT)) E.active = i;
         }
         x += w + 1;
     }
+    EndScissorMode();
+}
+
+static void startPrompt(Prompt p, const std::string& start) {
+    E.prompt = p;
+    E.promptText = start;
+    E.searchFocus = false;
 }
 
 static void drawSideBar() {
-    DrawRectangle(0, (int)L.top + 1, (int)L.side, (int)(L.H - L.top - L.status), kPanel);
-    DrawLine((int)L.side - 1, (int)L.top, (int)L.side - 1, (int)(L.H - L.status), kBorder);
+    float w = E.sideW;
+    DrawRectangle(0, (int)L.top + 1, (int)w, (int)(L.H - L.top - L.status), kPanel);
+    DrawLine((int)w - 1, (int)L.top, (int)w - 1, (int)(L.H - L.status), kBorder);
     float y0 = L.top + 8;
-    float rowH = 22;
-    if (E.docsMode) {
-        // the docs: a search box, then the pages
-        DrawRectangleRec({10, y0, L.side - 20, 26}, kBg);
-        ui(E.docSearch.empty() ? "Search the docs..." : E.docSearch + "_", 18, y0 + 5, E.docSearch.empty() ? kDim : kText, 14);
-        float y = y0 + 34 - E.sideScroll;
-        BeginScissorMode(0, (int)(y0 + 32), (int)L.side - 1, (int)(L.H - L.status - y0 - 32));
-        std::string q = lower(E.docSearch);
-        for (int i = 0; i < (int)E.pages.size(); i++) {
-            const DocPage& p = E.pages[i];
-            if (!q.empty() && p.textLower.find(q) == std::string::npos && lower(p.title).find(q) == std::string::npos) continue;
-            bool act = i == E.page;
-            if (act) DrawRectangle(0, (int)y, (int)L.side - 1, (int)rowH, Color{55, 58, 62, 255});
-            std::string section = p.rel.find('/') != std::string::npos ? p.rel.substr(0, p.rel.find('/')) : "";
-            std::string label = (section.empty() ? "" : section + ": ") + p.title;
-            while (uiW(label, 14) > L.side - 30 && label.size() > 4) label = label.substr(0, label.size() - 4) + "...";
-            ui(label, 14, y + 3, act ? kText : Color{190, 190, 190, 255}, 14);
-            if (mouseIn(0, y, L.side, rowH) && IsMouseButtonPressed(MOUSE_BUTTON_LEFT) && GetMousePosition().y > y0 + 32) openPage(i);
-            y += rowH;
+    ui("FILES", 14, y0 + 2, kDim, 13);
+    // new file / new folder, in the chosen folder
+    std::string where = E.chosenFolder.empty() ? "" : E.chosenFolder + "/";
+    if (button("+ Folder", w - 76, y0 - 2, 66, 22)) startPrompt(Prompt::NewFolder, where);
+    if (button("+ File", w - 136, y0 - 2, 54, 22)) startPrompt(Prompt::NewFile, where);
+    float listTop = y0 + 28, rowH = 22;
+    float listH = L.H - L.status - listTop - 4;
+    float total = 0;
+    BeginScissorMode(0, (int)listTop, (int)w - 1, (int)listH);
+    float y = listTop - E.sideScroll;
+    int hideBelow = -1;   // inside a closed folder: rows deeper than this are hidden
+    for (const Entry& e : E.tree) {
+        if (hideBelow >= 0 && e.depth > hideBelow) continue;
+        hideBelow = -1;
+        bool open = e.dir && E.openFolders.count(e.rel);
+        if (e.dir && !open) hideBelow = e.depth;
+        float x = 12 + e.depth * 14;
+        bool act = !e.dir && cur() && samePath(cur()->path, e.path);
+        bool chosen = e.dir && e.rel == E.chosenFolder;
+        bool hover = mouseIn(0, y, w, rowH) && GetMousePosition().y >= listTop && GetMousePosition().y < listTop + listH;
+        if (act || chosen) DrawRectangle(0, (int)y, (int)w - 1, (int)rowH, kChosen);
+        else if (hover) DrawRectangle(0, (int)y, (int)w - 1, (int)rowH, kHover);
+        std::string name = e.path.filename().string();
+        if (e.dir) {
+            ui(open ? "\xE2\x96\xBE" : "\xE2\x96\xB8", x, y + 3, kDim, 14);
+            ui(fit(name, w - x - 24, 14), x + 14, y + 3, kSoft, 14);
+        } else {
+            bool err = false;
+            for (const Problem& pr : E.problems)
+                if (!pr.warning && samePath(pr.file, e.path)) err = true;
+            Color c = err ? kError : act ? kText : isTextFile(e.path) ? kSoft : kDim;
+            ui(fit(name, w - x - 20, 14), x + 14, y + 3, c, 14);
         }
-        EndScissorMode();
-        if (E.pages.empty()) ui("No docs folder found", 14, y0 + 40, kDim, 14);
-        return;
-    }
-    ui("FILES", 14, y0, kDim, 13);
-    float y = y0 + 24 - E.sideScroll;
-    BeginScissorMode(0, (int)(y0 + 20), (int)L.side - 1, (int)(L.H - L.status - y0 - 20));
-    std::string lastFolder;
-    for (const fs::path& p : E.files) {
-        std::string rel = relName(p);
-        std::string folder = rel.find('/') != std::string::npos ? rel.substr(0, rel.rfind('/')) : "";
-        if (folder != lastFolder && !folder.empty()) {
-            ui(folder + "/", 14, y + 3, kDim, 14);
-            y += rowH;
+        if (hover && IsMouseButtonPressed(MOUSE_BUTTON_LEFT)) {
+            if (e.dir) {
+                if (open) E.openFolders.erase(e.rel);
+                else E.openFolders.insert(e.rel);
+                E.chosenFolder = e.rel;
+            } else if (isTextFile(e.path)) {
+                openFile(e.path);
+                size_t slash = e.rel.rfind('/');
+                E.chosenFolder = slash == std::string::npos ? "" : e.rel.substr(0, slash);
+            } else {
+                say(name + " isn't a text file, so Forge Edit doesn't open it");
+            }
         }
-        lastFolder = folder;
-        bool act = cur() && !E.docsMode && samePath(cur()->path, p);
-        if (act) DrawRectangle(0, (int)y, (int)L.side - 1, (int)rowH, Color{55, 58, 62, 255});
-        bool err = false;
-        for (const Problem& pr : E.problems)
-            if (!pr.warning && samePath(pr.file, p)) err = true;
-        float x = folder.empty() ? 14 : 28;
-        ui(p.filename().string(), x, y + 3, err ? kError : act ? kText : Color{190, 190, 190, 255}, 14);
-        if (mouseIn(0, y, L.side, rowH) && IsMouseButtonPressed(MOUSE_BUTTON_LEFT) && GetMousePosition().y > y0 + 20) openFile(p);
         y += rowH;
+        total += rowH;
     }
+    // clicking below the files chooses the game's own folder for new files
+    if (mouseIn(0, y, w, listTop + listH - y) && IsMouseButtonPressed(MOUSE_BUTTON_LEFT)) E.chosenFolder.clear();
     EndScissorMode();
-    ui("Ctrl+N  new file", 14, L.H - L.status - 26, kDim, 13);
+    E.sideScroll = std::clamp(E.sideScroll, 0.0f, std::max(0.0f, total - listH + rowH));
 }
 
 static void drawEditor() {
     Doc* dp = cur();
     DrawRectangle((int)L.editX, (int)L.editY, (int)L.editW, (int)L.editH, kBg);
     if (!dp) {
-        ui("Open a file on the left, or press F1 for Forge's docs.", L.editX + 30, L.editY + 30, kDim, 16);
-        ui("F5 runs the game, F8 checks it for errors, Ctrl+S saves.", L.editX + 30, L.editY + 56, kDim, 16);
+        float x = L.editX + 30;
+        ui("Open a file on the left, or make one with + File.", x, L.editY + 30, kDim, 16);
+        ui("F5 runs the game, F8 checks it, F1 shows the docs, Ctrl+O opens another folder.", x, L.editY + 56, kDim, 16);
         return;
     }
     Doc& d = *dp;
     BeginScissorMode((int)L.editX, (int)L.editY, (int)L.editW, (int)L.editH);
     int first = std::max(0, (int)(d.scrollY / F.lineH));
     int last = std::min((int)d.lines.size() - 1, first + (int)(L.editH / F.lineH) + 1);
-    // the comment/string state at the first visible line
-    int state = 0;
+    int state = 0;   // the comment/string state at the first visible line
     std::vector<Span> spans;
     for (int l = 0; l < first; l++) highlight(d.lines[l], state, spans);
     float tx = L.editX + L.gutter - d.scrollX;
     Pos sa = selStart(d), sb = selEnd(d);
     bool sel = hasSel(d);
     std::string findLower = lower(E.findText);
+    std::vector<const Problem*> here;
+    for (const Problem& p : E.problems)
+        if (samePath(p.file, d.path)) here.push_back(&p);
     for (int l = first; l <= last; l++) {
         float y = L.editY + l * F.lineH - d.scrollY;
         const std::string& s = d.lines[l];
         if (l == d.cur.line && !sel) DrawRectangle((int)L.editX, (int)y, (int)L.editW, (int)F.lineH, kCurLine);
-        // find matches
         if (E.prompt == Prompt::Find && !findLower.empty()) {
             std::string ls = lower(s);
             for (size_t at = ls.find(findLower); at != std::string::npos; at = ls.find(findLower, at + 1))
                 DrawRectangle((int)(tx + visCol(s, (int)at) * F.charW), (int)y, (int)(visCol(E.findText, (int)E.findText.size()) * F.charW), (int)F.lineH, kFound);
         }
-        // selection
         if (sel && l >= sa.line && l <= sb.line) {
             int a = l == sa.line ? visCol(s, sa.col) : 0;
             int b = l == sb.line ? visCol(s, sb.col) : visCol(s, (int)s.size()) + 1;
@@ -1182,19 +1316,20 @@ static void drawEditor() {
         float ty = y + (F.lineH - F.size) / 2;
         for (const Span& sp : spans) {
             float x = tx + visCol(s, sp.from) * F.charW;
-            if (x > L.W) break;
+            if (x > L.docsX) break;
             std::string piece = s.substr(sp.from, sp.to - sp.from);
             if (piece != " ") text(F.mono, piece, x, ty, F.size, tokColor(sp.tok));
         }
-        // problems: a wavy line under them
-        for (const Problem& p : E.problems) {
-            if (p.line - 1 != l || !samePath(p.file, d.path)) continue;
-            float x0 = tx + (p.col - 1) * F.charW, x1 = x0 + std::max(1, p.len) * F.charW;
-            Color c = p.warning ? kWarning : kError;
+        for (const Problem* p : here) {   // a wavy line under each problem
+            if (p->line - 1 != l) continue;
+            float x0 = tx + (p->col - 1) * F.charW, x1 = x0 + std::max(1, p->len) * F.charW;
+            Color c = p->warning ? kWarning : kError;
             float wy = y + F.lineH - 3;
-            for (float x = x0; x < x1; x += 4) DrawLineEx({x, wy + ((int)((x - x0) / 4) % 2 ? 1.5f : -1.0f)}, {x + 4, wy + ((int)((x - x0) / 4) % 2 ? -1.0f : 1.5f)}, 1.2f, c);
+            for (float x = x0; x < x1; x += 4) {
+                bool up = (int)((x - x0) / 4) % 2;
+                DrawLineEx({x, wy + (up ? 1.5f : -1.0f)}, {x + 4, wy + (up ? -1.0f : 1.5f)}, 1.2f, c);
+            }
         }
-        // cursor
         if (l == d.cur.line) DrawRectangle((int)(tx + visCol(s, d.cur.col) * F.charW), (int)y + 2, 2, (int)F.lineH - 4, kCursor);
     }
     // the line numbers, on top of anything scrolled under them
@@ -1203,8 +1338,8 @@ static void drawEditor() {
         float y = L.editY + l * F.lineH - d.scrollY;
         std::string num = std::to_string(l + 1);
         bool err = false, warn = false;
-        for (const Problem& p : E.problems)
-            if (p.line - 1 == l && samePath(p.file, d.path)) (p.warning ? warn : err) = true;
+        for (const Problem* p : here)
+            if (p->line - 1 == l) (p->warning ? warn : err) = true;
         if (err || warn) DrawCircle((int)(L.editX + 8), (int)(y + F.lineH / 2), 3.5f, err ? kError : kWarning);
         text(F.mono, num, L.editX + L.gutter - 6 - F.charW * 1.5f - num.size() * F.charW, y + (F.lineH - F.size) / 2, F.size,
              l == d.cur.line ? kText : kDim);
@@ -1212,33 +1347,82 @@ static void drawEditor() {
     EndScissorMode();
 }
 
-static void drawDocs() {
-    float x0 = L.side, y0 = L.editY, w = L.W - L.side, h = L.H - L.status - y0;
-    DrawRectangle((int)x0, (int)y0, (int)w, (int)h, kBg);
+static void drawDocsPanel() {
+    if (!E.docsOpen) return;
+    float x0 = L.docsX, w = E.docsW, y0 = L.top + 1, h = L.H - L.status - y0;
+    DrawRectangle((int)x0, (int)y0, (int)w, (int)h, kPanel);
+    DrawLine((int)x0, (int)L.top, (int)x0, (int)(L.H - L.status), kBorder);
+    // the search box
+    Rectangle box = {x0 + 10, y0 + 8, w - 20, 28};
+    DrawRectangleRec(box, kBg);
+    if (E.searchFocus) DrawRectangleLinesEx(box, 1, kAccent);
+    std::string shown = E.docSearch.empty() && !E.searchFocus ? "Search the docs..." : E.docSearch + (E.searchFocus ? "_" : "");
+    ui(fit(shown, box.width - 16, 14), box.x + 8, box.y + 6, E.docSearch.empty() && !E.searchFocus ? kDim : kText, 14);
+    if (IsMouseButtonPressed(MOUSE_BUTTON_LEFT)) {
+        if (CheckCollisionPointRec(GetMousePosition(), box)) {
+            E.searchFocus = true;
+            E.page = -1;
+        } else if (mouseIn(x0, y0, w, h)) {
+            E.searchFocus = false;
+        }
+    }
+    float top = y0 + 44, viewH = L.H - L.status - top;
     if (E.page < 0) {
-        ui(E.pages.empty() ? "Forge's docs weren't found next to forge-edit (" + E.docsDir.string() + ")." : "Pick a page on the left.",
-           x0 + 30, y0 + 30, kDim, 16);
+        // the list of pages (only those with the search words, if there are any)
+        std::string q = lower(E.docSearch);
+        float y = top - E.listScroll, rowH = 24, total = 0;
+        BeginScissorMode((int)x0, (int)top, (int)w, (int)viewH);
+        for (int i = 0; i < (int)E.pages.size(); i++) {
+            const DocPage& p = E.pages[i];
+            if (!q.empty() && p.textLower.find(q) == std::string::npos && lower(p.title).find(q) == std::string::npos) continue;
+            bool hover = mouseIn(x0, y, w, rowH) && GetMousePosition().y >= top;
+            if (hover) DrawRectangle((int)x0, (int)y, (int)w, (int)rowH, kHover);
+            std::string section = p.rel.find('/') != std::string::npos ? p.rel.substr(0, p.rel.find('/')) : "";
+            float tx = x0 + 16;
+            if (!section.empty()) {
+                ui(section, tx, y + 4, kDim, 13);
+                tx += uiW(section, 13) + 8;
+            }
+            ui(fit(p.title, x0 + w - tx - 12, 14), tx, y + 4, kSoft, 14);
+            if (hover && IsMouseButtonPressed(MOUSE_BUTTON_LEFT)) {
+                openPage(i);
+                E.searchFocus = false;
+            }
+            y += rowH;
+            total += rowH;
+        }
+        if (E.pages.empty()) ui("Forge's docs weren't found next to forge-edit.", x0 + 16, top + 4, kDim, 14);
+        else if (total == 0) ui("No page has \"" + E.docSearch + "\".", x0 + 16, top + 4, kDim, 14);
+        EndScissorMode();
+        E.listScroll = std::clamp(E.listScroll, 0.0f, std::max(0.0f, total - viewH + rowH));
         return;
     }
-    float width = std::min(w, 980.0f);
+    // one page
+    if (button("\xE2\x86\x90 All pages", x0 + 10, top - 2, 110, 24)) {
+        E.page = -1;
+        return;
+    }
+    ui(fit(E.pages[E.page].title, w - 140, 14), x0 + 130, top + 2, kDim, 14);
+    top += 30;
+    viewH -= 30;
+    float width = w - 8;
     if (E.layoutW != width) layoutDocs(width);
-    E.docScroll = std::clamp(E.docScroll, 0.0f, std::max(0.0f, E.layoutH - h));
-    BeginScissorMode((int)x0, (int)y0, (int)w, (int)h);
+    E.docScroll = std::clamp(E.docScroll, 0.0f, std::max(0.0f, E.layoutH - viewH));
+    DrawRectangle((int)x0 + 1, (int)top, (int)w - 1, (int)viewH, kBg);
+    BeginScissorMode((int)x0 + 1, (int)top, (int)w - 1, (int)viewH);
     for (const DocItem& it : E.layout) {
-        float y = y0 + it.y - E.docScroll;
+        float y = top + it.y - E.docScroll;
         if (it.boxH > 0) {
-            if (y + it.boxH < y0 || y > y0 + h) continue;
-            DrawRectangleRec({x0 + it.x, y, width - 2 * it.x + 16, it.boxH}, kPanelDark);
+            if (y + it.boxH >= top && y <= top + viewH) DrawRectangleRec({x0 + it.x, y, width - 2 * it.x + 16, it.boxH}, kPanelDark);
             continue;
         }
-        if (y + 40 < y0 || y > y0 + h) continue;
+        if (y + 40 < top || y > top + viewH) continue;
         if (it.mono) {
             int state = 0;
             std::vector<Span> spans;
             highlight(it.s, state, spans);
-            float cw = MeasureTextEx(F.mono, "M", it.size, 0).x;
             for (const Span& sp : spans)
-                text(F.mono, it.s.substr(sp.from, sp.to - sp.from), x0 + it.x + visCol(it.s, sp.from) * cw, y, it.size, tokColor(sp.tok));
+                text(F.mono, it.s.substr(sp.from, sp.to - sp.from), x0 + it.x + visCol(it.s, sp.from) * F.charW, y, it.size, tokColor(sp.tok));
         } else {
             text(F.sans, it.s, x0 + it.x, y, it.size, it.color);
         }
@@ -1247,12 +1431,11 @@ static void drawDocs() {
 }
 
 static void drawPanel() {
-    float px = L.side, pw = L.W - L.side;   // under the editor, next to the file list
+    float px = L.editX, pw = L.editW;   // under the editor
     DrawRectangle((int)px, (int)L.panelY, (int)pw, (int)E.panelH, kPanelDark);
-    DrawLine((int)px, (int)L.panelY, (int)L.W, (int)L.panelY, kBorder);
-    int errors = 0, warnings = 0;
-    for (const Problem& p : E.problems) (p.warning ? warnings : errors)++;
-    std::string probs = "Problems" + (errors + warnings ? " (" + std::to_string(errors + warnings) + ")" : std::string());
+    DrawLine((int)px, (int)L.panelY, (int)(px + pw), (int)L.panelY, kBorder);
+    int count = (int)E.problems.size();
+    std::string probs = "Problems" + (count ? " (" + std::to_string(count) + ")" : std::string());
     float x = px + 10;
     for (int i = 0; i < 2; i++) {
         std::string label = i == 0 ? probs : std::string(E.run ? "Output (running)" : "Output");
@@ -1272,7 +1455,7 @@ static void drawPanel() {
         for (const Problem& p : E.problems) {
             if (y > top + h) break;
             bool hover = mouseIn(px, y, pw, 22);
-            if (hover) DrawRectangle((int)px, (int)y, (int)pw, 22, Color{50, 52, 56, 255});
+            if (hover) DrawRectangle((int)px, (int)y, (int)pw, 22, kHover);
             DrawCircle((int)px + 18, (int)y + 11, 4, p.warning ? kWarning : kError);
             std::string where = relName(p.file) + ":" + std::to_string(p.line);
             ui(where, px + 30, y + 3, kDim, 14);
@@ -1280,8 +1463,7 @@ static void drawPanel() {
             ui(msg, px + 40 + uiW(where, 14), y + 3, kText, 14);
             if (hover && IsMouseButtonPressed(MOUSE_BUTTON_LEFT)) {
                 openFile(p.file, p.line - 1, 0);
-                Doc* d = cur();
-                if (d) {
+                if (Doc* d = cur()) {
                     d->cur.col = byteAtCol(d->lines[d->cur.line], p.col - 1);
                     keepCursorVisible(*d);
                 }
@@ -1290,18 +1472,19 @@ static void drawPanel() {
         }
     } else {
         std::vector<std::string> lines = splitLines(E.output);
-        float lh = F.size * 1.3f, size = F.size;
+        float lh = F.size * 1.3f;
         float total = lines.size() * lh;
         if (E.followOutput) E.outputScroll = std::max(0.0f, total - h);
+        E.outputScroll = std::clamp(E.outputScroll, 0.0f, std::max(0.0f, total - h));
         int first = std::max(0, (int)(E.outputScroll / lh));
         for (int i = first; i < (int)lines.size(); i++) {
             float y = top + i * lh - E.outputScroll;
             if (y > top + h) break;
             const std::string& s = lines[i];
             Color c = s.find("error") != std::string::npos ? kError : s.find("warning") != std::string::npos ? kWarning : kText;
-            text(F.mono, s, px + 14, y, size, c);
+            text(F.mono, s, px + 14, y, F.size, c);
         }
-        if (lines.size() <= 1 && E.output.empty()) ui("Press F5 to run the game. What it prints shows here.", px + 16, top + 4, kDim, 14);
+        if (E.output.empty()) ui("Press F5 to run the game. What it prints shows here.", px + 16, top + 4, kDim, 14);
     }
     EndScissorMode();
 }
@@ -1311,16 +1494,17 @@ static void drawStatus() {
     DrawRectangle(0, (int)y, (int)L.W, (int)L.status, E.run ? Color{150, 80, 20, 255} : kPanel);
     if (E.prompt != Prompt::None) {
         std::string label = E.prompt == Prompt::Find ? "Find (Enter: next, Shift+Enter: back, Esc: done): "
-                          : E.prompt == Prompt::NewFile ? "New file (like enemy.frg or levels/one.frg), Enter to make it: "
+                          : E.prompt == Prompt::NewFile ? "New file (like enemy.frg), Enter to make it, Esc to stop: "
+                          : E.prompt == Prompt::NewFolder ? "New folder, Enter to make it, Esc to stop: "
                           : E.prompt == Prompt::OpenFolder ? "Open the game folder (Tab finishes a name): "
-                                                        : "Go to line: ";
+                                                           : "Go to line: ";
         ui(label, 10, y + 4, kText, 14);
-        text(F.mono, E.promptText + "_", 14 + uiW(label, 14), y + 4, 15, kAccent);
+        text(F.mono, E.promptText + "_", 14 + uiW(label, 14), y + 4, F.size, kAccent);
         return;
     }
     Doc* d = cur();
     std::string left;
-    if (d && !E.docsMode) {
+    if (d) {
         left = "Ln " + std::to_string(d->cur.line + 1) + ", Col " + std::to_string(visCol(d->lines[d->cur.line], d->cur.col) + 1);
         for (const Problem& p : E.problems)
             if (p.line - 1 == d->cur.line && samePath(p.file, d->path)) {
@@ -1331,7 +1515,7 @@ static void drawStatus() {
     if (GetTime() - E.statusAt < 4) left = E.status;
     ui(left, 10, y + 4, kText, 14);
     std::string right = E.run ? "the game is running (Shift+F5 stops it)" : "F5 run   F8 check   F1 docs   Ctrl+F find   Ctrl+O open folder";
-    ui(right, L.W - uiW(right, 14) - 10, y + 4, kText, 14);
+    if (uiW(left, 14) + uiW(right, 14) + 40 < L.W) ui(right, L.W - uiW(right, 14) - 10, y + 4, kText, 14);
 }
 
 // ---------------------------------------------------------------- input
@@ -1348,15 +1532,35 @@ static void moveCursor(Doc& d, Pos p, bool shift) {
     keepCursorVisible(d);
 }
 
+static void makeNew(bool folder) {
+    std::string name = E.promptText;
+    while (!name.empty() && (name.back() == '/' || name.back() == '\\')) name.pop_back();
+    if (name.empty()) return;
+    fs::path p = E.root / fs::path(name);
+    std::error_code ec;
+    if (folder) {
+        fs::create_directories(p, ec);
+        if (ec) return say("couldn't make the folder " + name);
+        refreshTree();
+        revealInTree(p / "x");
+        E.chosenFolder = relName(p);
+        say("made the folder " + name + " - new files go in it now");
+        return;
+    }
+    if (fs::exists(p, ec)) return openFile(p);
+    fs::create_directories(p.parent_path(), ec);
+    std::ofstream f(p, std::ios::binary);
+    if (!f) return say("couldn't make " + name);
+    f.close();
+    refreshTree();
+    openFile(p);
+}
+
 static void handlePrompt() {
     int c;
     while ((c = GetCharPressed()) > 0) {
         if (c < 32) continue;
-        char buf[5] = {0};
-        int n = 0;
-        const char* u = CodepointToUTF8(c, &n);
-        std::memcpy(buf, u, n);
-        E.promptText += buf;
+        E.promptText += typed(c);
         if (E.prompt == Prompt::Find) E.findText = E.promptText;
     }
     if (pressed(KEY_BACKSPACE) && !E.promptText.empty()) {
@@ -1368,44 +1572,53 @@ static void handlePrompt() {
         E.prompt = Prompt::None;
         return;
     }
-    if (pressed(KEY_ENTER) || pressed(KEY_KP_ENTER)) {
-        Doc* d = cur();
-        if (E.prompt == Prompt::Find) {
-            if (d && !findNext(*d, E.findText, IsKeyDown(KEY_LEFT_SHIFT) || IsKeyDown(KEY_RIGHT_SHIFT))) say("\"" + E.findText + "\" isn't in this file");
-            if (d) keepCursorVisible(*d);
-            return;
-        }
-        if (E.prompt == Prompt::GoToLine && d) {
-            int l = std::atoi(E.promptText.c_str());
-            moveCursor(*d, {std::clamp(l - 1, 0, (int)d->lines.size() - 1), 0}, false);
-            d->scrollY = std::max(0.0f, (d->cur.line - 5) * F.lineH);
-        }
-        if (E.prompt == Prompt::OpenFolder && !E.promptText.empty()) {
-            fs::path p = expandHome(E.promptText);
-            std::error_code ec;
-            if (fs::is_directory(p, ec)) openFolder(p);
-            else {
-                say("there's no folder " + p.string());
-                return;
+    if (!(pressed(KEY_ENTER) || pressed(KEY_KP_ENTER))) return;
+    Doc* d = cur();
+    if (E.prompt == Prompt::Find) {
+        if (d && !findNext(*d, E.findText, IsKeyDown(KEY_LEFT_SHIFT) || IsKeyDown(KEY_RIGHT_SHIFT))) say("\"" + E.findText + "\" isn't in this file");
+        if (d) keepCursorVisible(*d);
+        return;
+    }
+    if (E.prompt == Prompt::GoToLine && d) {
+        int l = std::atoi(E.promptText.c_str());
+        moveCursor(*d, {std::clamp(l - 1, 0, (int)d->lines.size() - 1), 0}, false);
+        d->scrollY = std::max(0.0f, (d->cur.line - 5) * F.lineH);
+    }
+    if (E.prompt == Prompt::OpenFolder && !E.promptText.empty()) {
+        fs::path p = expandHome(E.promptText);
+        std::error_code ec;
+        if (!fs::is_directory(p, ec)) return say("there's no folder " + p.string());
+        openFolder(p);
+    }
+    if (E.prompt == Prompt::NewFile) makeNew(false);
+    if (E.prompt == Prompt::NewFolder) makeNew(true);
+    E.prompt = Prompt::None;
+}
+
+static void handleDocsSearch() {
+    int c;
+    while ((c = GetCharPressed()) > 0) {
+        if (c < 32) continue;
+        E.docSearch += typed(c);
+        E.listScroll = 0;
+        E.page = -1;
+    }
+    if (pressed(KEY_BACKSPACE) && !E.docSearch.empty()) {
+        E.docSearch.erase(prevPos(E.docSearch, (int)E.docSearch.size()));
+        E.page = -1;
+    }
+    if (IsKeyPressed(KEY_ESCAPE)) {
+        if (!E.docSearch.empty()) E.docSearch.clear();
+        else E.searchFocus = false;
+    }
+    if (IsKeyPressed(KEY_ENTER) || IsKeyPressed(KEY_KP_ENTER)) {   // the first page that has it
+        std::string q = lower(E.docSearch);
+        for (int i = 0; i < (int)E.pages.size(); i++)
+            if (q.empty() || E.pages[i].textLower.find(q) != std::string::npos) {
+                openPage(i);
+                E.searchFocus = false;
+                break;
             }
-        }
-        if (E.prompt == Prompt::NewFile && !E.promptText.empty()) {
-            fs::path p = E.root / fs::path(E.promptText);
-            std::error_code ec;
-            if (fs::exists(p, ec)) {
-                openFile(p);
-            } else {
-                fs::create_directories(p.parent_path(), ec);
-                std::ofstream f(p, std::ios::binary);
-                if (!f) say("couldn't make " + E.promptText);
-                else {
-                    f.close();
-                    refreshFiles();
-                    openFile(p);
-                }
-            }
-        }
-        E.prompt = Prompt::None;
     }
 }
 
@@ -1414,54 +1627,30 @@ static void handleKeys() {
     bool shift = IsKeyDown(KEY_LEFT_SHIFT) || IsKeyDown(KEY_RIGHT_SHIFT);
     // everywhere
     if (IsKeyPressed(KEY_F5)) {
-        if (shift) { if (E.run) stopProcess(E.run); }
-        else startRun();
+        if (shift) {
+            if (E.run) stopProcess(E.run);
+        } else {
+            startRun();
+        }
     }
     if (IsKeyPressed(KEY_F8)) {
         saveAll();
         startCheck();
     }
-    if (IsKeyPressed(KEY_F1)) {
-        E.docsMode = !E.docsMode;
-        if (E.docsMode && E.pages.empty()) loadDocs();
-        if (E.docsMode && E.page < 0 && !E.pages.empty()) openPage(0);
-    }
+    if (IsKeyPressed(KEY_F1)) toggleDocs();
     if (ctrl && (IsKeyPressed(KEY_EQUAL) || IsKeyPressed(KEY_MINUS) || IsKeyPressed(KEY_KP_ADD) || IsKeyPressed(KEY_KP_SUBTRACT))) {
         F.size = std::clamp(F.size + ((IsKeyPressed(KEY_EQUAL) || IsKeyPressed(KEY_KP_ADD)) ? 2.0f : -2.0f), 10.0f, 40.0f);
         loadMono();
         E.layoutW = 0;
+        saveSettings();
     }
-    if (ctrl && IsKeyPressed(KEY_O)) {
-        E.prompt = Prompt::OpenFolder;
-        E.promptText = E.root.string();
-        return;
-    }
+    if (ctrl && IsKeyPressed(KEY_O)) return startPrompt(Prompt::OpenFolder, E.root.string());
     if (ctrl && IsKeyPressed(KEY_N)) {
-        E.prompt = Prompt::NewFile;
-        E.promptText.clear();
-        return;
+        std::string where = E.chosenFolder.empty() ? "" : E.chosenFolder + "/";
+        return startPrompt(shift ? Prompt::NewFolder : Prompt::NewFile, where);
     }
     if (E.prompt != Prompt::None) return handlePrompt();
-
-    if (E.docsMode) {
-        int c;
-        while ((c = GetCharPressed()) > 0) {
-            int n = 0;
-            const char* u = CodepointToUTF8(c, &n);
-            E.docSearch += std::string(u, n);
-            E.sideScroll = 0;
-        }
-        if (pressed(KEY_BACKSPACE) && !E.docSearch.empty()) E.docSearch.erase(prevPos(E.docSearch, (int)E.docSearch.size()));
-        if (IsKeyPressed(KEY_ESCAPE)) {
-            if (!E.docSearch.empty()) E.docSearch.clear();
-            else E.docsMode = false;
-        }
-        float page = L.H - L.top - L.status - 40;
-        if (pressed(KEY_PAGE_DOWN) || pressed(KEY_DOWN)) E.docScroll += IsKeyDown(KEY_DOWN) ? 40 : page;
-        if (pressed(KEY_PAGE_UP) || pressed(KEY_UP)) E.docScroll -= IsKeyDown(KEY_UP) ? 40 : page;
-        if (IsKeyPressed(KEY_HOME)) E.docScroll = 0;
-        return;
-    }
+    if (E.searchFocus && E.docsOpen) return handleDocsSearch();
 
     Doc* dp = cur();
     if (!dp) return;
@@ -1471,9 +1660,9 @@ static void handleKeys() {
             if (shift) saveAll();
             else saveDoc(d);
             startCheck();
-            say("saved");
+            say(shift ? "saved every file" : "saved");
         }
-        if (pressed(KEY_Z)) shift ? undoRedo(d, true) : undoRedo(d, false);
+        if (pressed(KEY_Z)) undoRedo(d, shift);
         if (pressed(KEY_Y)) undoRedo(d, true);
         if (IsKeyPressed(KEY_A)) {
             d.anchor = {0, 0};
@@ -1485,8 +1674,9 @@ static void handleKeys() {
             SetClipboardText(t.c_str());
             if (IsKeyPressed(KEY_X)) {
                 remember(d, 0);
-                if (hasSel(d)) deleteSel(d);
-                else if (d.lines.size() > 1) {
+                if (hasSel(d)) {
+                    deleteSel(d);
+                } else if (d.lines.size() > 1) {
                     d.lines.erase(d.lines.begin() + d.cur.line);
                     d.cur.line = std::min(d.cur.line, (int)d.lines.size() - 1);
                     d.cur.col = std::min(d.cur.col, (int)d.lines[d.cur.line].size());
@@ -1505,37 +1695,24 @@ static void handleKeys() {
             }
         }
         if (IsKeyPressed(KEY_F)) {
-            E.prompt = Prompt::Find;
-            E.promptText = hasSel(d) && selStart(d).line == selEnd(d).line ? selectedText(d) : E.findText;
+            startPrompt(Prompt::Find, hasSel(d) && selStart(d).line == selEnd(d).line ? selectedText(d) : E.findText);
             E.findText = E.promptText;
         }
-        if (IsKeyPressed(KEY_G)) {
-            E.prompt = Prompt::GoToLine;
-            E.promptText.clear();
-        }
+        if (IsKeyPressed(KEY_G)) startPrompt(Prompt::GoToLine, "");
         if (IsKeyPressed(KEY_SLASH)) toggleComment(d);
-        if (IsKeyPressed(KEY_W)) {
-            if (d.dirty) saveDoc(d);
-            E.docs.erase(E.docs.begin() + E.active);
-            if (E.active >= (int)E.docs.size()) E.active = (int)E.docs.size() - 1;
-            return;
-        }
+        if (IsKeyPressed(KEY_W)) return closeTab(E.active);
         if (IsKeyPressed(KEY_TAB) && !E.docs.empty()) {
             E.active = (E.active + (shift ? (int)E.docs.size() - 1 : 1)) % (int)E.docs.size();
             return;
         }
     }
-    // typing
-    if (!ctrl) {
+    if (!ctrl) {   // typing
         int c;
         while ((c = GetCharPressed()) > 0) {
             if (c < 32) continue;
-            int n = 0;
-            const char* u = CodepointToUTF8(c, &n);
-            std::string s(u, n);
+            std::string s = typed(c);
             remember(d, 1);
-            // typing } on an empty line puts it one step further left
-            if (s == "}" && !hasSel(d)) {
+            if (s == "}" && !hasSel(d)) {   // typing } on an empty line puts it one step further left
                 std::string& line = d.lines[d.cur.line];
                 if (line.find_first_not_of(' ') == std::string::npos && line.size() >= 4 && d.cur.col == (int)line.size()) {
                     line.erase(0, 4);
@@ -1556,8 +1733,9 @@ static void handleKeys() {
     }
     if (pressed(KEY_DELETE)) deleteForward(d);
     if (pressed(KEY_TAB) && !ctrl) {
-        if (shift || hasSel(d)) indentLines(d, shift);
-        else {
+        if (shift || hasSel(d)) {
+            indentLines(d, shift);
+        } else {
             remember(d, 1);
             int col = visCol(d.lines[d.cur.line], d.cur.col);
             insertText(d, std::string(4 - col % 4, ' '));
@@ -1566,12 +1744,12 @@ static void handleKeys() {
     }
     if (IsKeyPressed(KEY_ESCAPE)) d.sel = false;
 
-    // moving
-    const std::string& line = d.lines[d.cur.line];
+    const std::string& line = d.lines[d.cur.line];   // moving
     if (pressed(KEY_LEFT)) {
         Pos p = d.cur;
-        if (!shift && hasSel(d)) p = selStart(d);
-        else if (p.col > 0) {
+        if (!shift && hasSel(d)) {
+            p = selStart(d);
+        } else if (p.col > 0) {
             if (ctrl) {
                 int k = p.col;
                 while (k > 0 && line[k - 1] == ' ') k--;
@@ -1588,8 +1766,9 @@ static void handleKeys() {
     }
     if (pressed(KEY_RIGHT)) {
         Pos p = d.cur;
-        if (!shift && hasSel(d)) p = selEnd(d);
-        else if (p.col < (int)line.size()) {
+        if (!shift && hasSel(d)) {
+            p = selEnd(d);
+        } else if (p.col < (int)line.size()) {
             if (ctrl) {
                 int k = p.col;
                 while (k < (int)line.size() && isWord((unsigned char)line[k])) k++;
@@ -1607,12 +1786,12 @@ static void handleKeys() {
     int pageLines = std::max(1, (int)(L.editH / F.lineH) - 2);
     for (auto [key, delta] : {std::pair{KEY_UP, -1}, std::pair{KEY_DOWN, 1}, std::pair{KEY_PAGE_UP, -pageLines}, std::pair{KEY_PAGE_DOWN, pageLines}}) {
         if (!pressed(key)) continue;
-        if (d.wantCol < 0) d.wantCol = visCol(line, d.cur.col);
-        int l = std::clamp(d.cur.line + delta, 0, (int)d.lines.size() - 1);
         if (ctrl && (key == KEY_UP || key == KEY_DOWN)) {   // Ctrl+Up/Down scroll without moving
             d.scrollY = std::max(0.0f, d.scrollY + delta * F.lineH);
             continue;
         }
+        if (d.wantCol < 0) d.wantCol = visCol(d.lines[d.cur.line], d.cur.col);
+        int l = std::clamp(d.cur.line + delta, 0, (int)d.lines.size() - 1);
         int keep = d.wantCol;
         moveCursor(d, {l, byteAtCol(d.lines[l], d.wantCol)}, shift);
         d.wantCol = keep;
@@ -1636,38 +1815,50 @@ static void handleKeys() {
 static void handleMouse() {
     Vector2 m = GetMousePosition();
     float wheel = GetMouseWheelMove();
-    // dragging the line between the editor and the bottom panel
-    static bool resizing = false;
-    if (mouseIn(L.side, L.panelY - 3, L.W, 6)) SetMouseCursor(MOUSE_CURSOR_RESIZE_NS);
-    else if (!resizing) SetMouseCursor(m.x > L.editX && m.y > L.editY && m.y < L.panelY && !E.docsMode ? MOUSE_CURSOR_IBEAM : MOUSE_CURSOR_DEFAULT);
-    if (IsMouseButtonPressed(MOUSE_BUTTON_LEFT) && mouseIn(L.side, L.panelY - 3, L.W, 6)) resizing = true;
-    if (resizing) {
-        E.panelH = L.H - L.status - m.y;
-        if (!IsMouseButtonDown(MOUSE_BUTTON_LEFT)) resizing = false;
+    // the edges between the panels can be dragged
+    bool overSide = mouseIn(E.sideW - 3, L.top, 6, L.H - L.top - L.status);
+    bool overDocs = E.docsOpen && mouseIn(L.docsX - 3, L.top, 6, L.H - L.top - L.status);
+    bool overPanel = mouseIn(L.editX, L.panelY - 3, L.editW, 6);
+    if (IsMouseButtonPressed(MOUSE_BUTTON_LEFT)) E.resizing = overSide ? 1 : overDocs ? 2 : overPanel ? 3 : 0;
+    if (E.resizing) {
+        if (E.resizing == 1) E.sideW = m.x;
+        if (E.resizing == 2) E.docsW = L.W - m.x;
+        if (E.resizing == 3) E.panelH = L.H - L.status - m.y;
+        E.layoutW = 0;
+        if (!IsMouseButtonDown(MOUSE_BUTTON_LEFT)) {
+            E.resizing = 0;
+            saveSettings();
+        }
+        SetMouseCursor(E.resizing == 3 ? MOUSE_CURSOR_RESIZE_NS : MOUSE_CURSOR_RESIZE_EW);
         return;
     }
+    if (overSide || overDocs) SetMouseCursor(MOUSE_CURSOR_RESIZE_EW);
+    else if (overPanel) SetMouseCursor(MOUSE_CURSOR_RESIZE_NS);
+    else SetMouseCursor(mouseIn(L.editX, L.editY, L.editW, L.editH) ? MOUSE_CURSOR_IBEAM : MOUSE_CURSOR_DEFAULT);
+
     if (wheel != 0) {
-        if (m.x < L.side) E.sideScroll = std::max(0.0f, E.sideScroll - wheel * 44);
-        else if (m.y > L.panelY && !E.docsMode) {
+        if (m.x < E.sideW) {
+            E.sideScroll = std::max(0.0f, E.sideScroll - wheel * 44);
+        } else if (E.docsOpen && m.x >= L.docsX) {
+            if (E.page < 0) E.listScroll -= wheel * 48;
+            else E.docScroll -= wheel * 60;
+        } else if (m.y > L.panelY) {
             E.outputScroll = std::max(0.0f, E.outputScroll - wheel * 3 * F.size);
             E.followOutput = false;
-        } else if (E.docsMode) {
-            E.docScroll -= wheel * 60;
         } else if (Doc* d = cur()) {
             if (IsKeyDown(KEY_LEFT_SHIFT)) d->scrollX = std::max(0.0f, d->scrollX - wheel * 6 * F.charW);
             else d->scrollY = std::clamp(d->scrollY - wheel * 3 * F.lineH, 0.0f, std::max(0.0f, (d->lines.size() - 3) * F.lineH));
         }
     }
-    if (E.docsMode) return;
     Doc* dp = cur();
     if (!dp) return;
     Doc& d = *dp;
     bool inText = mouseIn(L.editX, L.editY, L.editW, L.editH);
     if (IsMouseButtonPressed(MOUSE_BUTTON_LEFT) && inText) {
+        E.searchFocus = false;
         Pos p = posAtMouse(d);
         double now = GetTime();
-        if (now - E.lastClick < 0.35 && p.line == d.cur.line) {
-            // double click: the word
+        if (now - E.lastClick < 0.35 && p.line == d.cur.line) {   // double click: the word
             const std::string& s = d.lines[p.line];
             int a = p.col, b = p.col;
             while (a > 0 && isWord((unsigned char)s[a - 1])) a--;
@@ -1680,13 +1871,8 @@ static void handleMouse() {
         }
         E.lastClick = now;
         bool shift = IsKeyDown(KEY_LEFT_SHIFT) || IsKeyDown(KEY_RIGHT_SHIFT);
-        if (shift) {
-            if (!d.sel) d.anchor = d.cur;
-            d.sel = true;
-        } else {
-            d.anchor = p;
-            d.sel = true;
-        }
+        if (!shift || !d.sel) d.anchor = shift ? d.cur : p;
+        d.sel = true;
         d.cur = p;
         d.wantCol = -1;
         E.dragging = true;
@@ -1700,25 +1886,30 @@ static void handleMouse() {
             E.dragging = false;
         }
     }
-    if (IsMouseButtonPressed(MOUSE_BUTTON_LEFT) && m.y > L.panelY) E.followOutput = false;
 }
 
 // ---------------------------------------------------------------- main
 
 int main(int argc, char** argv) {
     E.exeDir = fs::path(exeFolder());
+    std::map<std::string, std::string> settings = loadSettings();
+    auto number = [&](const char* key, float fallback) {
+        auto it = settings.find(key);
+        return it == settings.end() ? fallback : (float)std::atof(it->second.c_str());
+    };
+    E.sideW = number("files", 240);
+    E.docsW = number("docs", 440);
+    E.panelH = number("panel", 190);
+    E.docsOpen = number("docsOpen", 0) != 0;
+    F.size = std::clamp(number("textSize", 18), 10.0f, 40.0f);
+
     // the folder: the one given, or else the one open last time (or else where it was started)
     fs::path start = argc > 1 ? fs::path(argv[1]) : fs::current_path();
-    if (argc <= 1) {
-        std::string last = readFileText(lastFolderFile());
-        while (!last.empty() && (last.back() == '\n' || last.back() == '\r')) last.pop_back();
-        std::error_code ec;
-        if (!last.empty() && fs::is_directory(last, ec)) start = last;
-    }
+    std::error_code ec;
+    if (argc <= 1 && settings.count("folder") && fs::is_directory(settings["folder"], ec)) start = settings["folder"];
     E.root = fs::absolute(start).lexically_normal();
     if (!E.root.has_filename()) E.root = E.root.parent_path();
-    if (fs::is_regular_file(E.root)) E.root = E.root.parent_path();
-    rememberFolder();
+    if (fs::is_regular_file(E.root, ec)) E.root = E.root.parent_path();
 #ifdef _WIN32
     E.frg = fs::exists(E.exeDir / "frg.exe") ? E.exeDir / "frg.exe" : fs::path("frg");
 #else
@@ -1728,18 +1919,22 @@ int main(int argc, char** argv) {
 
     SetConfigFlags(FLAG_WINDOW_RESIZABLE | FLAG_VSYNC_HINT);
     SetTraceLogLevel(LOG_WARNING);
-    InitWindow(1200, 760, ("Forge Edit - " + E.root.filename().string()).c_str());
-    SetWindowMinSize(700, 420);
+    InitWindow(1280, 780, ("Forge Edit - " + E.root.filename().string()).c_str());
+    SetWindowMinSize(760, 420);
     SetExitKey(KEY_NULL);
     SetTargetFPS(60);
     loadFonts(E.exeDir);
-    refreshFiles();
+    saveSettings();
+    refreshTree();
+    if (std::getenv("FORGE_EDIT_EXPAND"))
+        for (const Entry& e : E.tree)
+            if (e.dir) E.openFolders.insert(e.rel);
     if (const char* open = std::getenv("FORGE_EDIT_OPEN")) openFile(E.root / open);
     else if (fs::exists(E.root / "main.frg")) openFile(E.root / "main.frg");
-    if (std::getenv("FORGE_EDIT_DOCS")) {
+    if (E.docsOpen || std::getenv("FORGE_EDIT_DOCS")) {
         loadDocs();
-        E.docsMode = true;
-        if (!E.pages.empty()) openPage(0);
+        E.docsOpen = true;
+        if (std::getenv("FORGE_EDIT_DOCS") && !E.pages.empty()) openPage(1);
     }
     startCheck();
     if (std::getenv("FORGE_EDIT_RUN")) startRun();
@@ -1755,12 +1950,12 @@ int main(int argc, char** argv) {
             say("There are unsaved changes: Ctrl+Shift+S saves them all. Close again to quit without saving.");
         }
         // when nothing is happening, wait for the keyboard or mouse instead of drawing 60 times a second
-        bool busy = E.run || E.check || shot;
+        bool busy = E.run || E.check || E.editCount != E.checkedCount || shot;
         if (busy && waiting) DisableEventWaiting(), waiting = false;
         if (!busy && !waiting && frame > 2) EnableEventWaiting(), waiting = true;
 
         pollProcesses();
-        if (GetTime() - E.filesAt > 3) refreshFiles();
+        if (GetTime() - E.treeAt > 3) refreshTree();
         computeLayout();
         handleKeys();
         handleMouse();
@@ -1768,9 +1963,9 @@ int main(int argc, char** argv) {
 
         BeginDrawing();
         ClearBackground(kBg);
-        if (E.docsMode) drawDocs();
-        else drawEditor();
-        if (!E.docsMode) drawPanel();
+        drawEditor();
+        drawPanel();
+        drawDocsPanel();
         drawSideBar();
         drawTabs();
         drawTopBar();
@@ -1782,6 +1977,7 @@ int main(int argc, char** argv) {
             break;
         }
     }
+    saveSettings();
     if (E.run) freeProcess(E.run);
     if (E.check) freeProcess(E.check);
     CloseWindow();

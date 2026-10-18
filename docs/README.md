@@ -13,7 +13,7 @@ These docs are for **anyone using or learning Forge**, including people who have
 | [Getting Started](getting-started.md) | Setup, the `frg` command, VS Code, your first program, and building a finished game |
 | [Commands](reference/commands.md) | Everything you type in the terminal: every `frg` command and option |
 | [Cheat sheet](LANGUAGE.md) | The whole language on one page, for looking things up quickly |
-| [Everything in one file](FORGE_ALL_DOCS.md) | The teaching brief and every page below, combined into one file to upload to an AI chat. Rebuild it with `.\docs\make-all-docs.ps1` after changing the docs. |
+| [Everything in one file](FORGE_ALL_DOCS.md) | Every page below, combined into one file to upload to an AI chat. Rebuild it with `.\docs\make-all-docs.ps1` after changing the docs. |
 
 ## The language
 

@@ -1,4 +1,4 @@
-# Combines the teaching brief and every docs page into one file, docs/FORGE_ALL_DOCS.md, to upload to a chat.
+# Combines every docs page into one file, docs/FORGE_ALL_DOCS.md, to upload to a chat.
 #
 #   .\docs\make-all-docs.ps1          rebuild the file
 #   .\docs\make-all-docs.ps1 -Check   only check it's up to date (exit code 1 if not); the tests run this
@@ -13,28 +13,27 @@ $docs = $PSScriptRoot
 $out = Join-Path $docs "FORGE_ALL_DOCS.md"
 
 $parts = [ordered]@{
-    "Part A: The teaching brief (for an AI tutor)" = @("TEACH_ME_FORGE.md")
-    "Part B: Start here" = @("README.md", "getting-started.md")
-    "Part C: The language" = @(
+    "Part A: Start here" = @("README.md", "getting-started.md")
+    "Part B: The language" = @(
         "language/01-basics.md", "language/02-variables-and-types.md", "language/03-text.md", "language/04-operators.md",
         "language/05-control-flow.md", "language/06-functions.md", "language/07-files-and-folders.md",
         "language/08-lists-and-maps.md", "language/09-structs-and-classes.md", "language/10-enums-and-optionals.md",
         "language/11-tasks.md", "language/12-errors.md", "language/13-reserved-words.md",
         "language/14-coming-from-other-languages.md")
-    "Part D: The libraries" = @(
+    "Part C: The libraries" = @(
         "libraries/README.md", "libraries/core-types.md", "libraries/stdio.md", "libraries/math.md", "libraries/random.md",
         "libraries/window.md", "libraries/input.md", "libraries/graphics2d.md", "libraries/graphics3d.md",
         "libraries/assets.md", "libraries/audio.md", "libraries/physics.md", "libraries/physics3d.md", "libraries/time.md", "libraries/file.md",
         "libraries/save.md", "libraries/tween.md", "libraries/particles.md", "libraries/tilemap.md", "libraries/scenes.md", "libraries/ui.md", "libraries/ecs.md", "libraries/tasks.md", "libraries/testing.md",
         "libraries/toolkits.md", "libraries/opengl.md", "libraries/directx.md", "libraries/vulkan.md")
-    "Part E: Reference (exact rules, every command, every error message)" = @(
+    "Part D: Reference (exact rules, every command, every error message)" = @(
         "reference/syntax.md", "reference/rules.md", "reference/commands.md", "reference/error-messages.md")
-    # The practice projects are left out here: they're already in Part A (Part 6 of the teaching brief).
-    "Part F: Guides" = @("guides/game-loop.md", "guides/sprites-and-animation.md", "guides/platformer-walkthrough.md")
-    "Part G: Under the hood" = @("how-forge-works.md")
-    "Part H: The cheat sheet (everything on one page)" = @("LANGUAGE.md")
+    "Part E: Guides" = @("guides/game-loop.md", "guides/sprites-and-animation.md", "guides/platformer-walkthrough.md",
+        "guides/practice-projects.md")
+    "Part F: Under the hood" = @("how-forge-works.md")
+    "Part G: The cheat sheet (everything on one page)" = @("LANGUAGE.md")
 }
-$skipped = @("guides/practice-projects.md")
+$skipped = @()
 
 function RelPath([string]$full) { [IO.Path]::GetRelativePath($docs, $full).Replace('\', '/') }
 function Read([string]$rel) { [IO.File]::ReadAllText((Join-Path $docs $rel)).Replace("`r`n", "`n") }
@@ -42,8 +41,8 @@ function Read([string]$rel) { [IO.File]::ReadAllText((Join-Path $docs $rel)).Rep
 # Every page, so nothing is forgotten when a new page is added.
 $listed = @($parts.Values | ForEach-Object { $_ }) + $skipped
 $extra = Get-ChildItem $docs -Recurse -Filter *.md | ForEach-Object { RelPath $_.FullName } |
-    Where-Object { $_ -ne "FORGE_ALL_DOCS.md" -and $listed -notcontains $_ } | Sort-Object
-if ($extra) { $parts["Part I: Other pages"] = @($extra) }
+    Where-Object { $_ -ne "FORGE_ALL_DOCS.md" -and $_ -ne "TEACH_ME_FORGE.md" -and $listed -notcontains $_ } | Sort-Object
+if ($extra) { $parts["Part H: Other pages"] = @($extra) }
 
 # Lines inside ``` code blocks are left alone. A block opened with ```` only closes with ```` or more.
 function ForEachProseLine([string]$text, [scriptblock]$fn) {
@@ -107,7 +106,6 @@ function LinkToText([string]$rel, [string]$text, [string]$url) {
         if (-not $where) { return $text }
         return "$text (see $where)"
     }
-    if ($target -eq "guides/practice-projects.md") { return "$text (see Part 6 of the teaching brief, in Part A)" }
     # A file outside the docs, like an example game: name it by its path in the Forge folder.
     $repoPath = $target -replace '^\.\./', ''
     return "$text (the file ``$repoPath`` in the Forge folder)"
@@ -120,11 +118,10 @@ $sb = [Text.StringBuilder]::new()
 
 This one file holds everything written about the Forge programming language, so it can be uploaded in one go:
 
-- **Part A** is the teaching brief, written for an AI that teaches Forge to a beginner. It explains how to teach, what Forge has and doesn't have, the example platformer, and practice projects.
-- **Parts B to G** are the full documentation, page by page: getting started, every part of the language, every library, the reference (every form of the syntax, exactly how Forge behaves, every `frg` command and every error message), the guides, and how Forge works inside.
-- **Part H** is the one-page cheat sheet.
+- **Parts A to F** are the full documentation, page by page: getting started, every part of the language, every library, the reference (every form of the syntax, exactly how Forge behaves, every `frg` command and every error message), the guides (practice projects too), and how Forge works inside.
+- **Part G** is the one-page cheat sheet.
 
-Where the parts disagree, the detailed pages (B to G) are more precise, and the compiler is always right. The examples in Part E are run by Forge's tests, so their output is exactly what Forge prints. This file is made from the separate pages in Forge's docs folder by docs/make-all-docs.ps1, so don't edit it by hand.
+Where the parts disagree, the detailed pages (A to F) are more precise, and the compiler is always right. The examples in Part D are run by Forge's tests, so their output is exactly what Forge prints. This file is made from the separate pages in Forge's docs folder by docs/make-all-docs.ps1, so don't edit it by hand.
 
 ## Contents
 

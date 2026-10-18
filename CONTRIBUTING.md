@@ -40,8 +40,7 @@ On GitHub, every push also builds every example and then **runs** each one for 1
 - **Every change comes with tests.** Tests are `.test` files in `tests/cases`; the top of `tests/run_tests.ps1` explains their sections (`=== main.frg`, `=== output`, `=== error`, `=== warning`, `=== build`...).
 - **Every change that users can see updates the docs:**
   - the right page in `docs/`;
-  - the cheat sheet `docs/LANGUAGE.md`;
-  - the teaching brief `docs/TEACH_ME_FORGE.md`.
+  - the cheat sheet `docs/LANGUAGE.md`.
   Then run `.\docs\make-all-docs.ps1` to rebuild the combined file. The tests check that it's up to date.
 - **New library functions** are declared in `src/prelude.cpp` and added to the autocomplete table in `editors/vscode/extension.js`.
 - **Errors and docs are written for beginners:** plain words, no jargon, and every error explains the fix in a `hint:`.

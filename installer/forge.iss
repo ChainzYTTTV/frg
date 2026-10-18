@@ -1,7 +1,7 @@
 ; The Forge installer (Inno Setup 6). Built by installer\build.ps1, which puts everything it installs in
 ; installer\stage first and passes the version:
 ;
-;   iscc /DVersion=0.9.5 installer\forge.iss
+;   iscc /DVersion=0.9.6 installer\forge.iss
 ;
 ; It installs for the current Windows user only (no admin rights needed), into
 ; %LOCALAPPDATA%\Programs\Forge: frg.exe and its runtime, its own C++ compiler (w64devkit, which frg uses by

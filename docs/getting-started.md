@@ -27,7 +27,7 @@ frg version
 g++ --version
 ```
 
-The first should print `Forge 0.9.5`. If `frg` isn't found, open a new terminal; if it's still not found, run the installer again with "Add Forge to my PATH" ticked.
+The first should print `Forge 0.9.6`. If `frg` isn't found, open a new terminal; if it's still not found, run the installer again with "Add Forge to my PATH" ticked.
 
 ### Installing on Linux
 

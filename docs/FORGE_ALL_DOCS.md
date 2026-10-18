@@ -1,4 +1,4 @@
-# Forge 0.9.5: the complete documentation
+# Forge 0.9.6: the complete documentation
 
 This one file holds everything written about the Forge programming language, so it can be uploaded in one go:
 
@@ -158,7 +158,7 @@ frg version
 g++ --version
 ```
 
-The first should print `Forge 0.9.5`. If `frg` isn't found, open a new terminal; if it's still not found, run the installer again with "Add Forge to my PATH" ticked.
+The first should print `Forge 0.9.6`. If `frg` isn't found, open a new terminal; if it's still not found, run the installer again with "Add Forge to my PATH" ticked.
 
 #### Installing on Linux
 
@@ -8639,7 +8639,7 @@ The error messages on this page are checked against the real `frg` every time Fo
 frg version
 ```
 
-which prints `Forge 0.9.5` (or whichever version you have). If it says `frg is not recognized`, the folder with `frg.exe` isn't on your `PATH`.
+which prints `Forge 0.9.6` (or whichever version you have). If it says `frg is not recognized`, the folder with `frg.exe` isn't on your `PATH`.
 
 #### Moving between folders
 
@@ -9097,7 +9097,7 @@ frg update --on       turn the daily check back on
 The daily check: once a day, when you build, run, test, package or make a game, `frg` also asks GitHub (in the background, at most a few seconds, never stopping the command) whether a newer Forge is out. If it is, a short note comes at the end:
 
 ```text
-    Update  Forge 0.9.6 is out (you have 0.9.5). Updating is optional: run frg update to get it,
+    Update  Forge 0.9.7 is out (you have 0.9.6). Updating is optional: run frg update to get it,
             or frg update --off to stop these notes.
 ```
 
@@ -9105,7 +9105,7 @@ It asks only for the number of the latest release (from `api.github.com`), sends
 
 ### frg version and frg help
 
-`frg version` (or `frg --version`) prints the version, like `Forge 0.9.5`.
+`frg version` (or `frg --version`) prints the version, like `Forge 0.9.6`.
 
 `frg help` (or `frg --help`, `frg -h`, or `frg` on its own) prints the list of commands and options.
 

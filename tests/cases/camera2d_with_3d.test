@@ -3,7 +3,7 @@
 #include <graphics2d>
 #include <graphics3d>
 
-``` Both cameras in one game: the 3D Camera3D and the 2D Camera2D are different types. ```
+``` Both cameras in one game: Camera3D and Camera2D are different types. ```
 vec2 target = vec2(0, 0);
 
 void update(float dt) {

@@ -2,6 +2,10 @@
 
 What changed in each version of Forge. Plans for later versions are in the [roadmap](ROADMAP.md).
 
+## 0.9.7 (2026-10-18)
+
+**Forge Edit: a light code editor**, for computers where VS Code is slow. It comes with Forge on Windows (Start menu) and Linux (apps menu, or `forge-edit`), and uses far less memory than VS Code. Dark, with Forge's colors; errors as you save (wavy lines, and a Problems list to click); F5 runs the game with its output in the editor, Shift+F5 stops it; F1 shows all of Forge's docs, with a search box. Plus find, go to line, undo, comment lines, indenting, new files and opening another game folder. See [Forge Edit](docs/getting-started.md#forge-edit-a-light-editor).
+
 ## 0.9.6 (2026-10-18)
 
 **Forge on Linux.** `frg` and every game it makes now work on Linux (64-bit; Ubuntu 22.04 or newer, or similar): the whole language, the 2D and 3D engine, physics, sound, saving, `frg test` and `frg package`. Each release has a `Forge-<version>-linux-x64.tar.gz` with an `install.sh` that installs it for your user (no password needed). Not yet: the low-level toolkits (`<OpenGL>`, `<DirectX>`, `<Vulkan>`), which say so if a game includes one; DirectX never will, since it's Windows-only. Every test runs on Linux too, on every change.

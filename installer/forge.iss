@@ -1,7 +1,7 @@
 ; The Forge installer (Inno Setup 6). Built by installer\build.ps1, which puts everything it installs in
 ; installer\stage first and passes the version:
 ;
-;   iscc /DVersion=0.9.6 installer\forge.iss
+;   iscc /DVersion=0.9.7 installer\forge.iss
 ;
 ; It installs for the current Windows user only (no admin rights needed), into
 ; %LOCALAPPDATA%\Programs\Forge: frg.exe and its runtime, its own C++ compiler (w64devkit, which frg uses by
@@ -54,6 +54,11 @@ Source: "stage\*"; DestDir: "{app}"; Flags: recursesubdirs createallsubdirs igno
 ; made by frg as it's used: the build cache and the update check's note
 Type: filesandordirs; Name: "{app}\bin\cache"
 Type: files; Name: "{app}\bin\update.txt"
+Type: files; Name: "{app}\bin\forge-edit-folder.txt"
+
+[Icons]
+; Forge Edit, the light code editor, in the Start menu (it opens the game folder it had open last)
+Name: "{userprograms}\Forge Edit"; Filename: "{app}\bin\forge-edit.exe"; WorkingDir: "{userdocs}"; IconFilename: "{app}\art\frg-file.ico"; Comment: "A light code editor for Forge games"
 
 [Registry]
 Root: HKCU; Subkey: "Software\Classes\.frg"; ValueType: string; ValueName: ""; ValueData: "Forge.SourceFile"; Flags: uninsdeletevalue; Tasks: fileicons

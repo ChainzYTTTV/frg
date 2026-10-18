@@ -48,3 +48,18 @@ add_custom_target(runtime ALL
     COMMAND ${CMAKE_COMMAND} -E ${FRG_COPY_DIR} ${CMAKE_SOURCE_DIR}/runtime ${CMAKE_SOURCE_DIR}/bin/runtime
 )
 add_dependencies(frg runtime)
+
+# Forge Edit (editor/): a small, light code editor for Forge games, drawn with raylib. Its fonts go next to it.
+add_executable(forge-edit editor/forge_edit.cpp editor/process.cpp)
+target_include_directories(forge-edit PRIVATE ${CMAKE_SOURCE_DIR}/runtime/raylib/include)
+if(WIN32)
+    target_link_libraries(forge-edit PRIVATE ${CMAKE_SOURCE_DIR}/runtime/raylib/lib/libraylib.a opengl32 gdi32 winmm)
+    target_link_options(forge-edit PRIVATE -static -mwindows)
+else()
+    target_link_libraries(forge-edit PRIVATE ${CMAKE_SOURCE_DIR}/runtime/raylib/lib-linux/libraylib.a GL m pthread dl rt X11)
+    target_link_options(forge-edit PRIVATE -static-libstdc++ -static-libgcc)
+endif()
+add_custom_target(editor-fonts ALL
+    COMMAND ${CMAKE_COMMAND} -E ${FRG_COPY_DIR} ${CMAKE_SOURCE_DIR}/editor/fonts ${CMAKE_SOURCE_DIR}/bin/fonts
+)
+add_dependencies(forge-edit editor-fonts)

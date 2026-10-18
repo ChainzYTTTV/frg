@@ -178,14 +178,16 @@ jobs:
           version="$(sed -n 's/.*kVersion = "\([^"]*\)".*/\1/p' src/main.cpp)"
           out="Forge-$version-linux-x64"
           mkdir -p "pack/$out/bin"
-          cp bin/frg "pack/$out/bin/"
+          cp bin/frg bin/forge-edit "pack/$out/bin/"
+          cp -R bin/fonts "pack/$out/bin/fonts"
+          mkdir -p "pack/$out/art" && cp art/forge-icon-512.png "pack/$out/art/"
           cp -R runtime "pack/$out/bin/runtime"
           rm -rf "pack/$out/bin/runtime/raylib/lib"   # raylib for Windows
           git archive HEAD docs examples README.md LICENSE CHANGELOG.md | tar -x -C "pack/$out"
           cp installer/linux/install.sh "pack/$out/"
           pwsh -NoProfile -File editors/vscode/package.ps1
           mkdir -p "pack/$out/editors" && cp "editors/vscode/dist/forge-$version.vsix" "pack/$out/editors/forge.vsix"
-          chmod +x "pack/$out/install.sh" "pack/$out/bin/frg"
+          chmod +x "pack/$out/install.sh" "pack/$out/bin/frg" "pack/$out/bin/forge-edit"
           tar -czf "$out.tar.gz" -C pack "$out"
           ls -la "$out.tar.gz"
 
@@ -194,6 +196,8 @@ jobs:
           HOME="$RUNNER_TEMP/home" sh "$RUNNER_TEMP/$out/install.sh"
           cd "$RUNNER_TEMP" && "$RUNNER_TEMP/home/.local/bin/frg" new smoke --template window && "$RUNNER_TEMP/home/.local/bin/frg" build smoke
           test -x smoke/build/smoke
+          test -x "$RUNNER_TEMP/home/.local/bin/forge-edit"
+          test -f "$RUNNER_TEMP/home/.local/share/applications/forge-edit.desktop"
 
       - name: Keep the Linux package
         uses: actions/upload-artifact@v4

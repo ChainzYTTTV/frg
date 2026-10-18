@@ -2,6 +2,11 @@
 
 What changed in each version of Forge. Plans for later versions are in the [roadmap](ROADMAP.md).
 
+## Unreleased
+
+**Docs**
+- The teaching brief (`TEACH_ME_FORGE.md`) isn't part of Forge's docs any more, or of `FORGE_ALL_DOCS.md`. The practice projects, which were only in it, are now in the combined file.
+
 ## 0.9.5 (2026-10-18)
 
 3D physics, and the names settled for 1.0. Code written for 0.9.4 that uses an old name gets an error saying what it's called now, and how to change it everywhere at once (Replace in Files, with Match Case and Match Whole Word).

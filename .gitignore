@@ -4,3 +4,5 @@ editors/vscode/dist/
 *.spv
 installer/stage/
 installer/out/
+# a personal teaching brief, kept out of the repo
+docs/TEACH_ME_FORGE.md

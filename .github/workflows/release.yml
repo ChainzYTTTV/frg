@@ -43,11 +43,6 @@ jobs:
           if [ -z "$version" ]; then echo "Couldn't find kVersion in src/main.cpp"; exit 1; fi
           tag="v$version"
 
-          if gh release view "$tag" > /dev/null 2>&1; then
-            echo "$tag already has a release; nothing to do."
-            exit 0
-          fi
-
           # The notes: everything under "## <version>" in CHANGELOG.md, up to the next "## ".
           awk -v v="$version" '
             /^## / { if (found) exit; if (index($0, "## " v " ") == 1 || $0 == "## " v) { found = 1; next } }
@@ -56,6 +51,14 @@ jobs:
           if [ ! -s notes.md ]; then echo "Forge $version." > notes.md; fi
           printf '\n**To install:** download `Forge-%s-setup.exe` below and run it. It includes everything Forge needs (its own C++ compiler too). Already have Forge? Run it to update; your games and settings stay.\n\n' "$version" >> notes.md
           echo "Full list of changes: [CHANGELOG.md](https://github.com/${GITHUB_REPOSITORY}/blob/$tag/CHANGELOG.md)" >> notes.md
+
+          # A version that already has a release keeps it; only its notes are refreshed, so they always match
+          # CHANGELOG.md (the tag isn't moved).
+          if gh release view "$tag" > /dev/null 2>&1; then
+            gh release edit "$tag" --notes-file notes.md
+            echo "$tag already has a release; its notes were refreshed from CHANGELOG.md."
+            exit 0
+          fi
 
           if git ls-remote --exit-code --tags origin "refs/tags/$tag" > /dev/null; then
             # Already tagged (by hand): make the release page for that tag.
@@ -75,16 +78,21 @@ jobs:
           run-id: ${{ github.event.workflow_run.id }}
           github-token: ${{ github.token }}
 
+      # Attached when the release has none yet, or replaced when this run is for the very commit the version's tag
+      # points at (so the installer and the tag always match).
       - name: Attach the installer to the release
         if: github.event_name == 'workflow_run'
         env:
           GH_TOKEN: ${{ github.token }}
+          SHA: ${{ github.event.workflow_run.head_sha }}
         run: |
           version="$(sed -n 's/.*kVersion = "\([^"]*\)".*/\1/p' src/main.cpp)"
           tag="v$version"
-          if gh release view "$tag" --json assets -q '.assets[].name' | grep -q -- '-setup.exe$'; then
-            echo "$tag already has its installer."
+          tagged="$(git ls-remote origin "refs/tags/$tag^{}" | cut -f1)"
+          [ -n "$tagged" ] || tagged="$(git ls-remote origin "refs/tags/$tag" | cut -f1)"
+          if gh release view "$tag" --json assets -q '.assets[].name' | grep -q -- '-setup.exe$' && [ "$tagged" != "$SHA" ]; then
+            echo "$tag already has its installer (from the tagged commit)."
             exit 0
           fi
-          for f in installer-out/*-setup.exe; do gh release upload "$tag" "$f"; done
+          for f in installer-out/*-setup.exe; do gh release upload "$tag" "$f" --clobber; done
           echo "Attached the installer to $tag."

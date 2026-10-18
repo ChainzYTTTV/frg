@@ -35,7 +35,7 @@
 
 namespace fs = std::filesystem;
 
-static const char* kVersion = "0.9.6";
+static const char* kVersion = "0.9.7";
 
 // Command lines are built in the system's own kind of text: wide (UTF-16) on Windows, so any file name works, and
 // ordinary text on Linux. NS("...") is a piece of command line written in the code.

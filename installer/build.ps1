@@ -44,6 +44,8 @@ function Copy-Folder([string]$from, [string]$to, [string[]]$skipDirs = @()) {
 
 New-Item (Join-Path $stage "bin") -ItemType Directory | Out-Null
 Copy-Item $frg (Join-Path $stage "bin")
+Copy-Item (Join-Path $root "bin\forge-edit.exe") (Join-Path $stage "bin")   # Forge Edit, the light editor
+Copy-Folder (Join-Path $root "bin\fonts") (Join-Path $stage "bin\fonts")
 Copy-Folder (Join-Path $root "bin\runtime") (Join-Path $stage "bin\runtime")
 Copy-Folder $W64devkit (Join-Path $stage "w64devkit")
 Copy-Folder (Join-Path $root "docs") (Join-Path $stage "docs")
@@ -69,6 +71,9 @@ library exception, so games made with it can use any license). Their sources: ht
 
 raylib (bin\runtime\raylib): the library Forge's engine draws, plays sound and reads input with. zlib license:
 bin\runtime\raylib\LICENSE. https://www.raylib.com
+
+DejaVu fonts (bin\fonts): the fonts Forge Edit draws its text with. Free license: bin\fonts\LICENSE-DejaVu.txt.
+https://dejavu-fonts.github.io
 
 Forge itself: MIT license, see LICENSE.
 "@ | Out-File -Encoding utf8 (Join-Path $stage "THIRD-PARTY.txt")

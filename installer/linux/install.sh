@@ -20,6 +20,24 @@ cp -R "$here/." "$dest/"
 ln -sf "$dest/bin/frg" "$bindir/frg"
 echo "    frg is $bindir/frg"
 
+# Forge Edit, the light code editor: as a command, and in the apps menu
+if [ -x "$dest/bin/forge-edit" ]; then
+    ln -sf "$dest/bin/forge-edit" "$bindir/forge-edit"
+    apps="$HOME/.local/share/applications"
+    mkdir -p "$apps"
+    cat > "$apps/forge-edit.desktop" <<EOF
+[Desktop Entry]
+Type=Application
+Name=Forge Edit
+Comment=A light code editor for Forge games
+Exec=$dest/bin/forge-edit %F
+Icon=$dest/art/forge-icon-512.png
+Terminal=false
+Categories=Development;IDE;
+EOF
+    echo "    Forge Edit is in your apps menu (or run: forge-edit)"
+fi
+
 # The VS Code extension (colors, errors as you save, a Run button), if VS Code is installed.
 if command -v code > /dev/null 2>&1 && [ -f "$dest/editors/forge.vsix" ]; then
     code --install-extension "$dest/editors/forge.vsix" --force > /dev/null 2>&1 &&

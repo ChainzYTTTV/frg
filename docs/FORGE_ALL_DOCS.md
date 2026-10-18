@@ -1,4 +1,4 @@
-# Forge 0.9.6: the complete documentation
+# Forge 0.9.7: the complete documentation
 
 This one file holds everything written about the Forge programming language, so it can be uploaded in one go:
 
@@ -158,7 +158,7 @@ frg version
 g++ --version
 ```
 
-The first should print `Forge 0.9.6`. If `frg` isn't found, open a new terminal; if it's still not found, run the installer again with "Add Forge to my PATH" ticked.
+The first should print `Forge 0.9.7`. If `frg` isn't found, open a new terminal; if it's still not found, run the installer again with "Add Forge to my PATH" ticked.
 
 #### Installing on Linux
 
@@ -169,7 +169,7 @@ Everything in Forge works on Linux except the low-level toolkits (`<OpenGL>`, `<
 3. Forge uses the system's C++ compiler. If `install.sh` says something is missing, it prints the command that installs it, like `sudo apt install g++ libgl1-mesa-dev libx11-dev`.
 4. Open a new terminal and run `frg version`.
 
-To update, do the same with the newer version; your games aren't touched. `frg update` says when a newer Forge is out (it can't install it for you on Linux). To remove Forge: `rm -rf ~/.local/share/forge ~/.local/bin/frg`.
+To update, do the same with the newer version; your games aren't touched. `frg update` says when a newer Forge is out (it can't install it for you on Linux). To remove Forge: `rm -rf ~/.local/share/forge ~/.local/bin/frg ~/.local/bin/forge-edit ~/.local/share/applications/forge-edit.desktop`.
 
 On Linux a game is a program without `.exe` at the end: `frg build` makes `build/mygame`, and `frg package` makes `dist/mygame.zip` (or `.tar.gz` when `zip` isn't installed). A game built on Linux runs on Linux, and one built on Windows runs on Windows: to share a game with both, build it on both.
 
@@ -354,6 +354,32 @@ The `.exe` in `build/` runs on any Windows PC, with nothing else installed. Ever
 If your game loads images, fonts, sounds or 3D models, copy them next to the `.exe`, or into the folder above it, keeping the same sub-folders as in your game's folder. Forge looks in both places.
 
 Text files read and written with `<file>` (see “`<file>`: Reading and Writing Text Files”) work differently: they're found relative to the folder the game was **started from**. When someone double-clicks the `.exe`, that's the folder the `.exe` is in.
+
+### Forge Edit: a light editor
+
+Forge comes with its own small code editor, **Forge Edit**, for computers where VS Code is slow (it needs far less memory). It's dark, knows Forge's colors, shows errors as you save, runs the game, and has all of these docs inside it.
+
+Open it from the Start menu (Windows) or the apps menu (Linux), or in a terminal: `forge-edit` (or `forge-edit path/to/mygame`). It opens the game folder it had open last time; **Ctrl+O** opens another one (type its path; Tab finishes a folder's name).
+
+| Keys | What they do |
+|---|---|
+| **F5** | save everything and run the game (what it prints shows in **Output**) |
+| **Shift+F5** | stop the game |
+| **F8** | check the game for errors (it also does this every time you save) |
+| **F1** | Forge's docs, with a search box (Esc goes back to the code) |
+| **Ctrl+S** / **Ctrl+Shift+S** | save this file / save every file |
+| **Ctrl+N** | a new file (like `enemy.frg`, or `levels/one.txt` for one in a folder) |
+| **Ctrl+O** | open another game folder |
+| **Ctrl+F** | find (Enter: the next one, Shift+Enter: the one before) |
+| **Ctrl+G** | go to a line |
+| **Ctrl+Z** / **Ctrl+Y** | undo / redo |
+| **Ctrl+C**, **Ctrl+X**, **Ctrl+V** | copy, cut, paste (with nothing selected: the whole line) |
+| **Ctrl+/** | turn the selected lines into comments, or back |
+| **Tab** / **Shift+Tab** | indent / unindent (the selected lines) |
+| **Ctrl+W**, **Ctrl+Tab** | close this file, go to the next one |
+| **Ctrl+=** / **Ctrl+-** | bigger / smaller text |
+
+Errors get a red wavy line, a dot next to the line number, and a line in **Problems**: click it to go there. Forge Edit only writes spaces (a tab in a file becomes 4 spaces). It doesn't have autocomplete or a debugger; VS Code does.
 
 ### VS Code
 
@@ -8639,7 +8665,7 @@ The error messages on this page are checked against the real `frg` every time Fo
 frg version
 ```
 
-which prints `Forge 0.9.6` (or whichever version you have). If it says `frg is not recognized`, the folder with `frg.exe` isn't on your `PATH`.
+which prints `Forge 0.9.7` (or whichever version you have). If it says `frg is not recognized`, the folder with `frg.exe` isn't on your `PATH`.
 
 #### Moving between folders
 
@@ -9097,7 +9123,7 @@ frg update --on       turn the daily check back on
 The daily check: once a day, when you build, run, test, package or make a game, `frg` also asks GitHub (in the background, at most a few seconds, never stopping the command) whether a newer Forge is out. If it is, a short note comes at the end:
 
 ```text
-    Update  Forge 0.9.7 is out (you have 0.9.6). Updating is optional: run frg update to get it,
+    Update  Forge 0.9.8 is out (you have 0.9.7). Updating is optional: run frg update to get it,
             or frg update --off to stop these notes.
 ```
 
@@ -9105,7 +9131,7 @@ It asks only for the number of the latest release (from `api.github.com`), sends
 
 ### frg version and frg help
 
-`frg version` (or `frg --version`) prints the version, like `Forge 0.9.6`.
+`frg version` (or `frg --version`) prints the version, like `Forge 0.9.7`.
 
 `frg help` (or `frg --help`, `frg -h`, or `frg` on its own) prints the list of commands and options.
 

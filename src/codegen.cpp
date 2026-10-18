@@ -1185,6 +1185,8 @@ GeneratedCpp Gen::run() {
     for (const std::string& h : headers) result.headers.push_back(h);
     // physics.drawDebug() is drawn with raylib, so its code is only added to games that also use <graphics2d>.
     if (headers.count("forge_physics.hpp") && headers.count("forge_window.hpp")) result.headers.push_back("forge_physics_draw.hpp");
+    // physics3d.drawDebug() the same way, with <graphics3d>.
+    if (headers.count("forge_physics3d.hpp") && headers.count("forge_graphics3d.hpp")) result.headers.push_back("forge_physics3d_draw.hpp");
     for (const std::string& h : result.headers) out += "#include \"" + h + "\"\n";
     out += "\n";
 

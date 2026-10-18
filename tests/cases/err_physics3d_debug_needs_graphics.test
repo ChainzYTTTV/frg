@@ -1,0 +1,10 @@
+=== main.frg
+#include <physics3d>
+
+int main(){
+    physics3d.drawDebug();
+    return 0;
+}
+=== error
+physics3d.drawDebug() draws with the graphics3d library, which this file doesn't include
+hint: add #include <graphics3d> at the top of main.frg

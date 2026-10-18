@@ -13,7 +13,7 @@ Where the parts disagree, the detailed pages (B to G) are more precise, and the 
 - **Part A: The teaching brief (for an AI tutor)**: Teaching Brief: the Forge Programming Language
 - **Part B: Start here**: Forge Documentation - Getting Started
 - **Part C: The language**: 1. The Basics - 2. Variables and Types - 3. Text - 4. Operators - 5. Making Decisions and Repeating - 6. Functions - 7. Files and Folders - 8. Lists and Maps - 9. Structs and Classes - 10. Enums and Optionals - 11. Tasks - 12. Errors - 13. Reserved Words - 14. Coming From Other Languages
-- **Part D: The libraries**: Library Overview - Built-in Types: vec2, vec3, vec4, color, rect - <stdio>: Console Input and Output - <math>: Math Functions - <random>: Random Numbers - <window>: The Game Window - <input>: Keyboard, Mouse and Controllers - <graphics2d>: 2D Drawing - <graphics3d>: 3D Drawing - <assets>: Images, Animations and Fonts - <audio>: Sounds and Music - <physics>: Boxes, Balls, Ramps, Gravity and Collisions - <time>: Clock, Date and Timers - <file>: Reading and Writing Text Files - <save>: Remembering Things Between Runs - <tween>: Smooth Changes Over Time - <particles>: Dust, Sparks and Explosions - <tilemap>: Levels Drawn as Text - <scenes>: Menus, Levels and Game Over - <ui>: Buttons, Checkboxes, Sliders and Text Boxes - <ECS>: Entities and Components - <tasks>: Tasks Without a Window - <testing>: Testing Your Game's Code - Low-Level Toolkits: OpenGL, DirectX and Vulkan - <OpenGL>: Drawing with OpenGL Yourself - <DirectX>: Drawing with Direct3D 11 Yourself - <Vulkan>: Drawing with Vulkan Yourself
+- **Part D: The libraries**: Library Overview - Built-in Types: vec2, vec3, vec4, color, rect - <stdio>: Console Input and Output - <math>: Math Functions - <random>: Random Numbers - <window>: The Game Window - <input>: Keyboard, Mouse and Controllers - <graphics2d>: 2D Drawing - <graphics3d>: 3D Drawing - <assets>: Images, Animations and Fonts - <audio>: Sounds and Music - <physics>: Boxes, Balls, Ramps, Gravity and Collisions - <physics3d>: Boxes and Balls in 3D - <time>: Clock, Date and Timers - <file>: Reading and Writing Text Files - <save>: Remembering Things Between Runs - <tween>: Smooth Changes Over Time - <particles>: Dust, Sparks and Explosions - <tilemap>: Levels Drawn as Text - <scenes>: Menus, Levels and Game Over - <ui>: Buttons, Checkboxes, Sliders and Text Boxes - <ECS>: Entities and Components - <tasks>: Tasks Without a Window - <testing>: Testing Your Game's Code - Low-Level Toolkits: OpenGL, DirectX and Vulkan - <OpenGL>: Drawing with OpenGL Yourself - <DirectX>: Drawing with Direct3D 11 Yourself - <Vulkan>: Drawing with Vulkan Yourself
 - **Part E: Reference (exact rules, every command, every error message)**: Syntax: every way to write Forge - How Forge behaves, exactly - Commands: everything frg can do - Error messages
 - **Part F: Guides**: The Game Loop - Sprites and Animation - Platformer Walkthrough
 - **Part G: Under the hood**: How Forge Works
@@ -565,11 +565,12 @@ Library functions are reached through the library name (`window.open(...)`). Lib
 | `<random>` | `random.range(1, 6)` (whole numbers, both ends included), `random.range(0.5, 2.0)` (decimals), `random.value()` (0 to 1), `random.chance(0.25)`, `random.seed(n)`, `random.color()` (a random solid color) |
 | `<window>` | `window.open(width, height, "title")`, `shouldClose()`, `run()`, `close()`, `deltaTime()` (seconds since the last frame), `time()`, `width()`, `height()`, `fps()`, `setFPS(n)`, `setTitle(t)`, `setBackground(color)`, `toggleFullscreen()`, `screenshot("file.png")` |
 | `<input>` | `input.keyDown(Key.SPACE)` (held), `input.keyPressed(...)` (only the frame it was pressed), `input.keyReleased(...)`, `input.mouseDown(MouseButton.LEFT)`, `mousePressed`, `mouseReleased`, `mousePosition()` (a vec2), `mouseX()`, `mouseY()`, `mouseWheel()`, `mouseDelta()` (how far the mouse moved this frame), `lockMouse(true)` (hides the pointer and keeps it in the window, so a 3D game can turn the camera forever; `false` gives it back), `isMouseLocked()`. The pointer: `hideCursor()` / `showCursor()` / `isCursorHidden()` (hidden, it still moves and can leave the window, unlike a locked one: for drawing your own pointer), `setMousePosition(x, y)`, `setCursor(Cursor.HAND)` (shapes `ARROW HAND TEXT CROSSHAIR RESIZE_ALL RESIZE_LEFT_RIGHT RESIZE_UP_DOWN NOT_ALLOWED`), `isMouseInWindow()`. Escape doesn't close the window, so it's the usual key to unlock the mouse in a first-person game. Controllers (gamepads): `input.gamepadDown(GamepadButton.A)`, `gamepadPressed`, `gamepadReleased` (Xbox-style names: `A B X Y LEFT_BUMPER RIGHT_BUMPER LEFT_TRIGGER RIGHT_TRIGGER BACK START LEFT_STICK RIGHT_STICK`, and the D-pad `UP DOWN LEFT RIGHT`), `input.leftStick()` / `rightStick()` (a vec2 from -1 to 1; y is down, like the screen; small wobbles read as 0), `leftTrigger()` / `rightTrigger()` (0 to 1), `gamepadConnected()`, `gamepadName()`. Each takes an optional controller number: 0 (the default) is the first one plugged in. Without a controller they all read "not pressed", so a game can check both: `if (input.keyDown(Key.SPACE) or input.gamepadDown(GamepadButton.A))` |
-| `<graphics2d>` | `graphics2d.drawRect(x, y, w, h, color)` or `drawRect(rect, color)`, `drawRectOutline(x, y, w, h, color, thickness)`, `drawCircle(x, y, radius, color)` or `drawCircle(vec2, radius, color)`, `drawCircleOutline(x, y, radius, color)`, `drawLine(from, to, color, thickness)`, `drawTriangle(a, b, c, color)`, `drawText(text, x, y, size, color)`, `textWidth(text, size)`, `drawFPS(x, y)`, `clear(color)`, and a 2D camera (below) |
-| `<physics>` | the `Body` class, plus `physics.add(body)`, `remove(body)`, `step(dt)`, `setGravity(vec2)`, `gravity()`, `clear()`, `count()` |
+| `<graphics2d>` | `graphics2d.drawRect(x, y, w, h, color)` or `drawRect(rect, color)`, `drawRectOutline(x, y, w, h, color, thickness)`, `drawCircle(x, y, radius, color)` or `drawCircle(vec2, radius, color)`, `drawCircleOutline(x, y, radius, color)`, `drawLine(from, to, color, thickness)`, `drawTriangle(a, b, c, color)`, `drawText(text, x, y, size, color)`, `textWidth(text, size)`, `drawFPS(x, y)`, `clear(color)`, a 2D camera (below), and sprite effects for textures and animations: `beginFlash(color, amount)` (the "got hit" flash), `beginOutline(color, thickness)`, `beginGlow(color, size)`, then `endEffect()` |
+| `<physics>` | the `Body` class, plus `physics.add(body)`, `remove(body)`, `step(dt)`, `setGravity(vec2)`, `gravity()`, `clear()`, `count()`. Bodies can be balls (`circle = true`), static ramps (`slope = 1` rises to the right, `-1` to the left), bouncy (`bounce` 0 to 1), and on a `layer` (0-31): `physics.collide(2, 2, false)` makes layer 2 pass through itself |
+| `<physics3d>` | 3D physics in the `<graphics3d>` world (y up): `Body3D(vec3 position, vec3 size)` where `position` is the **middle**; fields `velocity`, `isStatic`, `solid`, `sphere` (a ball), `gravityScale`, `bounce`, `stepHeight` (climbs steps that high: stairs), `layer`, and `onGround` / `onCeiling` / `onWall` set by Forge. `physics3d.add(body)`, `remove`, `step(dt)`, `setGravity(vec3)` (starts at `vec3(0, -9.81, 0)`), `collide(a, b, on)`, `clear()`, `count()`, `drawDebug()` (needs `<graphics3d>`), and `physics3d.raycast(from, direction, maxDistance)`, which gives a `RayHit` (`hit`, `point`, `normal`, `distance`, `body`). Nothing turns: no tumbling boxes. See `examples/physics3d` |
 | `<assets>` | `assets.loadTexture("x.png")` gives a `Texture`, `assets.loadFont("x.ttf")` gives a `Font` (an optional second number is the size the letters are prepared at: use about the biggest size you draw it at, 64 to start with), `assets.exists(path)` |
 | `<audio>` | `audio.loadSound("x.wav")` gives a `Sound`, `audio.loadMusic("x.ogg")` gives a `Music`, `audio.setVolume(v)` |
-| `<graphics3d>` | the `Camera` struct and `Model` class, `graphics3d.setCamera(cam)`, `drawCube(pos, size, color)`, `drawCubeOutline`, `drawSphere(center, radius, color)`, `drawSphereOutline`, `drawCylinder(pos, radius, height, color)`, `drawPlane(center, vec2 size, color)`, `drawGrid(slices, spacing)`, `drawLine(from, to, color)`, `toScreen(vec3)`, `loadModel("x.glb")`, and `makeMesh(positions, uvs, shades, texture)`: a `Mesh` of your own triangles, sent to the graphics card once and drawn in one call with `mesh.draw(position)` (corners go counter-clockwise on the front; pixels that are mostly see-through are cut out). A block world builds one per chunk: see `examples/voxel`. `clearDepth()` makes what's drawn after it show in front of everything before it (a first-person gun). `pushTransform(position, axis, degrees, scale)` and `popTransform()` turn, move and scale everything drawn between them (they nest; each push needs a pop before the frame ends). Directions: y is up, and looking along +z, +x is on the **left**, so a camera's right is `forward.cross(vec3.UP)` |
+| `<graphics3d>` | the `Camera` struct and `Model` class, `graphics3d.setCamera(cam)`, `drawCube(pos, size, color)`, `drawCubeOutline`, `drawSphere(center, radius, color)`, `drawSphereOutline`, `drawCylinder(pos, radius, height, color)`, `drawPlane(center, vec2 size, color)`, `drawGrid(slices, spacing)`, `drawLine(from, to, color)`, `toScreen(vec3)`, `loadModel("x.glb")`, `setLight(direction, light, ambient)` (one light from a direction, like the sun, plus a soft light everywhere: everything 3D is lit, so it stops looking flat; `lightOff()`, `isLit()`), automatic culling (things completely out of view aren't drawn; `setCulling(false)` turns it off, `culledLastFrame()` counts them), and `makeMesh(positions, uvs, shades, texture)`: a `Mesh` of your own triangles, sent to the graphics card once and drawn in one call with `mesh.draw(position)` (corners go counter-clockwise on the front; pixels that are mostly see-through are cut out). A block world builds one per chunk: see `examples/voxel`. `clearDepth()` makes what's drawn after it show in front of everything before it (a first-person gun). `pushTransform(position, axis, degrees, scale)` and `popTransform()` turn, move and scale everything drawn between them (they nest; each push needs a pop before the frame ends). Directions: y is up, and looking along +z, +x is on the **left**, so a camera's right is `forward.cross(vec3.UP)` |
 | `<time>` | `time.now()`, `time.sleep(s)`, `time.clock()`, `time.date()`, `year() month() day() hour() minute() second()`, the `Timer` class |
 | `<tilemap>` | levels drawn as text, one character per tile: `TileMap level = TileMap("""` ... `""", 32);` (or `tilemap.load("level1.txt", 32)`). The game decides what characters mean. `level.addBodies("#")` makes static physics bodies, merging neighbouring tiles into big boxes (`addBodies("=", true)` makes one-way platforms); `level.find("C")` gives the top-left corner (pixels) of every `C` tile; `get(column, row)` (`" "` outside the map), `set(column, row, "#")`, `columns()`, `rows()`, `width()`, `height()` (pixels), `tileRect(column, row)`, `columnAt(x)`, `rowAt(y)`; `draw("#", color)` fills tiles with a color, `drawTiles(tileset, 16, "#=")` draws them from a tileset image (each character is the next 16x16 picture). Don't name the variable `map` (a type name) |
 | `<particles>` | dust, sparks, smoke, explosions: `Emitter sparks = Emitter(vec2(x, y));`, then `sparks.burst(30);` (all at once) or `sparks.rate = 50;` (a steady stream per second), and each frame `sparks.update(dt);` and `sparks.draw();`. Fields to set: `position`, `lifetime` (seconds), `speed`, `direction` (degrees: 0 right, -90 up), `spread` (degrees around it: 360 every way), `startColor`/`endColor` (an end color with alpha 0 fades them out), `startSize`/`endSize`, `gravity` (a vec2). Also `count()` and `clear()`. It draws in 2D, through the 2D camera |
@@ -1773,7 +1774,8 @@ Everything that isn't the core language lives in a library you `#include`. See t
 | `<graphics3d>` (see “`<graphics3d>`: 3D Drawing”) | Cameras, 3D shapes and 3D models |
 | `<assets>` (see “`<assets>`: Images, Animations and Fonts”) | Loading images and fonts, and sprite-sheet animation |
 | `<audio>` (see “`<audio>`: Sounds and Music”) | Sound effects and music |
-| `<physics>` (see “`<physics>`: Boxes, Balls, Ramps, Gravity and Collisions”) | Gravity and collisions for boxes |
+| `<physics>` (see “`<physics>`: Boxes, Balls, Ramps, Gravity and Collisions”) | Gravity and collisions in 2D: boxes, balls and ramps |
+| `<physics3d>` (see “`<physics3d>`: Boxes and Balls in 3D”) | Gravity and collisions in 3D: boxes and balls, stairs, and rays |
 | `<time>` (see “`<time>`: Clock, Date and Timers”) | The clock, the date, and timers |
 | `<save>` (see “`<save>`: Remembering Things Between Runs”) | Remembering values between runs: high scores, settings, progress |
 | `<testing>` (see “`<testing>`: Testing Your Game's Code”) | Checking your game's code with `frg test` |
@@ -5180,10 +5182,11 @@ How libraries work:
 | `<window>` (see “`<window>`: The Game Window”) | Opens the game window, runs the game loop, frame timing | **is** the window |
 | `<input>` (see “`<input>`: Keyboard, Mouse and Controllers”) | Keyboard, mouse and controllers (gamepads) | yes |
 | `<graphics2d>` (see “`<graphics2d>`: 2D Drawing”) | Rectangles, circles, lines, triangles, text | yes |
-| `<graphics3d>` (see “`<graphics3d>`: 3D Drawing”) | 3D camera, cubes, spheres, grids, 3D models | yes |
+| `<graphics3d>` (see “`<graphics3d>`: 3D Drawing”) | 3D camera, cubes, spheres, grids, 3D models, light | yes |
 | `<assets>` (see “`<assets>`: Images, Animations and Fonts”) | Loading images (`Texture`) and fonts (`Font`), and sprite-sheet animation (`Animation`) | to draw them |
 | `<audio>` (see “`<audio>`: Sounds and Music”) | Sound effects (`Sound`) and music (`Music`) | no |
-| `<physics>` (see “`<physics>`: Boxes, Balls, Ramps, Gravity and Collisions”) | Box bodies with gravity and collisions | no |
+| `<physics>` (see “`<physics>`: Boxes, Balls, Ramps, Gravity and Collisions”) | 2D bodies (boxes, balls, ramps) with gravity and collisions | no |
+| `<physics3d>` (see “`<physics3d>`: Boxes and Balls in 3D”) | 3D boxes and balls with gravity, collisions, stairs, and rays | no |
 | `<time>` (see “`<time>`: Clock, Date and Timers”) | The clock and date, `sleep`, and the `Timer` class | no |
 | `<save>` (see “`<save>`: Remembering Things Between Runs”) | Remembering values (high scores, settings) between runs | no |
 | `<testing>` (see “`<testing>`: Testing Your Game's Code”) | `testing.check(...)` in tests that `frg test` runs | no |
@@ -7001,6 +7004,147 @@ Layers only change what pushes what: `overlaps()` still says whether two bodies 
 - Static bodies don't move by themselves, but you can change their `position` yourself (moving platforms). Bodies standing on one aren't carried along automatically.
 - There's no friction: set `velocity` yourself for that (`bounce` is there).
 - A moving ball and a moving box push each other apart as two boxes.
+
+<!-- docs/libraries/physics3d.md -->
+
+## `<physics3d>`: Boxes and Balls in 3D
+
+```cpp
+#include <physics3d>
+```
+
+Simple 3D physics: boxes and balls that fall, move, bump into things, climb steps and bounce, and rays to find what's in a direction (for shooting and seeing). It's the 3D version of `<physics>` (see “`<physics>`: Boxes, Balls, Ramps, Gravity and Collisions”), and works in the same world as `<graphics3d>` (see “`<graphics3d>`: 3D Drawing”): **y is up**, sizes are in meters (or whatever unit you pick), and looking along +z, +x is on the left.
+
+This library doesn't draw anything: draw bodies yourself, for example `graphics3d.drawCube(box.position, box.size, color.ORANGE)`. It doesn't need a window either. The example (the file `examples/physics3d/main.frg` in the Forge folder) is a small playground: a player that walks, jumps and climbs stairs, crates, thrown balls and a ray.
+
+### Body3D
+
+A body is a box that never turns, or a ball. **`position` is its middle** (the same as `drawCube`).
+
+| Making one | |
+|---|---|
+| `Body3D(vec3 position, vec3 size)` | a moving, solid box, `size` wide, tall and deep, with its middle at `position` |
+
+| Field | Type | Meaning |
+|---|---|---|
+| `position` | `vec3` | the middle |
+| `size` | `vec3` | width (x), height (y) and depth (z) |
+| `velocity` | `vec3` | meters per second |
+| `isStatic` | `bool` | `true` for things that never move: the ground, walls, platforms, steps. Static bodies ignore gravity and velocity. (`false` to start with.) |
+| `solid` | `bool` | `false` for things that shouldn't push or be pushed, like pickups and trigger zones. (`true` to start with.) Rays go through them. |
+| `sphere` | `bool` | `true` makes it a **ball**, as wide as the smallest side of its box. (`false` to start with.) |
+| `gravityScale` | `float` | how strongly gravity pulls it: 1 is normal, 0 floats, 2 is twice as heavy |
+| `bounce` | `float` | how much speed it keeps when it hits something: `0` stops (to start with), `0.5` bounces back at half the speed, `1` as fast as it came |
+| `stepHeight` | `float` | for moving boxes: steps up to this high are climbed by walking into them (stairs, curbs). `0` to start with: nothing is climbed |
+| `layer` | `int` | its collision layer, `0` to `31` (`0` to start with). See Layers (see “Layers: what hits what”). |
+| `onGround` | `bool` | **set by Forge:** true if it landed on something during the last step |
+| `onCeiling` | `bool` | **set by Forge:** true if it bumped its head |
+| `onWall` | `bool` | **set by Forge:** true if it hit something sideways |
+
+| Method | Gives back | |
+|---|---|---|
+| `minCorner()` | `vec3` | the box's lowest x, y and z corner |
+| `maxCorner()` | `vec3` | its highest corner |
+| `overlaps(Body3D other)` | `bool` | true if the two touch right now (following balls' round shape) |
+
+### The world
+
+| Function | What it does |
+|---|---|
+| `physics3d.add(Body3D body)` | adds a body to the world. Adding it twice does nothing. |
+| `physics3d.remove(Body3D body)` | takes it out |
+| `physics3d.step(float dt)` | moves everything forward by `dt` seconds. Call it **once per frame** with the frame's `dt`. It behaves the same at any frame rate. |
+| `physics3d.setGravity(vec3 gravity)` | gravity, in meters per second per second. Starts at `vec3(0, -9.81, 0)`, real gravity. Games often feel better with more: `vec3(0, -20, 0)` |
+| `physics3d.gravity()` | the current gravity |
+| `physics3d.collide(int layerA, int layerB, bool on)` | `false`: bodies on these two layers pass through each other; `true`: they collide again |
+| `physics3d.collides(int layerA, int layerB)` | whether they collide |
+| `physics3d.clear()` | removes every body |
+| `physics3d.count()` | how many bodies are in the world |
+| `physics3d.raycast(vec3 from, vec3 direction, float maxDistance = 1000)` | what a line from `from` toward `direction` hits first (a `RayHit`, below) |
+| `physics3d.drawDebug()` | draws every body's outline (needs `#include <graphics3d>`) |
+
+### Walking, jumping and stairs
+
+```cpp
+Body3D player = Body3D(vec3(0, 1, 0), vec3(0.6, 1.8, 0.6));
+
+int main(){
+    window.open(960, 540, "Walk");
+    Body3D ground = Body3D(vec3(0, -0.5, 0), vec3(50, 1, 50));   // its top is at y 0
+    ground.isStatic = true;
+    physics3d.add(ground);
+    player.stepHeight = 0.35;            // climbs stairs with steps up to 0.35 high
+    physics3d.add(player);
+    window.run();
+    return 0;
+}
+
+void update(float dt){
+    vec3 move = vec3.ZERO;
+    if (input.keyDown(Key.W)) { move = move + vec3(0, 0, 5); }
+    if (input.keyDown(Key.S)) { move = move - vec3(0, 0, 5); }
+    player.velocity = vec3(move.x, player.velocity.y, move.z);   // keep the falling speed
+    if (input.keyPressed(Key.SPACE) and player.onGround) {
+        player.velocity = vec3(player.velocity.x, 6, player.velocity.z);
+    }
+    physics3d.step(dt);
+}
+```
+
+Set the sideways speed yourself every frame and keep `velocity.y`, which gravity looks after. Jump only when `onGround`.
+
+### Balls and bounce
+
+```cpp
+Body3D ball = Body3D(vec3(0, 5, 0), vec3(0.5, 0.5, 0.5));   // a ball 0.5 across
+ball.sphere = true;
+ball.bounce = 0.7;
+ball.velocity = vec3(4, 3, 0);                              // thrown
+physics3d.add(ball);
+```
+
+Draw it with `graphics3d.drawSphere(ball.position, ball.size.x / 2, color.RED)`.
+
+### Rays: what's over there?
+
+`physics3d.raycast(from, direction, maxDistance)` follows a line and gives back a `RayHit`:
+
+| Field | Type | |
+|---|---|---|
+| `hit` | `bool` | whether it hit anything within `maxDistance` |
+| `point` | `vec3` | where |
+| `normal` | `vec3` | which way the surface it hit faces (straight up for the top of a floor) |
+| `distance` | `float` | how far along the line |
+| `body` | `Body3D?` | what it hit |
+
+A ray that starts inside a body doesn't hit that body, so a ray from a character's eyes doesn't hit the character. Bodies with `solid = false` aren't hit.
+
+```cpp
+RayHit hit = physics3d.raycast(eyes, lookDirection, 50);
+if (hit.hit) {
+    graphics3d.drawSphere(hit.point, 0.1, color.YELLOW);    // where a shot would land
+}
+```
+
+### Layers: what hits what
+
+Every body has a `layer` (`0` to `31`), and normally everything collides with everything. `physics3d.collide(a, b, false)` makes layers `a` and `b` pass through each other (they can be the same layer: `collide(2, 2, false)` and balls on layer 2 go through each other). `overlaps()` and `raycast` ignore layers.
+
+### Seeing the bodies
+
+`physics3d.drawDebug()` outlines every body with the current 3D camera: static ones blue, moving ones green, ones with `solid = false` purple, and a yellow square under a moving body that's `onGround`. Call it in `draw`, after `graphics3d.setCamera`. The file that calls it needs `#include <graphics3d>`.
+
+### What happens in a step
+
+Moving bodies fall with gravity, then move by their velocity in small pieces (so a fast one can't pass through a thin wall). A box moves across, then along, then up or down, and is pushed back out of each static body it runs into; walking into a step no higher than its `stepHeight`, it climbs onto it instead. A ball is pushed out along the shortest way, so it rolls off edges and slides along walls. Then moving bodies are pushed apart from each other: the one on top is pushed up and stands on the other. `physics3d.step` cuts each frame into equal parts of at most 1/240 s, so a jump goes as high at 30 frames per second as at 144.
+
+### Limits
+
+- **Nothing turns.** Boxes stay upright and balls slide rather than spin, so there's no tipping over, tumbling or rolling stacks, and no ragdolls.
+- No ramps or slopes yet: use steps (`stepHeight`) for stairs.
+- Shapes are boxes and balls only: no capsules or meshes (a level made of many boxes works well).
+- A moving ball and a moving box push each other apart as two boxes.
+- Everything is checked against everything, which is fine for the few hundred bodies a game has, not for huge worlds.
 
 <!-- docs/libraries/time.md -->
 
@@ -13845,6 +13989,58 @@ error: the <network> library isn't built yet
 
 **Fix:** see the roadmap (the file `ROADMAP.md` in the Forge folder) for when it's coming.
 
+#### `physics.drawDebug() draws with the graphics2d library, which this file doesn't include`
+
+`physics` never draws by itself; its debug view draws with `<graphics2d>`, so the file that calls `physics.drawDebug()` needs that library too.
+
+<!-- check: error -->
+
+```cpp
+#include <physics>
+
+int main(){
+    physics.drawDebug();
+    return 0;
+}
+```
+
+```text
+error: physics.drawDebug() draws with the graphics2d library, which this file doesn't include
+  --> main.frg:4:13
+   |
+ 4 |     physics.drawDebug();
+   |             ^^^^^^^^^
+  hint: add #include <graphics2d> at the top of main.frg
+```
+
+**Fix:** add `#include <graphics2d>` at the top of the file that calls it.
+
+#### `physics3d.drawDebug() draws with the graphics3d library, which this file doesn't include`
+
+`physics3d` never draws by itself; its debug view draws with `<graphics3d>`, so the file that calls `physics3d.drawDebug()` needs that library too.
+
+<!-- check: error -->
+
+```cpp
+#include <physics3d>
+
+int main(){
+    physics3d.drawDebug();
+    return 0;
+}
+```
+
+```text
+error: physics3d.drawDebug() draws with the graphics3d library, which this file doesn't include
+  --> main.frg:4:15
+   |
+ 4 |     physics3d.drawDebug();
+   |               ^^^^^^^^^
+  hint: add #include <graphics3d> at the top of main.frg
+```
+
+**Fix:** add `#include <graphics3d>` at the top of the file that calls it.
+
 ### Tasks
 
 #### `wait() only works inside a task function`
@@ -15802,6 +15998,7 @@ Each file includes the libraries it uses. Functions are reached through the libr
 | `<input>` | `input.keyDown(Key.SPACE)` (held), `keyPressed` (just pressed this frame), `keyReleased`, `mouseDown(MouseButton.LEFT)` `mousePressed` `mouseReleased` `mousePosition()` `mouseX()` `mouseY()` `mouseWheel()` `mouseDelta()` (how far it moved this frame), `lockMouse(true)` (hide it and keep it in the window, for looking around in 3D) `isMouseLocked()`, `hideCursor()` `showCursor()` `isCursorHidden()` (the pointer still moves), `setMousePosition(x, y)`, `setCursor(Cursor.HAND)` (shapes: `ARROW` `HAND` `TEXT` `CROSSHAIR` `RESIZE_ALL` `RESIZE_LEFT_RIGHT` `RESIZE_UP_DOWN` `NOT_ALLOWED`), `isMouseInWindow()`. Keys: `Key.A`…`Key.Z`, `Key.NUM0`…`Key.NUM9`, `SPACE` `ENTER` `ESCAPE` `BACKSPACE` `TAB` `LEFT` `RIGHT` `UP` `DOWN` `LEFT_SHIFT` `RIGHT_SHIFT` `LEFT_CONTROL` `RIGHT_CONTROL` `LEFT_ALT` `RIGHT_ALT` `F1`…`F12`. Controllers: `input.gamepadDown(GamepadButton.A)` (also `gamepadPressed`, `gamepadReleased`; buttons `A` `B` `X` `Y` `LEFT_BUMPER` `RIGHT_BUMPER` `LEFT_TRIGGER` `RIGHT_TRIGGER` `BACK` `START` `LEFT_STICK` `RIGHT_STICK` `UP` `DOWN` `LEFT` `RIGHT`), `leftStick()` `rightStick()` (vec2, -1 to 1), `leftTrigger()` `rightTrigger()` (0 to 1), `gamepadConnected()`, `gamepadName()`. Each takes an optional controller number (0 = the first) |
 | `<graphics2d>` | `graphics2d.drawRect(x, y, w, h, color)` or `drawRect(rect, color)`, `drawRectOutline(..., color, thickness)`, `drawCircle(x, y, radius, color)` or `drawCircle(vec2, radius, color)`, `drawCircleOutline`, `drawLine(from, to, color, thickness)`, `drawTriangle(a, b, c, color)`, `drawText(text, x, y, size, color)`, `textWidth(text, size)`, `drawFPS(x, y)`, `clear(color)`, and a 2D camera: `setCamera(Camera2D(target, offset, zoom, rotation))`, `resetCamera()`, `screenToWorld(p)`, `worldToScreen(p)` |
 | `<physics>` | the `Body` class and `physics.add(body)` `remove(body)` `step(dt)` `setGravity(vec2)` `gravity()` `clear()` `count()` (see below) |
+| `<physics3d>` | 3D: the `Body3D` class (boxes, or balls with `sphere = true`; `position` is the middle; `stepHeight` climbs stairs) and `physics3d.add(body)` `remove` `step(dt)` `setGravity(vec3)` `raycast(from, direction, maxDistance)` (a `RayHit`: `hit`, `point`, `normal`, `distance`, `body`) `collide(a, b, on)` `drawDebug()` |
 | `<assets>` | images and fonts: `assets.loadTexture("player.png")`, `assets.loadFont("font.ttf")`, `assets.exists(path)` (see below) |
 | `<audio>` | `audio.loadSound("jump.wav")`, `audio.loadMusic("song.ogg")`, `audio.setVolume(0.5)` (see below) |
 | `<graphics3d>` | 3D drawing (see below) |

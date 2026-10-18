@@ -23,10 +23,11 @@ How libraries work:
 | [`<window>`](window.md) | Opens the game window, runs the game loop, frame timing | **is** the window |
 | [`<input>`](input.md) | Keyboard, mouse and controllers (gamepads) | yes |
 | [`<graphics2d>`](graphics2d.md) | Rectangles, circles, lines, triangles, text | yes |
-| [`<graphics3d>`](graphics3d.md) | 3D camera, cubes, spheres, grids, 3D models | yes |
+| [`<graphics3d>`](graphics3d.md) | 3D camera, cubes, spheres, grids, 3D models, light | yes |
 | [`<assets>`](assets.md) | Loading images (`Texture`) and fonts (`Font`), and sprite-sheet animation (`Animation`) | to draw them |
 | [`<audio>`](audio.md) | Sound effects (`Sound`) and music (`Music`) | no |
-| [`<physics>`](physics.md) | Box bodies with gravity and collisions | no |
+| [`<physics>`](physics.md) | 2D bodies (boxes, balls, ramps) with gravity and collisions | no |
+| [`<physics3d>`](physics3d.md) | 3D boxes and balls with gravity, collisions, stairs, and rays | no |
 | [`<time>`](time.md) | The clock and date, `sleep`, and the `Timer` class | no |
 | [`<save>`](save.md) | Remembering values (high scores, settings) between runs | no |
 | [`<testing>`](testing.md) | `testing.check(...)` in tests that `frg test` runs | no |

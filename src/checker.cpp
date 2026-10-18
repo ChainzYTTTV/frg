@@ -1895,6 +1895,9 @@ Type* Checker::callExpr(Expr* e, Type* expected) {
             if (m->isPrelude && m->name == "physics" && f->name == "drawDebug" && !cur->libs.count("graphics2d"))
                 reportError(e->loc, "physics.drawDebug() draws with the graphics2d library, which this file doesn't include",
                             "add #include <graphics2d> at the top of " + cur->src->displayPath);
+            if (m->isPrelude && m->name == "physics3d" && f->name == "drawDebug" && !cur->libs.count("graphics3d"))
+                reportError(e->loc, "physics3d.drawDebug() draws with the graphics3d library, which this file doesn't include",
+                            "add #include <graphics3d> at the top of " + cur->src->displayPath);
             return e->type = f->ret ? f->ret : tError();
         }
         case RK::Method: {

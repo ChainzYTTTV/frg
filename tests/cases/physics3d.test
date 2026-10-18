@@ -1,0 +1,249 @@
+=== main.frg
+#include <physics3d>
+#include <math>
+#include <stdio>
+
+``` <physics3d>: falling and landing, walls, steps and stairs, spheres and bounce, stacking, layers, raycasts. ```
+
+void run(float seconds){
+    for (int i in 1..int(seconds * 60)) {
+        physics3d.step(1.0 / 60);
+    }
+}
+
+bool near(float a, float b){
+    return math.abs(a - b) < 0.01;
+}
+
+Body3D ground(){
+    Body3D g = Body3D(vec3(0, -0.5, 0), vec3(100, 1, 100));   // top at y 0
+    g.isStatic = true;
+    physics3d.add(g);
+    return g;
+}
+
+Body3D block(vec3 middle, vec3 size){
+    Body3D b = Body3D(middle, size);
+    b.isStatic = true;
+    physics3d.add(b);
+    return b;
+}
+
+void landing(){
+    physics3d.clear();
+    ground();
+    Body3D box = Body3D(vec3(0, 5, 0), vec3(1, 2, 1));
+    physics3d.add(box);
+    run(2);
+    print("lands on the ground: {box.onGround and near(box.position.y, 1)}");
+    print("gravity is real gravity to start with: {near(physics3d.gravity().y, -9.81)}");
+}
+
+void walls(){
+    physics3d.clear();
+    ground();
+    block(vec3(3, 1, 0), vec3(1, 2, 4));          // a wall from x 2.5 to 3.5
+    Body3D p = Body3D(vec3(0, 0.9, 0), vec3(0.6, 1.8, 0.6));
+    physics3d.add(p);
+    bool hit = false;
+    for (int i in 1..120) {
+        p.velocity = vec3(4, p.velocity.y, 0);
+        physics3d.step(1.0 / 60);
+        if (p.onWall) {
+            hit = true;
+        }
+    }
+    print("a wall stops it: {near(p.position.x + 0.3, 2.5) and hit}");
+}
+
+void steps(){
+    physics3d.clear();
+    ground();
+    block(vec3(3, 0.15, 0), vec3(2, 0.3, 4));      // a 0.3 step at x 2 to 4
+    block(vec3(3, 0.3, 5), vec3(2, 0.6, 2));       // a 0.6 one, further along z
+    Body3D low = Body3D(vec3(0, 0.9, 0), vec3(0.6, 1.8, 0.6));
+    low.stepHeight = 0.4;
+    physics3d.add(low);
+    Body3D high = Body3D(vec3(0, 0.9, 5), vec3(0.6, 1.8, 0.6));
+    high.stepHeight = 0.4;
+    physics3d.add(high);
+    run(0.2);
+    for (int i in 1..60) {
+        low.velocity = vec3(3, low.velocity.y, 0);
+        high.velocity = vec3(3, high.velocity.y, 0);
+        physics3d.step(1.0 / 60);
+    }
+    print("climbs a 0.3 step: {low.position.x > 2.5 and near(low.position.y - 0.9, 0.3)}");
+    print("not a 0.6 one: {near(high.position.x + 0.3, 2) and near(high.position.y, 0.9)}");
+    // a staircase: 6 steps of 0.25
+    physics3d.clear();
+    ground();
+    for (int i in 0..5) {
+        block(vec3(2 + i * 0.5 + 0.25, (i + 1) * 0.25 / 2, 0), vec3(0.5, (i + 1) * 0.25, 2));
+    }
+    Body3D walker = Body3D(vec3(0, 0.9, 0), vec3(0.4, 1.8, 0.4));
+    walker.stepHeight = 0.3;
+    physics3d.add(walker);
+    run(0.2);
+    for (int i in 1..140) {
+        walker.velocity = vec3(2, walker.velocity.y, 0);
+        physics3d.step(1.0 / 60);
+    }
+    print("walks up the stairs: {walker.position.x > 4.5 and near(walker.position.y - 0.9, 1.5)}");
+}
+
+void spheres(){
+    physics3d.clear();
+    ground();
+    Body3D ball = Body3D(vec3(0, 3, 0), vec3(1, 1, 1));
+    ball.sphere = true;
+    physics3d.add(ball);
+    run(2);
+    print("a ball rests on the ground: {ball.onGround and near(ball.position.y, 0.5)}");
+    physics3d.clear();
+    ground();
+    Body3D bouncy = Body3D(vec3(0, 5, 0), vec3(1, 1, 1));
+    bouncy.sphere = true;
+    bouncy.bounce = 0.8;
+    physics3d.add(bouncy);
+    bool landed = false;
+    float highest = 0;
+    for (int i in 1..150) {
+        physics3d.step(1.0 / 60);
+        if (bouncy.onGround) {
+            landed = true;
+        }
+        if (landed) {
+            highest = math.max(highest, bouncy.position.y);
+        }
+    }
+    print("a bouncy ball bounces back up: {landed and highest > 2}");
+    // two balls, no gravity: the moving one stops and the still one moves on
+    physics3d.clear();
+    physics3d.setGravity(vec3.ZERO);
+    Body3D a = Body3D(vec3(0, 0, 0), vec3(1, 1, 1));
+    a.sphere = true;
+    a.bounce = 1;
+    a.velocity = vec3(3, 0, 0);
+    Body3D b = Body3D(vec3(3, 0, 0), vec3(1, 1, 1));
+    b.sphere = true;
+    b.bounce = 1;
+    physics3d.add(a);
+    physics3d.add(b);
+    run(2);
+    print("balls bounce off each other: {math.abs(a.velocity.x) < 0.05 and b.velocity.x > 2.9}");
+    physics3d.setGravity(vec3(0, -9.81, 0));
+    // overlaps follows the round shape
+    Body3D round = Body3D(vec3.ZERO, vec3(2, 2, 2));
+    round.sphere = true;
+    print("overlaps: corner {round.overlaps(Body3D(vec3(1.1, 1.1, 1.1), vec3(0.4, 0.4, 0.4)))}, side {round.overlaps(Body3D(vec3(1.1, 0, 0), vec3(0.4, 0.4, 0.4)))}");
+}
+
+void stacking(){
+    physics3d.clear();
+    ground();
+    Body3D bottom = Body3D(vec3(0, 0.5, 0), vec3(1, 1, 1));
+    Body3D top = Body3D(vec3(0.2, 3, 0), vec3(1, 1, 1));
+    physics3d.add(bottom);
+    physics3d.add(top);
+    run(2);
+    print("a box lands on another: {top.onGround and near(top.position.y, 1.5) and near(bottom.position.y, 0.5)}");
+}
+
+void layers(){
+    physics3d.clear();
+    ground();
+    Body3D ghost = Body3D(vec3(0, 3, 0), vec3(1, 1, 1));
+    ghost.layer = 3;
+    Body3D shelf = block(vec3(0, 2, 0), vec3(2, 0.2, 2));
+    shelf.layer = 3;
+    physics3d.add(ghost);
+    physics3d.collide(3, 3, false);
+    run(2);
+    print("layer 3 passes through layer 3, and lands on the ground: {near(ghost.position.y, 0.5)}");
+    physics3d.collide(3, 3, true);
+    try {
+        physics3d.collide(-1, 2, false);
+    } catch (Error e) {
+        print("error: {e.message}");
+    }
+}
+
+void rays(){
+    physics3d.clear();
+    ground();
+    block(vec3(5, 1, 0), vec3(1, 2, 1));               // a box with its -x face at x 4.5
+    Body3D ball = Body3D(vec3(0, 1, 5), vec3(2, 2, 2));
+    ball.sphere = true;
+    ball.isStatic = true;
+    physics3d.add(ball);
+    RayHit down = physics3d.raycast(vec3(0, 10, 0), vec3(0, -1, 0));
+    print("down: {down.hit} at y {down.point.y}, normal {down.normal}, distance {down.distance}");
+    RayHit side = physics3d.raycast(vec3(0, 1, 0), vec3(1, 0, 0), 100);
+    print("side: point x {side.point.x}, normal {side.normal}");
+    RayHit toBall = physics3d.raycast(vec3(0, 1, 0), vec3(0, 0, 1));
+    print("ball: distance {toBall.distance}, normal {toBall.normal}, is the ball: {toBall.body != null}");
+    RayHit up = physics3d.raycast(vec3(0, 1, 0), vec3(0, 1, 0));
+    print("nothing above: {up.hit}");
+    RayHit inside = physics3d.raycast(vec3(5, 1, 0), vec3(0, 1, 0));
+    print("starting inside a box doesn't hit it: {inside.hit}");
+    RayHit short = physics3d.raycast(vec3(0, 10, 0), vec3(0, -1, 0), 5);
+    print("too far for maxDistance: {short.hit}");
+    try {
+        physics3d.raycast(vec3.ZERO, vec3.ZERO);
+    } catch (Error e) {
+        print("error: {e.message}");
+    }
+}
+
+// a jump goes as high at 30 frames per second as at 144
+float jumpHeight(float fps){
+    physics3d.clear();
+    ground();
+    Body3D p = Body3D(vec3(0, 0.5, 0), vec3(1, 1, 1));
+    physics3d.add(p);
+    for (int i in 1..30) {
+        physics3d.step(1.0 / fps);
+    }
+    p.velocity = vec3(0, 6, 0);
+    float best = 0;
+    for (int i in 1..int(fps * 2)) {
+        physics3d.step(1.0 / fps);
+        best = math.max(best, p.position.y);
+    }
+    return best;
+}
+
+int main(){
+    landing();
+    walls();
+    steps();
+    spheres();
+    stacking();
+    layers();
+    rays();
+    print("jump height at 30 and 144 fps: {math.abs(jumpHeight(30) - jumpHeight(144)) < 0.02}");
+    return 0;
+}
+=== output
+lands on the ground: true
+gravity is real gravity to start with: true
+a wall stops it: true
+climbs a 0.3 step: true
+not a 0.6 one: true
+walks up the stairs: true
+a ball rests on the ground: true
+a bouncy ball bounces back up: true
+balls bounce off each other: true
+overlaps: corner false, side true
+a box lands on another: true
+layer 3 passes through layer 3, and lands on the ground: true
+error: layers go from 0 to 31, but this one is -1
+down: true at y 0.0, normal vec3(0.0, 1.0, 0.0), distance 10.0
+side: point x 4.5, normal vec3(-1.0, 0.0, 0.0)
+ball: distance 4.0, normal vec3(0.0, 0.0, -1.0), is the ball: true
+nothing above: false
+starting inside a box doesn't hit it: false
+too far for maxDistance: false
+error: the direction can't be (0, 0, 0) - it's the way the ray goes, like vec3(0, -1, 0) for straight down
+jump height at 30 and 144 fps: true

@@ -52,7 +52,8 @@ Everything that isn't the core language lives in a library you `#include`. See t
 | [`<graphics3d>`](libraries/graphics3d.md) | Cameras, 3D shapes and 3D models |
 | [`<assets>`](libraries/assets.md) | Loading images and fonts, and sprite-sheet animation |
 | [`<audio>`](libraries/audio.md) | Sound effects and music |
-| [`<physics>`](libraries/physics.md) | Gravity and collisions for boxes |
+| [`<physics>`](libraries/physics.md) | Gravity and collisions in 2D: boxes, balls and ramps |
+| [`<physics3d>`](libraries/physics3d.md) | Gravity and collisions in 3D: boxes and balls, stairs, and rays |
 | [`<time>`](libraries/time.md) | The clock, the date, and timers |
 | [`<save>`](libraries/save.md) | Remembering values between runs: high scores, settings, progress |
 | [`<testing>`](libraries/testing.md) | Checking your game's code with `frg test` |

@@ -274,6 +274,48 @@ int count();
 void drawDebug();
 )FRG";
 
+static const char* kPhysics3d = R"FRG(
+class Body3D {
+    vec3 position;
+    vec3 size;
+    vec3 velocity;
+    bool isStatic;
+    bool solid;
+    float gravityScale;
+    float bounce;
+    int layer;
+    bool sphere;
+    float stepHeight;
+    bool onGround;
+    bool onCeiling;
+    bool onWall;
+    Body3D(vec3 position, vec3 size);
+    vec3 minCorner();
+    vec3 maxCorner();
+    bool overlaps(Body3D other);
+}
+
+struct RayHit {
+    bool hit;
+    vec3 point;
+    vec3 normal;
+    float distance;
+    Body3D? body;
+}
+
+void add(Body3D body);
+void remove(Body3D body);
+void clear();
+void setGravity(vec3 gravity);
+vec3 gravity();
+void collide(int layerA, int layerB, bool on);
+bool collides(int layerA, int layerB);
+void step(float dt);
+int count();
+RayHit raycast(vec3 from, vec3 direction, float maxDistance = 1000);
+void drawDebug();
+)FRG";
+
 static const char* kAssets = R"FRG(
 class Texture {
     int width();
@@ -809,6 +851,7 @@ const std::vector<PreludeLib>& preludeLibs() {
         {"input", kInput, true, "forge_window.hpp", K::Engine},
         {"graphics2d", kGraphics2d, true, "forge_window.hpp", K::Engine},
         {"physics", kPhysics, false, "forge_physics.hpp"},
+        {"physics3d", kPhysics3d, false, "forge_physics3d.hpp"},
         {"assets", kAssets, true, "forge_assets.hpp", K::Engine},
         {"audio", kAudio, true, "forge_audio.hpp"},
         {"random", kRandom, false, ""},

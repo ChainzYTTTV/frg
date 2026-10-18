@@ -134,7 +134,7 @@ These were decided by Forge's designer (2026-10-16). Build them this way.
 | The side mouse buttons (`MouseButton.BACK` / `FORWARD`) | games couldn't use them, so players couldn't bind them | done |
 | Clearer errors for reserved words and name clashes | "expected a parameter name" didn't say why; one clash gave many errors | done |
 
-## 0.9.4: Engine extras
+## 0.9.4 and 0.9.5: Engine extras
 
 | Feature | Why | Size |
 |---|---|---|
@@ -143,7 +143,7 @@ These were decided by Forge's designer (2026-10-16). Build them this way.
 | Simple 3D lighting | 3D shapes stop looking flat | done (`graphics3d.setLight`) |
 | Custom shaders on sprites in the engine (glow, flash white, outlines) | effects without a low-level toolkit | done (`beginFlash`, `beginOutline`, `beginGlow`) |
 | Textures in `<Vulkan>`, and drawing into textures in `<OpenGL>` and `<DirectX>` | fills the toolkits' gaps | done |
-| `<physics3d>`: 3D boxes and balls, stairs, rays | 3D games without writing their own collision | done (after 0.9.4) |
+| `<physics3d>`: 3D boxes and balls, stairs, rays | 3D games without writing their own collision | done (0.9.5) |
 
 ## 1.0.0: Ready for other people
 

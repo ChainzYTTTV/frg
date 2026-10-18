@@ -1,4 +1,4 @@
-# Forge 0.9.4: the complete documentation
+# Forge 0.9.5: the complete documentation
 
 This one file holds everything written about the Forge programming language, so it can be uploaded in one go:
 
@@ -1855,7 +1855,7 @@ frg version
 g++ --version
 ```
 
-The first should print `Forge 0.9.4`. If `frg` isn't found, open a new terminal; if it's still not found, run the installer again with "Add Forge to my PATH" ticked.
+The first should print `Forge 0.9.5`. If `frg` isn't found, open a new terminal; if it's still not found, run the installer again with "Add Forge to my PATH" ticked.
 
 #### Without the installer
 
@@ -5058,7 +5058,7 @@ error: unknown type 'Camera'
   hint: it's called Camera3D since Forge 0.9.5 - change 'Camera' to 'Camera3D' everywhere at once: in VS Code, Replace in Files (Ctrl+Shift+H), with Match Case (Alt+C) and Match Whole Word (Alt+W) turned on, so only this exact name changes
 ```
 
-Change it **everywhere at once** rather than one line at a time: in VS Code, **Replace in Files** (Ctrl+Shift+H), type the old name and the new one, and turn on **Match Case** (Alt+C) and **Match Whole Word** (Alt+W) before replacing. Match Case keeps `camera` (a variable) from turning into `camera3D`; Match Whole Word keeps `myCamera` and `CameraShake` as they are. For a name of your own that's now taken, pick a new name and do the same.
+Change it **everywhere at once** rather than one line at a time: in VS Code, **Replace in Files** (Ctrl+Shift+H), type the old name and the new one, and turn on **Match Case** (Alt+C) and **Match Whole Word** (Alt+W) before replacing. Match Case keeps `camera` (a variable) from turning into `camera3D`; Match Whole Word keeps `myCamera` and `CameraShake` as they are. Then look over the list of matches before **Replace All**: words inside quotes match too, so text a player sees, like `"Bulletproof Camera"`, would change as well. Click the **×** next to a match to leave it alone. For a name of your own that's now taken, pick a new name and do the same.
 
 ### Word operators that are *not* reserved
 
@@ -10321,7 +10321,7 @@ The error messages on this page are checked against the real `frg` every time Fo
 frg version
 ```
 
-which prints `Forge 0.9.4` (or whichever version you have). If it says `frg is not recognized`, the folder with `frg.exe` isn't on your `PATH`.
+which prints `Forge 0.9.5` (or whichever version you have). If it says `frg is not recognized`, the folder with `frg.exe` isn't on your `PATH`.
 
 #### Moving between folders
 
@@ -10779,7 +10779,7 @@ frg update --on       turn the daily check back on
 The daily check: once a day, when you build, run, test, package or make a game, `frg` also asks GitHub (in the background, at most a few seconds, never stopping the command) whether a newer Forge is out. If it is, a short note comes at the end:
 
 ```text
-    Update  Forge 0.9.5 is out (you have 0.9.4). Updating is optional: run frg update to get it,
+    Update  Forge 0.9.6 is out (you have 0.9.5). Updating is optional: run frg update to get it,
             or frg update --off to stop these notes.
 ```
 
@@ -10787,7 +10787,7 @@ It asks only for the number of the latest release (from `api.github.com`), sends
 
 ### frg version and frg help
 
-`frg version` (or `frg --version`) prints the version, like `Forge 0.9.4`.
+`frg version` (or `frg --version`) prints the version, like `Forge 0.9.5`.
 
 `frg help` (or `frg --help`, `frg -h`, or `frg` on its own) prints the list of commands and options.
 
@@ -12130,7 +12130,7 @@ error: unknown type 'Camera'
   hint: it's called Camera3D since Forge 0.9.5 - change 'Camera' to 'Camera3D' everywhere at once: in VS Code, Replace in Files (Ctrl+Shift+H), with Match Case (Alt+C) and Match Whole Word (Alt+W) turned on, so only this exact name changes
 ```
 
-**Fix:** change every `Camera` to `Camera3D` at once, with Replace in Files (Ctrl+Shift+H). Turn on **Match Case**, or a variable called `camera` would become `camera3D`, and **Match Whole Word**, or `CameraShake` would become `Camera3DShake`. The other renamed names: `graphics3d.setCulling` / `isCulling` (now `setViewCulling` / `isViewCulling`), `time.clock` (now `timeOfDay`) and a font's `measure` (now `textWidth`).
+**Fix:** change every `Camera` to `Camera3D` at once, with Replace in Files (Ctrl+Shift+H). Turn on **Match Case**, or a variable called `camera` would become `camera3D`, and **Match Whole Word**, or `CameraShake` would become `Camera3DShake`. Look over the matches before Replace All: text in quotes, like `"Security Camera"`, matches too and should stay. The other renamed names: `graphics3d.setCulling` / `isCulling` (now `setViewCulling` / `isViewCulling`), `time.clock` (now `timeOfDay`) and a font's `measure` (now `textWidth`).
 
 #### `'string' is a built-in type name, so it can't be used as a name`
 

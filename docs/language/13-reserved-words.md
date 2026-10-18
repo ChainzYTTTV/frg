@@ -48,7 +48,7 @@ error: unknown type 'Camera'
   hint: it's called Camera3D since Forge 0.9.5 - change 'Camera' to 'Camera3D' everywhere at once: in VS Code, Replace in Files (Ctrl+Shift+H), with Match Case (Alt+C) and Match Whole Word (Alt+W) turned on, so only this exact name changes
 ```
 
-Change it **everywhere at once** rather than one line at a time: in VS Code, **Replace in Files** (Ctrl+Shift+H), type the old name and the new one, and turn on **Match Case** (Alt+C) and **Match Whole Word** (Alt+W) before replacing. Match Case keeps `camera` (a variable) from turning into `camera3D`; Match Whole Word keeps `myCamera` and `CameraShake` as they are. For a name of your own that's now taken, pick a new name and do the same.
+Change it **everywhere at once** rather than one line at a time: in VS Code, **Replace in Files** (Ctrl+Shift+H), type the old name and the new one, and turn on **Match Case** (Alt+C) and **Match Whole Word** (Alt+W) before replacing. Match Case keeps `camera` (a variable) from turning into `camera3D`; Match Whole Word keeps `myCamera` and `CameraShake` as they are. Then look over the list of matches before **Replace All**: words inside quotes match too, so text a player sees, like `"Bulletproof Camera"`, would change as well. Click the **×** next to a match to leave it alone. For a name of your own that's now taken, pick a new name and do the same.
 
 ## Word operators that are *not* reserved
 

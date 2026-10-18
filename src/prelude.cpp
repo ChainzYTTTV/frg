@@ -231,8 +231,8 @@ void drawCircleOutline(float x, float y, float radius, color c);
 void drawLine(float x1, float y1, float x2, float y2, color c, float thickness = 1);
 void drawLine(vec2 from, vec2 to, color c, float thickness = 1);
 void drawTriangle(vec2 a, vec2 b, vec2 c, color fill);
-void drawText(string text, float x, float y, int size, color c);
-int textWidth(string text, int size);
+void drawText(string text, float x, float y, float size, color c);
+float textWidth(string text, float size);
 void drawFPS(float x, float y);
 void beginFlash(color c, float amount = 1);
 void beginOutline(color c, float thickness = 1);
@@ -347,7 +347,7 @@ class Animation {
 
 class Font {
     void drawText(string text, float x, float y, float size, color c);
-    float measure(string text, float size);
+    float textWidth(string text, float size);
 }
 
 Texture loadTexture(string path);
@@ -393,7 +393,7 @@ class Timer {
 
 double now();
 void sleep(float seconds);
-string clock();
+string timeOfDay();
 string date();
 int year();
 int month();
@@ -445,12 +445,12 @@ void setTheme(color background, color accent, color text);
 )FRG";
 
 static const char* kGraphics3d = R"FRG(
-struct Camera {
+struct Camera3D {
     vec3 position;
     vec3 target;
     vec3 up;
     float fov;
-    Camera(vec3 position, vec3 target);
+    Camera3D(vec3 position, vec3 target);
     void orbit(float degrees);
 }
 
@@ -464,14 +464,14 @@ class Mesh {
     int vertexCount();
 }
 
-void setCamera(Camera camera);
-Camera camera();
+void setCamera(Camera3D camera);
+Camera3D camera();
 void clearDepth();
 void setLight(vec3 direction, color light = color.WHITE, color ambient = color(100, 105, 120));
 void lightOff();
 bool isLit();
-void setCulling(bool on);
-bool isCulling();
+void setViewCulling(bool on);
+bool isViewCulling();
 int culledLastFrame();
 void pushTransform(vec3 position, vec3 axis = vec3.UP, float degrees = 0, float scale = 1);
 void popTransform();

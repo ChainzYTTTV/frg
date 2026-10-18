@@ -105,8 +105,8 @@ struct Font_ : std::enable_shared_from_this<Font_> {
         ::Font& f = get("font.drawText()");
         DrawTextEx(f, text.c_str(), ::Vector2{x, y}, size, size / 10, rl(c));
     }
-    virtual float measure_(const std::string& text, float size) {
-        ::Font& f = get("font.measure()");
+    virtual float textWidth_(const std::string& text, float size) {
+        ::Font& f = get("font.textWidth()");
         return MeasureTextEx(f, text.c_str(), size, size / 10).x;
     }
 };

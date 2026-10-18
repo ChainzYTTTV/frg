@@ -139,7 +139,7 @@ static const char* k3D = R"FRG(#include <window>
   $NAME$: a 3D scene. Hold Left / Right to turn the camera around the cube.
 ```
 
-Camera camera = Camera(vec3(6, 4, 6), vec3(0, 0.5, 0));    // where the camera is, and the point it looks at
+Camera3D camera = Camera3D(vec3(6, 4, 6), vec3(0, 0.5, 0));    // where the camera is, and the point it looks at
 
 int main(){
     window.open(960, 540, "$NAME$");

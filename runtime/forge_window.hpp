@@ -580,11 +580,17 @@ inline void drawTriangle_(core::vec2_ a, core::vec2_ b, core::vec2_ c, core::col
     else
         DrawTriangle(rl(a), rl(c), rl(b), rl(fill));
 }
-inline void drawText_(const std::string& text, float x, float y, int32_t size, core::color_ c) {
+// The built-in pixel font at any size (whole sizes look exactly like raylib's DrawText: sizes under 10 are 10, and
+// the letters are size / 10 pixels apart, rounded down).
+inline float pixelFontSize(float size) { return std::max(size, 10.0f); }
+inline float pixelFontSpacing(float size) { return std::floor(pixelFontSize(size) / 10.0f); }
+inline void drawText_(const std::string& text, float x, float y, float size, core::color_ c) {
     window::ensureFrame("graphics2d.drawText()");
-    DrawText(text.c_str(), (int)x, (int)y, size, rl(c));
+    DrawTextEx(GetFontDefault(), text.c_str(), ::Vector2{std::floor(x), std::floor(y)}, pixelFontSize(size), pixelFontSpacing(size), rl(c));
 }
-inline int32_t textWidth_(const std::string& text, int32_t size) { return MeasureText(text.c_str(), size); }
+inline float textWidth_(const std::string& text, float size) {
+    return MeasureTextEx(GetFontDefault(), text.c_str(), pixelFontSize(size), pixelFontSpacing(size)).x;
+}
 // The 2D camera: drawing after setCamera is moved, zoomed and turned by it; resetCamera goes back to the screen.
 inline void setCamera_(Camera2D_ c) {
     if (!(c.zoom_ > 0)) panic("graphics2d.setCamera()", "the camera's zoom must be more than 0 (1 is normal size, 2 is twice as big), but it's " + str(c.zoom_));

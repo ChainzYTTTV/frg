@@ -381,8 +381,10 @@ bool Checker::checkNewName(const std::string& n, const Loc& loc) {
         reportError(loc, "'" + n + "' is the name of a built-in function", "pick a different name");
         return false;
     }
-    if (isStdLib(n) || isPlannedLib(n)) {
-        reportError(loc, "'" + n + "' is the name of a Forge library", "pick a different name");
+    // A library's name is only taken in the files that #include it (so a library added later never breaks a game).
+    if (isStdLib(n) && cur->libs.count(n)) {
+        reportError(loc, "'" + n + "' is the name of the " + n + " library, which this file includes",
+                    replaceEverywhereHint(n, ""));
         return false;
     }
     if (P.rootFolder.modules.count(n)) {
@@ -468,6 +470,8 @@ TypeDecl* Checker::findTypeDecl(const std::string& name) {
 }
 
 std::string Checker::unknownTypeHint(const std::string& name) {
+    std::string version, now = renamedTo("", name, &version);
+    if (!now.empty()) return "it's called " + now + " since Forge " + version + " - " + replaceEverywhereHint(name, now);
     for (Module* m : P.allModules)
         if (m != cur && m->types.count(name))
             return "'" + name + "' is in " + m->src->displayPath + " - use " + m->qualName + "." + name;
@@ -1230,6 +1234,8 @@ Type* Checker::finishRef(Expr* e, bool allowNonValue) {
 }
 
 std::string Checker::unknownHint(const std::string& n) {
+    std::string version, now = renamedTo("", n, &version);   // a type that was renamed, used as Camera(...)
+    if (!now.empty()) return "it's called " + now + " since Forge " + version + " - " + replaceEverywhereHint(n, now);
     for (Module* m : P.allModules)
         if (m != cur && (m->funcs.count(n) || m->globals.count(n)))
             return "'" + n + "' is in " + m->src->displayPath + " - use " + m->qualName + "." + n;
@@ -1311,14 +1317,9 @@ Type* Checker::nameExpr(Expr* e, bool allowNonValue) {
             r.kind = RK::Builtin;
             r.builtin = b;
         }
-    } else if (isStdLib(n)) {
-        if (!cur->libs.count(n)) {
-            reportError(e->loc, "this file doesn't include the " + n + " library",
-                        "add #include <" + n + "> at the top of " + cur->src->displayPath);
-        } else {
-            r.kind = RK::StdLib;
-            r.lib = n;
-        }
+    } else if (isStdLib(n) && cur->libs.count(n)) {
+        r.kind = RK::StdLib;
+        r.lib = n;
     } else if (auto m = P.rootFolder.modules.find(n); m != P.rootFolder.modules.end()) {
         r.kind = RK::Module;
         r.module = m->second.get();
@@ -1328,6 +1329,9 @@ Type* Checker::nameExpr(Expr* e, bool allowNonValue) {
     } else if (fs::is_directory(P.root / n) && !isBuiltinTypeName(n)) {
         reportError(e->loc, "the folder '" + n + "' isn't part of the game yet",
                     "add #include <\"" + n + "\"> to a file in the top folder, like main.frg");
+    } else if (isStdLib(n)) {
+        reportError(e->loc, "this file doesn't include the " + n + " library",
+                    "add #include <" + n + "> at the top of " + cur->src->displayPath);
     } else {
         reportError(e->loc, "unknown name '" + n + "'", unknownHint(n));
     }
@@ -1371,8 +1375,10 @@ void Checker::valueMember(Expr* e, Expr* o) {
                 for (auto& [k, _] : x->methodMap) names.push_back(k);
             }
             std::string guess = suggestName(n, names);
+            std::string version, now = renamedTo(d->name, n, &version);
             reportError(e->loc, d->name + " has no field or method called '" + n + "'",
-                        guess.empty() ? "" : "did you mean '" + guess + "'?");
+                        !now.empty() ? "it's called " + now + " since Forge " + version + " - " + replaceEverywhereHint(n, now)
+                        : guess.empty() ? "" : "did you mean '" + guess + "'?");
         }
         return;
     }
@@ -1503,8 +1509,10 @@ Type* Checker::memberExpr(Expr* e, bool allowNonValue) {
                     for (auto& [k, _] : lm->types) names.push_back(k);
                 }
                 std::string guess = suggestName(n, names);
+                std::string version, now = renamedTo(lib, n, &version);
                 reportError(e->loc, "the " + lib + " library has nothing called '" + n + "'",
-                            guess.empty() ? "" : "did you mean '" + guess + "'?");
+                            !now.empty() ? "it's called " + now + " since Forge " + version + " - " + replaceEverywhereHint(n, now)
+                            : guess.empty() ? "" : "did you mean '" + guess + "'?");
             }
             break;
         }

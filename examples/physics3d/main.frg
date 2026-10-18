@@ -97,7 +97,7 @@ void update(float dt){
 
     // the camera, behind the player and a little above
     vec3 eye = player.position - f * 6 + vec3(0, 3, 0);
-    graphics3d.setCamera(Camera(eye, player.position + vec3(0, 1, 0)));
+    graphics3d.setCamera(Camera3D(eye, player.position + vec3(0, 1, 0)));
 }
 
 void draw(){

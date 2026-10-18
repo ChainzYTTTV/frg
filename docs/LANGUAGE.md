@@ -533,7 +533,7 @@ Each file includes the libraries it uses. Functions are reached through the libr
 | `<assets>` | images and fonts: `assets.loadTexture("player.png")`, `assets.loadFont("font.ttf")`, `assets.exists(path)` (see below) |
 | `<audio>` | `audio.loadSound("jump.wav")`, `audio.loadMusic("song.ogg")`, `audio.setVolume(0.5)` (see below) |
 | `<graphics3d>` | 3D drawing (see below) |
-| `<time>` | `time.now()` (seconds since the game started), `time.sleep(seconds)`, `time.clock()` ("14:05:09"), `time.date()` ("2026-10-14"), `time.year()` `month()` `day()` `hour()` `minute()` `second()`, and the `Timer` class |
+| `<time>` | `time.now()` (seconds since the game started), `time.sleep(seconds)`, `time.timeOfDay()` ("14:05:09"), `time.date()` ("2026-10-14"), `time.year()` `month()` `day()` `hour()` `minute()` `second()`, and the `Timer` class |
 | `<tilemap>` | `TileMap level = TileMap("""...""", 32);` (text, tile size) or `tilemap.load("level1.txt", 32)`: one character per tile. `level.addBodies("#")` (merged static bodies; `addBodies("=", true)` for one-way), `level.find("C")` (top-left corners), `get(col, row)` `set(col, row, "#")` `columns()` `rows()` `width()` `height()` `tileRect(col, row)` `columnAt(x)` `rowAt(y)` `solidAreas(tiles)`, `draw("#", color)`, `drawTiles(tileset, 16, "#=")` |
 | `<particles>` | `Emitter e = Emitter(vec2(x, y));`, then `e.burst(30)` (all at once) or `e.rate = 50` (per second); `e.update(dt)` and `e.draw()` each frame. Fields: `position` `rate` `lifetime` `speed` `direction` (degrees, -90 is up) `spread` (degrees, 360 is every way) `startColor` `endColor` `startSize` `endSize` `gravity`; `count()` `clear()` |
 | `<tween>` | `Tween t = Tween(from, to, seconds, Ease.OUT);` then `t.update(dt)` and `t.value()` each frame; `progress()` (0 to 1, for `lerp`), `isDone()`, `restart()`, `reverse()`, fields `looping` `pingPong`. Easing: `Ease.LINEAR` `IN` `OUT` `IN_OUT` `BOUNCE`; `tween.ease(Ease.OUT, t)` |
@@ -593,7 +593,7 @@ song.play();                                           // loops until song.stop(
 |---|---|
 | `Texture` | `width()` `height()` `draw` `drawScaled` `drawRotated` `drawPart` |
 | `Animation` | `Animation(sheet, frameWidth, frameHeight, frames, fps, row = 0)`, `update(dt)` `draw(x, y)` `drawScaled(x, y, scale)` `flip(bool)` `play()` `pause()` `reset()` `isPlaying()` `isDone()` `frame()` `setFrame(i)` `frameCount()`, fields `fps` `looping` |
-| `Font` | `drawText(text, x, y, size, color)` `measure(text, size)` |
+| `Font` | `drawText(text, x, y, size, color)` `textWidth(text, size)` |
 | `Sound` | `play()` `stop()` `isPlaying()` `setVolume(v)` `setPitch(p)` |
 | `Music` | `play()` `stop()` `pause()` `resume()` `isPlaying()` `setVolume(v)` `setLooping(b)` `length()` `position()` |
 
@@ -602,7 +602,7 @@ song.play();                                           // loops until song.stop(
 ```cpp
 #include <graphics3d>
 
-Camera cam = Camera(vec3(8, 6, 8), vec3(0, 0, 0));     // where it is, what it looks at
+Camera3D cam = Camera3D(vec3(8, 6, 8), vec3(0, 0, 0));     // where it is, what it looks at
 Model ship = graphics3d.loadModel("ship.glb");         // .obj .gltf .glb .iqm .vox .m3d
 
 void draw(){
@@ -616,7 +616,7 @@ void draw(){
 }
 ```
 
-Shapes: `drawCube` `drawCubeOutline` `drawSphere(center, radius, color)` `drawSphereOutline` `drawCylinder(position, radius, height, color)` `drawPlane(center, vec2 size, color)` `drawGrid(slices, spacing)` `drawLine(from, to, color)`. `Camera` has `position`, `target`, `up`, `fov` and `orbit(degrees)`. `Model` has `draw(position, scale, tint)` and `drawRotated(position, axis, degrees, scale, tint)`. `graphics3d.makeMesh(positions, uvs, shades, texture)` builds a `Mesh` of your own triangles (drawn in one call with `mesh.draw(position)`; see-through pixels are cut out); see [Meshes](libraries/graphics3d.md#meshes-shapes-you-build-yourself). `graphics3d.clearDepth()` makes the 3D drawn after it show in front of everything before it (a first-person gun). `pushTransform(position, axis, degrees, scale)` ... `popTransform()` turns, moves and scales what's drawn between them (they nest). In 3D, **y goes up**, and looking along +z, +x is to the **left**: a camera's right is `forward.cross(vec3.UP)`.
+Shapes: `drawCube` `drawCubeOutline` `drawSphere(center, radius, color)` `drawSphereOutline` `drawCylinder(position, radius, height, color)` `drawPlane(center, vec2 size, color)` `drawGrid(slices, spacing)` `drawLine(from, to, color)`. `Camera3D` has `position`, `target`, `up`, `fov` and `orbit(degrees)`. `Model` has `draw(position, scale, tint)` and `drawRotated(position, axis, degrees, scale, tint)`. `graphics3d.makeMesh(positions, uvs, shades, texture)` builds a `Mesh` of your own triangles (drawn in one call with `mesh.draw(position)`; see-through pixels are cut out); see [Meshes](libraries/graphics3d.md#meshes-shapes-you-build-yourself). `graphics3d.clearDepth()` makes the 3D drawn after it show in front of everything before it (a first-person gun). `pushTransform(position, axis, degrees, scale)` ... `popTransform()` turns, moves and scales what's drawn between them (they nest). In 3D, **y goes up**, and looking along +z, +x is to the **left**: a camera's right is `forward.cross(vec3.UP)`.
 
 ### Scenes
 

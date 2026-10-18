@@ -543,8 +543,8 @@ Library functions are reached through the library name (`window.open(...)`). Lib
 | `<physics3d>` | 3D physics in the `<graphics3d>` world (y up): `Body3D(vec3 position, vec3 size)` where `position` is the **middle**; fields `velocity`, `isStatic`, `solid`, `sphere` (a ball), `gravityScale`, `bounce`, `stepHeight` (climbs steps that high: stairs), `layer`, and `onGround` / `onCeiling` / `onWall` set by Forge. `physics3d.add(body)`, `remove`, `step(dt)`, `setGravity(vec3)` (starts at `vec3(0, -9.81, 0)`), `collide(a, b, on)`, `clear()`, `count()`, `drawDebug()` (needs `<graphics3d>`), and `physics3d.raycast(from, direction, maxDistance)`, which gives a `RayHit` (`hit`, `point`, `normal`, `distance`, `body`). Nothing turns: no tumbling boxes. See `examples/physics3d` |
 | `<assets>` | `assets.loadTexture("x.png")` gives a `Texture`, `assets.loadFont("x.ttf")` gives a `Font` (an optional second number is the size the letters are prepared at: use about the biggest size you draw it at, 64 to start with), `assets.exists(path)` |
 | `<audio>` | `audio.loadSound("x.wav")` gives a `Sound`, `audio.loadMusic("x.ogg")` gives a `Music`, `audio.setVolume(v)` |
-| `<graphics3d>` | the `Camera` struct and `Model` class, `graphics3d.setCamera(cam)`, `drawCube(pos, size, color)`, `drawCubeOutline`, `drawSphere(center, radius, color)`, `drawSphereOutline`, `drawCylinder(pos, radius, height, color)`, `drawPlane(center, vec2 size, color)`, `drawGrid(slices, spacing)`, `drawLine(from, to, color)`, `toScreen(vec3)`, `loadModel("x.glb")`, `setLight(direction, light, ambient)` (one light from a direction, like the sun, plus a soft light everywhere: everything 3D is lit, so it stops looking flat; `lightOff()`, `isLit()`), automatic culling (things completely out of view aren't drawn; `setCulling(false)` turns it off, `culledLastFrame()` counts them), and `makeMesh(positions, uvs, shades, texture)`: a `Mesh` of your own triangles, sent to the graphics card once and drawn in one call with `mesh.draw(position)` (corners go counter-clockwise on the front; pixels that are mostly see-through are cut out). A block world builds one per chunk: see `examples/voxel`. `clearDepth()` makes what's drawn after it show in front of everything before it (a first-person gun). `pushTransform(position, axis, degrees, scale)` and `popTransform()` turn, move and scale everything drawn between them (they nest; each push needs a pop before the frame ends). Directions: y is up, and looking along +z, +x is on the **left**, so a camera's right is `forward.cross(vec3.UP)` |
-| `<time>` | `time.now()`, `time.sleep(s)`, `time.clock()`, `time.date()`, `year() month() day() hour() minute() second()`, the `Timer` class |
+| `<graphics3d>` | the `Camera3D` struct and `Model` class, `graphics3d.setCamera(cam)`, `drawCube(pos, size, color)`, `drawCubeOutline`, `drawSphere(center, radius, color)`, `drawSphereOutline`, `drawCylinder(pos, radius, height, color)`, `drawPlane(center, vec2 size, color)`, `drawGrid(slices, spacing)`, `drawLine(from, to, color)`, `toScreen(vec3)`, `loadModel("x.glb")`, `setLight(direction, light, ambient)` (one light from a direction, like the sun, plus a soft light everywhere: everything 3D is lit, so it stops looking flat; `lightOff()`, `isLit()`), automatic culling (things completely out of view aren't drawn; `setViewCulling(false)` turns it off, `culledLastFrame()` counts them), and `makeMesh(positions, uvs, shades, texture)`: a `Mesh` of your own triangles, sent to the graphics card once and drawn in one call with `mesh.draw(position)` (corners go counter-clockwise on the front; pixels that are mostly see-through are cut out). A block world builds one per chunk: see `examples/voxel`. `clearDepth()` makes what's drawn after it show in front of everything before it (a first-person gun). `pushTransform(position, axis, degrees, scale)` and `popTransform()` turn, move and scale everything drawn between them (they nest; each push needs a pop before the frame ends). Directions: y is up, and looking along +z, +x is on the **left**, so a camera's right is `forward.cross(vec3.UP)` |
+| `<time>` | `time.now()`, `time.sleep(s)`, `time.timeOfDay()`, `time.date()`, `year() month() day() hour() minute() second()`, the `Timer` class |
 | `<tilemap>` | levels drawn as text, one character per tile: `TileMap level = TileMap("""` ... `""", 32);` (or `tilemap.load("level1.txt", 32)`). The game decides what characters mean. `level.addBodies("#")` makes static physics bodies, merging neighbouring tiles into big boxes (`addBodies("=", true)` makes one-way platforms); `level.find("C")` gives the top-left corner (pixels) of every `C` tile; `get(column, row)` (`" "` outside the map), `set(column, row, "#")`, `columns()`, `rows()`, `width()`, `height()` (pixels), `tileRect(column, row)`, `columnAt(x)`, `rowAt(y)`; `draw("#", color)` fills tiles with a color, `drawTiles(tileset, 16, "#=")` draws them from a tileset image (each character is the next 16x16 picture). Don't name the variable `map` (a type name) |
 | `<particles>` | dust, sparks, smoke, explosions: `Emitter sparks = Emitter(vec2(x, y));`, then `sparks.burst(30);` (all at once) or `sparks.rate = 50;` (a steady stream per second), and each frame `sparks.update(dt);` and `sparks.draw();`. Fields to set: `position`, `lifetime` (seconds), `speed`, `direction` (degrees: 0 right, -90 up), `spread` (degrees around it: 360 every way), `startColor`/`endColor` (an end color with alpha 0 fades them out), `startSize`/`endSize`, `gravity` (a vec2). Also `count()` and `clear()`. It draws in 2D, through the 2D camera |
 | `<tween>` | smooth changes over time: `Tween slide = Tween(-300, 40, 0.5, Ease.OUT);` (from, to, seconds, easing), then `slide.update(dt);` and use `slide.value()`. Also `progress()` (0 to 1, with `lerp` for positions and colors: `a.lerp(b, t.progress())`), `isDone()`, `restart()`, `reverse()` (go back from where it is), fields `looping` and `pingPong`. `Ease.LINEAR` (steady), `IN` (slow start), `OUT` (slow end, the default), `IN_OUT`, `BOUNCE`. There are no callbacks: check `isDone()` |
@@ -580,7 +580,7 @@ void draw(){
 }
 ```
 
-`graphics2d.screenToWorld(input.mousePosition())` turns the mouse position into a world position (and `worldToScreen` goes the other way). `Camera2D` is a struct, so call `setCamera` again after changing it (each frame, in `draw`). Physics doesn't know about the camera; only drawing moves. The 3D `Camera` from `<graphics3d>` is separate.
+`graphics2d.screenToWorld(input.mousePosition())` turns the mouse position into a world position (and `worldToScreen` goes the other way). `Camera2D` is a struct, so call `setCamera` again after changing it (each frame, in `draw`). Physics doesn't know about the camera; only drawing moves. The 3D `Camera3D` from `<graphics3d>` is separate.
 
 ### Physics
 
@@ -622,7 +622,7 @@ player.draw(x, y);                                    // draw(x, y, tint) tints 
 player.drawScaled(x, y, 4);
 player.drawRotated(vec2(x, y), 45, 1);                // centered at (x, y), turned 45 DEGREES, scale 1
 player.drawPart(rect(0, 0, 16, 16), rect(x, y, 64, 64));   // one frame of a sprite sheet, stretched to 64x64
-big.drawText("Hello", 20, 20, 48, color.WHITE);       // big.measure(text, size) gives the width
+big.drawText("Hello", 20, 20, 48, color.WHITE);       // big.textWidth(text, size) gives the width
 jump.play();
 song.play();
 ```
@@ -636,7 +636,7 @@ song.play();
 **3D** (`<graphics3d>`). In 3D, **y goes up**.
 
 ```cpp
-Camera cam = Camera(vec3(8, 6, 8), vec3(0, 0, 0));    // camera position, and the point it looks at
+Camera3D cam = Camera3D(vec3(8, 6, 8), vec3(0, 0, 0));    // camera position, and the point it looks at
 Model ship = graphics3d.loadModel("ship.glb");        // .obj .gltf .glb .iqm .vox .m3d
 
 void draw(){
@@ -650,7 +650,7 @@ void draw(){
 }
 ```
 
-`Camera` is a struct with `position`, `target`, `up`, `fov` (45 to start with) and `orbit(degrees)`. There's no lighting yet: shapes are drawn in flat colors.
+`Camera3D` is a struct with `position`, `target`, `up`, `fov` (45 to start with) and `orbit(degrees)`. Shapes are drawn in flat colors until a light is turned on: `graphics3d.setLight(vec3(-0.5, -1, -0.3))`.
 
 **Scenes** (`<scenes>`). Each part of a game is a class inheriting from `Scene` that fills in any of `enter()`, `update(float dt)`, `draw()` and `exit()`. `scenes.change(Level())` switches at the start of the next `scenes.update(dt)`. The game calls `scenes.update(dt)` and `scenes.draw()` every frame.
 
@@ -1659,7 +1659,7 @@ Hints:
 
 **Stage 14.** A sun in the middle, planets going round it at different speeds, and a moon going round one planet. The camera can turn around the scene.
 
-**Practices:** `<graphics3d>`, circles with `math.sin` and `math.cos`, `Camera`.
+**Practices:** `<graphics3d>`, circles with `math.sin` and `math.cos`, `Camera3D`.
 
 Steps:
 
@@ -1667,7 +1667,7 @@ Steps:
 2. One planet: its position is `vec3(math.cos(t) * distance, 0, math.sin(t) * distance)`, where `t` grows every frame.
 3. Several planets, each a struct with its own distance, speed, size and color.
 4. A moon: the same circle, but around its planet's position instead of the middle.
-5. Left/Right turns the camera: keep a `Camera cam`, call `cam.orbit(degrees)`, then `graphics3d.setCamera(cam)`.
+5. Left/Right turns the camera: keep a `Camera3D cam`, call `cam.orbit(degrees)`, then `graphics3d.setCamera(cam)`.
 
 Make it yours: lines showing the orbits (many short `drawLine`s around a circle). Up/Down zooms. Labels with each planet's name, placed with `graphics3d.toScreen`.
 

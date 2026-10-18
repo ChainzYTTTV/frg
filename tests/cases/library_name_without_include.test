@@ -1,0 +1,12 @@
+=== main.frg
+``` A library's name is free in a file that doesn't include the library. ```
+#include <stdio>
+
+int main(){
+    int window = 3;
+    string time = "noon";
+    stdio.print("{window} {time}");
+    return 0;
+}
+=== output
+3 noon

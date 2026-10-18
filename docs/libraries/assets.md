@@ -109,21 +109,21 @@ A loaded font.
 | Method | Gives back | What it does |
 |---|---|---|
 | `drawText(string text, float x, float y, float size, color c)` | — | draws text with its top-left corner at (x, y). `size` is the height in pixels. |
-| `measure(string text, float size)` | `float` | how wide the text would be, in pixels |
+| `textWidth(string text, float size)` | `float` | how wide the text would be, in pixels |
 
 ```cpp
 Font title = assets.loadFont("fonts/Title.ttf", 96);
 
 void draw(){
     string text = "Forge Quest";
-    float w = title.measure(text, 72);
+    float w = title.textWidth(text, 72);
     title.drawText(text, (window.width() - w) / 2.0, 80, 72, color.GOLD);
 }
 ```
 
 `Font()` (made directly, not loaded) is the built-in pixel font.
 
-Fonts are prepared for drawing the first time they're used, which needs the window to be open. `measure` also needs the window.
+Fonts are prepared for drawing the first time they're used, which needs the window to be open. `textWidth` also needs the window.
 
 ## Memory
 

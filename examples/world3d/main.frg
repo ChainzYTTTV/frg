@@ -9,7 +9,7 @@
   and a camera that circles around (hold Left / Right to spin it yourself).
 ```
 
-Camera cam = Camera(vec3(8, 6, 8), vec3(0, 1, 0));
+Camera3D cam = Camera3D(vec3(8, 6, 8), vec3(0, 1, 0));
 Model pyramid = graphics3d.loadModel("pyramid.obj");
 float t = 0;
 

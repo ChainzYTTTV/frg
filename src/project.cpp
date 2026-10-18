@@ -61,7 +61,6 @@ static std::string badModuleName(const std::string& name) {
     if (!isIdentifier(name)) return "names can only use letters, numbers and _ (and can't start with a number)";
     if (isKeyword(name)) return "'" + name + "' is a Forge keyword";
     if (isBuiltinTypeName(name)) return "'" + name + "' is a built-in type name";
-    if (isStdLib(name) || isPlannedLib(name)) return "'" + name + "' is the name of a Forge library";
     return "";
 }
 

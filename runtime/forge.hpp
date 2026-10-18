@@ -290,6 +290,9 @@ template <class T>
 T clamp_(T v, T lo, T hi) { return v < lo ? lo : (hi < v ? hi : v); }
 template <class T>
 T lerp_(T a, T b, T t) { return a + (b - a) * t; }
+// math.toRadians(90) is a quarter turn in radians (about 1.5708); math.toDegrees goes back.
+inline double toRadians_(double degrees) { return degrees * 3.14159265358979323846 / 180.0; }
+inline double toDegrees_(double radians) { return radians * 180.0 / 3.14159265358979323846; }
 
 namespace math {
 constexpr double PI_ = 3.14159265358979323846;

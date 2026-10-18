@@ -159,6 +159,40 @@ static size_t editDistance(const std::string& a, const std::string& b) {
     return prev[b.size()];
 }
 
+std::string replaceEverywhereHint(const std::string& from, const std::string& to) {
+    std::string start = to.empty() ? "pick a new name, then change '" + from + "' everywhere at once"
+                                   : "change '" + from + "' to '" + to + "' everywhere at once";
+    return start + ": in VS Code, Replace in Files (Ctrl+Shift+H), with Match Case (Alt+C) and Match Whole Word "
+                   "(Alt+W) turned on, so only this exact name changes";
+}
+
+namespace {
+struct Renamed {
+    const char* owner;
+    const char* old;
+    const char* now;
+    const char* version;
+};
+// Names Forge renamed, so an older game gets a clear error that says what to change. Before 1.0 only: after 1.0,
+// names don't change.
+const Renamed kRenamed[] = {
+    {"", "Camera", "Camera3D", "0.9.5"},
+    {"graphics3d", "setCulling", "setViewCulling", "0.9.5"},
+    {"graphics3d", "isCulling", "isViewCulling", "0.9.5"},
+    {"time", "clock", "timeOfDay", "0.9.5"},
+    {"Font", "measure", "textWidth", "0.9.5"},
+};
+}  // namespace
+
+std::string renamedTo(const std::string& owner, const std::string& name, std::string* version) {
+    for (const Renamed& r : kRenamed)
+        if (owner == r.owner && name == r.old) {
+            if (version) *version = r.version;
+            return r.now;
+        }
+    return "";
+}
+
 std::string suggestName(const std::string& wrong, const std::vector<std::string>& candidates) {
     std::string best;
     size_t bestDist = std::max<size_t>(1, wrong.size() / 3) + 1;

@@ -47,8 +47,8 @@ vec3 lookDirection(){
     return vec3(math.cos(pitch) * math.sin(yaw), math.sin(pitch), math.cos(pitch) * math.cos(yaw));
 }
 
-Camera camera(){
-    Camera c = Camera(eye(), eye() + lookDirection());
+Camera3D camera(){
+    Camera3D c = Camera3D(eye(), eye() + lookDirection());
     c.fov = 70;
     return c;
 }

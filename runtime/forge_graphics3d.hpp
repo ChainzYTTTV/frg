@@ -11,14 +11,14 @@ namespace frg::graphics3d {
 
 inline ::Vector3 rl3(core::vec3_ v) { return ::Vector3{v.x_, v.y_, v.z_}; }
 
-struct Camera_ {
+struct Camera3D_ {
     core::vec3_ position_{0, 5, 10};
     core::vec3_ target_{0, 0, 0};
     core::vec3_ up_{0, 1, 0};
     float fov_ = 45;
-    static Camera_ frg$make() { return {}; }
-    static Camera_ frg$make(core::vec3_ position, core::vec3_ target) {
-        Camera_ c;
+    static Camera3D_ frg$make() { return {}; }
+    static Camera3D_ frg$make(core::vec3_ position, core::vec3_ target) {
+        Camera3D_ c;
         c.position_ = position;
         c.target_ = target;
         return c;
@@ -31,15 +31,15 @@ struct Camera_ {
         position_.x_ = target_.x_ + dx * c - dz * s;
         position_.z_ = target_.z_ + dx * s + dz * c;
     }
-    bool operator==(const Camera_&) const = default;
+    bool operator==(const Camera3D_&) const = default;
 };
 
-inline std::string frg$str(const Camera_& c) {
-    return "Camera(position: " + core::frg$str(c.position_) + ", target: " + core::frg$str(c.target_) + ")";
+inline std::string frg$str(const Camera3D_& c) {
+    return "Camera3D(position: " + core::frg$str(c.position_) + ", target: " + core::frg$str(c.target_) + ")";
 }
 
 struct State {
-    Camera_ camera;
+    Camera3D_ camera;
     bool in3D = false;
     int transforms = 0;  // pushTransform() calls not popped yet
     bool culling = true;     // skip things entirely outside what the camera sees
@@ -63,7 +63,7 @@ inline State& st() {
 }
 
 inline ::Camera3D rlCamera() {
-    const Camera_& c = st().camera;
+    const Camera3D_& c = st().camera;
     ::Camera3D cam{};
     cam.position = rl3(c.position_);
     cam.target = rl3(c.target_);
@@ -379,19 +379,19 @@ inline bool visibleAround(core::vec3_ center, float hx, float hy, float hz) {
     return visible(::Vector3{center.x_ - hx, center.y_ - hy, center.z_ - hz}, ::Vector3{center.x_ + hx, center.y_ + hy, center.z_ + hz});
 }
 
-inline void setCulling_(bool on) { st().culling = on; }
-inline bool isCulling_() { return st().culling; }
+inline void setViewCulling_(bool on) { st().culling = on; }
+inline bool isViewCulling_() { return st().culling; }
 inline int32_t culledLastFrame_() {
     long frame = window::st().frame;
     if (st().cullFrame == frame) return st().culledLast;
     return st().cullFrame == frame - 1 ? st().culledNow : 0;   // nothing drawn yet this frame
 }
 
-inline void setCamera_(Camera_ c) {
+inline void setCamera_(Camera3D_ c) {
     leave3D();  // the next 3D drawing starts again with the new camera
     st().camera = c;
 }
-inline Camera_ camera_() { return st().camera; }
+inline Camera3D_ camera_() { return st().camera; }
 
 inline void drawCube_(core::vec3_ p, core::vec3_ size, core::color_ c) {
     enter3D("graphics3d.drawCube()");

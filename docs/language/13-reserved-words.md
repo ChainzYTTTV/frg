@@ -29,13 +29,26 @@ These words have special meanings, so they can't be used as names for variables,
 
 ## Library names
 
-`stdio` `math` `random` `window` `input` `graphics2d` `graphics3d` `assets` `audio` `physics` `time` `file` `save` `tween` `particles` `tilemap` `scenes` `ui` `ECS` `tasks` `testing` `OpenGL` `DirectX` `Vulkan`, plus `network`, which is planned.
+`stdio` `math` `random` `window` `input` `graphics2d` `graphics3d` `assets` `audio` `physics` `physics3d` `time` `file` `save` `tween` `particles` `tilemap` `scenes` `ui` `ECS` `tasks` `testing` `OpenGL` `DirectX` `Vulkan`
 
-Types that come from a library (`Key`, `MouseButton`, `GamepadButton`, `Body`, `Texture`, `Animation`, `Font`, `Sound`, `Music`, `Camera`, `Camera2D`, `Model`, `Timer`, `Tween`, `Ease`, `Emitter`, `TileMap`, `Scene`, `Entity`, `Component`) can't be reused as names of your own types **in a file that includes that library**.
+A library's name can't be the name of something of yours **in a file that `#include`s that library**, since `time.now()` has to mean the library there. In every other file it's free: a file without `#include <time>` can have a variable called `time`. That's also why a library added in a later Forge never breaks a game: only files that include it are affected.
+
+Types that come from a library (`Key`, `MouseButton`, `GamepadButton`, `Body`, `Texture`, `Animation`, `Font`, `Sound`, `Music`, `Camera3D`, `Camera2D`, `Model`, `Timer`, `Tween`, `Ease`, `Emitter`, `TileMap`, `Scene`, `Entity`, `Component`) can't be reused as names of your own types **in a file that includes that library**.
 
 ## Your own top-level files and folders
 
 If the game has `player.frg` or an `enemies/` folder in its top folder, then `player` and `enemies` can't be used as names anywhere in the game, because `player.something` always means the file.
+
+## When a newer Forge takes a name you used
+
+Before Forge 1.0, a few names were changed (like `Camera` to `Camera3D`), and later Forges may add keywords. Either way, the error says exactly what happened, and, when something was renamed, what it's called now:
+
+```text
+error: unknown type 'Camera'
+  hint: it's called Camera3D since Forge 0.9.5 - change 'Camera' to 'Camera3D' everywhere at once: in VS Code, Replace in Files (Ctrl+Shift+H), with Match Case (Alt+C) and Match Whole Word (Alt+W) turned on, so only this exact name changes
+```
+
+Change it **everywhere at once** rather than one line at a time: in VS Code, **Replace in Files** (Ctrl+Shift+H), type the old name and the new one, and turn on **Match Case** (Alt+C) and **Match Whole Word** (Alt+W) before replacing. Match Case keeps `camera` (a variable) from turning into `camera3D`; Match Whole Word keeps `myCamera` and `CameraShake` as they are. For a name of your own that's now taken, pick a new name and do the same.
 
 ## Word operators that are *not* reserved
 

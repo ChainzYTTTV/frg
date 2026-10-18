@@ -14,17 +14,13 @@ inline ::Color rl(core::color_ c) { return ::Color{c.r_, c.g_, c.b_, c.a_}; }
 // Only show raylib's warnings, not its info messages - set before any game variable is created.
 inline const bool frg$quietRaylib = (SetTraceLogLevel(LOG_WARNING), true);
 
-extern "C" __declspec(dllimport) unsigned long __stdcall GetModuleFileNameA(void*, char*, unsigned long);
-
 // Finds a file the game uses: next to where the game was started from, or next to the .exe
 // (or one folder up, since frg puts the .exe in build/). Returns "" if it isn't anywhere.
 inline std::string findGameFile(const std::string& path) {
     namespace fs = std::filesystem;
     std::error_code ec;
     if (fs::exists(path, ec)) return path;
-    char buf[4096];
-    unsigned long n = GetModuleFileNameA(nullptr, buf, sizeof buf);
-    fs::path exeDir = fs::path(std::string(buf, n)).parent_path();
+    fs::path exeDir = exePath().parent_path();
     for (fs::path candidate : {exeDir / path, exeDir.parent_path() / path})
         if (fs::exists(candidate, ec)) return candidate.string();
     return "";

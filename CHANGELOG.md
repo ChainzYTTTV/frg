@@ -4,6 +4,8 @@ What changed in each version of Forge. Plans for later versions are in the [road
 
 ## Unreleased
 
+**Forge on Linux.** `frg` and every game it makes now work on Linux (64-bit; Ubuntu 22.04 or newer, or similar): the whole language, the 2D and 3D engine, physics, sound, saving, `frg test` and `frg package`. Each release has a `Forge-<version>-linux-x64.tar.gz` with an `install.sh` that installs it for your user (no password needed). Not yet: the low-level toolkits (`<OpenGL>`, `<DirectX>`, `<Vulkan>`), which say so if a game includes one; DirectX never will, since it's Windows-only. Every test runs on Linux too, on every change.
+
 **Docs**
 - The teaching brief (`TEACH_ME_FORGE.md`) isn't part of Forge's docs any more, or of `FORGE_ALL_DOCS.md`. The practice projects, which were only in it, are now in the combined file.
 

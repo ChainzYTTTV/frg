@@ -19,7 +19,7 @@ int main(){
 }
 ```
 
-**Install:** download `Forge-<version>-setup.exe` from the [latest release](https://github.com/ChainzYTTTV/frg/releases/latest) and run it. It has everything Forge needs, including its own C++ compiler (see [Getting started](docs/getting-started.md#installing)).
+**Install:** download `Forge-<version>-setup.exe` from the [latest release](https://github.com/ChainzYTTTV/frg/releases/latest) and run it. It has everything Forge needs, including its own C++ compiler (see [Getting started](docs/getting-started.md#installing)). **On Linux**, get `Forge-<version>-linux-x64.tar.gz` instead and run its `install.sh` ([Installing on Linux](docs/getting-started.md#installing-on-linux)): everything but the low-level toolkits works there.
 
 **Documentation:** start at [docs/README.md](docs/README.md), which has a getting-started guide, a chapter for each part of the language, a page for every library, and guides. [docs/LANGUAGE.md](docs/LANGUAGE.md) is a one-page cheat sheet. For VS Code support (colors, errors as you save, a Run button), see [editors/vscode](editors/vscode/README.md).
 

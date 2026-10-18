@@ -132,7 +132,8 @@ void screenshot(string fileName);
 )FRG";
 
 // The same keys for <input> and the toolkits' own windows (runtime/forge_window.hpp, runtime/forge_native.hpp).
-#define FRG_KEY_ENUMS R"FRG(
+// (Strings, not #defines: a raw string over several lines in a #define needs g++ 13 or newer.)
+static const std::string kKeyEnums = R"FRG(
 enum Key {
     A, B, C, D, E, F, G, H, I, J, K, L, M, N, O, P, Q, R, S, T, U, V, W, X, Y, Z,
     NUM0, NUM1, NUM2, NUM3, NUM4, NUM5, NUM6, NUM7, NUM8, NUM9,
@@ -142,10 +143,10 @@ enum Key {
 }
 
 enum MouseButton { LEFT, RIGHT, MIDDLE, BACK, FORWARD }
-)FRG"
+)FRG";
 
 // The window, keyboard and mouse functions every low-level toolkit has.
-#define FRG_TOOLKIT_WINDOW R"FRG(
+static const std::string kToolkitWindow = R"FRG(
 void openWindow(int width, int height, string title);
 bool shouldClose();
 void closeWindow();
@@ -163,9 +164,9 @@ bool mousePressed(MouseButton button);
 bool mouseReleased(MouseButton button);
 vec2 mousePosition();
 float mouseWheel();
-)FRG"
+)FRG";
 
-static const char* kInput = FRG_KEY_ENUMS R"FRG(
+static const std::string kInput = kKeyEnums + R"FRG(
 enum Cursor { ARROW, HAND, TEXT, CROSSHAIR, RESIZE_ALL, RESIZE_LEFT_RIGHT, RESIZE_UP_DOWN, NOT_ALLOWED }
 
 enum GamepadButton {
@@ -535,7 +536,7 @@ bool chance(float probability);
 color color();
 )FRG";
 
-static const char* kOpenGL = FRG_KEY_ENUMS FRG_TOOLKIT_WINDOW R"FRG(
+static const std::string kOpenGL = kKeyEnums + kToolkitWindow + R"FRG(
 string version();
 
 void clearColor(float r, float g, float b, float a);
@@ -671,7 +672,7 @@ const int INVALID_OPERATION = 1282;
 const int OUT_OF_MEMORY = 1285;
 )FRG";
 
-static const char* kDirectX = FRG_KEY_ENUMS FRG_TOOLKIT_WINDOW R"FRG(
+static const std::string kDirectX = kKeyEnums + kToolkitWindow + R"FRG(
 string adapterName();
 
 void clear(float r, float g, float b, float a);
@@ -721,7 +722,7 @@ const int CULL_FRONT = 2;
 const int CULL_BACK = 3;
 )FRG";
 
-static const char* kVulkan = FRG_KEY_ENUMS FRG_TOOLKIT_WINDOW R"FRG(
+static const std::string kVulkan = kKeyEnums + kToolkitWindow + R"FRG(
 string deviceName();
 
 void setTopology(int topology);

@@ -153,7 +153,7 @@ These were decided by Forge's designer (2026-10-16). Build them this way.
 |---|---|---|
 | An installer that includes g++, and gives `.frg` files their icon in File Explorer (`editors/windows/register-frg-files.ps1`) | one-step setup | done (`installer/`, and `frg update`) |
 | A final check of every name and rule | they can't change after 1.0 | done (`Camera3D`, `setViewCulling`, `textWidth`, `timeOfDay`; a library's name is only taken in files that include it) |
-| **Forge on Linux**: the compiler, the 2D and 3D engine, physics and the other libraries (not the low-level toolkits yet; DirectX is Windows-only) | learning and making games on a Linux laptop | L |
+| **Forge on Linux**: the compiler, the 2D and 3D engine, physics and the other libraries (not the low-level toolkits yet; DirectX is Windows-only) | learning and making games on a Linux laptop | done (`Forge-<version>-linux-x64.tar.gz`, and every test runs on Linux) |
 | A full review of the docs | the docs are how people learn Forge | M |
 | Testing on Windows 10 and 11, on several PCs, and the toolkits on NVIDIA and laptop graphics | no surprises for new users; only one AMD card has run the toolkits so far | S |
 

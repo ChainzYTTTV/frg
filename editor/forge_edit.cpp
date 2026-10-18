@@ -4,8 +4,8 @@
 //
 // The game's folders and files are on the left, the docs on the right (F1), and the bottom panel shows Problems and
 // Output. The game is checked as you type (a copy with the unsaved changes, so nothing is saved for you). F5 runs the
-// game, Shift+F5 stops it, F8 checks it. The panels' sizes, the text size and the last folder are remembered in
-// forge-edit-settings.txt next to forge-edit.
+// game, Shift+F5 stops it, F8 checks it, Ctrl+= and Ctrl+- zoom everything. The panels' sizes, the zoom and the last
+// folder are remembered in forge-edit-settings.txt next to forge-edit.
 // Testing: FORGE_EDIT_OPEN=file opens a file, FORGE_EDIT_DOCS=1 opens the docs, FORGE_EDIT_SHOT=picture.png
 // FORGE_EDIT_FRAMES=n takes a screenshot after n frames and quits, FORGE_EDIT_RUN=1 presses Run at the start,
 // FORGE_EDIT_EXPAND=1 opens every folder.
@@ -124,10 +124,13 @@ static bool inList(const std::string& w, std::initializer_list<const char*> word
 
 // ---------------------------------------------------------------- fonts
 
+// The zoom: everything is drawn Z times bigger. Ctrl+= and Ctrl+- change it.
+static float Z = 1.2f;
+
 struct Fonts {
     Font mono{};
     Font sans{};
-    float size = 18;     // the code's size; Ctrl+= and Ctrl+- change it
+    float size = 18;     // the code's size, before zooming
     float charW = 10;
     float lineH = 24;
     fs::path monoPath, sansPath;
@@ -147,9 +150,12 @@ static std::vector<int> fontCodepoints() {
 static void loadMono() {
     if (F.mono.texture.id && !F.monoPath.empty()) UnloadFont(F.mono);
     std::vector<int> cps = fontCodepoints();
-    F.mono = F.monoPath.empty() ? GetFontDefault() : LoadFontEx(F.monoPath.string().c_str(), (int)F.size, cps.data(), (int)cps.size());
+    // made at the size it really shows at on the screen, so the letters stay sharp when zoomed
+    F.mono = F.monoPath.empty() ? GetFontDefault() : LoadFontEx(F.monoPath.string().c_str(), (int)std::lround(F.size * Z), cps.data(), (int)cps.size());
     if (!F.monoPath.empty()) SetTextureFilter(F.mono.texture, TEXTURE_FILTER_POINT);
-    F.charW = MeasureTextEx(F.mono, "M", F.size, 0).x;
+    // a whole number of screen pixels per letter, so zoomed code stays evenly spaced
+    float px = (float)GetGlyphInfo(F.mono, 'M').advanceX * (F.size * Z) / (float)F.mono.baseSize;
+    F.charW = std::max(1.0f, std::round(px)) / Z;
     F.lineH = std::round(F.size * 1.4f);
 }
 
@@ -161,17 +167,36 @@ static void loadFonts(const fs::path& exeDir) {
     loadMono();
     std::vector<int> cps = fontCodepoints();
     if (!F.sansPath.empty()) {
-        F.sans = LoadFontEx(F.sansPath.string().c_str(), 40, cps.data(), (int)cps.size());
+        F.sans = LoadFontEx(F.sansPath.string().c_str(), 48, cps.data(), (int)cps.size());
         SetTextureFilter(F.sans.texture, TEXTURE_FILTER_BILINEAR);
     } else {
         F.sans = F.mono;
     }
 }
 
+// Only draws inside this rectangle (given before zooming).
+static void clip(float x, float y, float w, float h) {
+    BeginScissorMode((int)std::floor(x * Z), (int)std::floor(y * Z), (int)std::ceil(w * Z), (int)std::ceil(h * Z));
+}
+
 static void text(const Font& f, const std::string& s, float x, float y, float size, Color c) {
     DrawTextEx(f, s.c_str(), {std::floor(x), std::floor(y)}, size, 0, c);
 }
 static float textW(const Font& f, const std::string& s, float size) { return MeasureTextEx(f, s.c_str(), size, 0).x; }
+// Code: each letter on a whole screen pixel, F.charW apart (drawing the line in one go lands letters between pixels
+// when zoomed, so the spacing looks uneven).
+static float snap(float v) { return std::round(v * Z) / Z; }
+static void mono(const std::string& s, float x, float y, Color c) {
+    float px = snap(x), py = snap(y);
+    int i = 0, n = 0;
+    while (i < (int)s.size()) {
+        int bytes = 0;
+        int cp = GetCodepointNext(s.c_str() + i, &bytes);
+        if (cp != ' ') DrawTextCodepoint(F.mono, cp, {px + n * F.charW, py}, F.size, c);
+        i += bytes > 0 ? bytes : 1;
+        n++;
+    }
+}
 static void ui(const std::string& s, float x, float y, Color c = kText, float size = 15) { text(F.sans, s, x, y, size, c); }
 static float uiW(const std::string& s, float size = 15) { return textW(F.sans, s, size); }
 // Shortens text with "..." until it fits in `w`.
@@ -485,7 +510,7 @@ static void saveSettings() {
     std::ofstream f(settingsFile(), std::ios::binary);
     if (!f) return;
     f << "folder=" << E.root.string() << "\nfiles=" << (int)E.sideW << "\ndocs=" << (int)E.docsW << "\npanel=" << (int)E.panelH
-      << "\ndocsOpen=" << (E.docsOpen ? 1 : 0) << "\ntextSize=" << (int)F.size << "\n";
+      << "\ndocsOpen=" << (E.docsOpen ? 1 : 0) << "\nzoom=" << Z << "\n";
 }
 
 static std::map<std::string, std::string> loadSettings() {
@@ -939,8 +964,8 @@ struct Layout {
 static Layout L;
 
 static void computeLayout() {
-    L.W = (float)GetScreenWidth();
-    L.H = (float)GetScreenHeight();
+    L.W = GetScreenWidth() / Z;   // everything is laid out before zooming
+    L.H = GetScreenHeight() / Z;
     E.sideW = std::clamp(E.sideW, 140.0f, std::max(140.0f, L.W * 0.45f));
     E.docsW = std::clamp(E.docsW, 260.0f, std::max(260.0f, L.W - E.sideW - 300));
     E.panelH = std::clamp(E.panelH, 60.0f, std::max(60.0f, L.H - 220));
@@ -1186,7 +1211,7 @@ static void closeTab(int i) {
 
 static void drawTabs() {
     DrawRectangle((int)L.editX, (int)L.top, (int)L.editW, (int)L.tabs, kPanelDark);
-    BeginScissorMode((int)L.editX, (int)L.top, (int)L.editW, (int)L.tabs);
+    clip((int)L.editX, (int)L.top, (int)L.editW, (int)L.tabs);
     float x = L.editX;
     for (int i = 0; i < (int)E.docs.size(); i++) {
         std::string name = E.docs[i].path.filename().string() + (E.docs[i].dirty ? " \xE2\x80\xA2" : "");
@@ -1220,7 +1245,7 @@ static void drawSideBar() {
     DrawRectangle(0, (int)L.top + 1, (int)w, (int)(L.H - L.top - L.status), kPanel);
     DrawLine((int)w - 1, (int)L.top, (int)w - 1, (int)(L.H - L.status), kBorder);
     float y0 = L.top + 8;
-    ui("FILES", 14, y0 + 2, kDim, 13);
+    if (w > 230) ui("FILES", 14, y0 + 2, kDim, 13);
     // new file / new folder, in the chosen folder
     std::string where = E.chosenFolder.empty() ? "" : E.chosenFolder + "/";
     if (button("+ Folder", w - 76, y0 - 2, 66, 22)) startPrompt(Prompt::NewFolder, where);
@@ -1228,7 +1253,7 @@ static void drawSideBar() {
     float listTop = y0 + 28, rowH = 22;
     float listH = L.H - L.status - listTop - 4;
     float total = 0;
-    BeginScissorMode(0, (int)listTop, (int)w - 1, (int)listH);
+    clip(0, (int)listTop, (int)w - 1, (int)listH);
     float y = listTop - E.sideScroll;
     int hideBelow = -1;   // inside a closed folder: rows deeper than this are hidden
     for (const Entry& e : E.tree) {
@@ -1285,7 +1310,7 @@ static void drawEditor() {
         return;
     }
     Doc& d = *dp;
-    BeginScissorMode((int)L.editX, (int)L.editY, (int)L.editW, (int)L.editH);
+    clip((int)L.editX, (int)L.editY, (int)L.editW, (int)L.editH);
     int first = std::max(0, (int)(d.scrollY / F.lineH));
     int last = std::min((int)d.lines.size() - 1, first + (int)(L.editH / F.lineH) + 1);
     int state = 0;   // the comment/string state at the first visible line
@@ -1318,7 +1343,7 @@ static void drawEditor() {
             float x = tx + visCol(s, sp.from) * F.charW;
             if (x > L.docsX) break;
             std::string piece = s.substr(sp.from, sp.to - sp.from);
-            if (piece != " ") text(F.mono, piece, x, ty, F.size, tokColor(sp.tok));
+            if (piece != " ") mono(piece, x, ty, tokColor(sp.tok));
         }
         for (const Problem* p : here) {   // a wavy line under each problem
             if (p->line - 1 != l) continue;
@@ -1341,8 +1366,7 @@ static void drawEditor() {
         for (const Problem* p : here)
             if (p->line - 1 == l) (p->warning ? warn : err) = true;
         if (err || warn) DrawCircle((int)(L.editX + 8), (int)(y + F.lineH / 2), 3.5f, err ? kError : kWarning);
-        text(F.mono, num, L.editX + L.gutter - 6 - F.charW * 1.5f - num.size() * F.charW, y + (F.lineH - F.size) / 2, F.size,
-             l == d.cur.line ? kText : kDim);
+        mono(num, L.editX + L.gutter - 6 - F.charW * 1.5f - num.size() * F.charW, y + (F.lineH - F.size) / 2, l == d.cur.line ? kText : kDim);
     }
     EndScissorMode();
 }
@@ -1371,7 +1395,7 @@ static void drawDocsPanel() {
         // the list of pages (only those with the search words, if there are any)
         std::string q = lower(E.docSearch);
         float y = top - E.listScroll, rowH = 24, total = 0;
-        BeginScissorMode((int)x0, (int)top, (int)w, (int)viewH);
+        clip((int)x0, (int)top, (int)w, (int)viewH);
         for (int i = 0; i < (int)E.pages.size(); i++) {
             const DocPage& p = E.pages[i];
             if (!q.empty() && p.textLower.find(q) == std::string::npos && lower(p.title).find(q) == std::string::npos) continue;
@@ -1409,7 +1433,7 @@ static void drawDocsPanel() {
     if (E.layoutW != width) layoutDocs(width);
     E.docScroll = std::clamp(E.docScroll, 0.0f, std::max(0.0f, E.layoutH - viewH));
     DrawRectangle((int)x0 + 1, (int)top, (int)w - 1, (int)viewH, kBg);
-    BeginScissorMode((int)x0 + 1, (int)top, (int)w - 1, (int)viewH);
+    clip((int)x0 + 1, (int)top, (int)w - 1, (int)viewH);
     for (const DocItem& it : E.layout) {
         float y = top + it.y - E.docScroll;
         if (it.boxH > 0) {
@@ -1422,7 +1446,7 @@ static void drawDocsPanel() {
             std::vector<Span> spans;
             highlight(it.s, state, spans);
             for (const Span& sp : spans)
-                text(F.mono, it.s.substr(sp.from, sp.to - sp.from), x0 + it.x + visCol(it.s, sp.from) * F.charW, y, it.size, tokColor(sp.tok));
+                mono(it.s.substr(sp.from, sp.to - sp.from), x0 + it.x + visCol(it.s, sp.from) * F.charW, y, tokColor(sp.tok));
         } else {
             text(F.sans, it.s, x0 + it.x, y, it.size, it.color);
         }
@@ -1448,7 +1472,7 @@ static void drawPanel() {
     }
     if (E.check) ui("checking...", x + 10, L.panelY + 7, kDim, 14);
     float top = L.panelY + 32, h = E.panelH - 34;
-    BeginScissorMode((int)px, (int)top, (int)pw, (int)h);
+    clip((int)px, (int)top, (int)pw, (int)h);
     if (E.panel == Panel::Problems) {
         float y = top;
         if (E.problems.empty()) ui(fs::exists(E.root / "main.frg") ? "No problems." : "No main.frg here, so there's nothing to check.", px + 16, y + 4, kDim, 14);
@@ -1482,7 +1506,7 @@ static void drawPanel() {
             if (y > top + h) break;
             const std::string& s = lines[i];
             Color c = s.find("error") != std::string::npos ? kError : s.find("warning") != std::string::npos ? kWarning : kText;
-            text(F.mono, s, px + 14, y, F.size, c);
+            mono(s, px + 14, y, c);
         }
         if (E.output.empty()) ui("Press F5 to run the game. What it prints shows here.", px + 16, top + 4, kDim, 14);
     }
@@ -1499,7 +1523,7 @@ static void drawStatus() {
                           : E.prompt == Prompt::OpenFolder ? "Open the game folder (Tab finishes a name): "
                                                            : "Go to line: ";
         ui(label, 10, y + 4, kText, 14);
-        text(F.mono, E.promptText + "_", 14 + uiW(label, 14), y + 4, F.size, kAccent);
+        mono(E.promptText + "_", 14 + uiW(label, 14), y + 4, kAccent);
         return;
     }
     Doc* d = cur();
@@ -1514,13 +1538,26 @@ static void drawStatus() {
     }
     if (GetTime() - E.statusAt < 4) left = E.status;
     ui(left, 10, y + 4, kText, 14);
-    std::string right = E.run ? "the game is running (Shift+F5 stops it)" : "F5 run   F8 check   F1 docs   Ctrl+F find   Ctrl+O open folder";
+    std::string right = E.run ? "the game is running (Shift+F5 stops it)" : "F5 run   F8 check   F1 docs   Ctrl+F find   Ctrl+O open folder   Ctrl+= bigger";
     if (uiW(left, 14) + uiW(right, 14) + 40 < L.W) ui(right, L.W - uiW(right, 14) - 10, y + 4, kText, 14);
 }
 
 // ---------------------------------------------------------------- input
 
 static bool pressed(int key) { return IsKeyPressed(key) || IsKeyPressedRepeat(key); }
+
+// The zoom to start with: a bit bigger than 1:1, and bigger still on screens that ask for it (high-DPI laptops).
+static float defaultZoom() {
+    Vector2 dpi = GetWindowScaleDPI();
+    return std::clamp(1.2f * std::max(1.0f, dpi.x), 0.6f, 3.0f);
+}
+
+static void setZoom(float z) {
+    Z = std::clamp(std::round(z * 10) / 10, 0.6f, 3.0f);
+    SetMouseScale(1 / Z, 1 / Z);   // the mouse is read before zooming, like everything else
+    loadMono();
+    E.layoutW = 0;
+}
 
 static void moveCursor(Doc& d, Pos p, bool shift) {
     if (shift && !d.sel) {
@@ -1638,10 +1675,10 @@ static void handleKeys() {
         startCheck();
     }
     if (IsKeyPressed(KEY_F1)) toggleDocs();
-    if (ctrl && (IsKeyPressed(KEY_EQUAL) || IsKeyPressed(KEY_MINUS) || IsKeyPressed(KEY_KP_ADD) || IsKeyPressed(KEY_KP_SUBTRACT))) {
-        F.size = std::clamp(F.size + ((IsKeyPressed(KEY_EQUAL) || IsKeyPressed(KEY_KP_ADD)) ? 2.0f : -2.0f), 10.0f, 40.0f);
-        loadMono();
-        E.layoutW = 0;
+    if (ctrl && (IsKeyPressed(KEY_EQUAL) || IsKeyPressed(KEY_MINUS) || IsKeyPressed(KEY_KP_ADD) || IsKeyPressed(KEY_KP_SUBTRACT) || IsKeyPressed(KEY_ZERO))) {
+        bool bigger = IsKeyPressed(KEY_EQUAL) || IsKeyPressed(KEY_KP_ADD);
+        setZoom(IsKeyPressed(KEY_ZERO) ? defaultZoom() : Z + (bigger ? 0.1f : -0.1f));
+        say("zoom " + std::to_string((int)std::lround(Z * 100)) + "%  (Ctrl+= bigger, Ctrl+- smaller, Ctrl+0 back to normal)");
         saveSettings();
     }
     if (ctrl && IsKeyPressed(KEY_O)) return startPrompt(Prompt::OpenFolder, E.root.string());
@@ -1901,7 +1938,6 @@ int main(int argc, char** argv) {
     E.docsW = number("docs", 440);
     E.panelH = number("panel", 190);
     E.docsOpen = number("docsOpen", 0) != 0;
-    F.size = std::clamp(number("textSize", 18), 10.0f, 40.0f);
 
     // the folder: the one given, or else the one open last time (or else where it was started)
     fs::path start = argc > 1 ? fs::path(argv[1]) : fs::current_path();
@@ -1923,6 +1959,11 @@ int main(int argc, char** argv) {
     SetWindowMinSize(760, 420);
     SetExitKey(KEY_NULL);
     SetTargetFPS(60);
+    // a small screen (like a laptop's): use all of it
+    int monitor = GetCurrentMonitor();
+    if (GetMonitorWidth(monitor) < 1500 || GetMonitorHeight(monitor) < 950) MaximizeWindow();
+    Z = std::clamp(number("zoom", defaultZoom()), 0.6f, 3.0f);
+    SetMouseScale(1 / Z, 1 / Z);
     loadFonts(E.exeDir);
     saveSettings();
     refreshTree();
@@ -1963,6 +2004,7 @@ int main(int argc, char** argv) {
 
         BeginDrawing();
         ClearBackground(kBg);
+        BeginMode2D(Camera2D{{0, 0}, {0, 0}, 0, Z});
         drawEditor();
         drawPanel();
         drawDocsPanel();
@@ -1970,6 +2012,7 @@ int main(int argc, char** argv) {
         drawTabs();
         drawTopBar();
         drawStatus();
+        EndMode2D();
         EndDrawing();
 
         if (shot && frame == shotFrames) {

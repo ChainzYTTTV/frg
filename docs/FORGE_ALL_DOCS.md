@@ -1,4 +1,4 @@
-# Forge 0.9.7: the complete documentation
+# Forge 0.9.8: the complete documentation
 
 This one file holds everything written about the Forge programming language, so it can be uploaded in one go:
 
@@ -158,7 +158,7 @@ frg version
 g++ --version
 ```
 
-The first should print `Forge 0.9.7`. If `frg` isn't found, open a new terminal; if it's still not found, run the installer again with "Add Forge to my PATH" ticked.
+The first should print `Forge 0.9.8`. If `frg` isn't found, open a new terminal; if it's still not found, run the installer again with "Add Forge to my PATH" ticked.
 
 #### Installing on Linux
 
@@ -364,7 +364,8 @@ Open it from the Start menu (Windows) or the apps menu (Linux), or in a terminal
 - **Left:** the game's folders and files. Click a folder to open or close it. **+ File** and **+ Folder** make one in the folder you clicked last.
 - **Middle:** the code, with **Problems** and **Output** under it.
 - **Right:** the docs (F1 opens and closes them), with a search box.
-- Drag the edges between them to make any part bigger or smaller. Forge Edit remembers the sizes, the text size and the folder.
+- Drag the edges between them to make any part bigger or smaller. Forge Edit remembers the sizes, the zoom and the folder.
+- Text too small (or too big)? **Ctrl+=** and **Ctrl+-** zoom everything, and **Ctrl+0** goes back to normal.
 
 | Keys | What they do |
 |---|---|
@@ -382,7 +383,7 @@ Open it from the Start menu (Windows) or the apps menu (Linux), or in a terminal
 | **Ctrl+/** | turn the selected lines into comments, or back |
 | **Tab** / **Shift+Tab** | indent / unindent (the selected lines) |
 | **Ctrl+W**, **Ctrl+Tab** | close this file, go to the next one |
-| **Ctrl+=** / **Ctrl+-** | bigger / smaller text |
+| **Ctrl+=** / **Ctrl+-** / **Ctrl+0** | zoom everything bigger / smaller / back to normal |
 
 Errors get a red wavy line, a dot next to the line number, a red file name on the left, and a line in **Problems**: click it to go there. They show up a moment after you stop typing, without saving anything: Forge Edit checks a copy of the game with your changes. It only writes spaces (a tab in a file becomes 4 spaces). It doesn't have autocomplete or a debugger; VS Code does.
 
@@ -8670,7 +8671,7 @@ The error messages on this page are checked against the real `frg` every time Fo
 frg version
 ```
 
-which prints `Forge 0.9.7` (or whichever version you have). If it says `frg is not recognized`, the folder with `frg.exe` isn't on your `PATH`.
+which prints `Forge 0.9.8` (or whichever version you have). If it says `frg is not recognized`, the folder with `frg.exe` isn't on your `PATH`.
 
 #### Moving between folders
 
@@ -9128,7 +9129,7 @@ frg update --on       turn the daily check back on
 The daily check: once a day, when you build, run, test, package or make a game, `frg` also asks GitHub (in the background, at most a few seconds, never stopping the command) whether a newer Forge is out. If it is, a short note comes at the end:
 
 ```text
-    Update  Forge 0.9.8 is out (you have 0.9.7). Updating is optional: run frg update to get it,
+    Update  Forge 0.9.9 is out (you have 0.9.8). Updating is optional: run frg update to get it,
             or frg update --off to stop these notes.
 ```
 
@@ -9136,7 +9137,7 @@ It asks only for the number of the latest release (from `api.github.com`), sends
 
 ### frg version and frg help
 
-`frg version` (or `frg --version`) prints the version, like `Forge 0.9.7`.
+`frg version` (or `frg --version`) prints the version, like `Forge 0.9.8`.
 
 `frg help` (or `frg --help`, `frg -h`, or `frg` on its own) prints the list of commands and options.
 

@@ -8,7 +8,7 @@
 int frame = 0;
 
 int main(){
-    print(graphics3d.isCulling());
+    print(graphics3d.isViewCulling());
     window.open(400, 300, "culling");
     window.run();
     return 0;
@@ -16,13 +16,13 @@ int main(){
 
 void update(float dt){
     if (frame == 3) {
-        graphics3d.setCulling(false);
+        graphics3d.setViewCulling(false);
     }
 }
 
 void draw(){
     print("frame {frame}: {graphics3d.culledLastFrame()} culled last frame");
-    graphics3d.setCamera(Camera(vec3(0, 0, 0), vec3(0, 0, 1)));
+    graphics3d.setCamera(Camera3D(vec3(0, 0, 0), vec3(0, 0, 1)));
     graphics3d.drawCube(vec3(0, 0, 5), vec3(1, 1, 1), color.RED);       // in front: drawn
     graphics3d.drawCube(vec3(0, 0, -5), vec3(1, 1, 1), color.RED);      // behind: culled
     graphics3d.drawSphere(vec3(60, 0, 5), 1, color.RED);                // far to the side: culled

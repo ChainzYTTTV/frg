@@ -46,8 +46,8 @@ Several functions have two versions: one taking separate numbers, and one taking
 
 | Function | Gives back | What it does |
 |---|---|---|
-| `graphics2d.drawText(string text, float x, float y, int size, color c)` | — | draws text with its top-left corner at (x, y). `size` is the height in pixels. |
-| `graphics2d.textWidth(string text, int size)` | `int` | how wide that text would be, in pixels |
+| `graphics2d.drawText(string text, float x, float y, float size, color c)` | — | draws text with its top-left corner at (x, y). `size` is the height in pixels (sizes under 10 are drawn at 10). |
+| `graphics2d.textWidth(string text, float size)` | `float` | how wide that text would be, in pixels |
 | `graphics2d.drawFPS(float x, float y)` | — | draws the current frames per second |
 
 This uses the built-in pixel font. For other fonts, see [`Font`](assets.md#font).
@@ -56,7 +56,7 @@ Centering text:
 
 ```cpp
 string title = "GAME OVER";
-int w = graphics2d.textWidth(title, 48);
+float w = graphics2d.textWidth(title, 48);
 graphics2d.drawText(title, (window.width() - w) / 2.0, 200, 48, color.WHITE);
 ```
 
@@ -109,7 +109,7 @@ Things to know:
 - `Camera2D` is a struct, so `setCamera` takes a copy. After changing `camera.target`, call `setCamera(camera)` again (usually at the start of `draw()`, every frame).
 - To stop the camera from showing past the edges of the level, keep the target away from them with `math.clamp`: `math.clamp(x, window.width() / 2.0, LEVEL_WIDTH - window.width() / 2.0)`.
 - Physics doesn't know about the camera. Bodies keep their world positions; only the drawing moves.
-- The 3D camera (`Camera`, in `<graphics3d>`) is a different thing. A game can use both: 3D drawing ignores the 2D camera, and the 2D camera comes back at the next 2D drawing.
+- The 3D camera (`Camera3D`, in `<graphics3d>`) is a different thing. A game can use both: 3D drawing ignores the 2D camera, and the 2D camera comes back at the next 2D drawing.
 
 ## Colors and transparency
 

@@ -448,7 +448,7 @@ Hints:
 
 **Stage 20.** A sun in the middle, planets going round it at different speeds, and a moon going round one planet. The camera can turn around the scene.
 
-**Practices:** `<graphics3d>`, circles with `math.sin` and `math.cos`, `Camera`.
+**Practices:** `<graphics3d>`, circles with `math.sin` and `math.cos`, `Camera3D`.
 
 Steps:
 
@@ -456,7 +456,7 @@ Steps:
 2. One planet: its position is `vec3(math.cos(t) * distance, 0, math.sin(t) * distance)`, where `t` grows every frame.
 3. Several planets, each a struct with its own distance, speed, size and color.
 4. A moon: the same circle, but around its planet's position instead of the middle.
-5. Left/Right turns the camera: keep a `Camera cam`, call `cam.orbit(degrees)`, then `graphics3d.setCamera(cam)`.
+5. Left/Right turns the camera: keep a `Camera3D cam`, call `cam.orbit(degrees)`, then `graphics3d.setCamera(cam)`.
 
 Make it yours: lines showing the orbits (many short `drawLine`s around a circle). Up/Down zooms. Labels with each planet's name, placed with `graphics3d.toScreen`.
 

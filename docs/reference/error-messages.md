@@ -1184,13 +1184,15 @@ error: 'score' is defined twice in this file
 
 **Fix:** rename one of them.
 
-### `'window' is the name of a Forge library`
+### `'window' is the name of the window library, which this file includes`
 
-A name can't be a library's name, since `window.open` would be ambiguous.
+In a file that `#include`s a library, the library's name can't be the name of something else, since `window.open` has to mean the library there. (In a file without `#include <window>`, a variable can be called `window`.)
 
 <!-- check: error -->
 
 ```cpp
+#include <window>
+
 int main(){
     int window = 3;
     return 0;
@@ -1198,15 +1200,41 @@ int main(){
 ```
 
 ```text
-error: 'window' is the name of a Forge library
-  --> main.frg:2:9
+error: 'window' is the name of the window library, which this file includes
+  --> main.frg:4:9
    |
- 2 |     int window = 3;
+ 4 |     int window = 3;
    |         ^^^^^^
-  hint: pick a different name
+  hint: pick a new name, then change 'window' everywhere at once: in VS Code, Replace in Files (Ctrl+Shift+H), with Match Case (Alt+C) and Match Whole Word (Alt+W) turned on, so only this exact name changes
 ```
 
-**Fix:** pick another name, like `windowCount`.
+**Fix:** pick another name, like `windowCount`, and change it everywhere at once: **Replace in Files** (Ctrl+Shift+H) with **Match Case** and **Match Whole Word** turned on, so `windowCount` or `Window` elsewhere don't change too.
+
+### `unknown type 'Camera'` (it's called Camera3D since Forge 0.9.5)
+
+A name from an older Forge that was renamed before 1.0. The hint says what it's called now.
+
+<!-- check: error -->
+
+```cpp
+#include <graphics3d>
+
+int main(){
+    Camera cam;
+    return 0;
+}
+```
+
+```text
+error: unknown type 'Camera'
+  --> main.frg:4:5
+   |
+ 4 |     Camera cam;
+   |     ^^^^^^
+  hint: it's called Camera3D since Forge 0.9.5 - change 'Camera' to 'Camera3D' everywhere at once: in VS Code, Replace in Files (Ctrl+Shift+H), with Match Case (Alt+C) and Match Whole Word (Alt+W) turned on, so only this exact name changes
+```
+
+**Fix:** change every `Camera` to `Camera3D` at once, with Replace in Files (Ctrl+Shift+H). Turn on **Match Case**, or a variable called `camera` would become `camera3D`, and **Match Whole Word**, or `CameraShake` would become `Camera3DShake`. The other renamed names: `graphics3d.setCulling` / `isCulling` (now `setViewCulling` / `isViewCulling`), `time.clock` (now `timeOfDay`) and a font's `measure` (now `textWidth`).
 
 ### `'string' is a built-in type name, so it can't be used as a name`
 
@@ -1253,10 +1281,10 @@ error: 'negative' is a reserved word in Forge, so it can't be a parameter name
    |
  1 | int add(int a, int negative){
    |                    ^^^^^^^^
-  hint: pick a different name - the reserved words are listed in the docs (Reserved words)
+  hint: pick a new name, then change 'negative' everywhere at once: in VS Code, Replace in Files (Ctrl+Shift+H), with Match Case (Alt+C) and Match Whole Word (Alt+W) turned on, so only this exact name changes (the reserved words are listed in the docs: Reserved words)
 ```
 
-**Fix:** pick another name, like `amount`. The full list is in [Reserved words](../language/13-reserved-words.md).
+**Fix:** pick another name, like `amount`, and change it everywhere at once with Replace in Files (Match Case and Match Whole Word on). The full list is in [Reserved words](../language/13-reserved-words.md).
 
 ### `'feed' is already the name of a function in this file`
 

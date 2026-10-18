@@ -5,7 +5,9 @@ const fs = require('fs');
 const path = require('path');
 
 // ---------------------------------------------------------------- built-in library reference
-// [name, signature, description]. Keep in sync with src/prelude.cpp and src/builtins.cpp.
+// [name, signature, description]: the longer descriptions shown in autocomplete and hover. Which names exist, and
+// their signatures, come from frg itself (frg query), so a library function missing here still shows up; this
+// table only adds words to it (and is used when frg can't be found).
 
 const LIBRARIES = {
     stdio: [
@@ -98,8 +100,8 @@ const LIBRARIES = {
         ['drawCircleOutline', 'void drawCircleOutline(float x, float y, float radius, color c)', 'The outline of a circle.'],
         ['drawLine', 'void drawLine(float x1, float y1, float x2, float y2, color c, float thickness = 1)\nvoid drawLine(vec2 from, vec2 to, color c, float thickness = 1)', 'A line.'],
         ['drawTriangle', 'void drawTriangle(vec2 a, vec2 b, vec2 c, color fill)', 'A filled triangle.'],
-        ['drawText', 'void drawText(string text, float x, float y, int size, color c)', 'Text on the screen.'],
-        ['textWidth', 'int textWidth(string text, int size)', 'How wide some text would be, in pixels.'],
+        ['drawText', 'void drawText(string text, float x, float y, float size, color c)', 'Text on the screen.'],
+        ['textWidth', 'float textWidth(string text, float size)', 'How wide some text would be, in pixels.'],
         ['drawFPS', 'void drawFPS(float x, float y)', 'Shows the frames per second.'],
         ['clear', 'void clear(color c)', 'Fills the whole screen with a color.'],
         ['setCamera', 'void setCamera(Camera2D camera)', 'Drawing after this is moved, zoomed and turned by the camera. Camera2D(target, offset, zoom = 1, rotation = 0): target is the world point to look at, offset is where it shows on the screen.'],
@@ -110,7 +112,7 @@ const LIBRARIES = {
     ],
     assets: [
         ['loadTexture', 'Texture loadTexture(string path)', 'Loads an image (.png .jpg .bmp .tga .gif .qoi). Then: tex.draw(x, y), drawScaled, drawRotated, drawPart, width(), height(). For a sprite sheet: Animation(tex, frameWidth, frameHeight, frames, fps), then anim.update(dt) and anim.draw(x, y).'],
-        ['loadFont', 'Font loadFont(string path, int quality = 64)', 'Loads a font (.ttf .otf). Then: font.drawText(text, x, y, size, color), font.measure(text, size).'],
+        ['loadFont', 'Font loadFont(string path, int quality = 64)', 'Loads a font (.ttf .otf). Then: font.drawText(text, x, y, size, color), font.textWidth(text, size).'],
         ['exists', 'bool exists(string path)', 'True if the file is in the game folder.'],
     ],
     audio: [
@@ -120,8 +122,8 @@ const LIBRARIES = {
         ['update', 'void update()', 'Keeps music playing in programs without a window (the window does this by itself).'],
     ],
     graphics3d: [
-        ['setCamera', 'void setCamera(Camera camera)', 'The camera the next 3D drawing uses. Camera(position, target), and cam.orbit(degrees).'],
-        ['camera', 'Camera camera()', 'The camera being used.'],
+        ['setCamera', 'void setCamera(Camera3D camera)', 'The camera the next 3D drawing uses. Camera3D(position, target), and cam.orbit(degrees).'],
+        ['camera', 'Camera3D camera()', 'The camera being used.'],
         ['drawCube', 'void drawCube(vec3 position, vec3 size, color c)', 'A solid box, centered on position.'],
         ['drawCubeOutline', 'void drawCubeOutline(vec3 position, vec3 size, color c)', 'The edges of a box.'],
         ['drawSphere', 'void drawSphere(vec3 center, float radius, color c)', 'A ball.'],
@@ -140,7 +142,7 @@ const LIBRARIES = {
     time: [
         ['now', 'double now()', 'Seconds since the game started.'],
         ['sleep', 'void sleep(float seconds)', 'Stops everything for a while (in games, use a task and wait() instead).'],
-        ['clock', 'string clock()', 'The time of day, like "14:05:09".'],
+        ['timeOfDay', 'string timeOfDay()', 'The time of day, like "14:05:09".'],
         ['date', 'string date()', "Today's date, like \"2026-10-14\"."],
         ['year', 'int year()', 'The current year.'],
         ['month', 'int month()', 'The current month (1 to 12).'],
@@ -664,7 +666,9 @@ function libraryHover(document, position) {
     const entry = LIBRARIES[m[1]].find(([name]) => name === word);
     if (!entry) return undefined;
     const md = new vscode.MarkdownString().appendCodeblock(entry[1], 'forge').appendMarkdown(entry[2]);
-    return new vscode.Hover(md, range);
+    const hover = new vscode.Hover(md, range);
+    hover.description = entry[2];   // added to frg's own answer
+    return hover;
 }
 
 // ---------------------------------------------------------------- your own code: definitions, hover, autocomplete, rename
@@ -739,25 +743,30 @@ const referenceProvider = {
     },
 };
 
+// Forge's own answer comes first (it always matches the installed Forge); a built-in library's longer
+// description is added to it.
 const hoverProvider = {
     async provideHover(document, position, token) {
-        const library = libraryHover(document, position);  // the built-in libraries have longer descriptions
-        if (library) return library;
+        const library = libraryHover(document, position);
         const r = await query('hover', document, position, null, token);
-        if (!r || !r.text) return undefined;
-        return new vscode.Hover(new vscode.MarkdownString(r.text), document.getWordRangeAtPosition(position));
+        if (!r || !r.text) return library;
+        const md = new vscode.MarkdownString(r.text);
+        if (library && library.description) md.appendMarkdown('\n\n' + library.description);
+        return new vscode.Hover(md, document.getWordRangeAtPosition(position));
     },
 };
 
 const completionProvider = {
     async provideCompletionItems(document, position, token) {
         const library = libraryCompletions(document, position);
-        if (library) return library;
         const r = await query('complete', document, position, null, token);
-        if (!r || !r.items) return undefined;
+        if (!r || !r.items || !r.items.length) return library;   // frg not found: the built-in table
+        const docs = new Map((library || []).map(item => [item.label, item]));
         return r.items.map(i => {
             const item = new vscode.CompletionItem(i.label, COMPLETION_KINDS[i.kind] ?? vscode.CompletionItemKind.Text);
             if (i.detail) item.detail = i.detail;
+            const known = docs.get(i.label);
+            if (known && known.documentation) item.documentation = known.documentation;
             return item;
         });
     },

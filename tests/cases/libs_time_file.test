@@ -12,7 +12,7 @@ int main(){
     t.restart();
     print(t.isDone());
     print(time.now() > 0.05);
-    print(time.date().length == 10 and time.clock().length == 8);
+    print(time.date().length == 10 and time.timeOfDay().length == 8);
     print(time.year() >= 2024 and time.month() >= 1 and time.month() <= 12);
 
     print(file.exists("save/game.txt"));

@@ -163,7 +163,7 @@ void drawMenu(){
     if (hovered != blocks.AIR) {
         vec2 m = input.mousePosition();
         string name = blocks.NAMES[hovered];
-        int tw = graphics2d.textWidth(name, 20);
+        float tw = graphics2d.textWidth(name, 20);
         graphics2d.drawRect(m.x + 14, m.y - 30, tw + 12, 28, color(20, 10, 30, 230));
         graphics2d.drawText(name, m.x + 20, m.y - 26, 20, color.WHITE);
     }

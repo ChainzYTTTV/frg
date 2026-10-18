@@ -39,11 +39,11 @@ right of +x is 0.0, 0.0, 1.0
 What you see depends on the camera: where it is, and what it's looking at.
 
 ```cpp
-Camera cam = Camera(vec3(8, 6, 8), vec3(0, 0, 0));   // standing at (8, 6, 8), looking at the middle
+Camera3D cam = Camera3D(vec3(8, 6, 8), vec3(0, 0, 0));   // standing at (8, 6, 8), looking at the middle
 graphics3d.setCamera(cam);
 ```
 
-`Camera` is a struct:
+`Camera3D` is a struct:
 
 | Field | Type | Meaning |
 |---|---|---|
@@ -54,8 +54,8 @@ graphics3d.setCamera(cam);
 
 | Making one | |
 |---|---|
-| `Camera(vec3 position, vec3 target)` | |
-| `Camera()` | at `(0, 5, 10)`, looking at `(0, 0, 0)` |
+| `Camera3D(vec3 position, vec3 target)` | |
+| `Camera3D()` | at `(0, 5, 10)`, looking at `(0, 0, 0)` |
 
 | Method | What it does |
 |---|---|
@@ -63,10 +63,10 @@ graphics3d.setCamera(cam);
 
 | Function | What it does |
 |---|---|
-| `graphics3d.setCamera(Camera camera)` | uses this camera for the 3D drawing that comes after |
+| `graphics3d.setCamera(Camera3D camera)` | uses this camera for the 3D drawing that comes after |
 | `graphics3d.camera()` | gives back the camera being used |
 
-Because `Camera` is a struct, changing your variable doesn't change the camera being used. Call `setCamera` again after changing it, usually every frame:
+Because `Camera3D` is a struct, changing your variable doesn't change the camera being used. Call `setCamera` again after changing it, usually every frame:
 
 ```cpp
 void update(float dt){
@@ -186,7 +186,7 @@ void update(float dt){
 }
 
 void draw(){
-    graphics3d.setCamera(Camera(vec3(0, 3, -6), vec3(0, 0, 0)));
+    graphics3d.setCamera(Camera3D(vec3(0, 3, -6), vec3(0, 0, 0)));
     graphics3d.drawGrid(10, 1);
     graphics3d.pushTransform(vec3(0, 0.5, 0), vec3.UP, turn);                       // a body that turns
     graphics3d.drawCube(vec3.ZERO, vec3(0.6, 1, 0.4), color.RED);
@@ -213,8 +213,8 @@ The gun is easiest to draw with its own camera that never moves, so it's always 
 #include <window>
 #include <graphics3d>
 
-Camera player = Camera(vec3(0, 1.6, -4), vec3(0, 1.6, 0));
-Camera gunView = Camera(vec3(0, 0, 0), vec3(0, 0, 1));   // looking along +z, so +x is on the left
+Camera3D player = Camera3D(vec3(0, 1.6, -4), vec3(0, 1.6, 0));
+Camera3D gunView = Camera3D(vec3(0, 0, 0), vec3(0, 0, 1));   // looking along +z, so +x is on the left
 
 int main(){
     window.open(960, 540, "First person");
@@ -265,8 +265,8 @@ Forge skips anything that's entirely outside what the camera sees: behind it, of
 
 | Function | What it does |
 |---|---|
-| `graphics3d.setCulling(bool on)` | turns culling off (`false`) or back on (`true`); it's on to start with |
-| `graphics3d.isCulling()` | whether it's on |
+| `graphics3d.setViewCulling(bool on)` | turns culling off (`false`) or back on (`true`); it's on to start with |
+| `graphics3d.isViewCulling()` | whether it's on |
 | `graphics3d.culledLastFrame()` | how many things weren't drawn in the last frame because they were out of view |
 
 Culling never changes what you see, only how fast it's drawn, so you'll rarely need to turn it off. `culledLastFrame()` is handy for checking that it works: print it, turn around, and watch the number change.
@@ -305,7 +305,7 @@ Every 3D drawing call switches into 3D mode by itself, and every [2D call](graph
 #include <graphics3d>
 #include <math>
 
-Camera cam = Camera(vec3(6, 5, 6), vec3(0, 0, 0));
+Camera3D cam = Camera3D(vec3(6, 5, 6), vec3(0, 0, 0));
 float t = 0;
 
 int main(){

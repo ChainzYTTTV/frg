@@ -570,8 +570,8 @@ Library functions are reached through the library name (`window.open(...)`). Lib
 | `<physics3d>` | 3D physics in the `<graphics3d>` world (y up): `Body3D(vec3 position, vec3 size)` where `position` is the **middle**; fields `velocity`, `isStatic`, `solid`, `sphere` (a ball), `gravityScale`, `bounce`, `stepHeight` (climbs steps that high: stairs), `layer`, and `onGround` / `onCeiling` / `onWall` set by Forge. `physics3d.add(body)`, `remove`, `step(dt)`, `setGravity(vec3)` (starts at `vec3(0, -9.81, 0)`), `collide(a, b, on)`, `clear()`, `count()`, `drawDebug()` (needs `<graphics3d>`), and `physics3d.raycast(from, direction, maxDistance)`, which gives a `RayHit` (`hit`, `point`, `normal`, `distance`, `body`). Nothing turns: no tumbling boxes. See `examples/physics3d` |
 | `<assets>` | `assets.loadTexture("x.png")` gives a `Texture`, `assets.loadFont("x.ttf")` gives a `Font` (an optional second number is the size the letters are prepared at: use about the biggest size you draw it at, 64 to start with), `assets.exists(path)` |
 | `<audio>` | `audio.loadSound("x.wav")` gives a `Sound`, `audio.loadMusic("x.ogg")` gives a `Music`, `audio.setVolume(v)` |
-| `<graphics3d>` | the `Camera` struct and `Model` class, `graphics3d.setCamera(cam)`, `drawCube(pos, size, color)`, `drawCubeOutline`, `drawSphere(center, radius, color)`, `drawSphereOutline`, `drawCylinder(pos, radius, height, color)`, `drawPlane(center, vec2 size, color)`, `drawGrid(slices, spacing)`, `drawLine(from, to, color)`, `toScreen(vec3)`, `loadModel("x.glb")`, `setLight(direction, light, ambient)` (one light from a direction, like the sun, plus a soft light everywhere: everything 3D is lit, so it stops looking flat; `lightOff()`, `isLit()`), automatic culling (things completely out of view aren't drawn; `setCulling(false)` turns it off, `culledLastFrame()` counts them), and `makeMesh(positions, uvs, shades, texture)`: a `Mesh` of your own triangles, sent to the graphics card once and drawn in one call with `mesh.draw(position)` (corners go counter-clockwise on the front; pixels that are mostly see-through are cut out). A block world builds one per chunk: see `examples/voxel`. `clearDepth()` makes what's drawn after it show in front of everything before it (a first-person gun). `pushTransform(position, axis, degrees, scale)` and `popTransform()` turn, move and scale everything drawn between them (they nest; each push needs a pop before the frame ends). Directions: y is up, and looking along +z, +x is on the **left**, so a camera's right is `forward.cross(vec3.UP)` |
-| `<time>` | `time.now()`, `time.sleep(s)`, `time.clock()`, `time.date()`, `year() month() day() hour() minute() second()`, the `Timer` class |
+| `<graphics3d>` | the `Camera3D` struct and `Model` class, `graphics3d.setCamera(cam)`, `drawCube(pos, size, color)`, `drawCubeOutline`, `drawSphere(center, radius, color)`, `drawSphereOutline`, `drawCylinder(pos, radius, height, color)`, `drawPlane(center, vec2 size, color)`, `drawGrid(slices, spacing)`, `drawLine(from, to, color)`, `toScreen(vec3)`, `loadModel("x.glb")`, `setLight(direction, light, ambient)` (one light from a direction, like the sun, plus a soft light everywhere: everything 3D is lit, so it stops looking flat; `lightOff()`, `isLit()`), automatic culling (things completely out of view aren't drawn; `setViewCulling(false)` turns it off, `culledLastFrame()` counts them), and `makeMesh(positions, uvs, shades, texture)`: a `Mesh` of your own triangles, sent to the graphics card once and drawn in one call with `mesh.draw(position)` (corners go counter-clockwise on the front; pixels that are mostly see-through are cut out). A block world builds one per chunk: see `examples/voxel`. `clearDepth()` makes what's drawn after it show in front of everything before it (a first-person gun). `pushTransform(position, axis, degrees, scale)` and `popTransform()` turn, move and scale everything drawn between them (they nest; each push needs a pop before the frame ends). Directions: y is up, and looking along +z, +x is on the **left**, so a camera's right is `forward.cross(vec3.UP)` |
+| `<time>` | `time.now()`, `time.sleep(s)`, `time.timeOfDay()`, `time.date()`, `year() month() day() hour() minute() second()`, the `Timer` class |
 | `<tilemap>` | levels drawn as text, one character per tile: `TileMap level = TileMap("""` ... `""", 32);` (or `tilemap.load("level1.txt", 32)`). The game decides what characters mean. `level.addBodies("#")` makes static physics bodies, merging neighbouring tiles into big boxes (`addBodies("=", true)` makes one-way platforms); `level.find("C")` gives the top-left corner (pixels) of every `C` tile; `get(column, row)` (`" "` outside the map), `set(column, row, "#")`, `columns()`, `rows()`, `width()`, `height()` (pixels), `tileRect(column, row)`, `columnAt(x)`, `rowAt(y)`; `draw("#", color)` fills tiles with a color, `drawTiles(tileset, 16, "#=")` draws them from a tileset image (each character is the next 16x16 picture). Don't name the variable `map` (a type name) |
 | `<particles>` | dust, sparks, smoke, explosions: `Emitter sparks = Emitter(vec2(x, y));`, then `sparks.burst(30);` (all at once) or `sparks.rate = 50;` (a steady stream per second), and each frame `sparks.update(dt);` and `sparks.draw();`. Fields to set: `position`, `lifetime` (seconds), `speed`, `direction` (degrees: 0 right, -90 up), `spread` (degrees around it: 360 every way), `startColor`/`endColor` (an end color with alpha 0 fades them out), `startSize`/`endSize`, `gravity` (a vec2). Also `count()` and `clear()`. It draws in 2D, through the 2D camera |
 | `<tween>` | smooth changes over time: `Tween slide = Tween(-300, 40, 0.5, Ease.OUT);` (from, to, seconds, easing), then `slide.update(dt);` and use `slide.value()`. Also `progress()` (0 to 1, with `lerp` for positions and colors: `a.lerp(b, t.progress())`), `isDone()`, `restart()`, `reverse()` (go back from where it is), fields `looping` and `pingPong`. `Ease.LINEAR` (steady), `IN` (slow start), `OUT` (slow end, the default), `IN_OUT`, `BOUNCE`. There are no callbacks: check `isDone()` |
@@ -607,7 +607,7 @@ void draw(){
 }
 ```
 
-`graphics2d.screenToWorld(input.mousePosition())` turns the mouse position into a world position (and `worldToScreen` goes the other way). `Camera2D` is a struct, so call `setCamera` again after changing it (each frame, in `draw`). Physics doesn't know about the camera; only drawing moves. The 3D `Camera` from `<graphics3d>` is separate.
+`graphics2d.screenToWorld(input.mousePosition())` turns the mouse position into a world position (and `worldToScreen` goes the other way). `Camera2D` is a struct, so call `setCamera` again after changing it (each frame, in `draw`). Physics doesn't know about the camera; only drawing moves. The 3D `Camera3D` from `<graphics3d>` is separate.
 
 #### Physics
 
@@ -649,7 +649,7 @@ player.draw(x, y);                                    // draw(x, y, tint) tints 
 player.drawScaled(x, y, 4);
 player.drawRotated(vec2(x, y), 45, 1);                // centered at (x, y), turned 45 DEGREES, scale 1
 player.drawPart(rect(0, 0, 16, 16), rect(x, y, 64, 64));   // one frame of a sprite sheet, stretched to 64x64
-big.drawText("Hello", 20, 20, 48, color.WHITE);       // big.measure(text, size) gives the width
+big.drawText("Hello", 20, 20, 48, color.WHITE);       // big.textWidth(text, size) gives the width
 jump.play();
 song.play();
 ```
@@ -663,7 +663,7 @@ song.play();
 **3D** (`<graphics3d>`). In 3D, **y goes up**.
 
 ```cpp
-Camera cam = Camera(vec3(8, 6, 8), vec3(0, 0, 0));    // camera position, and the point it looks at
+Camera3D cam = Camera3D(vec3(8, 6, 8), vec3(0, 0, 0));    // camera position, and the point it looks at
 Model ship = graphics3d.loadModel("ship.glb");        // .obj .gltf .glb .iqm .vox .m3d
 
 void draw(){
@@ -677,7 +677,7 @@ void draw(){
 }
 ```
 
-`Camera` is a struct with `position`, `target`, `up`, `fov` (45 to start with) and `orbit(degrees)`. There's no lighting yet: shapes are drawn in flat colors.
+`Camera3D` is a struct with `position`, `target`, `up`, `fov` (45 to start with) and `orbit(degrees)`. Shapes are drawn in flat colors until a light is turned on: `graphics3d.setLight(vec3(-0.5, -1, -0.3))`.
 
 **Scenes** (`<scenes>`). Each part of a game is a class inheriting from `Scene` that fills in any of `enter()`, `update(float dt)`, `draw()` and `exit()`. `scenes.change(Level())` switches at the start of the next `scenes.update(dt)`. The game calls `scenes.update(dt)` and `scenes.draw()` every frame.
 
@@ -1686,7 +1686,7 @@ Hints:
 
 **Stage 14.** A sun in the middle, planets going round it at different speeds, and a moon going round one planet. The camera can turn around the scene.
 
-**Practices:** `<graphics3d>`, circles with `math.sin` and `math.cos`, `Camera`.
+**Practices:** `<graphics3d>`, circles with `math.sin` and `math.cos`, `Camera3D`.
 
 Steps:
 
@@ -1694,7 +1694,7 @@ Steps:
 2. One planet: its position is `vec3(math.cos(t) * distance, 0, math.sin(t) * distance)`, where `t` grows every frame.
 3. Several planets, each a struct with its own distance, speed, size and color.
 4. A moon: the same circle, but around its planet's position instead of the middle.
-5. Left/Right turns the camera: keep a `Camera cam`, call `cam.orbit(degrees)`, then `graphics3d.setCamera(cam)`.
+5. Left/Right turns the camera: keep a `Camera3D cam`, call `cam.orbit(degrees)`, then `graphics3d.setCamera(cam)`.
 
 Make it yours: lines showing the orbits (many short `drawLine`s around a circle). Up/Down zooms. Labels with each planet's name, placed with `graphics3d.toScreen`.
 
@@ -5039,13 +5039,26 @@ These words have special meanings, so they can't be used as names for variables,
 
 ### Library names
 
-`stdio` `math` `random` `window` `input` `graphics2d` `graphics3d` `assets` `audio` `physics` `time` `file` `save` `tween` `particles` `tilemap` `scenes` `ui` `ECS` `tasks` `testing` `OpenGL` `DirectX` `Vulkan`, plus `network`, which is planned.
+`stdio` `math` `random` `window` `input` `graphics2d` `graphics3d` `assets` `audio` `physics` `physics3d` `time` `file` `save` `tween` `particles` `tilemap` `scenes` `ui` `ECS` `tasks` `testing` `OpenGL` `DirectX` `Vulkan`
 
-Types that come from a library (`Key`, `MouseButton`, `GamepadButton`, `Body`, `Texture`, `Animation`, `Font`, `Sound`, `Music`, `Camera`, `Camera2D`, `Model`, `Timer`, `Tween`, `Ease`, `Emitter`, `TileMap`, `Scene`, `Entity`, `Component`) can't be reused as names of your own types **in a file that includes that library**.
+A library's name can't be the name of something of yours **in a file that `#include`s that library**, since `time.now()` has to mean the library there. In every other file it's free: a file without `#include <time>` can have a variable called `time`. That's also why a library added in a later Forge never breaks a game: only files that include it are affected.
+
+Types that come from a library (`Key`, `MouseButton`, `GamepadButton`, `Body`, `Texture`, `Animation`, `Font`, `Sound`, `Music`, `Camera3D`, `Camera2D`, `Model`, `Timer`, `Tween`, `Ease`, `Emitter`, `TileMap`, `Scene`, `Entity`, `Component`) can't be reused as names of your own types **in a file that includes that library**.
 
 ### Your own top-level files and folders
 
 If the game has `player.frg` or an `enemies/` folder in its top folder, then `player` and `enemies` can't be used as names anywhere in the game, because `player.something` always means the file.
+
+### When a newer Forge takes a name you used
+
+Before Forge 1.0, a few names were changed (like `Camera` to `Camera3D`), and later Forges may add keywords. Either way, the error says exactly what happened, and, when something was renamed, what it's called now:
+
+```text
+error: unknown type 'Camera'
+  hint: it's called Camera3D since Forge 0.9.5 - change 'Camera' to 'Camera3D' everywhere at once: in VS Code, Replace in Files (Ctrl+Shift+H), with Match Case (Alt+C) and Match Whole Word (Alt+W) turned on, so only this exact name changes
+```
+
+Change it **everywhere at once** rather than one line at a time: in VS Code, **Replace in Files** (Ctrl+Shift+H), type the old name and the new one, and turn on **Match Case** (Alt+C) and **Match Whole Word** (Alt+W) before replacing. Match Case keeps `camera` (a variable) from turning into `camera3D`; Match Whole Word keeps `myCamera` and `CameraShake` as they are. For a name of your own that's now taken, pick a new name and do the same.
 
 ### Word operators that are *not* reserved
 
@@ -5494,6 +5507,8 @@ They take on whichever decimal type they're used as (`float` or `double`).
 | `math.acos(x)` | float | inverse cosine, in radians | |
 | `math.atan(x)` | float | inverse tangent, in radians | |
 | `math.atan2(y, x)` | float | the angle of the point (x, y), in radians. Note: y comes first. | |
+| `math.toRadians(degrees)` | float | degrees turned into radians | `math.toRadians(180)` → `3.14159...` |
+| `math.toDegrees(radians)` | float | radians turned into degrees | `math.toDegrees(math.PI)` → `180.0` |
 | `math.exp(x)` | float | e to the power x | |
 | `math.log(x)` | float | natural logarithm | |
 
@@ -5501,7 +5516,7 @@ Notes:
 
 - **`floor`, `ceil` and `round` give back a decimal number.** Wrap them in `int(...)` for a whole number: `int(math.round(2.6))` is `3`.
 - `min`, `max`, `clamp` and `abs` keep whole numbers whole: `math.max(3, 8)` is the `int` `8`. Mixing types gives the bigger type: `math.min(2.5, 1)` is the `float` `1.0`.
-- Angles are in **radians**. To convert, `radians = degrees * math.PI / 180`. Note that `Texture.drawRotated` (see “`<assets>`: Images, Animations and Fonts”) and `graphics3d` (see “`<graphics3d>`: 3D Drawing”) rotations use **degrees**.
+- Angles are in **radians**. To convert, `math.toRadians(degrees)` and `math.toDegrees(radians)`. Note that `Texture.drawRotated` (see “`<assets>`: Images, Animations and Fonts”) and `graphics3d` (see “`<graphics3d>`: 3D Drawing”) rotations use **degrees**.
 - `sqrt` of a negative number, or `log` of zero or less, gives `nan` (not a number).
 - Squaring: `x * x` or `math.pow(x, 2)`. There's no `^` power operator.
 
@@ -5914,7 +5929,7 @@ void update(float dt){
     if (input.keyDown(Key.S)) {
         eye -= forward * (5 * dt);
     }
-    graphics3d.setCamera(Camera(eye, eye + look));
+    graphics3d.setCamera(Camera3D(eye, eye + look));
 }
 
 void draw(){
@@ -6054,8 +6069,8 @@ Several functions have two versions: one taking separate numbers, and one taking
 
 | Function | Gives back | What it does |
 |---|---|---|
-| `graphics2d.drawText(string text, float x, float y, int size, color c)` | — | draws text with its top-left corner at (x, y). `size` is the height in pixels. |
-| `graphics2d.textWidth(string text, int size)` | `int` | how wide that text would be, in pixels |
+| `graphics2d.drawText(string text, float x, float y, float size, color c)` | — | draws text with its top-left corner at (x, y). `size` is the height in pixels (sizes under 10 are drawn at 10). |
+| `graphics2d.textWidth(string text, float size)` | `float` | how wide that text would be, in pixels |
 | `graphics2d.drawFPS(float x, float y)` | — | draws the current frames per second |
 
 This uses the built-in pixel font. For other fonts, see `Font` (see “`<assets>`: Images, Animations and Fonts” › “Font”).
@@ -6064,7 +6079,7 @@ Centering text:
 
 ```cpp
 string title = "GAME OVER";
-int w = graphics2d.textWidth(title, 48);
+float w = graphics2d.textWidth(title, 48);
 graphics2d.drawText(title, (window.width() - w) / 2.0, 200, 48, color.WHITE);
 ```
 
@@ -6117,7 +6132,7 @@ Things to know:
 - `Camera2D` is a struct, so `setCamera` takes a copy. After changing `camera.target`, call `setCamera(camera)` again (usually at the start of `draw()`, every frame).
 - To stop the camera from showing past the edges of the level, keep the target away from them with `math.clamp`: `math.clamp(x, window.width() / 2.0, LEVEL_WIDTH - window.width() / 2.0)`.
 - Physics doesn't know about the camera. Bodies keep their world positions; only the drawing moves.
-- The 3D camera (`Camera`, in `<graphics3d>`) is a different thing. A game can use both: 3D drawing ignores the 2D camera, and the 2D camera comes back at the next 2D drawing.
+- The 3D camera (`Camera3D`, in `<graphics3d>`) is a different thing. A game can use both: 3D drawing ignores the 2D camera, and the 2D camera comes back at the next 2D drawing.
 
 ### Colors and transparency
 
@@ -6224,11 +6239,11 @@ right of +x is 0.0, 0.0, 1.0
 What you see depends on the camera: where it is, and what it's looking at.
 
 ```cpp
-Camera cam = Camera(vec3(8, 6, 8), vec3(0, 0, 0));   // standing at (8, 6, 8), looking at the middle
+Camera3D cam = Camera3D(vec3(8, 6, 8), vec3(0, 0, 0));   // standing at (8, 6, 8), looking at the middle
 graphics3d.setCamera(cam);
 ```
 
-`Camera` is a struct:
+`Camera3D` is a struct:
 
 | Field | Type | Meaning |
 |---|---|---|
@@ -6239,8 +6254,8 @@ graphics3d.setCamera(cam);
 
 | Making one | |
 |---|---|
-| `Camera(vec3 position, vec3 target)` | |
-| `Camera()` | at `(0, 5, 10)`, looking at `(0, 0, 0)` |
+| `Camera3D(vec3 position, vec3 target)` | |
+| `Camera3D()` | at `(0, 5, 10)`, looking at `(0, 0, 0)` |
 
 | Method | What it does |
 |---|---|
@@ -6248,10 +6263,10 @@ graphics3d.setCamera(cam);
 
 | Function | What it does |
 |---|---|
-| `graphics3d.setCamera(Camera camera)` | uses this camera for the 3D drawing that comes after |
+| `graphics3d.setCamera(Camera3D camera)` | uses this camera for the 3D drawing that comes after |
 | `graphics3d.camera()` | gives back the camera being used |
 
-Because `Camera` is a struct, changing your variable doesn't change the camera being used. Call `setCamera` again after changing it, usually every frame:
+Because `Camera3D` is a struct, changing your variable doesn't change the camera being used. Call `setCamera` again after changing it, usually every frame:
 
 ```cpp
 void update(float dt){
@@ -6371,7 +6386,7 @@ void update(float dt){
 }
 
 void draw(){
-    graphics3d.setCamera(Camera(vec3(0, 3, -6), vec3(0, 0, 0)));
+    graphics3d.setCamera(Camera3D(vec3(0, 3, -6), vec3(0, 0, 0)));
     graphics3d.drawGrid(10, 1);
     graphics3d.pushTransform(vec3(0, 0.5, 0), vec3.UP, turn);                       // a body that turns
     graphics3d.drawCube(vec3.ZERO, vec3(0.6, 1, 0.4), color.RED);
@@ -6398,8 +6413,8 @@ The gun is easiest to draw with its own camera that never moves, so it's always 
 #include <window>
 #include <graphics3d>
 
-Camera player = Camera(vec3(0, 1.6, -4), vec3(0, 1.6, 0));
-Camera gunView = Camera(vec3(0, 0, 0), vec3(0, 0, 1));   // looking along +z, so +x is on the left
+Camera3D player = Camera3D(vec3(0, 1.6, -4), vec3(0, 1.6, 0));
+Camera3D gunView = Camera3D(vec3(0, 0, 0), vec3(0, 0, 1));   // looking along +z, so +x is on the left
 
 int main(){
     window.open(960, 540, "First person");
@@ -6450,8 +6465,8 @@ Forge skips anything that's entirely outside what the camera sees: behind it, of
 
 | Function | What it does |
 |---|---|
-| `graphics3d.setCulling(bool on)` | turns culling off (`false`) or back on (`true`); it's on to start with |
-| `graphics3d.isCulling()` | whether it's on |
+| `graphics3d.setViewCulling(bool on)` | turns culling off (`false`) or back on (`true`); it's on to start with |
+| `graphics3d.isViewCulling()` | whether it's on |
 | `graphics3d.culledLastFrame()` | how many things weren't drawn in the last frame because they were out of view |
 
 Culling never changes what you see, only how fast it's drawn, so you'll rarely need to turn it off. `culledLastFrame()` is handy for checking that it works: print it, turn around, and watch the number change.
@@ -6490,7 +6505,7 @@ Every 3D drawing call switches into 3D mode by itself, and every 2D call (see �
 #include <graphics3d>
 #include <math>
 
-Camera cam = Camera(vec3(6, 5, 6), vec3(0, 0, 0));
+Camera3D cam = Camera3D(vec3(6, 5, 6), vec3(0, 0, 0));
 float t = 0;
 
 int main(){
@@ -6636,21 +6651,21 @@ A loaded font.
 | Method | Gives back | What it does |
 |---|---|---|
 | `drawText(string text, float x, float y, float size, color c)` | — | draws text with its top-left corner at (x, y). `size` is the height in pixels. |
-| `measure(string text, float size)` | `float` | how wide the text would be, in pixels |
+| `textWidth(string text, float size)` | `float` | how wide the text would be, in pixels |
 
 ```cpp
 Font title = assets.loadFont("fonts/Title.ttf", 96);
 
 void draw(){
     string text = "Forge Quest";
-    float w = title.measure(text, 72);
+    float w = title.textWidth(text, 72);
     title.drawText(text, (window.width() - w) / 2.0, 80, 72, color.GOLD);
 }
 ```
 
 `Font()` (made directly, not loaded) is the built-in pixel font.
 
-Fonts are prepared for drawing the first time they're used, which needs the window to be open. `measure` also needs the window.
+Fonts are prepared for drawing the first time they're used, which needs the window to be open. `textWidth` also needs the window.
 
 ### Memory
 
@@ -7160,7 +7175,7 @@ Moving bodies fall with gravity, then move by their velocity in small pieces (so
 |---|---|---|
 | `time.now()` | `double` | seconds since the game started (real time) |
 | `time.sleep(float seconds)` | — | stops **everything** for that long |
-| `time.clock()` | `string` | the time of day, like `"14:05:09"` |
+| `time.timeOfDay()` | `string` | the time of day, like `"14:05:09"` |
 | `time.date()` | `string` | today's date, like `"2026-10-14"` |
 | `time.year()` | `int` | for example `2026` |
 | `time.month()` | `int` | 1 (January) to 12 |
@@ -12065,13 +12080,15 @@ error: 'score' is defined twice in this file
 
 **Fix:** rename one of them.
 
-#### `'window' is the name of a Forge library`
+#### `'window' is the name of the window library, which this file includes`
 
-A name can't be a library's name, since `window.open` would be ambiguous.
+In a file that `#include`s a library, the library's name can't be the name of something else, since `window.open` has to mean the library there. (In a file without `#include <window>`, a variable can be called `window`.)
 
 <!-- check: error -->
 
 ```cpp
+#include <window>
+
 int main(){
     int window = 3;
     return 0;
@@ -12079,15 +12096,41 @@ int main(){
 ```
 
 ```text
-error: 'window' is the name of a Forge library
-  --> main.frg:2:9
+error: 'window' is the name of the window library, which this file includes
+  --> main.frg:4:9
    |
- 2 |     int window = 3;
+ 4 |     int window = 3;
    |         ^^^^^^
-  hint: pick a different name
+  hint: pick a new name, then change 'window' everywhere at once: in VS Code, Replace in Files (Ctrl+Shift+H), with Match Case (Alt+C) and Match Whole Word (Alt+W) turned on, so only this exact name changes
 ```
 
-**Fix:** pick another name, like `windowCount`.
+**Fix:** pick another name, like `windowCount`, and change it everywhere at once: **Replace in Files** (Ctrl+Shift+H) with **Match Case** and **Match Whole Word** turned on, so `windowCount` or `Window` elsewhere don't change too.
+
+#### `unknown type 'Camera'` (it's called Camera3D since Forge 0.9.5)
+
+A name from an older Forge that was renamed before 1.0. The hint says what it's called now.
+
+<!-- check: error -->
+
+```cpp
+#include <graphics3d>
+
+int main(){
+    Camera cam;
+    return 0;
+}
+```
+
+```text
+error: unknown type 'Camera'
+  --> main.frg:4:5
+   |
+ 4 |     Camera cam;
+   |     ^^^^^^
+  hint: it's called Camera3D since Forge 0.9.5 - change 'Camera' to 'Camera3D' everywhere at once: in VS Code, Replace in Files (Ctrl+Shift+H), with Match Case (Alt+C) and Match Whole Word (Alt+W) turned on, so only this exact name changes
+```
+
+**Fix:** change every `Camera` to `Camera3D` at once, with Replace in Files (Ctrl+Shift+H). Turn on **Match Case**, or a variable called `camera` would become `camera3D`, and **Match Whole Word**, or `CameraShake` would become `Camera3DShake`. The other renamed names: `graphics3d.setCulling` / `isCulling` (now `setViewCulling` / `isViewCulling`), `time.clock` (now `timeOfDay`) and a font's `measure` (now `textWidth`).
 
 #### `'string' is a built-in type name, so it can't be used as a name`
 
@@ -12134,10 +12177,10 @@ error: 'negative' is a reserved word in Forge, so it can't be a parameter name
    |
  1 | int add(int a, int negative){
    |                    ^^^^^^^^
-  hint: pick a different name - the reserved words are listed in the docs (Reserved words)
+  hint: pick a new name, then change 'negative' everywhere at once: in VS Code, Replace in Files (Ctrl+Shift+H), with Match Case (Alt+C) and Match Whole Word (Alt+W) turned on, so only this exact name changes (the reserved words are listed in the docs: Reserved words)
 ```
 
-**Fix:** pick another name, like `amount`. The full list is in Reserved words (see “13. Reserved Words”).
+**Fix:** pick another name, like `amount`, and change it everywhere at once with Replace in Files (Match Case and Match Whole Word on). The full list is in Reserved words (see “13. Reserved Words”).
 
 #### `'feed' is already the name of a function in this file`
 
@@ -16002,7 +16045,7 @@ Each file includes the libraries it uses. Functions are reached through the libr
 | `<assets>` | images and fonts: `assets.loadTexture("player.png")`, `assets.loadFont("font.ttf")`, `assets.exists(path)` (see below) |
 | `<audio>` | `audio.loadSound("jump.wav")`, `audio.loadMusic("song.ogg")`, `audio.setVolume(0.5)` (see below) |
 | `<graphics3d>` | 3D drawing (see below) |
-| `<time>` | `time.now()` (seconds since the game started), `time.sleep(seconds)`, `time.clock()` ("14:05:09"), `time.date()` ("2026-10-14"), `time.year()` `month()` `day()` `hour()` `minute()` `second()`, and the `Timer` class |
+| `<time>` | `time.now()` (seconds since the game started), `time.sleep(seconds)`, `time.timeOfDay()` ("14:05:09"), `time.date()` ("2026-10-14"), `time.year()` `month()` `day()` `hour()` `minute()` `second()`, and the `Timer` class |
 | `<tilemap>` | `TileMap level = TileMap("""...""", 32);` (text, tile size) or `tilemap.load("level1.txt", 32)`: one character per tile. `level.addBodies("#")` (merged static bodies; `addBodies("=", true)` for one-way), `level.find("C")` (top-left corners), `get(col, row)` `set(col, row, "#")` `columns()` `rows()` `width()` `height()` `tileRect(col, row)` `columnAt(x)` `rowAt(y)` `solidAreas(tiles)`, `draw("#", color)`, `drawTiles(tileset, 16, "#=")` |
 | `<particles>` | `Emitter e = Emitter(vec2(x, y));`, then `e.burst(30)` (all at once) or `e.rate = 50` (per second); `e.update(dt)` and `e.draw()` each frame. Fields: `position` `rate` `lifetime` `speed` `direction` (degrees, -90 is up) `spread` (degrees, 360 is every way) `startColor` `endColor` `startSize` `endSize` `gravity`; `count()` `clear()` |
 | `<tween>` | `Tween t = Tween(from, to, seconds, Ease.OUT);` then `t.update(dt)` and `t.value()` each frame; `progress()` (0 to 1, for `lerp`), `isDone()`, `restart()`, `reverse()`, fields `looping` `pingPong`. Easing: `Ease.LINEAR` `IN` `OUT` `IN_OUT` `BOUNCE`; `tween.ease(Ease.OUT, t)` |
@@ -16062,7 +16105,7 @@ song.play();                                           // loops until song.stop(
 |---|---|
 | `Texture` | `width()` `height()` `draw` `drawScaled` `drawRotated` `drawPart` |
 | `Animation` | `Animation(sheet, frameWidth, frameHeight, frames, fps, row = 0)`, `update(dt)` `draw(x, y)` `drawScaled(x, y, scale)` `flip(bool)` `play()` `pause()` `reset()` `isPlaying()` `isDone()` `frame()` `setFrame(i)` `frameCount()`, fields `fps` `looping` |
-| `Font` | `drawText(text, x, y, size, color)` `measure(text, size)` |
+| `Font` | `drawText(text, x, y, size, color)` `textWidth(text, size)` |
 | `Sound` | `play()` `stop()` `isPlaying()` `setVolume(v)` `setPitch(p)` |
 | `Music` | `play()` `stop()` `pause()` `resume()` `isPlaying()` `setVolume(v)` `setLooping(b)` `length()` `position()` |
 
@@ -16071,7 +16114,7 @@ song.play();                                           // loops until song.stop(
 ```cpp
 #include <graphics3d>
 
-Camera cam = Camera(vec3(8, 6, 8), vec3(0, 0, 0));     // where it is, what it looks at
+Camera3D cam = Camera3D(vec3(8, 6, 8), vec3(0, 0, 0));     // where it is, what it looks at
 Model ship = graphics3d.loadModel("ship.glb");         // .obj .gltf .glb .iqm .vox .m3d
 
 void draw(){
@@ -16085,7 +16128,7 @@ void draw(){
 }
 ```
 
-Shapes: `drawCube` `drawCubeOutline` `drawSphere(center, radius, color)` `drawSphereOutline` `drawCylinder(position, radius, height, color)` `drawPlane(center, vec2 size, color)` `drawGrid(slices, spacing)` `drawLine(from, to, color)`. `Camera` has `position`, `target`, `up`, `fov` and `orbit(degrees)`. `Model` has `draw(position, scale, tint)` and `drawRotated(position, axis, degrees, scale, tint)`. `graphics3d.makeMesh(positions, uvs, shades, texture)` builds a `Mesh` of your own triangles (drawn in one call with `mesh.draw(position)`; see-through pixels are cut out); see Meshes (see “`<graphics3d>`: 3D Drawing” › “Meshes: shapes you build yourself”). `graphics3d.clearDepth()` makes the 3D drawn after it show in front of everything before it (a first-person gun). `pushTransform(position, axis, degrees, scale)` ... `popTransform()` turns, moves and scales what's drawn between them (they nest). In 3D, **y goes up**, and looking along +z, +x is to the **left**: a camera's right is `forward.cross(vec3.UP)`.
+Shapes: `drawCube` `drawCubeOutline` `drawSphere(center, radius, color)` `drawSphereOutline` `drawCylinder(position, radius, height, color)` `drawPlane(center, vec2 size, color)` `drawGrid(slices, spacing)` `drawLine(from, to, color)`. `Camera3D` has `position`, `target`, `up`, `fov` and `orbit(degrees)`. `Model` has `draw(position, scale, tint)` and `drawRotated(position, axis, degrees, scale, tint)`. `graphics3d.makeMesh(positions, uvs, shades, texture)` builds a `Mesh` of your own triangles (drawn in one call with `mesh.draw(position)`; see-through pixels are cut out); see Meshes (see “`<graphics3d>`: 3D Drawing” › “Meshes: shapes you build yourself”). `graphics3d.clearDepth()` makes the 3D drawn after it show in front of everything before it (a first-person gun). `pushTransform(position, axis, degrees, scale)` ... `popTransform()` turns, moves and scales what's drawn between them (they nest). In 3D, **y goes up**, and looking along +z, +x is to the **left**: a camera's right is `forward.cross(vec3.UP)`.
 
 #### Scenes
 

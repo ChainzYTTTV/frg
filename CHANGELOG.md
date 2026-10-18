@@ -4,7 +4,20 @@ What changed in each version of Forge. Plans for later versions are in the [road
 
 ## Unreleased
 
+Names settled for 1.0. Code written for 0.9.4 that uses an old name gets an error saying what it's called now, and how to change it everywhere at once (Replace in Files, with Match Case and Match Whole Word).
+
+**Language**
+- **A library's name only blocks names in the files that `#include` it.** A file without `#include <time>` can have a variable called `time`, and a library added in a later Forge never breaks a game (`network` isn't reserved any more either). Files and folders can be named like libraries too.
+- Errors for a name that's taken (a reserved word, or the name of an included library) say to rename it everywhere at once, with Match Case and Match Whole Word.
+
+**Renamed** (the old names give an error that says the new one)
+- `Camera` is now **`Camera3D`**, to match `Camera2D`.
+- `graphics3d.setCulling` / `isCulling` are now **`setViewCulling`** / **`isViewCulling`**, so they don't share a name with the toolkits' `setCulling(mode)`, which is about triangles' sides.
+- `Font.measure` is now **`textWidth`**, like `graphics2d.textWidth`. Both take decimal sizes and give back a `float` (`int w = graphics2d.textWidth(...)` becomes `float w`). `graphics2d.drawText` takes a decimal size too.
+- `time.clock()` is now **`time.timeOfDay()`**: it gives the time of day as text, like `"14:05:09"`.
+
 **Engine**
+- `math.toRadians(degrees)` and `math.toDegrees(radians)`.
 - **`<physics3d>`: 3D physics.** `Body3D` boxes and balls (`sphere = true`) that fall, move, collide, bounce and stack, in the same world as `<graphics3d>` (y up). `stepHeight` lets walking bodies climb stairs. `physics3d.raycast(from, direction, maxDistance)` finds what a line hits (point, surface direction, distance and body), for shooting and line of sight. Collision layers, a fixed-rate `step` (the same at any frame rate), and `physics3d.drawDebug()`. New example: `examples/physics3d`.
 
 ## 0.9.4 (2026-10-17)

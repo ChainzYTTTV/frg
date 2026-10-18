@@ -40,6 +40,8 @@ They take on whichever decimal type they're used as (`float` or `double`).
 | `math.acos(x)` | float | inverse cosine, in radians | |
 | `math.atan(x)` | float | inverse tangent, in radians | |
 | `math.atan2(y, x)` | float | the angle of the point (x, y), in radians. Note: y comes first. | |
+| `math.toRadians(degrees)` | float | degrees turned into radians | `math.toRadians(180)` → `3.14159...` |
+| `math.toDegrees(radians)` | float | radians turned into degrees | `math.toDegrees(math.PI)` → `180.0` |
 | `math.exp(x)` | float | e to the power x | |
 | `math.log(x)` | float | natural logarithm | |
 
@@ -47,7 +49,7 @@ Notes:
 
 - **`floor`, `ceil` and `round` give back a decimal number.** Wrap them in `int(...)` for a whole number: `int(math.round(2.6))` is `3`.
 - `min`, `max`, `clamp` and `abs` keep whole numbers whole: `math.max(3, 8)` is the `int` `8`. Mixing types gives the bigger type: `math.min(2.5, 1)` is the `float` `1.0`.
-- Angles are in **radians**. To convert, `radians = degrees * math.PI / 180`. Note that [`Texture.drawRotated`](assets.md) and [`graphics3d`](graphics3d.md) rotations use **degrees**.
+- Angles are in **radians**. To convert, `math.toRadians(degrees)` and `math.toDegrees(radians)`. Note that [`Texture.drawRotated`](assets.md) and [`graphics3d`](graphics3d.md) rotations use **degrees**.
 - `sqrt` of a negative number, or `log` of zero or less, gives `nan` (not a number).
 - Squaring: `x * x` or `math.pow(x, 2)`. There's no `^` power operator.
 

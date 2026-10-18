@@ -174,7 +174,7 @@ void update(float dt){
     if (input.keyDown(Key.S)) {
         eye -= forward * (5 * dt);
     }
-    graphics3d.setCamera(Camera(eye, eye + look));
+    graphics3d.setCamera(Camera3D(eye, eye + look));
 }
 
 void draw(){

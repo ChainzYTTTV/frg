@@ -10,7 +10,7 @@
 |---|---|---|
 | `time.now()` | `double` | seconds since the game started (real time) |
 | `time.sleep(float seconds)` | — | stops **everything** for that long |
-| `time.clock()` | `string` | the time of day, like `"14:05:09"` |
+| `time.timeOfDay()` | `string` | the time of day, like `"14:05:09"` |
 | `time.date()` | `string` | today's date, like `"2026-10-14"` |
 | `time.year()` | `int` | for example `2026` |
 | `time.month()` | `int` | 1 (January) to 12 |

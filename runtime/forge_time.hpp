@@ -25,7 +25,7 @@ inline std::tm localNow() {
     return out;
 }
 inline std::string two(int v) { return (v < 10 ? "0" : "") + std::to_string(v); }
-inline std::string clock_() {
+inline std::string timeOfDay_() {
     std::tm t = localNow();
     return two(t.tm_hour) + ":" + two(t.tm_min) + ":" + two(t.tm_sec);
 }

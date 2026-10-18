@@ -33,7 +33,7 @@ void update(float dt){
     }
     vec3 eye = vec3(2, 3, -4);
     vec3 look = vec3(math.cos(pitch) * math.sin(yaw), math.sin(pitch), math.cos(pitch) * math.cos(yaw));
-    graphics3d.setCamera(Camera(eye, eye + look));
+    graphics3d.setCamera(Camera3D(eye, eye + look));
 }
 
 void draw(){

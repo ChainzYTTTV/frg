@@ -1,0 +1,10 @@
+=== main.frg
+``` An old name gives an error that says the new one. ```
+#include <time>
+
+int main(){
+    string now = time.clock();
+    return 0;
+}
+=== error
+it's called timeOfDay since Forge 0.9.5 - change 'clock' to 'timeOfDay' everywhere at once

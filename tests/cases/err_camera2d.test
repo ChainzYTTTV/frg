@@ -3,10 +3,10 @@
 #include <graphics3d>
 
 int main(){
-    graphics2d.setCamera(Camera(vec3(0, 5, 10), vec3(0, 0, 0)));
+    graphics2d.setCamera(Camera3D(vec3(0, 5, 10), vec3(0, 0, 0)));
     Camera2D cam = Camera2D(vec2(0, 0));
     return 0;
 }
 === error
-'camera' in graphics2d.setCamera() needs a Camera2D, but this is a Camera
+'camera' in graphics2d.setCamera() needs a Camera2D, but this is a Camera3D
 Camera2D() needs 2 to 4 values, but got 1

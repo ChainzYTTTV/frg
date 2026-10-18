@@ -27,6 +27,8 @@ static const Builtin kBuiltins[] = {
     {"math", "round", BSig::Float1, "::std::round"},
     {"math", "pow", BSig::Float2, "::std::pow"},
     {"math", "atan2", BSig::Float2, "::std::atan2"},
+    {"math", "toRadians", BSig::Float1, "::frg::toRadians_"},
+    {"math", "toDegrees", BSig::Float1, "::frg::toDegrees_"},
     {"math", "lerp", BSig::Float3, "::frg::lerp_"},
     {"math", "abs", BSig::Generic1, "::frg::abs_"},
     {"math", "sign", BSig::Generic1, "::frg::sign_"},

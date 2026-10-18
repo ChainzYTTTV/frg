@@ -6,7 +6,7 @@ This page gets you from nothing to a running game, and covers every `frg` comman
 
 | | Why |
 |---|---|
-| **Windows 10 or 11** | Forge only builds Windows games for now |
+| **Windows 10 or 11**, or **Linux** (64-bit; Ubuntu 22.04 or newer, or similar) | On Linux, everything but the low-level toolkits works ([Installing on Linux](#installing-on-linux)) |
 | **Forge** | The installer has everything: `frg`, its own C++ compiler (w64devkit's `g++`, which Forge uses to make `.exe` files), the docs and the examples |
 | **VS Code** (optional, recommended) | With the Forge extension: colors, errors as you save, a Run button |
 
@@ -27,7 +27,20 @@ frg version
 g++ --version
 ```
 
-The first should print `Forge 0.9.5`. If `frg` isn't found, open a new terminal; if it's still not found, run the installer again with "Add Forge to my PATH" ticked.
+The first should print `Forge 0.9.6`. If `frg` isn't found, open a new terminal; if it's still not found, run the installer again with "Add Forge to my PATH" ticked.
+
+### Installing on Linux
+
+Everything in Forge works on Linux except the low-level toolkits (`<OpenGL>`, `<DirectX>`, `<Vulkan>`), which are Windows-only for now: the engine (`<window>`, `<graphics2d>`, `<graphics3d>`, `<physics>`, `<physics3d>`, sound and the rest), `frg test`, `frg package` and the VS Code extension.
+
+1. Get `Forge-<version>-linux-x64.tar.gz` from the [releases page](https://github.com/ChainzYTTTV/frg/releases/latest), and unpack it (double-click it, or `tar -xzf Forge-<version>-linux-x64.tar.gz`).
+2. In a terminal, in the unpacked folder, run `./install.sh`. It installs Forge for your user only (into `~/.local/share/forge`, with `frg` in `~/.local/bin`), so it doesn't need your password.
+3. Forge uses the system's C++ compiler. If `install.sh` says something is missing, it prints the command that installs it, like `sudo apt install g++ libgl1-mesa-dev libx11-dev`.
+4. Open a new terminal and run `frg version`.
+
+To update, do the same with the newer version; your games aren't touched. `frg update` says when a newer Forge is out (it can't install it for you on Linux). To remove Forge: `rm -rf ~/.local/share/forge ~/.local/bin/frg`.
+
+On Linux a game is a program without `.exe` at the end: `frg build` makes `build/mygame`, and `frg package` makes `dist/mygame.zip` (or `.tar.gz` when `zip` isn't installed). A game built on Linux runs on Linux, and one built on Windows runs on Windows: to share a game with both, build it on both.
 
 ### Without the installer
 

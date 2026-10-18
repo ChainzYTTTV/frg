@@ -28,12 +28,23 @@ add_executable(frg
     src/update.cpp
 )
 target_compile_options(frg PRIVATE -Wall -Wextra -Wno-missing-field-initializers)
-target_link_options(frg PRIVATE -static)
-target_link_libraries(frg PRIVATE winhttp)   # the update check (src/update.cpp)
+if(WIN32)
+    target_link_options(frg PRIVATE -static)
+    target_link_libraries(frg PRIVATE winhttp)   # the update check (src/update.cpp)
+else()
+    # Linux: C++'s own library goes into frg, so it runs on other Linux PCs too.
+    target_link_options(frg PRIVATE -static-libstdc++ -static-libgcc)
+endif()
 
 # The runtime folder is copied next to frg.exe on every build, so a change to a runtime file alone is picked up too.
 # (copy_directory_if_different only copies changed files, so unchanged files keep their dates and the build cache.)
+# (CMake before 3.26, like Ubuntu 22.04's, only has copy_directory, which copies everything every time.)
+if(CMAKE_VERSION VERSION_LESS 3.26)
+    set(FRG_COPY_DIR copy_directory)
+else()
+    set(FRG_COPY_DIR copy_directory_if_different)
+endif()
 add_custom_target(runtime ALL
-    COMMAND ${CMAKE_COMMAND} -E copy_directory_if_different ${CMAKE_SOURCE_DIR}/runtime ${CMAKE_SOURCE_DIR}/bin/runtime
+    COMMAND ${CMAKE_COMMAND} -E ${FRG_COPY_DIR} ${CMAKE_SOURCE_DIR}/runtime ${CMAKE_SOURCE_DIR}/bin/runtime
 )
 add_dependencies(frg runtime)

@@ -412,6 +412,9 @@ function frgPath() {
     // Where the Forge installer puts it (VS Code only sees a new PATH after it's restarted).
     const installed = path.join(process.env.LOCALAPPDATA || '', 'Programs', 'Forge', 'bin', 'frg.exe');
     if (process.env.LOCALAPPDATA && fs.existsSync(installed)) return installed;
+    // Where Linux's install.sh puts it (not always on the PATH VS Code was started with).
+    const linux = path.join(require('os').homedir(), '.local', 'bin', 'frg');
+    if (process.platform !== 'win32' && fs.existsSync(linux)) return linux;
     return 'frg';
 }
 
@@ -615,7 +618,7 @@ async function debugGame() {
         vscode.window.showErrorMessage('Forge: the debug build failed. The Forge output panel says why.');
         return;
     }
-    const exe = path.join(root, 'build', path.basename(root) + '.exe');
+    const exe = path.join(root, 'build', path.basename(root) + (process.platform === 'win32' ? '.exe' : ''));
     await vscode.debug.startDebugging(vscode.workspace.getWorkspaceFolder(vscode.Uri.file(file)), {
         name: `Forge: ${path.basename(root)}`,
         type: 'cppdbg',
@@ -624,7 +627,7 @@ async function debugGame() {
         args: [],
         cwd: root,
         MIMode: 'gdb',
-        miDebuggerPath: findOnPath('gdb.exe') || 'gdb',
+        miDebuggerPath: findOnPath(process.platform === 'win32' ? 'gdb.exe' : 'gdb') || 'gdb',
         externalConsole: true,  // print() output appears in the game's own console window, as with Run
         stopAtEntry: false,
     });

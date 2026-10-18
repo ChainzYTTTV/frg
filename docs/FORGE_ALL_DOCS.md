@@ -1,4 +1,4 @@
-# Forge 0.9.5: the complete documentation
+# Forge 0.9.6: the complete documentation
 
 This one file holds everything written about the Forge programming language, so it can be uploaded in one go:
 
@@ -137,7 +137,7 @@ This page gets you from nothing to a running game, and covers every `frg` comman
 
 | | Why |
 |---|---|
-| **Windows 10 or 11** | Forge only builds Windows games for now |
+| **Windows 10 or 11**, or **Linux** (64-bit; Ubuntu 22.04 or newer, or similar) | On Linux, everything but the low-level toolkits works (Installing on Linux (see “Installing on Linux”)) |
 | **Forge** | The installer has everything: `frg`, its own C++ compiler (w64devkit's `g++`, which Forge uses to make `.exe` files), the docs and the examples |
 | **VS Code** (optional, recommended) | With the Forge extension: colors, errors as you save, a Run button |
 
@@ -158,7 +158,20 @@ frg version
 g++ --version
 ```
 
-The first should print `Forge 0.9.5`. If `frg` isn't found, open a new terminal; if it's still not found, run the installer again with "Add Forge to my PATH" ticked.
+The first should print `Forge 0.9.6`. If `frg` isn't found, open a new terminal; if it's still not found, run the installer again with "Add Forge to my PATH" ticked.
+
+#### Installing on Linux
+
+Everything in Forge works on Linux except the low-level toolkits (`<OpenGL>`, `<DirectX>`, `<Vulkan>`), which are Windows-only for now: the engine (`<window>`, `<graphics2d>`, `<graphics3d>`, `<physics>`, `<physics3d>`, sound and the rest), `frg test`, `frg package` and the VS Code extension.
+
+1. Get `Forge-<version>-linux-x64.tar.gz` from the [releases page](https://github.com/ChainzYTTTV/frg/releases/latest), and unpack it (double-click it, or `tar -xzf Forge-<version>-linux-x64.tar.gz`).
+2. In a terminal, in the unpacked folder, run `./install.sh`. It installs Forge for your user only (into `~/.local/share/forge`, with `frg` in `~/.local/bin`), so it doesn't need your password.
+3. Forge uses the system's C++ compiler. If `install.sh` says something is missing, it prints the command that installs it, like `sudo apt install g++ libgl1-mesa-dev libx11-dev`.
+4. Open a new terminal and run `frg version`.
+
+To update, do the same with the newer version; your games aren't touched. `frg update` says when a newer Forge is out (it can't install it for you on Linux). To remove Forge: `rm -rf ~/.local/share/forge ~/.local/bin/frg`.
+
+On Linux a game is a program without `.exe` at the end: `frg build` makes `build/mygame`, and `frg package` makes `dist/mygame.zip` (or `.tar.gz` when `zip` isn't installed). A game built on Linux runs on Linux, and one built on Windows runs on Windows: to share a game with both, build it on both.
 
 #### Without the installer
 
@@ -6588,6 +6601,8 @@ Forge has three extra libraries for people who want to write their **own** rende
 | `<DirectX>` | Direct3D 11 | HLSL, as text in the program | DirectX (see “`<DirectX>`: Drawing with Direct3D 11 Yourself”) |
 | `<Vulkan>` | Vulkan 1.0 | GLSL files, compiled to SPIR-V by `frg build` | Vulkan (see “`<Vulkan>`: Drawing with Vulkan Yourself”) |
 
+> **Windows only, for now.** The toolkits open their own windows with Windows' own code, so on Linux a game that includes one gets an error saying so. (DirectX will always be Windows-only: it's Microsoft's.)
+
 > **New to Forge or to making games? You don't need any of these.** Forge's built-in engine (`<window>`, `<graphics2d>`, `<graphics3d>`...) already draws 2D and 3D for you. The toolkits are for learning how graphics cards work, or for drawing things the engine can't.
 
 ### Toolkits are not part of the engine
@@ -8624,7 +8639,7 @@ The error messages on this page are checked against the real `frg` every time Fo
 frg version
 ```
 
-which prints `Forge 0.9.5` (or whichever version you have). If it says `frg is not recognized`, the folder with `frg.exe` isn't on your `PATH`.
+which prints `Forge 0.9.6` (or whichever version you have). If it says `frg is not recognized`, the folder with `frg.exe` isn't on your `PATH`.
 
 #### Moving between folders
 
@@ -9026,7 +9041,7 @@ Makes the finished game, ready to give to players:
 
 1. a `--release` build (no console, unless you add `--console`);
 2. a folder `dist/<name>/` with the `.exe` and **every file the game might load** (images, sounds, levels, `icon.png`...), keeping their folders;
-3. `dist/<name>.zip` of that folder.
+3. `dist/<name>.zip` of that folder. (On Linux, made with the `zip` program, or `dist/<name>.tar.gz` if it isn't installed.)
 
 ```text
       Copied mygame.exe and 12 files into dist/mygame/
@@ -9071,7 +9086,7 @@ error: frg cache doesn't know 'tidy'
 
 ### frg update
 
-Checks GitHub for a newer Forge. If there is one, it says what's new and asks whether to download and start its installer (`y` to do it; anything else, or just Enter, doesn't). The installer updates Forge in place and keeps your games, settings and build cache. **Updating is never required**: an older Forge keeps working.
+Checks GitHub for a newer Forge. If there is one, it says what's new and asks whether to download and start its installer (`y` to do it; anything else, or just Enter, doesn't). The installer updates Forge in place and keeps your games, settings and build cache. **Updating is never required**: an older Forge keeps working. On Linux it can't install the update for you: it says where to download it, and you run the new version's `install.sh`.
 
 ```text
 frg update            check now
@@ -9082,7 +9097,7 @@ frg update --on       turn the daily check back on
 The daily check: once a day, when you build, run, test, package or make a game, `frg` also asks GitHub (in the background, at most a few seconds, never stopping the command) whether a newer Forge is out. If it is, a short note comes at the end:
 
 ```text
-    Update  Forge 0.9.6 is out (you have 0.9.5). Updating is optional: run frg update to get it,
+    Update  Forge 0.9.7 is out (you have 0.9.6). Updating is optional: run frg update to get it,
             or frg update --off to stop these notes.
 ```
 
@@ -9090,7 +9105,7 @@ It asks only for the number of the latest release (from `api.github.com`), sends
 
 ### frg version and frg help
 
-`frg version` (or `frg --version`) prints the version, like `Forge 0.9.5`.
+`frg version` (or `frg --version`) prints the version, like `Forge 0.9.6`.
 
 `frg help` (or `frg --help`, `frg -h`, or `frg` on its own) prints the list of commands and options.
 

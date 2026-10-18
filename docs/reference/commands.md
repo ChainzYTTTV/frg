@@ -15,7 +15,7 @@ The error messages on this page are checked against the real `frg` every time Fo
 frg version
 ```
 
-which prints `Forge 0.9.5` (or whichever version you have). If it says `frg is not recognized`, the folder with `frg.exe` isn't on your `PATH`.
+which prints `Forge 0.9.6` (or whichever version you have). If it says `frg is not recognized`, the folder with `frg.exe` isn't on your `PATH`.
 
 ### Moving between folders
 
@@ -417,7 +417,7 @@ Makes the finished game, ready to give to players:
 
 1. a `--release` build (no console, unless you add `--console`);
 2. a folder `dist/<name>/` with the `.exe` and **every file the game might load** (images, sounds, levels, `icon.png`...), keeping their folders;
-3. `dist/<name>.zip` of that folder.
+3. `dist/<name>.zip` of that folder. (On Linux, made with the `zip` program, or `dist/<name>.tar.gz` if it isn't installed.)
 
 ```text
       Copied mygame.exe and 12 files into dist/mygame/
@@ -462,7 +462,7 @@ error: frg cache doesn't know 'tidy'
 
 ## frg update
 
-Checks GitHub for a newer Forge. If there is one, it says what's new and asks whether to download and start its installer (`y` to do it; anything else, or just Enter, doesn't). The installer updates Forge in place and keeps your games, settings and build cache. **Updating is never required**: an older Forge keeps working.
+Checks GitHub for a newer Forge. If there is one, it says what's new and asks whether to download and start its installer (`y` to do it; anything else, or just Enter, doesn't). The installer updates Forge in place and keeps your games, settings and build cache. **Updating is never required**: an older Forge keeps working. On Linux it can't install the update for you: it says where to download it, and you run the new version's `install.sh`.
 
 ```text
 frg update            check now
@@ -473,7 +473,7 @@ frg update --on       turn the daily check back on
 The daily check: once a day, when you build, run, test, package or make a game, `frg` also asks GitHub (in the background, at most a few seconds, never stopping the command) whether a newer Forge is out. If it is, a short note comes at the end:
 
 ```text
-    Update  Forge 0.9.6 is out (you have 0.9.5). Updating is optional: run frg update to get it,
+    Update  Forge 0.9.7 is out (you have 0.9.6). Updating is optional: run frg update to get it,
             or frg update --off to stop these notes.
 ```
 
@@ -481,7 +481,7 @@ It asks only for the number of the latest release (from `api.github.com`), sends
 
 ## frg version and frg help
 
-`frg version` (or `frg --version`) prints the version, like `Forge 0.9.5`.
+`frg version` (or `frg --version`) prints the version, like `Forge 0.9.6`.
 
 `frg help` (or `frg --help`, `frg -h`, or `frg` on its own) prints the list of commands and options.
 

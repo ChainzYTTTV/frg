@@ -12,7 +12,7 @@ Add-Type -AssemblyName System.IO.Compression.FileSystem
 
 $here = $PSScriptRoot
 $pkg = Get-Content (Join-Path $here "package.json") -Raw | ConvertFrom-Json
-$frg = [IO.Path]::GetFullPath((Join-Path $here "..\..\bin\frg.exe"))
+$frg = [IO.Path]::GetFullPath((Join-Path $here ".." ".." "bin" ($(if ($IsWindows) { "frg.exe" } else { "frg" }))))
 if (-not (Test-Path $frg)) { throw "Build Forge first: $frg doesn't exist" }
 
 $files = @("package.json", "extension.js", "language-configuration.json", "README.md",

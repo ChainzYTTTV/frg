@@ -8,6 +8,8 @@ Forge has three extra libraries for people who want to write their **own** rende
 | `<DirectX>` | Direct3D 11 | HLSL, as text in the program | [DirectX](directx.md) |
 | `<Vulkan>` | Vulkan 1.0 | GLSL files, compiled to SPIR-V by `frg build` | [Vulkan](vulkan.md) |
 
+> **Windows only, for now.** The toolkits open their own windows with Windows' own code, so on Linux a game that includes one gets an error saying so. (DirectX will always be Windows-only: it's Microsoft's.)
+
 > **New to Forge or to making games? You don't need any of these.** Forge's built-in engine (`<window>`, `<graphics2d>`, `<graphics3d>`...) already draws 2D and 3D for you. The toolkits are for learning how graphics cards work, or for drawing things the engine can't.
 
 ## Toolkits are not part of the engine

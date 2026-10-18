@@ -21,7 +21,11 @@ inline void sleep_(float seconds) {
 inline std::tm localNow() {
     std::time_t t = std::time(nullptr);
     std::tm out{};
+#ifdef _WIN32
     localtime_s(&out, &t);
+#else
+    localtime_r(&t, &out);
+#endif
     return out;
 }
 inline std::string two(int v) { return (v < 10 ? "0" : "") + std::to_string(v); }

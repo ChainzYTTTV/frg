@@ -1,6 +1,6 @@
 # Builds frg.exe on Windows, runs every test in tests/cases, and builds every example game.
 # Then a Linux job runs every example for a few frames (see tests/run_games.sh), and the window tests
-# (see tests/run_window_tests.sh).
+# (see tests/run_window_tests.sh). The "linux" job does it all again with Forge for Linux, and packs it.
 name: tests
 
 on:
@@ -132,6 +132,74 @@ jobs:
         with:
           name: installer
           path: installer/out/*.exe
+          retention-days: 30
+
+  # Forge on Linux: builds frg with the system's g++, runs every test (the window tests on a virtual screen with
+  # software drawing), builds every example but the low-level toolkits' (Windows-only), and packs Forge into
+  # Forge-<version>-linux-x64.tar.gz, which the release workflow attaches to the release. Ubuntu 22.04, so that
+  # frg runs on it and every newer Ubuntu.
+  linux:
+    runs-on: ubuntu-22.04
+    env:
+      FRG_NO_UPDATE_CHECK: "1"
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Get the compiler and the window libraries
+        run: |
+          sudo apt-get update -q
+          sudo apt-get install -y -q --no-install-recommends g++ cmake libgl1-mesa-dev libx11-dev libxrandr-dev \
+            libxi-dev libxcursor-dev libxinerama-dev xvfb libgl1-mesa-dri zip
+
+      - name: Build frg
+        run: |
+          g++ --version
+          cmake -S . -B build -DCMAKE_BUILD_TYPE=Release
+          cmake --build build -j4
+
+      - name: Run the tests
+        env:
+          LIBGL_ALWAYS_SOFTWARE: "1"
+        run: xvfb-run -a -s "-screen 0 1280x720x24" pwsh -NoProfile -File tests/run_tests.ps1
+
+      - name: Build every example
+        run: |
+          failed=""
+          for dir in examples/*/; do
+            name=$(basename "$dir")
+            case "$name" in opengl|directx|vulkan) continue;; esac
+            echo "--- $name"
+            bin/frg build "$dir" || failed="$failed $name"
+          done
+          if [ -n "$failed" ]; then echo "Examples that didn't build:$failed"; exit 1; fi
+
+      - name: Pack Forge for Linux
+        run: |
+          version="$(sed -n 's/.*kVersion = "\([^"]*\)".*/\1/p' src/main.cpp)"
+          out="Forge-$version-linux-x64"
+          mkdir -p "pack/$out/bin"
+          cp bin/frg "pack/$out/bin/"
+          cp -R runtime "pack/$out/bin/runtime"
+          rm -rf "pack/$out/bin/runtime/raylib/lib"   # raylib for Windows
+          git archive HEAD docs examples README.md LICENSE CHANGELOG.md | tar -x -C "pack/$out"
+          cp installer/linux/install.sh "pack/$out/"
+          pwsh -NoProfile -File editors/vscode/package.ps1
+          mkdir -p "pack/$out/editors" && cp "editors/vscode/dist/forge-$version.vsix" "pack/$out/editors/forge.vsix"
+          chmod +x "pack/$out/install.sh" "pack/$out/bin/frg"
+          tar -czf "$out.tar.gz" -C pack "$out"
+          ls -la "$out.tar.gz"
+
+          # it installs, and the installed Forge builds a game
+          tar -xzf "$out.tar.gz" -C "$RUNNER_TEMP"
+          HOME="$RUNNER_TEMP/home" sh "$RUNNER_TEMP/$out/install.sh"
+          cd "$RUNNER_TEMP" && "$RUNNER_TEMP/home/.local/bin/frg" new smoke --template window && "$RUNNER_TEMP/home/.local/bin/frg" build smoke
+          test -x smoke/build/smoke
+
+      - name: Keep the Linux package
+        uses: actions/upload-artifact@v4
+        with:
+          name: linux
+          path: Forge-*-linux-x64.tar.gz
           retention-days: 30
 
   # Runs every example for 180 frames with scripted keys and saves the last frame as a picture.

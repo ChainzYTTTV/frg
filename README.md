@@ -2,7 +2,7 @@
 
 <img src="art/forge-icon-512.png" width="96" alt="Forge's logo: an orange anvil with sparks" align="right">
 
-[![tests](https://github.com/ChainzYTTTV/frg/actions/workflows/tests.yml/badge.svg)](https://github.com/ChainzYTTTV/frg/actions/workflows/tests.yml) · Version 0.9.5 · [Changelog](CHANGELOG.md) · [Roadmap](ROADMAP.md) · [License: MIT](LICENSE)
+[![tests](https://github.com/ChainzYTTTV/frg/actions/workflows/tests.yml/badge.svg)](https://github.com/ChainzYTTTV/frg/actions/workflows/tests.yml) · Version 0.9.6 · [Changelog](CHANGELOG.md) · [Roadmap](ROADMAP.md) · [License: MIT](LICENSE)
 
 > **This project was made with AI.** I designed the language: what it looks like, how files and folders work, and which features it has. The compiler, runtime, tools and docs were written by an AI (Claude), not by me.
 >
@@ -19,7 +19,7 @@ int main(){
 }
 ```
 
-**Install:** download `Forge-<version>-setup.exe` from the [latest release](https://github.com/ChainzYTTTV/frg/releases/latest) and run it. It has everything Forge needs, including its own C++ compiler (see [Getting started](docs/getting-started.md#installing)).
+**Install:** download `Forge-<version>-setup.exe` from the [latest release](https://github.com/ChainzYTTTV/frg/releases/latest) and run it. It has everything Forge needs, including its own C++ compiler (see [Getting started](docs/getting-started.md#installing)). **On Linux**, get `Forge-<version>-linux-x64.tar.gz` instead and run its `install.sh` ([Installing on Linux](docs/getting-started.md#installing-on-linux)): everything but the low-level toolkits works there.
 
 **Documentation:** start at [docs/README.md](docs/README.md), which has a getting-started guide, a chapter for each part of the language, a page for every library, and guides. [docs/LANGUAGE.md](docs/LANGUAGE.md) is a one-page cheat sheet. For VS Code support (colors, errors as you save, a Run button), see [editors/vscode](editors/vscode/README.md).
 

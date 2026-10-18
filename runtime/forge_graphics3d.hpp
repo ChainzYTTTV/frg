@@ -305,8 +305,12 @@ inline void popTransform_() {
     st().transforms--;
 }
 
-// OpenGL 1.1, in Windows' opengl32.dll (which raylib already uses).
+// OpenGL 1.1, which raylib already uses: in Windows' opengl32.dll, or Linux's libGL.
+#ifdef _WIN32
 extern "C" __declspec(dllimport) void __stdcall glClear(unsigned int mask);
+#else
+extern "C" void glClear(unsigned int mask);
+#endif
 
 // Forgets how far away everything drawn so far is, so the 3D drawn next shows in front of all of it: a first-person
 // gun that never pokes into walls, or a 3D model on top of the world. The pictures already drawn stay.

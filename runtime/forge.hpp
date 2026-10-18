@@ -23,16 +23,18 @@
 #include <type_traits>
 #include <vector>
 
+#ifdef _WIN32
 extern "C" __declspec(dllimport) int __stdcall SetConsoleOutputCP(unsigned int);
 // Declared exactly as windows.h does (HMODULE is HINSTANCE__*), so files that include windows.h too still build.
 struct HINSTANCE__;
 extern "C" __declspec(dllimport) unsigned long __stdcall GetModuleFileNameW(HINSTANCE__*, wchar_t*, unsigned long);
+#endif
 
 namespace frg {
 
 using u128 = unsigned __int128;
 
-#ifdef FRG_NO_CONSOLE
+#if defined(FRG_NO_CONSOLE) && defined(_WIN32)
 }  // namespace frg
 // Built without a console (--release or --no-console): there's nowhere to print errors, so they're shown in a box.
 // Declared by hand, exactly as windows.h does, because windows.h can't be mixed with raylib.h.
@@ -87,7 +89,7 @@ inline std::string callTrace(const char* where) {
 [[noreturn]] inline void fatal(const core::Error_& e) {
     std::fflush(stdout);
     std::fprintf(stderr, "\nRuntime error in %s: %s\n%s", e.where_.c_str(), e.message_.c_str(), e.trace_.c_str());
-#ifdef FRG_NO_CONSOLE
+#if defined(FRG_NO_CONSOLE) && defined(_WIN32)
     std::string text = "Runtime error in " + e.where_ + ":\n\n" + e.message_ + (e.trace_.empty() ? "" : "\n\n" + e.trace_);
     MessageBoxA(nullptr, text.c_str(), "The game stopped", 0x10 /* MB_ICONERROR */);
 #endif
@@ -125,12 +127,24 @@ inline void addHook(std::vector<void (*)()>& hooks, void (*fn)()) {
 // The game runs in its own folder, so "data/levels.txt", save files and pictures are found the same way however the
 // game was started (frg run, double-clicking the .exe, or from another folder): the folder with main.frg, which is
 // one up from build/ (two up from build/tests/), or the .exe's own folder in a packaged game.
-inline void enterGameFolder() {
-    namespace fs = std::filesystem;
+// The game's own .exe file (its full path), or an empty path if it can't be found.
+inline std::filesystem::path exePath() {
+#ifdef _WIN32
     std::wstring buf(32768, L'\0');
     unsigned long n = GetModuleFileNameW(nullptr, buf.data(), (unsigned long)buf.size());
-    if (n == 0 || n >= buf.size()) return;
-    fs::path dir = fs::path(buf.substr(0, n)).parent_path();
+    if (n == 0 || n >= buf.size()) return {};
+    return buf.substr(0, n);
+#else
+    std::error_code ec;
+    return std::filesystem::read_symlink("/proc/self/exe", ec);
+#endif
+}
+
+inline void enterGameFolder() {
+    namespace fs = std::filesystem;
+    fs::path exe = exePath();
+    if (exe.empty()) return;
+    fs::path dir = exe.parent_path();
     if (dir.filename() == "tests" && dir.parent_path().filename() == "build") dir = dir.parent_path().parent_path();
     else if (dir.filename() == "build") dir = dir.parent_path();
     std::error_code ec;
@@ -138,7 +152,9 @@ inline void enterGameFolder() {
 }
 
 inline void init() {
+#ifdef _WIN32
     SetConsoleOutputCP(65001);
+#endif
     enterGameFolder();
 }
 inline void shutdown() {

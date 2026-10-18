@@ -1,6 +1,10 @@
+#ifdef _WIN32
 #define WIN32_LEAN_AND_MEAN
 #define NOMINMAX
 #include <windows.h>
+#else
+#include <unistd.h>
+#endif
 
 #include "common.hpp"
 
@@ -8,7 +12,7 @@
 #include <cctype>
 #include <cstdio>
 
-#ifndef ENABLE_VIRTUAL_TERMINAL_PROCESSING
+#if defined(_WIN32) && !defined(ENABLE_VIRTUAL_TERMINAL_PROCESSING)
 #define ENABLE_VIRTUAL_TERMINAL_PROCESSING 0x0004
 #endif
 
@@ -24,11 +28,15 @@ static const char* bold() { return g_color ? "\x1b[1m" : ""; }
 static const char* reset() { return g_color ? "\x1b[0m" : ""; }
 
 void initConsole() {
+#ifdef _WIN32
     SetConsoleOutputCP(CP_UTF8);
     HANDLE h = GetStdHandle(STD_ERROR_HANDLE);
     DWORD mode = 0;
     if (GetConsoleMode(h, &mode) && SetConsoleMode(h, mode | ENABLE_VIRTUAL_TERMINAL_PROCESSING))
         g_color = true;
+#else
+    g_color = isatty(2);  // colors only in a terminal, not when the output goes to a file
+#endif
 }
 
 void SourceFile::computeLines() {

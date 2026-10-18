@@ -19,7 +19,7 @@ on:
 
 permissions:
   contents: write
-  actions: read   # to get the installer the tests run built
+  actions: read   # to get the installer and the Linux package the tests run built
 
 jobs:
   release:
@@ -49,7 +49,8 @@ jobs:
             found { print }
           ' CHANGELOG.md > notes.md
           if [ ! -s notes.md ]; then echo "Forge $version." > notes.md; fi
-          printf '\n**To install:** download `Forge-%s-setup.exe` below and run it. It includes everything Forge needs (its own C++ compiler too). Already have Forge? Run it to update; your games and settings stay.\n\n' "$version" >> notes.md
+          printf '\n**To install on Windows:** download `Forge-%s-setup.exe` below and run it. It includes everything Forge needs (its own C++ compiler too). Already have Forge? Run it to update; your games and settings stay.\n\n' "$version" >> notes.md
+          printf '**On Linux** (everything but the low-level toolkits): download `Forge-%s-linux-x64.tar.gz`, unpack it, and run `./install.sh` in it.\n\n' "$version" >> notes.md
           echo "Full list of changes: [CHANGELOG.md](https://github.com/${GITHUB_REPOSITORY}/blob/$tag/CHANGELOG.md)" >> notes.md
 
           # A version that already has a release keeps it; only its notes are refreshed, so they always match
@@ -96,3 +97,30 @@ jobs:
           fi
           for f in installer-out/*-setup.exe; do gh release upload "$tag" "$f" --clobber; done
           echo "Attached the installer to $tag."
+
+      # Forge for Linux, from the same tests run (tests.yml, "linux"), attached the same way.
+      - name: Get the Linux package from the tests run
+        if: github.event_name == 'workflow_run'
+        uses: actions/download-artifact@v4
+        with:
+          name: linux
+          path: linux-out
+          run-id: ${{ github.event.workflow_run.id }}
+          github-token: ${{ github.token }}
+
+      - name: Attach the Linux package to the release
+        if: github.event_name == 'workflow_run'
+        env:
+          GH_TOKEN: ${{ github.token }}
+          SHA: ${{ github.event.workflow_run.head_sha }}
+        run: |
+          version="$(sed -n 's/.*kVersion = "\([^"]*\)".*/\1/p' src/main.cpp)"
+          tag="v$version"
+          tagged="$(git ls-remote origin "refs/tags/$tag^{}" | cut -f1)"
+          [ -n "$tagged" ] || tagged="$(git ls-remote origin "refs/tags/$tag" | cut -f1)"
+          if gh release view "$tag" --json assets -q '.assets[].name' | grep -q -- '-linux-x64.tar.gz$' && [ "$tagged" != "$SHA" ]; then
+            echo "$tag already has its Linux package (from the tagged commit)."
+            exit 0
+          fi
+          for f in linux-out/*-linux-x64.tar.gz; do gh release upload "$tag" "$f" --clobber; done
+          echo "Attached the Linux package to $tag."

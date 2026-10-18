@@ -1,6 +1,15 @@
+#ifdef _WIN32
 #define WIN32_LEAN_AND_MEAN
 #define NOMINMAX
 #include <windows.h>
+#include <fcntl.h>
+#include <io.h>
+#else
+#include <csignal>
+#include <fcntl.h>
+#include <sys/wait.h>
+#include <unistd.h>
+#endif
 
 #include "checker.hpp"
 #include "codegen.hpp"
@@ -19,8 +28,6 @@
 #include <cstdio>
 #include <filesystem>
 #include <fstream>
-#include <fcntl.h>
-#include <io.h>
 #include <iostream>
 #include <iterator>
 #include <string>
@@ -28,23 +35,79 @@
 
 namespace fs = std::filesystem;
 
-static const char* kVersion = "0.9.5";
+static const char* kVersion = "0.9.6";
+
+// Command lines are built in the system's own kind of text: wide (UTF-16) on Windows, so any file name works, and
+// ordinary text on Linux. NS("...") is a piece of command line written in the code.
+#ifdef _WIN32
+using NStr = std::wstring;
+#define NS(s) L##s
+static NStr toNStr(long long n) { return std::to_wstring(n); }
+static const char* kExe = ".exe";  // what a program's file name ends in
+#else
+using NStr = std::string;
+#define NS(s) s
+static NStr toNStr(long long n) { return std::to_string(n); }
+static const char* kExe = "";
+#endif
 
 static fs::path exeDir() {
-    std::wstring buf(32768, L'\0');
+#ifdef _WIN32
+    NStr buf(32768, L'\0');
     DWORD n = GetModuleFileNameW(nullptr, buf.data(), (DWORD)buf.size());
     return fs::path(buf.substr(0, n)).parent_path();
+#else
+    std::error_code ec;
+    return fs::read_symlink("/proc/self/exe", ec).parent_path();
+#endif
 }
 
-static std::wstring quote(const fs::path& p) { return L"\"" + p.wstring() + L"\""; }
+static NStr quote(const fs::path& p) { return NS("\"") + p.native() + NS("\""); }
+
+#ifndef _WIN32
+// Linux: runs a command line with the shell, its output going to `outFd` (or the console if -1). Returns its process.
+static pid_t startShell(const std::string& cmdline, const fs::path& workDir, int outFd) {
+    pid_t pid = fork();
+    if (pid == 0) {
+        std::signal(SIGINT, SIG_DFL);  // Ctrl+C stops the program, even while frg itself ignores it
+        if (!workDir.empty() && chdir(workDir.c_str()) != 0) _exit(127);
+        if (outFd >= 0) {
+            dup2(outFd, 1);
+            dup2(outFd, 2);
+        }
+        execl("/bin/sh", "sh", "-c", cmdline.c_str(), (char*)nullptr);
+        _exit(127);
+    }
+    return pid;
+}
+
+// The exit code of a finished process: its own code, -1 if it couldn't be started (the shell's 127, "command not
+// found"), or 128 + the signal's number if it crashed, like the shell says it.
+static int exitCode(int status) {
+    if (WIFEXITED(status)) return WEXITSTATUS(status) == 127 ? -1 : WEXITSTATUS(status);
+    if (WIFSIGNALED(status)) return 128 + WTERMSIG(status);
+    return -1;
+}
+
+static int waitFor(pid_t pid) {
+    int status = 0;
+    while (waitpid(pid, &status, 0) < 0)
+        if (errno != EINTR) return -1;
+    return exitCode(status);
+}
+#endif
 
 // Runs a command line and waits for it. Returns the exit code, or -1 if it couldn't start.
-static int runProcess(const std::wstring& cmdline, const fs::path& workDir = {}) {
+static int runProcess(const NStr& cmdline, const fs::path& workDir = {}) {
+#ifndef _WIN32
+    pid_t pid = startShell(cmdline, workDir, -1);
+    return pid < 0 ? -1 : waitFor(pid);
+#else
     STARTUPINFOW si{};
     si.cb = sizeof si;
     PROCESS_INFORMATION pi{};
-    std::wstring cmd = cmdline;
-    std::wstring dir = workDir.wstring();
+    NStr cmd = cmdline;
+    NStr dir = workDir.native();
     if (!CreateProcessW(nullptr, cmd.data(), nullptr, nullptr, TRUE, 0, nullptr, dir.empty() ? nullptr : dir.c_str(), &si, &pi))
         return -1;
     WaitForSingleObject(pi.hProcess, INFINITE);
@@ -53,10 +116,19 @@ static int runProcess(const std::wstring& cmdline, const fs::path& workDir = {})
     CloseHandle(pi.hProcess);
     CloseHandle(pi.hThread);
     return (int)code;
+#endif
 }
 
 // Like runProcess, but collects what the command prints (stdout and stderr) instead of showing it.
-static int runCaptured(const std::wstring& cmdline, std::string& output) {
+static int runCaptured(const NStr& cmdline, std::string& output) {
+#ifndef _WIN32
+    FILE* p = popen((cmdline + " 2>&1").c_str(), "r");
+    if (!p) return -1;
+    char buf[4096];
+    size_t got;
+    while ((got = std::fread(buf, 1, sizeof buf, p)) > 0) output.append(buf, got);
+    return exitCode(pclose(p));
+#else
     SECURITY_ATTRIBUTES sa{sizeof sa, nullptr, TRUE};
     HANDLE readEnd = nullptr, writeEnd = nullptr;
     if (!CreatePipe(&readEnd, &writeEnd, &sa, 0)) return -1;
@@ -67,7 +139,7 @@ static int runCaptured(const std::wstring& cmdline, std::string& output) {
     si.hStdOutput = si.hStdError = writeEnd;
     si.hStdInput = GetStdHandle(STD_INPUT_HANDLE);
     PROCESS_INFORMATION pi{};
-    std::wstring cmd = cmdline;
+    NStr cmd = cmdline;
     BOOL started = CreateProcessW(nullptr, cmd.data(), nullptr, nullptr, TRUE, 0, nullptr, nullptr, &si, &pi);
     CloseHandle(writeEnd);
     if (!started) {
@@ -84,13 +156,14 @@ static int runCaptured(const std::wstring& cmdline, std::string& output) {
     CloseHandle(pi.hProcess);
     CloseHandle(pi.hThread);
     return (int)code;
+#endif
 }
 
 // <Vulkan> games: turns every GLSL shader in the game's folder (player.vert, sky.frag...) into the SPIR-V file
 // Vulkan loads (player.vert.spv), using glslang. Only shaders that changed since last time are compiled.
 static bool compileShaders(const fs::path& root, const fs::path& runtime) {
     static const char* kStages[] = {".vert", ".frag", ".comp", ".geom", ".tesc", ".tese"};
-    fs::path glslang = runtime / "tools" / "glslang.exe";
+    fs::path glslang = runtime / "tools" / (std::string("glslang") + kExe);
     std::error_code ec;
     bool ok = true;
     for (auto it = fs::recursive_directory_iterator(root, ec); it != fs::recursive_directory_iterator(); it.increment(ec)) {
@@ -108,7 +181,7 @@ static bool compileShaders(const fs::path& root, const fs::path& runtime) {
         std::string shown = fs::relative(file, root, ec).generic_string();
         printStatus("Shader", shown);
         std::string out;
-        int code = runCaptured(quote(glslang) + L" -V " + quote(file) + L" -o " + quote(spv), out);
+        int code = runCaptured(quote(glslang) + NS(" -V ") + quote(file) + NS(" -o ") + quote(spv), out);
         if (code == -1) {
             reportPlainError("Forge's shader compiler is missing (" + glslang.string() + ")", "keep the runtime folder next to frg.exe");
             return false;
@@ -168,8 +241,25 @@ static std::string toolStamp(const fs::path& runtime) {
     std::error_code ec;
     for (const auto& entry : fs::directory_iterator(runtime, ec))
         if (entry.is_regular_file()) s += entry.path().filename().string() + "@" + timeStamp(entry.path()) + ";";
+#ifdef _WIN32
     wchar_t gpp[MAX_PATH];
-    if (SearchPathW(nullptr, L"g++.exe", nullptr, MAX_PATH, gpp, nullptr)) s += fs::path(gpp).string() + "@" + timeStamp(gpp);
+    if (SearchPathW(nullptr, NS("g++.exe"), nullptr, MAX_PATH, gpp, nullptr)) s += fs::path(gpp).string() + "@" + timeStamp(gpp);
+#else
+    if (const char* path = std::getenv("PATH")) {
+        std::string dirs = path;
+        for (size_t at = 0; at <= dirs.size();) {
+            size_t end = dirs.find(':', at);
+            if (end == std::string::npos) end = dirs.size();
+            fs::path gpp = fs::path(dirs.substr(at, end - at)) / "g++";
+            std::error_code ec;
+            if (!dirs.substr(at, end - at).empty() && fs::exists(gpp, ec)) {
+                s += gpp.string() + "@" + timeStamp(fs::canonical(gpp, ec));
+                break;
+            }
+            at = end + 1;
+        }
+    }
+#endif
     return s;
 }
 
@@ -298,10 +388,14 @@ static int cmdCache(bool clear) {
 }
 
 // Runs one g++ command that makes `output`, writing to a temporary name first so a half-written file is never used.
-static int compileTo(const std::wstring& args, const fs::path& output) {
+static int compileTo(const NStr& args, const fs::path& output) {
     fs::path tmp = output;
-    tmp += L"." + std::to_wstring(GetCurrentProcessId()) + L".tmp";
-    int code = runProcess(L"g++ " + args + L" -o " + quote(tmp));
+#ifdef _WIN32
+    tmp += NS(".") + toNStr(GetCurrentProcessId()) + NS(".tmp");
+#else
+    tmp += NS(".") + toNStr(getpid()) + NS(".tmp");
+#endif
+    int code = runProcess(NS("g++ ") + args + NS(" -o ") + quote(tmp));
     std::error_code ec;
     if (code == 0) fs::rename(tmp, output, ec);
     if (code != 0 || ec) fs::remove(tmp, ec);
@@ -312,13 +406,61 @@ static int compileTo(const std::wstring& args, const fs::path& output) {
 
 // One g++ run. Its messages go to a log file instead of the console, because several run at the same time.
 struct Job {
-    std::wstring args;  // everything after "g++"
+    NStr args;          // everything after "g++"
     fs::path log;
+#ifdef _WIN32
     HANDLE process = nullptr;
     HANDLE logFile = nullptr;
+#else
+    pid_t process = -1;
+#endif
     int code = 0;       // its exit code once it's done; -1 if it couldn't be started
 };
 
+#ifndef _WIN32
+static bool startJob(Job& j) {
+    int fd = open(j.log.c_str(), O_WRONLY | O_CREAT | O_TRUNC | O_CLOEXEC, 0644);
+    if (fd < 0) return false;
+    j.process = startShell("g++ " + j.args, {}, fd);
+    close(fd);
+    return j.process > 0;
+}
+
+static int jobLimit() {
+    long cores = sysconf(_SC_NPROCESSORS_ONLN);
+    long pages = sysconf(_SC_AVPHYS_PAGES), pageSize = sysconf(_SC_PAGESIZE);
+    if (pages > 0 && pageSize > 0) cores = std::min<long>(cores, (long)((unsigned long long)pages * pageSize / (700ull * 1024 * 1024)));
+    return (int)std::clamp<long>(cores, 1, 64);
+}
+
+static void runJobs(std::vector<Job>& jobs, int limit) {
+    size_t next = 0;
+    std::vector<Job*> running;
+    while (next < jobs.size() || !running.empty()) {
+        while (next < jobs.size() && (int)running.size() < limit) {
+            Job& j = jobs[next++];
+            if (startJob(j))
+                running.push_back(&j);
+            else
+                j.code = -1;
+        }
+        if (running.empty()) break;
+        int status = 0;
+        pid_t done = waitpid(-1, &status, 0);
+        if (done < 0) {
+            if (errno == EINTR) continue;
+            for (Job* j : running) j->code = waitFor(j->process);
+            break;
+        }
+        for (size_t i = 0; i < running.size(); i++)
+            if (running[i]->process == done) {
+                running[i]->code = exitCode(status);
+                running.erase(running.begin() + i);
+                break;
+            }
+    }
+}
+#else
 static bool startJob(Job& j) {
     SECURITY_ATTRIBUTES sa{sizeof sa, nullptr, TRUE};
     j.logFile = CreateFileW(j.log.c_str(), GENERIC_WRITE, FILE_SHARE_READ | FILE_SHARE_DELETE, &sa, CREATE_ALWAYS,
@@ -341,7 +483,7 @@ static bool startJob(Job& j) {
     si.StartupInfo.hStdOutput = si.StartupInfo.hStdError = j.logFile;
     si.lpAttributeList = attrs;
     PROCESS_INFORMATION pi{};
-    std::wstring cmd = L"g++ " + j.args;
+    NStr cmd = NS("g++ ") + j.args;
     BOOL ok = CreateProcessW(nullptr, cmd.data(), nullptr, nullptr, TRUE, EXTENDED_STARTUPINFO_PRESENT, nullptr, nullptr,
                              &si.StartupInfo, &pi);
     DeleteProcThreadAttributeList(attrs);
@@ -393,6 +535,7 @@ static void runJobs(std::vector<Job>& jobs, int limit) {
         running.erase(running.begin() + done);
     }
 }
+#endif
 
 static std::string readFile(const fs::path& p) {
     std::ifstream f(p, std::ios::binary);
@@ -428,6 +571,9 @@ static fs::path makeIcon(const fs::path& root, const fs::path& buildDir) {
                            "save the picture as a .png file (256 x 256 pixels works best)");
         return {};
     }
+#ifndef _WIN32
+    return {};  // Linux programs don't carry an icon inside them; the window still gets icon.png
+#endif
     auto be32 = [&](size_t at) {
         return (uint32_t)(unsigned char)data[at] << 24 | (uint32_t)(unsigned char)data[at + 1] << 16 |
                (uint32_t)(unsigned char)data[at + 2] << 8 | (uint32_t)(unsigned char)data[at + 3];
@@ -447,7 +593,7 @@ static fs::path makeIcon(const fs::path& root, const fs::path& buildDir) {
         std::ofstream rc(buildDir / "icon.rc", std::ios::binary);
         rc << "GLFW_ICON ICON \"icon.ico\"\n";
     }
-    int code = runProcess(L"windres -O coff -i icon.rc -o icon_res.o", buildDir);
+    int code = runProcess(NS("windres -O coff -i icon.rc -o icon_res.o"), buildDir);
     if (code != 0) {
         reportPlainWarning("couldn't put icon.png into the .exe, so it won't have an icon",
                            code == -1 ? "windres, which comes with w64devkit, wasn't found - is w64devkit's bin folder on your PATH?"
@@ -459,7 +605,12 @@ static fs::path makeIcon(const fs::path& root, const fs::path& buildDir) {
 }
 
 // While the game runs, Ctrl+C should stop the game, not Forge.
+#ifdef _WIN32
 static BOOL WINAPI ignoreCtrlC(DWORD type) { return type == CTRL_C_EVENT || type == CTRL_BREAK_EVENT; }
+static void ignoreCtrlCWhileRunning() { SetConsoleCtrlHandler(ignoreCtrlC, TRUE); }
+#else
+static void ignoreCtrlCWhileRunning() { std::signal(SIGINT, SIG_IGN); }
+#endif
 
 // How a game is built. The console is on for normal builds (to see print() and errors while testing) and off
 // for --release builds; --console and --no-console choose it either way.
@@ -506,7 +657,7 @@ static bool build(const fs::path& dir, fs::path& exeOut, const BuildOptions& opt
     phase("reading and checking");
     GeneratedCpp gen = generateCpp(proj, opt.debug, opt.test);
     phase("generating C++");
-    fs::path exe = buildDir / (proj.name + (opt.test ? "_tests.exe" : ".exe"));
+    fs::path exe = buildDir / (proj.name + (opt.test ? "_tests" : "") + kExe);
 
     fs::path runtime = exeDir() / "runtime";
     if (!fs::exists(runtime / "forge.hpp")) {
@@ -515,6 +666,14 @@ static bool build(const fs::path& dir, fs::path& exeOut, const BuildOptions& opt
         return false;
     }
 
+#ifndef _WIN32
+    // The low-level toolkits open their own windows with Windows' own code, so they're Windows-only for now.
+    if (!gen.sources.empty()) {
+        reportPlainError("the <OpenGL>, <DirectX> and <Vulkan> toolkits only work on Windows for now",
+                         "everything else in Forge works on Linux: <window>, <graphics2d>, <graphics3d> and the rest");
+        return false;
+    }
+#endif
     bool vulkan = std::find(gen.sources.begin(), gen.sources.end(), "forge_vulkan_impl.cpp") != gen.sources.end();
     if (vulkan && !compileShaders(proj.root, runtime)) {
         std::fprintf(stderr, "Build failed: a shader has errors.\n");
@@ -523,11 +682,13 @@ static bool build(const fs::path& dir, fs::path& exeOut, const BuildOptions& opt
 
     // Release builds are optimized more (-O2). Other builds use -O1, which compiles faster and still runs well.
     // -fwrapv: whole numbers wrap around when they overflow, the same at every optimization level.
-    std::wstring flags = std::wstring(L"-std=gnu++20 ") + (opt.debug ? L"-O0 -g" : opt.release ? L"-O2" : L"-O1") + L" -fwrapv -w -I" + quote(runtime);
-    if (!opt.console) flags += L" -DFRG_NO_CONSOLE";  // no console window: runtime errors pop up in a box instead
-    if (vulkan) flags += L" -I" + quote(runtime / "vulkan" / "include");
+    NStr flags = NStr(NS("-std=gnu++20 ")) + (opt.debug ? NS("-O0 -g") : opt.release ? NS("-O2") : NS("-O1")) + NS(" -fwrapv -w -I") + quote(runtime);
+#ifdef _WIN32
+    if (!opt.console) flags += NS(" -DFRG_NO_CONSOLE");
+#endif  // no console window: runtime errors pop up in a box instead
+    if (vulkan) flags += NS(" -I") + quote(runtime / "vulkan" / "include");
     fs::path raylib = runtime / "raylib";
-    if (gen.needsRaylib) flags += L" -I" + quote(raylib / "include");
+    if (gen.needsRaylib) flags += NS(" -I") + quote(raylib / "include");
     std::string tools = toolStamp(runtime), stamp = fs::path(flags).string();
 
     // Forge's runtime headers, precompiled once (see "build cache" above). There are two sets, so that all games share
@@ -551,7 +712,7 @@ static bool build(const fs::path& dir, fs::path& exeOut, const BuildOptions& opt
     }
     if (!fs::exists(pch)) {
         printStatus("Preparing", "Forge's runtime for this kind of build (once each for normal, --debug and --release builds, and again after Forge is updated)");
-        if (compileTo(flags + L" -x c++-header " + quote(pchHeader), pch) == -1) {
+        if (compileTo(flags + NS(" -x c++-header ") + quote(pchHeader), pch) == -1) {
             reportPlainError("couldn't find g++, which Forge uses to make .exe files",
                              "install w64devkit and make sure its bin folder is on your PATH");
             return false;
@@ -564,7 +725,7 @@ static bool build(const fs::path& dir, fs::path& exeOut, const BuildOptions& opt
         fs::path obj = cacheFolder("obj|" + stamp + "|" + src, tools, buildDir) / (fs::path(src).stem().string() + ".o");
         if (!fs::exists(obj)) {
             printStatus("Preparing", src + " (only the first time)");
-            if (compileTo(flags + L" -c " + quote(runtime / src), obj) != 0) {
+            if (compileTo(flags + NS(" -c ") + quote(runtime / src), obj) != 0) {
                 reportPlainError("the C++ compiler rejected Forge's runtime file " + src + " - this is a bug in Forge, not in your code");
                 return false;
             }
@@ -602,7 +763,7 @@ static bool build(const fs::path& dir, fs::path& exeOut, const BuildOptions& opt
         fs::path gamePch = forgeDir / "game_pch.hpp.gch", keyFile = forgeDir / "game_pch.key";
         if (!fs::exists(gamePch, ec) || readFile(keyFile) != pchKey) {
             fs::remove(keyFile, ec);
-            if (compileTo(flags + L" -x c++-header " + quote(forgeDir / "game_pch.hpp"), gamePch) != 0) {
+            if (compileTo(flags + NS(" -x c++-header ") + quote(forgeDir / "game_pch.hpp"), gamePch) != 0) {
                 reportPlainError("the C++ compiler rejected Forge's output (game.hpp) - this is a bug in Forge, not in your code",
                                  "the generated file is " + (forgeDir / "game.hpp").string());
                 return false;
@@ -653,7 +814,7 @@ static bool build(const fs::path& dir, fs::path& exeOut, const BuildOptions& opt
         if (single || (fs::exists(obj, ec) && readFile(keyFile) == key)) continue;
         fs::remove(keyFile, ec);
         Job j;
-        j.args = flags + L" -I" + quote(pchDir) + L" -I" + quote(forgeDir) + L" -c " + quote(cpp) + L" -o " + quote(obj);
+        j.args = flags + NS(" -I") + quote(pchDir) + NS(" -I") + quote(forgeDir) + NS(" -c ") + quote(cpp) + NS(" -o ") + quote(obj);
         j.log = forgeDir / (p.name + ".log");
         jobs.push_back(j);
         jobParts.push_back(&p);
@@ -701,19 +862,29 @@ static bool build(const fs::path& dir, fs::path& exeOut, const BuildOptions& opt
 
     phase("compiling");
     // Link: the parts, a toolkit's runtime code and the icon, into the .exe. Skipped if none of it changed.
-    std::wstring cmd = L"g++";
+    NStr cmd = NS("g++");
     if (single)
-        cmd += L" " + flags + L" -I" + quote(pchDir) + L" -I" + quote(forgeDir) + L" " + quote(forgeDir / (all[0].name + ".cpp"));
+        cmd += NS(" ") + flags + NS(" -I") + quote(pchDir) + NS(" -I") + quote(forgeDir) + NS(" ") + quote(forgeDir / (all[0].name + ".cpp"));
     else
-        for (const Part& p : all) cmd += L" " + quote(forgeDir / (p.name + ".o"));
-    for (const fs::path& obj : objects) cmd += L" " + quote(obj);
+        for (const Part& p : all) cmd += NS(" ") + quote(forgeDir / (p.name + ".o"));
+    for (const fs::path& obj : objects) cmd += NS(" ") + quote(obj);
     fs::path icon = makeIcon(proj.root, buildDir);
-    if (!icon.empty()) cmd += L" " + quote(icon);
-    cmd += L" -o " + quote(exe) + L" -static";
-    if (!opt.console) cmd += L" -mwindows";
-    if (opt.release) cmd += L" -s";  // a smaller .exe
-    if (gen.needsRaylib) cmd += L" -L" + quote(raylib / "lib") + L" -lraylib -lopengl32 -lgdi32 -lwinmm";
-    for (const std::string& flag : gen.linkFlags) cmd += L" " + fs::path(flag).wstring();
+    if (!icon.empty()) cmd += NS(" ") + quote(icon);
+#ifdef _WIN32
+    cmd += NS(" -o ") + quote(exe) + NS(" -static");
+    if (!opt.console) cmd += NS(" -mwindows");
+#else
+    // Linux: C++'s own library goes into the game, so it runs on other Linux PCs too; the system's are shared.
+    cmd += NS(" -o ") + quote(exe) + NS(" -static-libstdc++ -static-libgcc");
+#endif
+    if (opt.release) cmd += NS(" -s");  // a smaller .exe
+#ifdef _WIN32
+    if (gen.needsRaylib) cmd += NS(" -L") + quote(raylib / "lib") + NS(" -lraylib -lopengl32 -lgdi32 -lwinmm");
+#else
+    if (gen.needsRaylib) cmd += " -L" + quote(raylib / "lib-linux") + " -lraylib -lGL -lm -lpthread -ldl -lrt -lX11";
+    else cmd += " -lpthread";
+#endif
+    for (const std::string& flag : gen.linkFlags) cmd += NS(" ") + fs::path(flag).native();
     linkKey = hashName(linkKey + "|" + fs::path(cmd).string() + "|" + (icon.empty() ? "" : timeStamp(icon)));
     bool linked = false;
     if (!fs::exists(exe, ec) || readFile(forgeDir / "link.key") != linkKey) {
@@ -725,6 +896,7 @@ static bool build(const fs::path& dir, fs::path& exeOut, const BuildOptions& opt
             }
         }
         fs::remove(forgeDir / "link.key", ec);
+        if (verbose) std::fprintf(stderr, "    [build] %s\n", fs::path(cmd).string().c_str());
         int code = runProcess(cmd);
         if (code == -1) {
             reportPlainError("couldn't find g++, which Forge uses to make .exe files",
@@ -746,8 +918,13 @@ static bool build(const fs::path& dir, fs::path& exeOut, const BuildOptions& opt
     char timeBuf[32];
     std::snprintf(timeBuf, sizeof timeBuf, "%.2fs", secs);
     std::string note = !linked ? " (nothing changed)" : all.size() > 2 ? " (" + std::to_string(jobs.size()) + " of " + std::to_string(all.size()) + " parts compiled)" : "";
-    printStatus("Finished", fs::relative(exe, proj.root, ec).generic_string() + (opt.debug ? " (debug)" : "") + (opt.console ? "" : " (no console)") + note + " in " + timeBuf);
-    if (!opt.console && !gen.needsRaylib)
+#ifdef _WIN32
+    bool noConsole = !opt.console;
+#else
+    bool noConsole = false;  // a Linux program shows its output wherever it's started from
+#endif
+    printStatus("Finished", fs::relative(exe, proj.root, ec).generic_string() + (opt.debug ? " (debug)" : "") + (noConsole ? " (no console)" : "") + note + " in " + timeBuf);
+    if (noConsole && !gen.needsRaylib)
         std::fprintf(stderr, "    note: this game doesn't open a window, so without a console nothing will show when it runs\n");
     exeOut = exe;
     return true;
@@ -781,7 +958,7 @@ static int cmdRun(const fs::path& dir, const BuildOptions& opt) {
     if (!build(dir, exe, opt)) return 1;
     printStatus("Running", exe.filename().string());
     std::fflush(stderr);
-    SetConsoleCtrlHandler(ignoreCtrlC, TRUE);
+    ignoreCtrlCWhileRunning();
     int code = runProcess(quote(exe), fs::path(exe).parent_path().parent_path());
     if (code == -1) {
         reportPlainError("couldn't start " + exe.string());
@@ -851,21 +1028,36 @@ static int cmdPackage(const fs::path& dir, const BuildOptions& opt) {
     printStatus("Copied", exe.filename().string() + (copied ? " and " + std::to_string(copied) + " file" + (copied == 1 ? "" : "s") : "") +
                               " into dist/" + name + "/");
 
+#ifdef _WIN32
     // Windows 10 and newer come with tar.exe, which can make .zip files. It's called by its full path, because
     // w64devkit has a different tar that can't.
     wchar_t sys[MAX_PATH];
     UINT n = GetSystemDirectoryW(sys, MAX_PATH);
-    fs::path tar = fs::path(std::wstring(sys, n)) / "tar.exe";
-    int code = runProcess(quote(tar) + L" -a -c -f " + quote(zip.filename()) + L" " + quote(fs::path(name)), dist);
+    fs::path tar = fs::path(NStr(sys, n)) / "tar.exe";
+    int code = runProcess(quote(tar) + NS(" -a -c -f ") + quote(zip.filename()) + NS(" ") + quote(fs::path(name)), dist);
+    const char* missing = "Windows' tar.exe wasn't found (it comes with Windows 10 and newer). ";
+#else
+    int code = runProcess("command -v zip > /dev/null") == 0 ? runProcess("zip -q -r " + quote(zip.filename()) + " " + quote(fs::path(name)), dist) : -1;
+    const char* missing = "";
+    if (code == -1) {  // no zip program: a .tar.gz, which every Linux can make (and unpack)
+        zip = dist / (name + ".tar.gz");
+        code = runProcess("tar -czf " + quote(zip.filename()) + " " + quote(fs::path(name)), dist);
+    }
+#endif
     if (code != 0 || !fs::exists(zip)) {
-        reportPlainError("couldn't make the .zip file", code == -1 ? "Windows' tar.exe wasn't found (it comes with Windows 10 and newer). "
+        reportPlainError("couldn't make the .zip file", code == -1 ? std::string(missing) +
                                                                     "The game is ready in " + out.string() + " - you can zip that folder yourself"
                                                                   : "the game is ready in " + out.string() + " - you can zip that folder yourself");
         return 1;
     }
-    printStatus("Packaged", "dist/" + name + ".zip");
+    printStatus("Packaged", "dist/" + zip.filename().string());
+#ifdef _WIN32
     std::fprintf(stderr, "\nYour game is ready to share:\n    %s\nPlayers unzip it and double-click %s.\n", zip.string().c_str(),
                  exe.filename().string().c_str());
+#else
+    std::fprintf(stderr, "\nYour game is ready to share:\n    %s\nPlayers unpack it and run ./%s in its folder.\n", zip.string().c_str(),
+                 exe.filename().string().c_str());
+#endif
     return 0;
 }
 
@@ -1010,7 +1202,9 @@ static int dispatch(const std::vector<std::string>& args) {
                 std::fprintf(stderr, "%s\n", r.error.c_str());
                 return 1;
             }
+#ifdef _WIN32
             _setmode(_fileno(stdout), _O_BINARY);  // the text exactly: Windows would turn each line ending into two characters
+#endif
             std::fwrite(r.text.data(), 1, r.text.size(), stdout);
             return 0;
         }
@@ -1163,13 +1357,20 @@ static int dispatch(const std::vector<std::string>& args) {
 // An installed Forge has its own g++ next to it (w64devkit, from the installer): that one is used, so a build never
 // depends on what else is on the PATH. (Without it, the g++ on the PATH is used.)
 static void useBundledCompiler() {
+#ifndef _WIN32
+    return;  // on Linux, the system's g++ is used
+#endif
     fs::path kit = exeDir().parent_path() / "w64devkit" / "bin";
     std::error_code ec;
     if (!fs::exists(kit / "g++.exe", ec)) return;
+#ifdef _WIN32
     static wchar_t old[32767];
-    DWORD n = GetEnvironmentVariableW(L"PATH", old, 32767);
-    std::wstring path = kit.wstring() + L";" + (n ? std::wstring(old, n) : L"");
-    SetEnvironmentVariableW(L"PATH", path.c_str());
+    DWORD n = GetEnvironmentVariableW(NS("PATH"), old, 32767);
+    NStr path = kit.native() + NS(";") + (n ? NStr(old, n) : NS(""));
+#endif
+#ifdef _WIN32
+    SetEnvironmentVariableW(NS("PATH"), path.c_str());
+#endif
 }
 
 int main(int argc, char** argv) {

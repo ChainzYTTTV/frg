@@ -1,12 +1,15 @@
 // Is there a newer Forge? Asks GitHub for the latest release, at most once a day (in the background while a
 // command runs), and says so if there is one. Updating is never required: `frg update` checks straight away and
 // can download and start the installer, `frg update --off` stops the daily check, and FRG_NO_UPDATE_CHECK=1 skips
-// it (the tests set that, so they never use the network).
+// it (the tests set that, so they never use the network). On Linux, GitHub is asked through curl, and there's no
+// installer to start: frg update says where to download the new version.
+#ifdef _WIN32
 #define WIN32_LEAN_AND_MEAN
 #define NOMINMAX
 #include <windows.h>
 #include <winhttp.h>
 #include <shellapi.h>
+#endif
 
 #include <chrono>
 #include <cstdio>
@@ -26,8 +29,10 @@ namespace update {
 
 namespace {
 
+#ifdef _WIN32
 const wchar_t* kHost = L"api.github.com";
 const wchar_t* kLatest = L"/repos/ChainzYTTTV/frg/releases/latest";
+#endif
 const char* kReleases = "https://github.com/ChainzYTTTV/frg/releases";
 
 struct Release {
@@ -45,6 +50,7 @@ std::vector<int> parts(std::string v) {
     return out;
 }
 
+#ifdef _WIN32
 // GETs an https link (following redirects) and gives back the body; nothing on any problem.
 std::optional<std::string> get(const std::wstring& host, const std::wstring& path, int timeoutMs, const std::wstring& headers) {
     std::optional<std::string> result;
@@ -75,6 +81,21 @@ std::optional<std::string> get(const std::wstring& host, const std::wstring& pat
     WinHttpCloseHandle(session);
     return result;
 }
+#else
+// GETs an https link with curl (which Linux systems come with) and gives back the body; nothing on any problem.
+std::optional<std::string> get(const std::string& url, int timeoutMs, const std::string& header) {
+    std::string cmd = "curl -fsSL --max-time " + std::to_string((timeoutMs + 999) / 1000) +
+                      (header.empty() ? "" : " -H '" + header + "'") + " '" + url + "' 2>/dev/null";
+    FILE* p = popen(cmd.c_str(), "r");
+    if (!p) return std::nullopt;
+    std::string body;
+    char buf[4096];
+    size_t n;
+    while ((n = std::fread(buf, 1, sizeof buf, p)) > 0) body.append(buf, n);
+    if (pclose(p) != 0) return std::nullopt;
+    return body;
+}
+#endif
 
 // The string value of the first "key": "..." in a JSON text at or after `from`.
 std::string jsonString(const std::string& json, const std::string& key, size_t from = 0, size_t* end = nullptr) {
@@ -91,7 +112,11 @@ std::string jsonString(const std::string& json, const std::string& key, size_t f
 }
 
 std::optional<Release> latest(int timeoutMs) {
+#ifdef _WIN32
     auto body = get(kHost, kLatest, timeoutMs, L"Accept: application/vnd.github+json\r\n");
+#else
+    auto body = get("https://api.github.com/repos/ChainzYTTTV/frg/releases/latest", timeoutMs, "Accept: application/vnd.github+json");
+#endif
     if (!body) return std::nullopt;
     Release r;
     r.version = jsonString(*body, "tag_name");
@@ -207,6 +232,10 @@ int command(const std::vector<std::string>& args, const fs::path& exeDir, const 
         return 0;
     }
     std::fprintf(stderr, "    Forge %s is out (you have %s). What's new: %s/tag/v%s\n", r->version.c_str(), current, kReleases, r->version.c_str());
+#ifndef _WIN32
+    std::fprintf(stderr, "    To update, download it from the page above.\n");
+    return 0;
+#else
     if (r->installer.empty()) {
         std::fprintf(stderr, "    That release has no installer to download; get it from the page above.\n");
         return 0;
@@ -248,6 +277,7 @@ int command(const std::vector<std::string>& args, const fs::path& exeDir, const 
         return 1;
     }
     return 0;
+#endif
 }
 
 }  // namespace update

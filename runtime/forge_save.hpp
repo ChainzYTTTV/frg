@@ -12,10 +12,6 @@
 #include <map>
 #include <sstream>
 
-namespace frg {
-extern "C" __declspec(dllimport) unsigned long __stdcall GetModuleFileNameA(void*, char*, unsigned long);
-}
-
 namespace frg::save {
 
 namespace fs = std::filesystem;
@@ -31,9 +27,7 @@ inline State& st() {
 }
 
 inline fs::path savePath() {
-    char buf[4096];
-    unsigned long n = GetModuleFileNameA(nullptr, buf, sizeof buf);
-    fs::path dir = fs::path(std::string(buf, n)).parent_path();
+    fs::path dir = exePath().parent_path();
     std::error_code ec;
     if (dir.filename() == "build" && fs::exists(dir.parent_path() / "main.frg", ec)) dir = dir.parent_path();
     return dir / "save.txt";

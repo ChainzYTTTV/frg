@@ -1,3 +1,4 @@
+=== windows only
 === main.frg
 #include <stdio>
 

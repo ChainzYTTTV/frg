@@ -4,7 +4,7 @@ What changed in each version of Forge. Plans for later versions are in the [road
 
 ## 0.9.7 (2026-10-18)
 
-**Forge Edit: a light code editor**, for computers where VS Code is slow. It comes with Forge on Windows (Start menu) and Linux (apps menu, or `forge-edit`), and uses far less memory than VS Code. Dark, with Forge's colors; errors as you save (wavy lines, and a Problems list to click); F5 runs the game with its output in the editor, Shift+F5 stops it; F1 shows all of Forge's docs, with a search box. Plus find, go to line, undo, comment lines, indenting, new files and opening another game folder. See [Forge Edit](docs/getting-started.md#forge-edit-a-light-editor).
+**Forge Edit: a light code editor**, for computers where VS Code is slow. It comes with Forge on Windows (Start menu) and Linux (apps menu, or `forge-edit`), and uses far less memory than VS Code. Dark, with Forge's colors; the game's folders and files in a tree, with new files and folders; errors a moment after you stop typing, without saving (wavy lines, and a Problems list to click); F5 runs the game with its output in the editor, Shift+F5 stops it; F1 opens all of Forge's docs in a panel next to the code, with a search box. Every panel can be resized, and the sizes are remembered. Plus find, go to line, undo, comment lines, indenting, and opening another game folder. See [Forge Edit](docs/getting-started.md#forge-edit-a-light-editor).
 
 ## 0.9.6 (2026-10-18)
 

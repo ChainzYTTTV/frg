@@ -143,6 +143,7 @@ These were decided by Forge's designer (2026-10-16). Build them this way.
 | Simple 3D lighting | 3D shapes stop looking flat | done (`graphics3d.setLight`) |
 | Custom shaders on sprites in the engine (glow, flash white, outlines) | effects without a low-level toolkit | done (`beginFlash`, `beginOutline`, `beginGlow`) |
 | Textures in `<Vulkan>`, and drawing into textures in `<OpenGL>` and `<DirectX>` | fills the toolkits' gaps | done |
+| `<physics3d>`: 3D boxes and balls, stairs, rays | 3D games without writing their own collision | done (after 0.9.4) |
 
 ## 1.0.0: Ready for other people
 

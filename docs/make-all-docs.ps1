@@ -24,7 +24,7 @@ $parts = [ordered]@{
     "Part D: The libraries" = @(
         "libraries/README.md", "libraries/core-types.md", "libraries/stdio.md", "libraries/math.md", "libraries/random.md",
         "libraries/window.md", "libraries/input.md", "libraries/graphics2d.md", "libraries/graphics3d.md",
-        "libraries/assets.md", "libraries/audio.md", "libraries/physics.md", "libraries/time.md", "libraries/file.md",
+        "libraries/assets.md", "libraries/audio.md", "libraries/physics.md", "libraries/physics3d.md", "libraries/time.md", "libraries/file.md",
         "libraries/save.md", "libraries/tween.md", "libraries/particles.md", "libraries/tilemap.md", "libraries/scenes.md", "libraries/ui.md", "libraries/ecs.md", "libraries/tasks.md", "libraries/testing.md",
         "libraries/toolkits.md", "libraries/opengl.md", "libraries/directx.md", "libraries/vulkan.md")
     "Part E: Reference (exact rules, every command, every error message)" = @(

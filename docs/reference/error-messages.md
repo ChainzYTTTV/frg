@@ -3108,6 +3108,58 @@ error: the <network> library isn't built yet
 
 **Fix:** see the [roadmap](../../ROADMAP.md) for when it's coming.
 
+### `physics.drawDebug() draws with the graphics2d library, which this file doesn't include`
+
+`physics` never draws by itself; its debug view draws with `<graphics2d>`, so the file that calls `physics.drawDebug()` needs that library too.
+
+<!-- check: error -->
+
+```cpp
+#include <physics>
+
+int main(){
+    physics.drawDebug();
+    return 0;
+}
+```
+
+```text
+error: physics.drawDebug() draws with the graphics2d library, which this file doesn't include
+  --> main.frg:4:13
+   |
+ 4 |     physics.drawDebug();
+   |             ^^^^^^^^^
+  hint: add #include <graphics2d> at the top of main.frg
+```
+
+**Fix:** add `#include <graphics2d>` at the top of the file that calls it.
+
+### `physics3d.drawDebug() draws with the graphics3d library, which this file doesn't include`
+
+`physics3d` never draws by itself; its debug view draws with `<graphics3d>`, so the file that calls `physics3d.drawDebug()` needs that library too.
+
+<!-- check: error -->
+
+```cpp
+#include <physics3d>
+
+int main(){
+    physics3d.drawDebug();
+    return 0;
+}
+```
+
+```text
+error: physics3d.drawDebug() draws with the graphics3d library, which this file doesn't include
+  --> main.frg:4:15
+   |
+ 4 |     physics3d.drawDebug();
+   |               ^^^^^^^^^
+  hint: add #include <graphics3d> at the top of main.frg
+```
+
+**Fix:** add `#include <graphics3d>` at the top of the file that calls it.
+
 ## Tasks
 
 ### `wait() only works inside a task function`

@@ -2,6 +2,11 @@
 
 What changed in each version of Forge. Plans for later versions are in the [roadmap](ROADMAP.md).
 
+## Unreleased
+
+**Engine**
+- **`<physics3d>`: 3D physics.** `Body3D` boxes and balls (`sphere = true`) that fall, move, collide, bounce and stack, in the same world as `<graphics3d>` (y up). `stepHeight` lets walking bodies climb stairs. `physics3d.raycast(from, direction, maxDistance)` finds what a line hits (point, surface direction, distance and body), for shooting and line of sight. Collision layers, a fixed-rate `step` (the same at any frame rate), and `physics3d.drawDebug()`. New example: `examples/physics3d`.
+
 ## 0.9.4 (2026-10-17)
 
 The engine extras before 1.0 (3D culling and light, balls and ramps in `<physics>`, sprite effects, textures for the low-level toolkits), and an installer.

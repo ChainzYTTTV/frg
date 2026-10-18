@@ -27,7 +27,7 @@ frg version
 g++ --version
 ```
 
-The first should print `Forge 0.9.7`. If `frg` isn't found, open a new terminal; if it's still not found, run the installer again with "Add Forge to my PATH" ticked.
+The first should print `Forge 0.9.8`. If `frg` isn't found, open a new terminal; if it's still not found, run the installer again with "Add Forge to my PATH" ticked.
 
 ### Installing on Linux
 
@@ -233,7 +233,8 @@ Open it from the Start menu (Windows) or the apps menu (Linux), or in a terminal
 - **Left:** the game's folders and files. Click a folder to open or close it. **+ File** and **+ Folder** make one in the folder you clicked last.
 - **Middle:** the code, with **Problems** and **Output** under it.
 - **Right:** the docs (F1 opens and closes them), with a search box.
-- Drag the edges between them to make any part bigger or smaller. Forge Edit remembers the sizes, the text size and the folder.
+- Drag the edges between them to make any part bigger or smaller. Forge Edit remembers the sizes, the zoom and the folder.
+- Text too small (or too big)? **Ctrl+=** and **Ctrl+-** zoom everything, and **Ctrl+0** goes back to normal.
 
 | Keys | What they do |
 |---|---|
@@ -251,7 +252,7 @@ Open it from the Start menu (Windows) or the apps menu (Linux), or in a terminal
 | **Ctrl+/** | turn the selected lines into comments, or back |
 | **Tab** / **Shift+Tab** | indent / unindent (the selected lines) |
 | **Ctrl+W**, **Ctrl+Tab** | close this file, go to the next one |
-| **Ctrl+=** / **Ctrl+-** | bigger / smaller text |
+| **Ctrl+=** / **Ctrl+-** / **Ctrl+0** | zoom everything bigger / smaller / back to normal |
 
 Errors get a red wavy line, a dot next to the line number, a red file name on the left, and a line in **Problems**: click it to go there. They show up a moment after you stop typing, without saving anything: Forge Edit checks a copy of the game with your changes. It only writes spaces (a tab in a file becomes 4 spaces). It doesn't have autocomplete or a debugger; VS Code does.
 

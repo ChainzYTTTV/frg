@@ -159,7 +159,19 @@ These were decided by Forge's designer (2026-10-16). Build them this way.
 
 ## After 1.0 (ideas)
 
-- `<network>` for multiplayer games
+Features to come, roughly in the order they'd help most:
+
+| Feature | Why |
+|---|---|
+| **Hot reload**: change a number like `JUMP_SPEED` and see it in the running game right away, without restarting | every change now means building and running again (a few seconds); tuning jumps and gravity by feel would be much faster |
+| **A visual level editor**: click tiles onto a grid, and it saves the level file `<tilemap>` reads | much faster than counting characters in a text level |
+| **`<network>`** for multiplayer games | nothing multiplayer can be made without it, like a player-vs-player FPS |
+| **A debugger made for games**: values and positions shown live in the running game, a value inspector, and pause and step (`physics.drawDebug()` is a start) | seeing what the game is doing, instead of guessing |
+| **3D model animation**: models' animations play (they're drawn, but don't move yet) | characters that walk, run and jump |
+| **More templates and examples**: `frg new mygame --template platformer`, `--template topdown` | starting from a working game instead of from nothing |
+
+Also later:
+
 - macOS support, and the `<OpenGL>` and `<Vulkan>` toolkits on Linux
 - Values scrambled in memory, to make cheating harder
 - Exporting games to the web
@@ -167,4 +179,3 @@ These were decided by Forge's designer (2026-10-16). Build them this way.
 ## Not planned
 
 - `goto`, and a separate `char` type (one-letter strings do the job)
-- Hot reload
